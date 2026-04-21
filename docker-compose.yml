@@ -1,0 +1,38 @@
+name: cuidarte
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: cuidarte-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cuidarte
+      POSTGRES_USER: cuidarte
+      POSTGRES_PASSWORD: cuidarte_dev_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - cuidarte_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cuidarte -d cuidarte"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8-alpine
+    container_name: cuidarte-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - cuidarte_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  cuidarte_postgres_data:
+  cuidarte_redis_data:

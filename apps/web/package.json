@@ -1,0 +1,29 @@
+{
+  "name": "@cuidarte/web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.json && vite build",
+    "dev": "vite --host 0.0.0.0",
+    "lint": "echo \"lint pendiente para @cuidarte/web\"",
+    "preview": "vite preview",
+    "test": "echo \"tests pendientes para @cuidarte/web\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@cuidarte/contracts": "workspace:*",
+    "@tanstack/react-query": "^5.87.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@cuidarte/config": "workspace:*",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.0"
+  }
+}
