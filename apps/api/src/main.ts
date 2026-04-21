@@ -5,27 +5,20 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
 
 import { AppModule } from "./app.module";
-
-const DEFAULT_PORT = 3001;
-const DEFAULT_WEB_ORIGIN = "http://localhost:5173";
-
-function resolvePort(): number {
-  const port = Number.parseInt(process.env.PORT ?? `${DEFAULT_PORT}`, 10);
-
-  return Number.isNaN(port) ? DEFAULT_PORT : port;
-}
+import { getEnv } from "./config/env";
 
 async function bootstrap(): Promise<void> {
+  const env = getEnv();
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({
-      logger: process.env.NODE_ENV !== "test",
+      logger: env.NODE_ENV !== "test",
     }),
   );
 
   app.setGlobalPrefix("api");
   app.enableCors({
-    origin: process.env.WEB_ORIGIN ?? DEFAULT_WEB_ORIGIN,
+    origin: env.WEB_ORIGIN,
     credentials: true,
   });
   app.enableShutdownHooks();
@@ -41,7 +34,7 @@ async function bootstrap(): Promise<void> {
 
   SwaggerModule.setup("api/docs", app, document);
 
-  await app.listen(resolvePort(), "0.0.0.0");
+  await app.listen(env.PORT, "0.0.0.0");
 }
 
 void bootstrap();

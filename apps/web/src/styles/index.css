@@ -30,6 +30,15 @@ button {
   font: inherit;
 }
 
+input {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid rgb(29 158 117 / 52%);
+  outline-offset: 3px;
+}
+
 .app-shell {
   min-height: 100vh;
   background:
@@ -78,7 +87,7 @@ h1 {
   line-height: 1.7;
 }
 
-.slice-status {
+.auth-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(320px, 460px);
   gap: 28px;
@@ -86,7 +95,7 @@ h1 {
   padding: 0 clamp(20px, 5vw, 72px) 48px;
 }
 
-.slice-status__label {
+.auth-layout__label {
   margin-bottom: 8px;
   color: var(--color-care);
   font-size: 0.82rem;
@@ -95,26 +104,160 @@ h1 {
   text-transform: uppercase;
 }
 
-.slice-status h2 {
+.auth-layout h2 {
   max-width: 680px;
-  margin-bottom: 0;
+  margin-bottom: 18px;
   color: var(--color-deep);
   font-size: clamp(2rem, 4vw, 3.7rem);
   line-height: 1;
 }
 
-.health-card {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 16px;
-  align-items: center;
-  min-height: 124px;
-  padding: 24px;
+.auth-layout__copy {
+  max-width: 590px;
+  margin-bottom: 0;
+  color: var(--color-muted);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.login-card,
+.session-panel {
+  min-height: 420px;
+  padding: 26px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  background: rgb(255 255 255 / 78%);
+  background: rgb(255 255 255 / 82%);
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(16px);
+}
+
+.login-card__header {
+  margin-bottom: 24px;
+}
+
+.login-card__header h2,
+.session-panel h2 {
+  margin-bottom: 8px;
+  color: var(--color-deep);
+  font-size: 2rem;
+  line-height: 1.05;
+}
+
+.login-card__header p,
+.session-panel__meta {
+  margin-bottom: 0;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+.login-form {
+  display: grid;
+  gap: 18px;
+}
+
+.field-group {
+  display: grid;
+  gap: 8px;
+}
+
+.field-group label {
+  color: var(--color-deep);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.field-group input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: #fbfefd;
+  color: var(--color-deep);
+}
+
+.field-group input[aria-invalid="true"] {
+  border-color: #b94a48;
+}
+
+.field-error,
+.form-error {
+  margin-bottom: 0;
+  color: #8f2f2d;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.form-error {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #fff1f0;
+}
+
+.primary-action,
+.secondary-action {
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.primary-action {
+  background: var(--color-care);
+  color: white;
+}
+
+.secondary-action {
+  background: var(--color-deep);
+  color: white;
+}
+
+.primary-action:disabled,
+.secondary-action:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.session-panel {
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+
+.session-panel__details {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 0;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-muted);
+}
+
+.session-panel__details strong {
+  color: var(--color-deep);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.health-strip {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  margin: 0 clamp(20px, 5vw, 72px) 48px;
+  padding: 18px 0;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-muted);
+}
+
+.health-strip p {
+  margin-bottom: 0;
+  line-height: 1.5;
+}
+
+.health-strip strong {
+  color: var(--color-deep);
 }
 
 .health-dot {
@@ -129,33 +272,10 @@ h1 {
   box-shadow: 0 0 0 7px rgb(29 158 117 / 14%);
 }
 
-.health-card__title {
+.auth-loading__title {
   margin-bottom: 4px;
   color: var(--color-deep);
   font-weight: 800;
-}
-
-.health-card__description {
-  margin-bottom: 0;
-  color: var(--color-muted);
-  font-size: 0.92rem;
-  line-height: 1.5;
-}
-
-.health-card__action {
-  min-height: 42px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--color-deep);
-  color: white;
-  cursor: pointer;
-  font-weight: 800;
-}
-
-.health-card__action:disabled {
-  cursor: wait;
-  opacity: 0.62;
 }
 
 @media (max-width: 800px) {
@@ -164,15 +284,7 @@ h1 {
     padding-top: 40px;
   }
 
-  .slice-status {
+  .auth-layout {
     grid-template-columns: 1fr;
-  }
-
-  .health-card {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .health-card__action {
-    grid-column: 1 / -1;
   }
 }

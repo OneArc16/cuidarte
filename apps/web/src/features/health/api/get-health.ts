@@ -1,10 +1,6 @@
 import { type HealthResponse, healthResponseSchema } from "@cuidarte/contracts";
 
-const DEFAULT_API_URL = "http://localhost:3001/api";
-
-function getApiBaseUrl(): string {
-  return (import.meta.env.VITE_API_URL ?? DEFAULT_API_URL).replace(/\/$/, "");
-}
+import { getApiBaseUrl } from "../../../shared/api/api-config";
 
 export async function getHealth(): Promise<HealthResponse> {
   const response = await fetch(`${getApiBaseUrl()}/health`, {

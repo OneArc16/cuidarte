@@ -7,4 +7,5 @@ export PATH="$ROOT_DIR/.tools/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:
 
 cd "$ROOT_DIR"
 pnpm typecheck
+pnpm test
 pnpm build

@@ -1,0 +1,10 @@
+{
+  "terminal.integrated.splitCwd": "initial",
+  "terminal.integrated.defaultProfile.windows": "Cuidarte Ubuntu",
+  "terminal.integrated.profiles.windows": {
+    "Cuidarte Ubuntu": {
+      "path": "C:\\Windows\\System32\\wsl.exe",
+      "args": ["-d", "Ubuntu", "--cd", "/home/daniel/cuidarte"]
+    }
+  }
+}
