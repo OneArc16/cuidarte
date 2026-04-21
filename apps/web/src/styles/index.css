@@ -66,12 +66,13 @@ h2 {
 
 .app-shell {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 460px);
-  gap: clamp(28px, 6vw, 72px);
+  grid-template-columns: minmax(560px, 820px) minmax(360px, 460px);
+  gap: clamp(28px, 4vw, 58px);
   align-items: center;
+  justify-content: center;
   min-height: 100svh;
   overflow: hidden;
-  padding: clamp(24px, 5vw, 72px);
+  padding: clamp(24px, 4vw, 64px);
 }
 
 .auth-shell {
@@ -91,12 +92,12 @@ h2 {
 
 .hero::before {
   position: absolute;
-  left: -22px;
+  left: -30px;
   top: 50%;
   z-index: -1;
   color: rgb(8 80 65 / 7%);
   content: "C";
-  font-size: 20rem;
+  font-size: 24rem;
   font-weight: 900;
   line-height: 0.7;
   transform: translateY(-52%);
@@ -105,8 +106,8 @@ h2 {
 .hero__content {
   position: relative;
   z-index: 0;
-  max-width: 760px;
-  padding-left: 26px;
+  max-width: 820px;
+  padding-left: 34px;
 }
 
 .hero__content::before {
@@ -145,30 +146,39 @@ h2 {
 
 h1 {
   margin-bottom: 16px;
-  font-size: 6.75rem;
+  font-size: 7.75rem;
   line-height: 0.88;
   text-shadow: 0 18px 42px rgb(8 80 65 / 10%);
 }
 
-.hero__copy {
-  max-width: 620px;
+.hero__slogan {
+  display: grid;
+  min-height: 5rem;
+  align-items: start;
+  max-width: 760px;
   margin-bottom: 0;
-  color: var(--color-muted);
-  font-size: 1.08rem;
-  line-height: 1.7;
+  color: var(--color-deep);
+  font-size: 1.55rem;
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1.42;
+  animation: hero-slogan-enter 280ms ease-out both;
+  transition:
+    opacity 280ms ease-out,
+    transform 280ms ease-out;
 }
 
 .hero__signature {
   display: grid;
-  grid-template-columns: 92px 42px 18px;
-  gap: 10px;
+  grid-template-columns: 126px 58px 24px;
+  gap: 12px;
   align-items: center;
-  width: 180px;
-  margin-top: 28px;
+  width: 236px;
+  margin-top: 34px;
 }
 
 .hero__signature span {
-  height: 6px;
+  height: 7px;
   border-radius: 8px;
   background: var(--color-care);
   box-shadow: 0 10px 24px rgb(29 158 117 / 18%);
@@ -293,6 +303,74 @@ h1 {
   border-color: #b94a48;
 }
 
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 54px;
+}
+
+.password-visibility {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgb(8 80 65 / 72%);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.password-visibility:hover {
+  background: rgb(29 158 117 / 10%);
+  color: var(--color-deep);
+}
+
+.password-visibility:active {
+  transform: translateY(-50%) scale(0.96);
+}
+
+.password-visibility svg {
+  width: 20px;
+  height: 20px;
+}
+
+.remember-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  min-height: 28px;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.3;
+  cursor: pointer;
+  user-select: none;
+}
+
+.remember-option input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--color-care);
+  cursor: pointer;
+}
+
+.remember-option:hover {
+  color: var(--color-deep);
+}
+
 .field-error,
 .form-error {
   margin-bottom: 0;
@@ -406,6 +484,110 @@ h1 {
   line-height: 0.9;
 }
 
+@media (min-width: 1440px) and (min-height: 900px) {
+  .app-shell {
+    grid-template-columns: minmax(640px, 900px) minmax(360px, 460px);
+    gap: clamp(36px, 3vw, 52px);
+  }
+
+  .hero::before {
+    left: -36px;
+    font-size: 27rem;
+  }
+
+  .hero__content {
+    max-width: 900px;
+    padding-left: 40px;
+  }
+
+  .hero__content::before {
+    width: 8px;
+  }
+
+  .hero__content::after {
+    inset: -54px 14px -52px -18px;
+  }
+
+  h1 {
+    font-size: 8.5rem;
+  }
+
+  .hero__slogan {
+    min-height: 5.8rem;
+    max-width: 820px;
+    font-size: 1.75rem;
+    line-height: 1.4;
+  }
+
+  .hero__signature {
+    grid-template-columns: 154px 68px 28px;
+    gap: 14px;
+    width: 278px;
+    margin-top: 42px;
+  }
+
+  .hero__signature span {
+    height: 8px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .app-shell {
+    grid-template-columns: minmax(300px, 360px) minmax(360px, 460px);
+    gap: 28px;
+    padding: 14px 30px;
+  }
+
+  .hero::before {
+    left: -10px;
+    font-size: 13rem;
+  }
+
+  .hero__content {
+    max-width: 360px;
+    padding-left: 22px;
+  }
+
+  .hero__content::after {
+    inset: -24px 0 -24px -12px;
+  }
+
+  .hero__content::before {
+    width: 5px;
+  }
+
+  h1 {
+    margin-bottom: 12px;
+    font-size: 4.35rem;
+  }
+
+  .hero__slogan {
+    min-height: 4.4rem;
+    max-width: 320px;
+    font-size: 1.18rem;
+    line-height: 1.35;
+  }
+
+  .hero__signature {
+    width: 170px;
+    grid-template-columns: 92px 42px 18px;
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  .hero__signature span {
+    height: 6px;
+  }
+
+  .login-card {
+    padding: 24px;
+  }
+
+  .login-card__header {
+    margin-bottom: 20px;
+  }
+}
+
 @media (max-width: 800px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -433,8 +615,10 @@ h1 {
     font-size: 3.35rem;
   }
 
-  .hero__copy {
-    display: none;
+  .hero__slogan {
+    min-height: 3.4rem;
+    font-size: 1rem;
+    line-height: 1.55;
   }
 
   .hero__signature {
@@ -491,5 +675,24 @@ h1 {
   h1,
   .home-heading h1 {
     font-size: 2.75rem;
+  }
+}
+
+@keyframes hero-slogan-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__slogan {
+    animation: none;
+    transition: opacity 1ms linear;
   }
 }
