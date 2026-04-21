@@ -6,11 +6,15 @@ import { ApiError } from "../../../shared/api/api-error";
 import { useLoginMutation } from "../model/auth-queries";
 
 const DEFAULT_VALUES: LoginRequest = {
-  email: "admin@centro-demo.test",
-  password: "Cuidarte123!",
+  email: "",
+  password: "",
 };
 
-export function LoginForm() {
+type LoginFormProps = {
+  onAuthenticated?: () => void;
+};
+
+export function LoginForm({ onAuthenticated }: LoginFormProps) {
   const loginMutation = useLoginMutation();
   const form = useForm<LoginRequest>({
     resolver: zodResolver(loginRequestSchema),
@@ -25,7 +29,13 @@ export function LoginForm() {
       className="login-form"
       noValidate
       onSubmit={(event) => {
-        void form.handleSubmit((values) => loginMutation.mutate(values))(event);
+        void form.handleSubmit((values) => {
+          loginMutation.mutate(values, {
+            onSuccess: () => {
+              onAuthenticated?.();
+            },
+          });
+        })(event);
       }}
     >
       <div className="field-group">

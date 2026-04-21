@@ -6,8 +6,8 @@ const adminCredentials = {
 };
 
 test.describe("Auth + Login", () => {
-  test("permite iniciar sesion, ver la sesion activa y cerrar sesion", async ({ page }) => {
-    await page.goto("/");
+  test("permite iniciar sesion, llegar al home y cerrar sesion", async ({ page }) => {
+    await page.goto("/login");
 
     await expect(page.getByRole("heading", { name: "Bienvenido" })).toBeVisible();
     await expect(page.getByLabel("Correo")).toBeVisible();
@@ -26,7 +26,8 @@ test.describe("Auth + Login", () => {
     const loginResponse = await loginResponsePromise;
     expect(loginResponse.status()).toBe(200);
 
-    await expect(page.getByRole("region", { name: "Sesion activa" })).toBeVisible();
+    await expect(page).toHaveURL(/\/home$/);
+    await expect(page.getByRole("region", { name: "Cuenta activa" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Admin Centro Demo" })).toBeVisible();
     await expect(page.getByText("admin@centro-demo.test")).toBeVisible();
     await expect(page.getByText("Asignada por admin")).toBeVisible();
@@ -41,7 +42,8 @@ test.describe("Auth + Login", () => {
     const logoutResponse = await logoutResponsePromise;
     expect(logoutResponse.status()).toBe(200);
 
+    await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole("heading", { name: "Bienvenido" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Sesion activa" })).toBeHidden();
+    await expect(page.getByRole("region", { name: "Cuenta activa" })).toBeHidden();
   });
 });

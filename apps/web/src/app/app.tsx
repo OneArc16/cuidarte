@@ -1,22 +1,87 @@
-import { useQuery } from "@tanstack/react-query";
+import { type AuthUser } from "@cuidarte/contracts";
+import { useCallback, useEffect, useState } from "react";
 
 import { LoginForm } from "../features/auth/ui/login-form";
 import { SessionPanel } from "../features/auth/ui/session-panel";
 import { useCurrentUserQuery } from "../features/auth/model/auth-queries";
-import { getHealth } from "../features/health/api/get-health";
+
+const HOME_PATH = "/home";
+const LOGIN_PATH = "/login";
 
 export function App() {
   const currentUserQuery = useCurrentUserQuery();
-  const healthQuery = useQuery({
-    queryKey: ["health"],
-    queryFn: getHealth,
-    retry: 1,
-  });
+  const { path, navigate } = useAppNavigation();
 
-  const isOnline = healthQuery.data?.status === "ok";
-  const statusLabel = isOnline ? "API conectada" : "Validando API";
   const user = currentUserQuery.data?.user ?? null;
 
+  useEffect(() => {
+    if (currentUserQuery.isLoading) {
+      return;
+    }
+
+    if (user === null) {
+      if (path !== LOGIN_PATH) {
+        navigate(LOGIN_PATH, { replace: true });
+      }
+
+      return;
+    }
+
+    if (path !== HOME_PATH) {
+      navigate(HOME_PATH, { replace: true });
+    }
+  }, [currentUserQuery.isLoading, navigate, path, user]);
+
+  useEffect(() => {
+    document.title = user === null ? "Iniciar sesion | Cuidarte" : "Inicio | Cuidarte";
+  }, [user]);
+
+  if (currentUserQuery.isLoading) {
+    return <SessionLoadingScreen />;
+  }
+
+  if (user === null) {
+    return <LoginPage onAuthenticated={() => navigate(HOME_PATH, { replace: true })} />;
+  }
+
+  return <HomePage user={user} onLogoutSuccess={() => navigate(LOGIN_PATH, { replace: true })} />;
+}
+
+type NavigateOptions = {
+  replace?: boolean;
+};
+
+function useAppNavigation() {
+  const [path, setPath] = useState(() => window.location.pathname);
+
+  useEffect(() => {
+    const syncPath = () => {
+      setPath(window.location.pathname);
+    };
+
+    window.addEventListener("popstate", syncPath);
+
+    return () => {
+      window.removeEventListener("popstate", syncPath);
+    };
+  }, []);
+
+  const navigate = useCallback((nextPath: string, options: NavigateOptions = {}) => {
+    if (window.location.pathname !== nextPath) {
+      window.history[options.replace === true ? "replaceState" : "pushState"]({}, "", nextPath);
+    }
+
+    setPath(nextPath);
+  }, []);
+
+  return { path, navigate };
+}
+
+type LoginPageProps = {
+  onAuthenticated: () => void;
+};
+
+function LoginPage({ onAuthenticated }: LoginPageProps) {
   return (
     <main className="app-shell">
       <section className="hero">
@@ -27,48 +92,70 @@ export function App() {
             Ingresa al entorno operativo para gestionar cuidado, sesiones, alimentacion,
             empleados y permisos por tenant.
           </p>
+          <div className="hero__signature" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
         </div>
       </section>
 
       <section className="auth-layout" aria-label="Acceso a Cuidarte">
-        <div>
-          <p className="auth-layout__label">Vertical slice auth</p>
-          <h2>{user === null ? "Acceso seguro por correo y contrasena." : "Sesion validada."}</h2>
-          <p className="auth-layout__copy">
-            La contrasena inicial la asigna el administrador. El usuario podra cambiarla
-            manualmente desde su configuracion de sesion.
-          </p>
-        </div>
-
-        {currentUserQuery.isLoading ? (
-          <section className="login-card" aria-busy="true">
-            <p className="auth-loading__title">Validando sesion...</p>
-          </section>
-        ) : user === null ? (
-          <section className="login-card" aria-label="Formulario de inicio de sesion">
-            <div className="login-card__header">
-              <p className="eyebrow">Ingreso</p>
-              <h2>Bienvenido</h2>
-              <p>Usa el correo y contrasena asignados por el administrador.</p>
-            </div>
-            <LoginForm />
-          </section>
-        ) : (
-          <SessionPanel user={user} />
-        )}
-      </section>
-
-      <section className="health-strip" aria-label="Estado del backend">
-        <span className={isOnline ? "health-dot health-dot--ok" : "health-dot"} />
-        <p>
-          <strong>{healthQuery.isError ? "API no disponible" : statusLabel}</strong>
-          <span>
-            {healthQuery.isError
-              ? " Revisa que apps/api este corriendo en el puerto 3001."
-              : ` ${healthQuery.data?.timestamp ?? "Esperando respuesta del backend."}`}
-          </span>
-        </p>
+        <section className="login-card" aria-label="Formulario de inicio de sesion">
+          <div className="login-card__header">
+            <p className="eyebrow">Ingreso</p>
+            <h2>Bienvenido</h2>
+            <p>Usa el correo y contrasena asignados por el administrador.</p>
+          </div>
+          <LoginForm onAuthenticated={onAuthenticated} />
+        </section>
       </section>
     </main>
+  );
+}
+
+type HomePageProps = {
+  user: AuthUser;
+  onLogoutSuccess: () => void;
+};
+
+function HomePage({ user, onLogoutSuccess }: HomePageProps) {
+  return (
+    <main className="home-shell">
+      <header className="home-topbar">
+        <BrandLockup />
+      </header>
+
+      <section className="home-layout" aria-label="Inicio">
+        <div className="home-heading">
+          <p className="eyebrow">Inicio</p>
+          <h1>{user.fullName}</h1>
+        </div>
+
+        <SessionPanel user={user} onLogoutSuccess={onLogoutSuccess} />
+      </section>
+    </main>
+  );
+}
+
+function SessionLoadingScreen() {
+  return (
+    <main className="auth-shell">
+      <section className="login-card login-card--loading" aria-busy="true">
+        <BrandLockup />
+        <p className="auth-loading__title">Validando sesion...</p>
+      </section>
+    </main>
+  );
+}
+
+function BrandLockup() {
+  return (
+    <div className="brand-lockup">
+      <span className="brand-lockup__mark" aria-hidden="true">
+        C
+      </span>
+      <span>Cuidarte</span>
+    </div>
   );
 }

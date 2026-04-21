@@ -4,16 +4,17 @@ import { useLogoutMutation } from "../model/auth-queries";
 
 type SessionPanelProps = {
   user: AuthUser;
+  onLogoutSuccess?: () => void;
 };
 
-export function SessionPanel({ user }: SessionPanelProps) {
+export function SessionPanel({ user, onLogoutSuccess }: SessionPanelProps) {
   const logoutMutation = useLogoutMutation();
 
   return (
-    <section className="session-panel" aria-label="Sesion activa">
+    <section className="session-panel" aria-label="Cuenta activa">
       <div>
-        <p className="eyebrow">Sesion activa</p>
-        <h2>{user.fullName}</h2>
+        <p className="eyebrow">Cuenta activa</p>
+        <h2>Sesion</h2>
         <p className="session-panel__meta">
           {user.email} · {formatRole(user.role)}
         </p>
@@ -33,7 +34,13 @@ export function SessionPanel({ user }: SessionPanelProps) {
         className="secondary-action"
         disabled={logoutMutation.isPending}
         type="button"
-        onClick={() => logoutMutation.mutate()}
+        onClick={() => {
+          logoutMutation.mutate(undefined, {
+            onSuccess: () => {
+              onLogoutSuccess?.();
+            },
+          });
+        }}
       >
         {logoutMutation.isPending ? "Cerrando..." : "Cerrar sesion"}
       </button>
