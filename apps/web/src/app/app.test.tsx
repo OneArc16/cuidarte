@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { App } from "./app";
@@ -15,6 +15,7 @@ describe("App auth routing", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
   it("rotates login slogans below the CuidarTe heading", async () => {
@@ -69,13 +70,32 @@ describe("App auth routing", () => {
     await user.click(screen.getByLabelText("Recordar contrasena"));
     await user.click(screen.getByRole("button", { name: "Iniciar sesion" }));
 
-    expect(await screen.findByRole("heading", { name: authUserFixture.fullName })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: authUserFixture.fullName }),
+    ).toBeInTheDocument();
     await waitFor(() => {
       expect(window.location.pathname).toBe("/home");
     });
     expect(window.localStorage.getItem("cuidarte.login.email")).toBe("admin@centro-demo.test");
-    expect(screen.getByText(/admin@centro-demo.test/)).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Cuenta activa" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("complementary", { name: "Menu principal de CuidarTe" }),
+    ).toBeInTheDocument();
+    const loggedUser = screen.getByRole("region", { name: "Usuario logueado" });
+
+    expect(loggedUser).toHaveTextContent(authUserFixture.fullName);
+    expect(loggedUser).toHaveTextContent("Admin de tenant");
+    expect(screen.getAllByText("CuidarTe")).not.toHaveLength(0);
+
+    const navigation = screen.getByRole("navigation", { name: "Modulos principales" });
+
+    expect(within(navigation).getByRole("button", { name: "Inicio" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expectBaseModules(navigation);
+    expect(
+      within(navigation).queryByRole("button", { name: "BackOffice" }),
+    ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Cerrar sesion" }));
 
@@ -104,4 +124,117 @@ describe("App auth routing", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Correo o contrasena incorrectos.");
   });
+
+  it("shows BackOffice in the sidebar for super admin users", async () => {
+    server.use(
+      http.post("http://localhost:3001/api/auth/login", () =>
+        HttpResponse.json({
+          user: {
+            ...authUserFixture,
+            id: "4c5b84e6-d88e-4f8a-93de-af2916d62f40",
+            tenantId: null,
+            email: "superadmin@cuidarte.test",
+            fullName: "Super Admin CuidarTe",
+            role: "super_admin",
+          },
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+
+    renderWithProviders(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Bienvenido" })).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Correo"), "superadmin@cuidarte.test");
+    await user.type(screen.getByLabelText("Contrasena"), "Cuidarte123!");
+    await user.click(screen.getByRole("button", { name: "Iniciar sesion" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Super Admin CuidarTe" }),
+    ).toBeInTheDocument();
+
+    const navigation = screen.getByRole("navigation", { name: "Modulos principales" });
+
+    expectBaseModules(navigation);
+    expect(within(navigation).getByRole("button", { name: "BackOffice" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Usuario logueado" })).toHaveTextContent(
+      "SuperAdmin",
+    );
+  });
+
+  it("uses a mobile bottom navigation with a more modules sheet", async () => {
+    vi.stubGlobal("matchMedia", createMatchMedia(true));
+    const user = userEvent.setup();
+
+    renderWithProviders(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Bienvenido" })).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Correo"), "admin@centro-demo.test");
+    await user.type(screen.getByLabelText("Contrasena"), "Cuidarte123!");
+    await user.click(screen.getByRole("button", { name: "Iniciar sesion" }));
+
+    expect(
+      await screen.findByRole("heading", { name: authUserFixture.fullName }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("complementary", { name: "Menu principal de CuidarTe" }),
+    ).not.toBeInTheDocument();
+
+    const mobileNavigation = screen.getByRole("navigation", { name: "Navegacion movil" });
+
+    ["Inicio", "Adultos mayores", "Sesiones grupales", "Creación de actividades"].forEach(
+      (moduleLabel) => {
+        expect(
+          within(mobileNavigation).getByRole("button", { name: moduleLabel }),
+        ).toBeInTheDocument();
+      },
+    );
+    expect(
+      within(mobileNavigation).queryByRole("button", { name: "Registro de alimentación" }),
+    ).not.toBeInTheDocument();
+
+    const moreButton = within(mobileNavigation).getByRole("button", { name: "Más" });
+
+    expect(moreButton).toHaveAttribute("aria-expanded", "false");
+    await user.click(moreButton);
+    expect(moreButton).toHaveAttribute("aria-expanded", "true");
+
+    const moreSheet = await screen.findByRole("dialog", { name: "Más módulos" });
+
+    expect(
+      within(moreSheet).getByRole("button", { name: "Registro de alimentación" }),
+    ).toBeInTheDocument();
+    expect(
+      within(moreSheet).getByRole("button", { name: "Gestión de empleados" }),
+    ).toBeInTheDocument();
+    expect(within(moreSheet).queryByRole("button", { name: "BackOffice" })).not.toBeInTheDocument();
+    expect(within(moreSheet).getByRole("button", { name: "Cerrar sesion" })).toBeInTheDocument();
+  });
 });
+
+function expectBaseModules(navigation: HTMLElement) {
+  [
+    "Inicio",
+    "Adultos mayores",
+    "Sesiones grupales",
+    "Creación de actividades",
+    "Registro de alimentación",
+    "Gestión de empleados",
+  ].forEach((moduleLabel) => {
+    expect(within(navigation).getByRole("button", { name: moduleLabel })).toBeInTheDocument();
+  });
+}
+
+function createMatchMedia(matches: boolean) {
+  return (query: string): MediaQueryList =>
+    ({
+      matches,
+      media: query,
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }) as MediaQueryList;
+}

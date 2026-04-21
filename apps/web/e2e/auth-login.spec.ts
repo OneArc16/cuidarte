@@ -27,9 +27,16 @@ test.describe("Auth + Login", () => {
     expect(loginResponse.status()).toBe(200);
 
     await expect(page).toHaveURL(/\/home$/);
-    await expect(page.getByRole("region", { name: "Cuenta activa" })).toBeVisible();
+    await expect(
+      page.getByRole("complementary", { name: "Menu principal de CuidarTe" }),
+    ).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Modulos principales" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Admin Centro Demo" })).toBeVisible();
-    await expect(page.getByText("admin@centro-demo.test")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Usuario logueado" })).toContainText(
+      "Admin de tenant",
+    );
+    await expect(page.getByRole("button", { name: "Adultos mayores" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "BackOffice" })).toBeHidden();
     await expect(page.getByText("Asignada por admin")).toBeVisible();
 
     const logoutResponsePromise = page.waitForResponse(
@@ -44,6 +51,8 @@ test.describe("Auth + Login", () => {
 
     await expect(page).toHaveURL(/\/login$/);
     await expect(page.getByRole("heading", { name: "Bienvenido" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Cuenta activa" })).toBeHidden();
+    await expect(
+      page.getByRole("complementary", { name: "Menu principal de CuidarTe" }),
+    ).toBeHidden();
   });
 });
