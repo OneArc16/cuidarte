@@ -5,7 +5,12 @@ import userEvent from "@testing-library/user-event";
 
 import { App } from "./app";
 import { renderWithProviders } from "../test/render-with-providers";
-import { authUserFixture, server } from "../test/test-server";
+import {
+  authUserFixture,
+  backofficeTenantDetailFixture,
+  server,
+  superAdminUserFixture,
+} from "../test/test-server";
 
 describe("App auth routing", () => {
   beforeEach(() => {
@@ -129,14 +134,7 @@ describe("App auth routing", () => {
     server.use(
       http.post("http://localhost:3001/api/auth/login", () =>
         HttpResponse.json({
-          user: {
-            ...authUserFixture,
-            id: "4c5b84e6-d88e-4f8a-93de-af2916d62f40",
-            tenantId: null,
-            email: "superadmin@cuidarte.test",
-            fullName: "Super Admin CuidarTe",
-            role: "super_admin",
-          },
+          user: superAdminUserFixture,
         }),
       ),
     );
@@ -159,6 +157,204 @@ describe("App auth routing", () => {
     expect(within(navigation).getByRole("button", { name: "BackOffice" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Usuario logueado" })).toHaveTextContent(
       "SuperAdmin",
+    );
+  });
+
+  it("redirects tenant admins away from BackOffice routes", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: authUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", "/backoffice");
+
+    renderWithProviders(<App />);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/home");
+    });
+    expect(await screen.findByRole("heading", { name: authUserFixture.fullName })).toBeInTheDocument();
+  });
+
+  it("shows the BackOffice tenant table for SuperAdmin users", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: superAdminUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", "/backoffice");
+
+    const { container } = renderWithProviders(<App />);
+
+    const backofficeTitle = await screen.findByRole("heading", { name: "Tenants" });
+
+    expect(backofficeTitle).toHaveClass("visually-hidden");
+    expect(container.querySelector(".backoffice-heading")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Nuevo tenant" })).toHaveClass(
+      "backoffice-floating-action",
+    );
+    expect(screen.getByRole("table")).toBeInTheDocument();
+    expect(await screen.findByText(backofficeTenantDetailFixture.tenant.name)).toBeInTheDocument();
+    expect(screen.getByText(backofficeTenantDetailFixture.owner.fullName)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: `Abrir ${backofficeTenantDetailFixture.tenant.name}` }),
+    ).toBeInTheDocument();
+  });
+
+  it("creates a tenant with its owner from BackOffice", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: superAdminUserFixture }),
+      ),
+    );
+    let createPayload: unknown = null;
+    server.use(
+      http.post("http://localhost:3001/api/backoffice/tenants", async ({ request }) => {
+        createPayload = await request.json();
+
+        return HttpResponse.json({
+          tenant: {
+            ...backofficeTenantDetailFixture.tenant,
+            id: "63c7aa4f-aee0-4a8e-90a3-4566cc4cc706",
+            name: "Centro Nuevo",
+          },
+          owner: {
+            ...backofficeTenantDetailFixture.owner,
+            tenantId: "63c7aa4f-aee0-4a8e-90a3-4566cc4cc706",
+            email: "propietario@centro-nuevo.test",
+            fullName: "Propietario Centro Nuevo",
+          },
+        });
+      }),
+      http.get("http://localhost:3001/api/backoffice/tenants/63c7aa4f-aee0-4a8e-90a3-4566cc4cc706", () =>
+        HttpResponse.json({
+          tenant: {
+            ...backofficeTenantDetailFixture.tenant,
+            id: "63c7aa4f-aee0-4a8e-90a3-4566cc4cc706",
+            name: "Centro Nuevo",
+          },
+          owner: {
+            ...backofficeTenantDetailFixture.owner,
+            tenantId: "63c7aa4f-aee0-4a8e-90a3-4566cc4cc706",
+            email: "propietario@centro-nuevo.test",
+            fullName: "Propietario Centro Nuevo",
+          },
+        }),
+      ),
+    );
+    window.history.replaceState({}, "", "/backoffice/tenants/new");
+    const user = userEvent.setup();
+
+    const { container } = renderWithProviders(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Nuevo tenant" })).toHaveClass(
+      "visually-hidden",
+    );
+    expect(container.querySelector(".backoffice-topbar")).not.toBeInTheDocument();
+    expect(
+      container.querySelector(".backoffice-form-nav .backoffice-back-action"),
+    ).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Volver" })).toHaveClass("backoffice-back-action");
+    await user.type(screen.getByLabelText("Nombre del centro"), "Centro Nuevo");
+    await user.type(screen.getByLabelText("Número de documento"), "901222333");
+    await user.type(screen.getByLabelText("Correo del centro"), "contacto@centro-nuevo.test");
+    await user.type(screen.getByLabelText("Teléfono"), "6015552233");
+    await user.type(screen.getByLabelText("Dirección"), "Carrera 12 # 34-56");
+    await user.type(screen.getByLabelText("Ciudad"), "Medellin");
+    await user.type(screen.getByLabelText("Departamento"), "Antioquia");
+    await user.type(screen.getByLabelText("Nombre completo"), "Propietario Centro Nuevo");
+    await user.type(screen.getByLabelText("Correo de acceso"), "propietario@centro-nuevo.test");
+    await user.type(screen.getByLabelText("Contraseña inicial"), "Cuidarte123!");
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/backoffice/tenants/63c7aa4f-aee0-4a8e-90a3-4566cc4cc706");
+    });
+    expect(createPayload).toMatchObject({
+      tenant: {
+        name: "Centro Nuevo",
+        documentType: "nit",
+        documentNumber: "901222333",
+        email: "contacto@centro-nuevo.test",
+      },
+      owner: {
+        fullName: "Propietario Centro Nuevo",
+        email: "propietario@centro-nuevo.test",
+      },
+    });
+  });
+
+  it("edits a tenant and can leave the owner password unchanged", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: superAdminUserFixture }),
+      ),
+    );
+    let updatePayload: unknown = null;
+    server.use(
+      http.patch("http://localhost:3001/api/backoffice/tenants/:tenantId", async ({ request }) => {
+        updatePayload = await request.json();
+
+        return HttpResponse.json({
+          tenant: {
+            ...backofficeTenantDetailFixture.tenant,
+            name: "Centro Demo Editado",
+          },
+          owner: backofficeTenantDetailFixture.owner,
+        });
+      }),
+    );
+    window.history.replaceState(
+      {},
+      "",
+      `/backoffice/tenants/${backofficeTenantDetailFixture.tenant.id}`,
+    );
+    const user = userEvent.setup();
+
+    renderWithProviders(<App />);
+
+    const nameInput = await screen.findByLabelText("Nombre del centro");
+
+    await user.clear(nameInput);
+    await user.type(nameInput, "Centro Demo Editado");
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Cambios guardados.");
+    expect(updatePayload).toMatchObject({
+      tenant: {
+        name: "Centro Demo Editado",
+      },
+      owner: {
+        email: backofficeTenantDetailFixture.owner.email,
+      },
+    });
+    expect((updatePayload as { owner?: { password?: unknown } }).owner?.password).toBeUndefined();
+  });
+
+  it("shows controlled conflict errors from BackOffice mutations", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: superAdminUserFixture }),
+      ),
+      http.post("http://localhost:3001/api/backoffice/tenants", () =>
+        HttpResponse.json({ message: "Ya existe un tenant con ese documento." }, { status: 409 }),
+      ),
+    );
+    window.history.replaceState({}, "", "/backoffice/tenants/new");
+    const user = userEvent.setup();
+
+    renderWithProviders(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Nuevo tenant" })).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Nombre del centro"), "Centro Repetido");
+    await user.type(screen.getByLabelText("Número de documento"), "900123456");
+    await user.type(screen.getByLabelText("Nombre completo"), "Propietario Repetido");
+    await user.type(screen.getByLabelText("Correo de acceso"), "propietario@repetido.test");
+    await user.type(screen.getByLabelText("Contraseña inicial"), "Cuidarte123!");
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Ya existe un tenant con ese documento.",
     );
   });
 

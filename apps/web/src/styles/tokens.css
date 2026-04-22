@@ -1,0 +1,105 @@
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+:root {
+  color: #085041;
+  background: #f8fbfa;
+  font-family:
+    "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", Inter, ui-sans-serif, system-ui,
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  --color-care: #1d9e75;
+  --color-deep: #085041;
+  --color-soft: #e1f5ee;
+  --color-amber: #faeeda;
+  --color-coral: #e96f5d;
+  --color-gold: #c98d2b;
+  --color-ink: #17352f;
+  --color-surface: #ffffff;
+  --color-page: #f8fbfa;
+  --color-border: #d6e4df;
+  --color-muted: #5d716b;
+  --color-danger: #8f2f2d;
+  --background: #f8fbfa;
+  --foreground: #17352f;
+  --card: #ffffff;
+  --card-foreground: #17352f;
+  --primary: #085041;
+  --primary-foreground: #ffffff;
+  --secondary: #e1f5ee;
+  --secondary-foreground: #085041;
+  --muted: #eef6f3;
+  --muted-foreground: #5d716b;
+  --accent: #faeeda;
+  --accent-foreground: #17352f;
+  --destructive: #8f2f2d;
+  --border: #d6e4df;
+  --input: #d6e4df;
+  --ring: #1d9e75;
+  --home-sidebar-expanded: 300px;
+  --home-sidebar-rail: 72px;
+  --shadow-soft: 0 24px 60px rgb(8 80 65 / 12%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid rgb(29 158 117 / 52%);
+  outline-offset: 3px;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1,
+h2 {
+  color: var(--color-deep);
+  overflow-wrap: anywhere;
+}
+
+.app-shell,
+.auth-shell,
+.home-shell {
+  min-height: 100vh;
+  background:
+    linear-gradient(135deg, rgb(225 245 238 / 88%), rgb(250 238 218 / 72%)), var(--color-page);
+}

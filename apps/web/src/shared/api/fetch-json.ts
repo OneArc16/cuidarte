@@ -3,7 +3,7 @@ import { type ZodSchema } from "zod";
 import { ApiError } from "./api-error";
 
 type FetchJsonOptions = {
-  method?: "GET" | "POST";
+  method?: "GET" | "PATCH" | "POST";
   body?: unknown;
 };
 
@@ -28,10 +28,38 @@ export async function fetchJson<T>(
   const response = await fetch(url, requestInit);
 
   if (!response.ok) {
-    throw new ApiError("No fue posible completar la solicitud.", response.status);
+    throw new ApiError(await resolveErrorMessage(response), response.status);
   }
 
   const data: unknown = await response.json();
 
   return schema.parse(data);
+}
+
+async function resolveErrorMessage(response: Response): Promise<string> {
+  try {
+    const data: unknown = await response.json();
+
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "message" in data &&
+      typeof data.message === "string"
+    ) {
+      return data.message;
+    }
+
+    if (
+      typeof data === "object" &&
+      data !== null &&
+      "message" in data &&
+      Array.isArray(data.message)
+    ) {
+      return data.message.join(" ");
+    }
+  } catch {
+    return "No fue posible completar la solicitud.";
+  }
+
+  return "No fue posible completar la solicitud.";
 }

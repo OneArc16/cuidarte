@@ -1,4 +1,5 @@
 import { hash } from "argon2";
+import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
@@ -13,26 +14,49 @@ const client = postgres(env.DATABASE_URL, {
 const db = drizzle(client);
 
 const seedPassword = process.env.SEED_PASSWORD ?? "Cuidarte123!";
+const demoTenantName = "Centro de Vida Demo";
+const demoTenantEmail = "contacto@centro-demo.test";
 
 async function seed(): Promise<void> {
   const passwordHash = await hash(seedPassword);
+  const [existingTenant] = await db
+    .select()
+    .from(tenants)
+    .where(eq(tenants.name, demoTenantName))
+    .limit(1);
 
-  const [tenant] = await db
-    .insert(tenants)
-    .values({
-      name: "Centro de Vida Demo",
-      slug: "centro-demo",
-      isActive: true,
-    })
-    .onConflictDoUpdate({
-      target: tenants.slug,
-      set: {
-        name: "Centro de Vida Demo",
-        isActive: true,
-        updatedAt: new Date(),
-      },
-    })
-    .returning();
+  const [tenant] =
+    existingTenant === undefined
+      ? await db
+          .insert(tenants)
+          .values({
+            name: demoTenantName,
+            documentType: "nit",
+            documentNumber: "900123456",
+            email: demoTenantEmail,
+            phone: "6015550101",
+            address: "Calle 10 # 20-30",
+            city: "Bogota",
+            department: "Cundinamarca",
+            isActive: true,
+          })
+          .returning()
+      : await db
+          .update(tenants)
+          .set({
+            name: demoTenantName,
+            documentType: "nit",
+            documentNumber: "900123456",
+            email: demoTenantEmail,
+            phone: "6015550101",
+            address: "Calle 10 # 20-30",
+            city: "Bogota",
+            department: "Cundinamarca",
+            isActive: true,
+            updatedAt: new Date(),
+          })
+          .where(eq(tenants.id, existingTenant.id))
+          .returning();
 
   if (tenant === undefined) {
     throw new Error("No fue posible crear el tenant demo.");

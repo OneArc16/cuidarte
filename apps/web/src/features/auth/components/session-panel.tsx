@@ -27,7 +27,9 @@ export function SessionPanel({ user, onLogoutSuccess }: SessionPanelProps) {
 
       <div className="session-panel__details">
         <span>Contrasena</span>
-        <strong>{user.passwordSetByAdmin ? "Asignada por admin" : "Actualizada por usuario"}</strong>
+        <strong>
+          {user.passwordSetByAdmin ? "Asignada por admin" : "Actualizada por usuario"}
+        </strong>
       </div>
 
       <button

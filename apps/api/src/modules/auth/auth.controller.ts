@@ -19,6 +19,7 @@ import { type FastifyReply, type FastifyRequest } from "fastify";
 import { parseZodSchema } from "../../common/parse-zod-schema";
 import { getEnv } from "../../config/env";
 import { AuthService } from "./auth.service";
+import { getSessionTokenFromRequest } from "./session-cookie";
 
 @ApiTags("auth")
 @Controller("auth")
@@ -50,7 +51,7 @@ export class AuthController {
   @Get("me")
   @ApiOkResponse({ description: "Usuario autenticado actual." })
   async me(@Req() request: FastifyRequest) {
-    const user = await this.authService.getCurrentUser(this.getSessionToken(request));
+    const user = await this.authService.getCurrentUser(getSessionTokenFromRequest(request));
 
     return meResponseSchema.parse({ user });
   }
@@ -62,31 +63,11 @@ export class AuthController {
     @Req() request: FastifyRequest,
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
-    await this.authService.logout(this.getSessionToken(request));
+    await this.authService.logout(getSessionTokenFromRequest(request));
 
     reply.header("Set-Cookie", this.buildExpiredSessionCookie());
 
     return logoutResponseSchema.parse({ success: true });
-  }
-
-  private getSessionToken(request: FastifyRequest): string | undefined {
-    const cookieHeader = request.headers.cookie;
-
-    if (cookieHeader === undefined) {
-      return undefined;
-    }
-
-    const cookieName = `${getEnv().SESSION_COOKIE_NAME}=`;
-    const cookie = cookieHeader
-      .split(";")
-      .map((part) => part.trim())
-      .find((part) => part.startsWith(cookieName));
-
-    if (cookie === undefined) {
-      return undefined;
-    }
-
-    return decodeURIComponent(cookie.slice(cookieName.length));
   }
 
   private getUserAgent(request: FastifyRequest): string | null {

@@ -132,9 +132,9 @@ No usar any salvo casos excepcionales, documentados y justificados.
 - Vite.
 - TypeScript.
 - TypeScript strict.
-- TanStack Router.
+- Rutas centralizadas en `app`.
 - TanStack Query.
-- Zustand.
+- Zustand solo cuando exista estado cliente realmente compartido.
 - React Hook Form.
 - Zod.
 
@@ -144,9 +144,113 @@ React y Vite permiten una aplicacion administrativa rapida, modular y mantenible
 
 TanStack Query manejara el server state, cache, invalidaciones, paginacion y mutaciones.
 
-Zustand se usara solamente para estado global de UI o estado cliente realmente compartido.
+Zustand se usara solamente para estado global de UI o estado cliente realmente compartido. No se usara para server state.
 
 React Hook Form y Zod se usaran para formularios tipados y validacion consistente.
+
+### Arquitectura Frontend Obligatoria
+
+El frontend debe seguir una arquitectura modular por feature, muy parecida a Feature-Sliced / Vertical Slice. No se usara MVC clasico ni Clean Architecture estricta en el frontend.
+
+La regla principal es:
+
+```txt
+Cada modulo del negocio vive en su propia carpeta dentro de features.
+La page compone y conecta.
+Los componentes renderizan UI.
+Los hooks encapsulan comportamiento reutilizable.
+La API habla con backend usando servicios compartidos.
+Los schemas validan formularios y contratos de entrada.
+Las utils/lib contienen logica pura.
+El store solo existe si el estado debe sobrevivir entre componentes o pantallas.
+shared solo recibe cosas realmente transversales.
+```
+
+Estructura base:
+
+```txt
+apps/web/src/
+  app/
+    components/
+    hooks/
+    routes/
+    app.tsx
+    providers.tsx
+    query-client.ts
+  components/
+    ui/
+  features/
+    auth/
+      api/
+      components/
+      lib/
+      model/
+      pages/
+      auth.css
+    backoffice/
+      api/
+      components/
+      lib/
+      model/
+      pages/
+      schemas/
+      backoffice.css
+    home/
+      components/
+      hooks/
+      lib/
+      pages/
+      home.css
+  shared/
+    api/
+  styles/
+    index.css
+    tokens.css
+    responsive.css
+  lib/
+    utils.ts
+```
+
+Para crear un modulo nuevo se debe usar esta estructura:
+
+```txt
+features/nuevo-modulo/
+  api/
+  components/
+  hooks/       si necesita comportamiento reutilizable
+  pages/
+  schemas/     si tiene formularios o validaciones locales
+  store/       solo si realmente necesita estado cliente persistente o compartido
+  lib/         formatters, utils puras, paths, filtros, reglas de presentacion
+  nuevo.css    solo si Tailwind no cubre bien un estilo especifico del feature
+  nuevo.types.ts
+```
+
+### Patrones Frontend
+
+- Page as orchestrator: las paginas coordinan datos, filtros, acciones, permisos y composicion visual.
+- Componentes por responsabilidad: componentes pequenos para UI especifica del feature.
+- API client por feature: cada feature tiene funciones API propias que usan el cliente HTTP compartido.
+- Server state con TanStack Query: datos remotos, loading, refetch, cache e invalidaciones.
+- Client state con Zustand solo cuando aplica: sesion UI, drafts o estado que cruza pantallas.
+- URL state para filtros importantes: si un filtro debe ser compartible o recargable, vive en query params.
+- Utils puras fuera de componentes: formateo, fechas, transformaciones y reglas de presentacion.
+- Schemas con Zod + React Hook Form: formularios tipados y validaciones por feature.
+- Composicion React antes que boolean props excesivos.
+
+### Reglas Para Evitar Codigo Espagueti
+
+- No crear archivos gigantes que mezclen page, componentes, iconos, helpers, schemas y estilos.
+- No crear `features/*/ui`. Esa carpeta pertenecia a la arquitectura anterior y no se seguira usando.
+- No crear barrels de compatibilidad en `features/*/ui`.
+- No importar componentes de negocio desde una capa `ui`; importar desde `features/<modulo>/components` o `features/<modulo>/pages`.
+- No escribir CSS puro extenso en un archivo global.
+- `styles/index.css` debe quedarse como entrada/importador de Tailwind y CSS modular.
+- Los estilos globales permitidos son tokens, reset/base y responsive transversal.
+- Los estilos especificos de un modulo viven junto al feature, por ejemplo `features/backoffice/backoffice.css`.
+- Para UI nueva se debe preferir Tailwind CSS + componentes de `components/ui`.
+- Si un componente se repite entre features, moverlo a `components/ui` o a `shared` solo cuando sea realmente transversal.
+- Si un helper crece o se reutiliza, sacarlo del componente hacia `lib`, `hooks` o `schemas`.
 
 ## UI Y Design System
 
@@ -158,7 +262,7 @@ React Hook Form y Zod se usaran para formularios tipados y validacion consistent
 - CVA, `class-variance-authority`.
 - Sonner.
 - Apache ECharts.
-- Phosphor Icons React.
+- Lucide React.
 - Motion for React.
 - Atkinson Hyperlegible Next.
 
@@ -190,6 +294,20 @@ Componentes iniciales esperados:
 - Form.
 
 No se usara el look default de shadcn/ui como identidad del producto.
+
+### Uso De Tailwind Y CSS
+
+Tailwind CSS es la estrategia principal para estilos nuevos. La intencion es reducir CSS manual repetitivo, evitar archivos enormes y disminuir el contexto que debe cargar cualquier agente de IA para cambios pequenos.
+
+Reglas:
+
+- Usar utilidades de Tailwind para layout, spacing, color, estado y responsive.
+- Usar `components/ui` para primitivos compartidos estilo shadcn: `Button`, `Input`, `Card`, `Badge`, etc.
+- Usar `cn()` desde `src/lib/utils.ts` para componer clases.
+- Usar CVA cuando un componente tenga variantes reales.
+- Usar CSS por feature solo para estilos complejos, temporales, heredados o muy especificos.
+- No volver al patron de un `index.css` monolitico con cientos o miles de lineas.
+- No duplicar componentes shadcn en cada feature; los primitivos viven en `components/ui`.
 
 ### Paleta Oficial
 

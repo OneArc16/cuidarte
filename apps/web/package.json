@@ -17,10 +17,17 @@
   "dependencies": {
     "@cuidarte/contracts": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@tailwindcss/vite": "^4.2.4",
     "@tanstack/react-query": "^5.87.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.8.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-hook-form": "^7.73.1",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss": "^4.2.4",
     "zod": "^4.3.6"
   },
   "devDependencies": {

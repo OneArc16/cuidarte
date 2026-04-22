@@ -1,0 +1,341 @@
+.backoffice-stack {
+  display: grid;
+  gap: clamp(10px, 1.8vw, 18px);
+  min-width: 0;
+}
+
+.backoffice-stack--index {
+  padding-bottom: 74px;
+}
+
+.backoffice-stack--form {
+  position: relative;
+  gap: 12px;
+  padding-top: 0;
+}
+
+.backoffice-topbar {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  padding: clamp(18px, 3.5vw, 38px) 0 16px;
+  border-bottom: 1px solid rgb(8 80 65 / 12%);
+}
+
+.backoffice-topbar h1 {
+  margin-bottom: 0;
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  line-height: 0.9;
+}
+
+.backoffice-topbar {
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.backoffice-back-action {
+  width: fit-content;
+  min-height: 40px;
+  padding: 0 12px 0 10px;
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 0 8px 18px rgb(8 80 65 / 7%);
+}
+
+.backoffice-form-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  padding: 0 2px;
+}
+
+.backoffice-form-nav__context {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.backoffice-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 420px) max-content;
+  gap: 10px;
+  align-items: end;
+}
+
+.search-field {
+  display: grid;
+  gap: 5px;
+}
+
+.search-field span {
+  color: var(--color-deep);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.search-field input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 86%);
+  color: var(--color-deep);
+  font-size: 0.86rem;
+}
+
+.status-segment {
+  display: inline-grid;
+  grid-template-columns: repeat(3, minmax(76px, 1fr));
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid rgb(8 80 65 / 12%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 80%);
+}
+
+.status-segment button {
+  min-height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.status-segment button[aria-pressed="true"] {
+  background: var(--color-deep);
+  color: white;
+}
+
+.backoffice-table-wrap {
+  overflow: auto;
+  border: 1px solid rgb(8 80 65 / 11%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 0 10px 28px rgb(8 80 65 / 6%);
+}
+
+.backoffice-table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.backoffice-table th,
+.backoffice-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid rgb(8 80 65 / 10%);
+  color: var(--color-ink);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.backoffice-table th {
+  background: rgb(225 245 238 / 48%);
+  color: var(--color-deep);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.backoffice-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.backoffice-table td strong,
+.backoffice-table td span {
+  display: block;
+}
+
+.backoffice-table td strong {
+  max-width: 190px;
+  color: var(--color-ink);
+  font-size: 0.84rem;
+  overflow-wrap: anywhere;
+}
+
+.backoffice-table td span {
+  margin-top: 2px;
+  color: var(--color-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.icon-action {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  place-items: center;
+  border: 1px solid rgb(8 80 65 / 13%);
+  background: white;
+  color: var(--color-deep);
+}
+
+.status-badge {
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  padding: 0 8px;
+  border: 1px solid rgb(143 47 45 / 16%);
+  border-radius: 999px;
+  background: #fff1f0;
+  color: var(--color-danger);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.status-badge--active {
+  border-color: rgb(29 158 117 / 20%);
+  background: var(--color-soft);
+  color: var(--color-deep);
+}
+
+.backoffice-empty {
+  display: grid;
+  max-width: 560px;
+  gap: 16px;
+  padding: clamp(22px, 4vw, 42px) 0;
+}
+
+.backoffice-empty h2 {
+  margin-bottom: 0;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 1;
+}
+
+.backoffice-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.9fr);
+  gap: 16px;
+  width: 100%;
+  max-width: none;
+}
+
+.form-panel {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid rgb(8 80 65 / 12%);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 92%), rgb(247 252 250 / 78%)), var(--color-surface);
+  box-shadow: 0 10px 26px rgb(8 80 65 / 5%);
+}
+
+.form-panel--tenant {
+  grid-column: 1;
+}
+
+.form-panel--owner {
+  grid-column: 2;
+}
+
+.form-panel__header h2 {
+  margin-bottom: 0;
+  font-size: clamp(1.45rem, 1.4vw, 1.8rem);
+  line-height: 1;
+}
+
+.form-panel__header .eyebrow {
+  margin-bottom: 6px;
+  font-size: 0.7rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.form-panel--owner .form-grid {
+  grid-template-columns: 1fr;
+}
+
+.backoffice-form .field-group {
+  gap: 6px;
+}
+
+.backoffice-form .field-group > span:first-child {
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.backoffice-form .field-group input,
+.backoffice-form .field-group select {
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 0.92rem;
+}
+
+.backoffice-form .password-field input {
+  padding-right: 50px;
+}
+
+.backoffice-form .password-visibility {
+  right: 5px;
+  width: 38px;
+  height: 38px;
+}
+
+.backoffice-form .password-visibility svg {
+  width: 18px;
+  height: 18px;
+}
+
+.switch-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  color: var(--color-deep);
+  font-size: 0.86rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.switch-field input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--color-care);
+}
+
+.form-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+
+.form-actions .primary-action {
+  min-width: 156px;
+  min-height: 44px;
+  padding: 0 18px;
+  font-size: 0.92rem;
+}
+
+.backoffice-form > .form-error {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  font-size: 0.84rem;
+}
+
+.success-banner {
+  margin-bottom: 0;
+  padding: 12px 14px;
+  border: 1px solid rgb(29 158 117 / 18%);
+  border-radius: 8px;
+  background: var(--color-soft);
+  color: var(--color-deep);
+  font-weight: 900;
+}

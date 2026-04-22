@@ -12,7 +12,7 @@
     "start:e2e": "nest build && node dist/main.js",
     "start": "node dist/main.js",
     "lint": "echo \"lint pendiente para @cuidarte/api\"",
-    "test": "echo \"tests pendientes para @cuidarte/api\"",
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
