@@ -105,6 +105,27 @@ export const empleadoFixture = {
   updatedAt: "2026-04-21T12:00:00.000Z",
 } as const;
 
+export const actividadGrupalFixture = {
+  id: "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
+  tenantId: backofficeTenantDetailFixture.tenant.id,
+  tenantName: backofficeTenantDetailFixture.tenant.name,
+  actaNumber: 4,
+  activityName: "Jornada psicomotriz",
+  activityType: "fisioterapia",
+  activityDate: "2026-04-23",
+  startTime: "08:30",
+  endTime: "10:00",
+  organizer: "fisioterapeuta",
+  involvedEmployeesCount: 1,
+  createdAt: "2026-04-23T12:00:00.000Z",
+  updatedAt: "2026-04-23T12:00:00.000Z",
+} as const;
+
+export const actividadGrupalFormOptionsFixture = {
+  nextActaNumber: 4,
+  empleados: [empleadoFixture],
+} as const;
+
 export const server = setupServer(
   http.get("http://localhost:3001/api/health", () =>
     HttpResponse.json({
@@ -157,6 +178,35 @@ export const server = setupServer(
   http.post("http://localhost:3001/api/empleados", () => HttpResponse.json(empleadoFixture)),
   http.patch("http://localhost:3001/api/empleados/:empleadoId", () =>
     HttpResponse.json(empleadoFixture),
+  ),
+  http.get("http://localhost:3001/api/actividades-grupales", ({ request }) => {
+    const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? null;
+    const activityType = new URL(request.url).searchParams.get("activityType");
+    const actividades = [actividadGrupalFixture].filter((actividad) => {
+      const matchesSearch =
+        search === null ||
+        [
+          String(actividad.actaNumber),
+          actividad.activityName,
+          actividad.activityType,
+          actividad.organizer,
+        ].some((value) => value.toLowerCase().includes(search));
+      const matchesActivityType =
+        activityType === null || activityType === "" || actividad.activityType === activityType;
+
+      return matchesSearch && matchesActivityType;
+    });
+
+    return HttpResponse.json({ actividadesGrupales: actividades });
+  }),
+  http.get("http://localhost:3001/api/actividades-grupales/tenant-options", () =>
+    HttpResponse.json({ tenants: [backofficeTenantDetailFixture.tenant] }),
+  ),
+  http.get("http://localhost:3001/api/actividades-grupales/form-options", () =>
+    HttpResponse.json(actividadGrupalFormOptionsFixture),
+  ),
+  http.post("http://localhost:3001/api/actividades-grupales", () =>
+    HttpResponse.json(actividadGrupalFixture),
   ),
   http.get(
     "http://localhost:3001/api/adultos-mayores/export/excel",

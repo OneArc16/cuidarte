@@ -7,6 +7,8 @@ import { App } from "./app";
 import { renderWithProviders } from "../test/render-with-providers";
 import {
   adultoMayorFixture,
+  actividadGrupalFixture,
+  actividadGrupalFormOptionsFixture,
   authUserFixture,
   backofficeTenantDetailFixture,
   empleadoFixture,
@@ -613,9 +615,9 @@ describe("App auth routing", () => {
     expect(screen.getByRole("button", { name: `Ver ${empleadoFixture.fullName}` })).toHaveClass(
       "empleados-row-action",
     );
-    expect(
-      screen.getByRole("button", { name: `Editar ${empleadoFixture.fullName}` }),
-    ).toHaveClass("empleados-row-action");
+    expect(screen.getByRole("button", { name: `Editar ${empleadoFixture.fullName}` })).toHaveClass(
+      "empleados-row-action",
+    );
     expect(screen.getByRole("button", { name: "Crear usuario" })).toHaveClass(
       "empleados-floating-action",
     );
@@ -781,6 +783,122 @@ describe("App auth routing", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("shows the activities list when navigating to Sesiones grupales", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: authUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", "/creacion-actividades");
+
+    renderWithProviders(<App />);
+
+    expect(await screen.findByRole("table")).toBeInTheDocument();
+    expect(await screen.findByText(actividadGrupalFixture.activityName)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Crear actividad" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: `Diligenciar actividad ${actividadGrupalFixture.activityName}`,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: `Descargar acta 0004`,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("filters the activities list by type", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: authUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", "/creacion-actividades");
+    const user = userEvent.setup();
+
+    renderWithProviders(<App />);
+
+    expect(await screen.findByText(actividadGrupalFixture.activityName)).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Tipo de actividad"), "nutricion");
+
+    await waitFor(() => {
+      expect(screen.queryByText(actividadGrupalFixture.activityName)).not.toBeInTheDocument();
+    });
+
+    await user.selectOptions(screen.getByLabelText("Tipo de actividad"), "fisioterapia");
+
+    expect(await screen.findByText(actividadGrupalFixture.activityName)).toBeInTheDocument();
+  });
+
+  it("creates an activity and returns to the list", async () => {
+    let createPayload: unknown = null;
+    let actividades: Record<string, unknown>[] = [
+      actividadGrupalFixture as unknown as Record<string, unknown>,
+    ];
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: authUserFixture }),
+      ),
+      http.get("http://localhost:3001/api/actividades-grupales", () =>
+        HttpResponse.json({ actividadesGrupales: actividades }),
+      ),
+      http.get("http://localhost:3001/api/actividades-grupales/form-options", () =>
+        HttpResponse.json({
+          ...actividadGrupalFormOptionsFixture,
+          nextActaNumber: 5,
+        }),
+      ),
+      http.post("http://localhost:3001/api/actividades-grupales", async ({ request }) => {
+        createPayload = await request.json();
+        actividades = [
+          {
+            ...actividadGrupalFixture,
+            id: "c6027793-39d5-4ff7-a531-65c0fd6ea24b",
+            actaNumber: 5,
+            activityName: "Actividad creada desde test",
+            activityType: "salud_preventiva",
+            activityDate: "2026-04-24",
+            startTime: "09:00",
+            endTime: "11:00",
+            organizer: "medico",
+          },
+        ];
+
+        return HttpResponse.json(actividades[0] ?? {});
+      }),
+    );
+    window.history.replaceState({}, "", "/creacion-actividades/new");
+    const user = userEvent.setup();
+
+    renderWithProviders(<App />);
+
+    expect(await screen.findByLabelText("Numero de acta")).toHaveValue("0005");
+    await user.type(screen.getByLabelText("Nombre de la actividad"), "Actividad creada desde test");
+    await user.selectOptions(screen.getByLabelText("Tipo de actividad"), "salud_preventiva");
+    await user.type(screen.getByLabelText("Fecha de la actividad"), "2026-04-24");
+    await user.type(screen.getByLabelText("Hora de inicio"), "09:00");
+    await user.type(screen.getByLabelText("Hora final"), "11:00");
+    await user.selectOptions(screen.getByLabelText("Organizador"), "medico");
+    await user.click(screen.getByRole("checkbox", { name: /Laura Natalia Perez Ruiz/i }));
+    await user.click(screen.getByRole("button", { name: "Guardar actividad" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/creacion-actividades");
+    });
+    expect(await screen.findByText("Actividad creada desde test")).toBeInTheDocument();
+    expect(createPayload).toMatchObject({
+      tenantId: null,
+      activityName: "Actividad creada desde test",
+      activityType: "salud_preventiva",
+      activityDate: "2026-04-24",
+      startTime: "09:00",
+      endTime: "11:00",
+      organizer: "medico",
+      employeeIds: [empleadoFixture.id],
+    });
+  });
+
   it("uses a mobile bottom navigation with a more modules sheet", async () => {
     vi.stubGlobal("matchMedia", createMatchMedia(true));
     const user = userEvent.setup();
@@ -801,13 +919,14 @@ describe("App auth routing", () => {
 
     const mobileNavigation = screen.getByRole("navigation", { name: "Navegacion movil" });
 
-    ["Inicio", "Adultos mayores", "Sesiones grupales", "Creación de actividades"].forEach(
-      (moduleLabel) => {
-        expect(
-          within(mobileNavigation).getByRole("button", { name: moduleLabel }),
-        ).toBeInTheDocument();
-      },
-    );
+    ["Inicio", "Adultos mayores", "Sesiones grupales"].forEach((moduleLabel) => {
+      expect(
+        within(mobileNavigation).getByRole("button", { name: moduleLabel }),
+      ).toBeInTheDocument();
+    });
+    expect(
+      within(mobileNavigation).queryByRole("button", { name: "Creación de actividades" }),
+    ).not.toBeInTheDocument();
     expect(
       within(mobileNavigation).queryByRole("button", { name: "Registro de alimentación" }),
     ).not.toBeInTheDocument();
@@ -836,12 +955,14 @@ function expectBaseModules(navigation: HTMLElement) {
     "Inicio",
     "Adultos mayores",
     "Sesiones grupales",
-    "Creación de actividades",
     "Registro de alimentación",
     "Gestión de empleados",
   ].forEach((moduleLabel) => {
     expect(within(navigation).getByRole("button", { name: moduleLabel })).toBeInTheDocument();
   });
+  expect(
+    within(navigation).queryByRole("button", { name: "Creación de actividades" }),
+  ).not.toBeInTheDocument();
 }
 
 function createMatchMedia(matches: boolean) {

@@ -4,6 +4,7 @@ import {
   index,
   integer,
   jsonb,
+  primaryKey,
   pgEnum,
   pgTable,
   text,
@@ -34,6 +35,27 @@ export const adultoMayorDocumentType = pgEnum("adulto_mayor_document_type", [
   "other",
 ]);
 export const adultoMayorSex = pgEnum("adulto_mayor_sex", ["female", "male", "other"]);
+export const actividadGrupalType = pgEnum("actividad_grupal_type", [
+  "centro_vida",
+  "actividad_campo",
+  "sesiones_psicosocial",
+  "salud_preventiva",
+  "nutricion",
+  "fisioterapia",
+  "encuentro_intergeneracional",
+  "actividades_manualidad",
+  "actividades_recreacion",
+]);
+export const actividadGrupalOrganizer = pgEnum("actividad_grupal_organizer", [
+  "director",
+  "medico",
+  "enfermeria",
+  "psicologa",
+  "trabajadora_social",
+  "nutricionista",
+  "fisioterapeuta",
+  "recreacionista",
+]);
 
 export const tenants = pgTable(
   "tenants",
@@ -153,6 +175,64 @@ export const adultosMayores = pgTable(
     index("adultos_mayores_tenant_id_idx").on(table.tenantId),
     index("adultos_mayores_names_idx").on(table.names),
     index("adultos_mayores_surnames_idx").on(table.surnames),
+  ],
+);
+
+export const actividadGrupalActaCounters = pgTable(
+  "actividad_grupal_acta_counters",
+  {
+    tenantId: uuid("tenant_id")
+      .primaryKey()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    lastValue: integer("last_value").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("actividad_grupal_acta_counters_updated_at_idx").on(table.updatedAt)],
+);
+
+export const actividadesGrupales = pgTable(
+  "actividades_grupales",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    actaNumber: integer("acta_number").notNull(),
+    activityName: varchar("activity_name", { length: 160 }).notNull(),
+    activityType: actividadGrupalType("activity_type").notNull(),
+    activityDate: date("activity_date", { mode: "string" }).notNull(),
+    startTime: varchar("start_time", { length: 5 }).notNull(),
+    endTime: varchar("end_time", { length: 5 }).notNull(),
+    organizer: actividadGrupalOrganizer("organizer").notNull(),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("actividades_grupales_tenant_acta_unique").on(table.tenantId, table.actaNumber),
+    index("actividades_grupales_tenant_date_idx").on(table.tenantId, table.activityDate),
+    index("actividades_grupales_created_by_user_idx").on(table.createdByUserId),
+  ],
+);
+
+export const actividadGrupalEmpleados = pgTable(
+  "actividad_grupal_empleados",
+  {
+    activityId: uuid("activity_id")
+      .notNull()
+      .references(() => actividadesGrupales.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+  },
+  (table) => [
+    primaryKey({
+      name: "actividad_grupal_empleados_pk",
+      columns: [table.activityId, table.employeeId],
+    }),
+    index("actividad_grupal_empleados_employee_idx").on(table.employeeId),
   ],
 );
 

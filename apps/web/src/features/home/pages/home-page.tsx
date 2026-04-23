@@ -3,6 +3,8 @@ import { type AuthUser } from "@cuidarte/contracts";
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { AdultosMayoresPage } from "@/features/adultos-mayores/pages/adultos-mayores-page";
 import { isAdultosMayoresPath } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
+import { ActividadesGrupalesPage } from "@/features/actividades-grupales/pages/actividades-grupales-page";
+import { isActividadesGrupalesPath } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
 import { BackofficePage } from "@/features/backoffice/pages/backoffice-page";
 import { isBackofficePath } from "@/features/backoffice/lib/backoffice-paths";
 import { EmpleadosPage } from "@/features/empleados/pages/empleados-page";
@@ -28,9 +30,11 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
     ? "backoffice"
     : isAdultosMayoresPath(path)
       ? "adultos-mayores"
-      : isEmpleadosPath(path)
-        ? "gestion-empleados"
-        : "inicio";
+      : isActividadesGrupalesPath(path)
+        ? "sesiones-grupales"
+        : isEmpleadosPath(path)
+          ? "gestion-empleados"
+          : "inicio";
 
   return (
     <main className="home-shell">
@@ -50,15 +54,19 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
             ? undefined
             : isAdultosMayoresPath(path)
               ? "adultos-mayores-title"
-              : isEmpleadosPath(path)
-                ? "empleados-title"
-              : "home-title"
+              : isActividadesGrupalesPath(path)
+                ? "actividades-title"
+                : isEmpleadosPath(path)
+                  ? "empleados-title"
+                  : "home-title"
         }
       >
         {isBackofficePath(path) ? (
           <BackofficePage path={path} navigate={navigate} />
         ) : isAdultosMayoresPath(path) ? (
           <AdultosMayoresPage path={path} navigate={navigate} user={user} />
+        ) : isActividadesGrupalesPath(path) ? (
+          <ActividadesGrupalesPage path={path} navigate={navigate} user={user} />
         ) : isEmpleadosPath(path) ? (
           <EmpleadosPage path={path} navigate={navigate} user={user} />
         ) : (

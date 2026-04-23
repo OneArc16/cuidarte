@@ -37,9 +37,7 @@ test.describe("Auth + Login", () => {
     ).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Modulos principales" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Admin Centro Demo" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Usuario logueado" })).toContainText(
-      "Admin",
-    );
+    await expect(page.getByRole("region", { name: "Usuario logueado" })).toContainText("Admin");
     await expect(page.getByRole("button", { name: "Adultos mayores" })).toBeVisible();
     await expect(page.getByRole("button", { name: "BackOffice" })).toBeHidden();
     await expect(page.getByText("Asignada por admin")).toBeVisible();
@@ -116,5 +114,33 @@ test.describe("Auth + Login", () => {
 
     await expect(page.getByRole("status")).toContainText("Cambios guardados.");
     await expect(page.getByRole("heading", { name: editedTenantName })).toBeVisible();
+  });
+
+  test("permite a un admin crear una actividad grupal", async ({ page }) => {
+    const runId = Date.now();
+    const activityName = `Actividad E2E ${runId}`;
+
+    await page.goto("/login");
+    await page.getByLabel("Correo").fill(adminCredentials.email);
+    await page.getByLabel("Contrasena").fill(adminCredentials.password);
+    await page.getByRole("button", { name: "Iniciar sesion" }).click();
+
+    await expect(page).toHaveURL(/\/home$/);
+    await page.getByRole("button", { name: "Creación de actividades" }).click();
+    await expect(page).toHaveURL(/\/creacion-actividades$/);
+    await expect(page.getByRole("table")).toBeVisible();
+
+    await page.getByRole("button", { name: "Crear actividad" }).click();
+    await expect(page).toHaveURL(/\/creacion-actividades\/new$/);
+
+    await page.getByLabel("Nombre de la actividad").fill(activityName);
+    await page.getByLabel("Fecha de la actividad").fill("2026-04-24");
+    await page.getByLabel("Hora de inicio").fill("09:00");
+    await page.getByLabel("Hora final").fill("11:00");
+    await page.getByRole("checkbox").first().check();
+    await page.getByRole("button", { name: "Guardar actividad" }).click();
+
+    await expect(page).toHaveURL(/\/creacion-actividades$/);
+    await expect(page.getByText(activityName)).toBeVisible();
   });
 });

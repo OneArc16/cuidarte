@@ -3,7 +3,6 @@ import {
   BriefcaseBusiness,
   CalendarPlus,
   Home,
-  MessageSquareText,
   UserRoundCog,
   UsersRound,
   Utensils,
@@ -11,6 +10,7 @@ import {
 import { type ReactNode } from "react";
 
 import { ADULTOS_MAYORES_PATH } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
+import { CREACION_ACTIVIDADES_PATH } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
 import { BACKOFFICE_PATH } from "@/features/backoffice/lib/backoffice-paths";
 import { EMPLEADOS_PATH } from "@/features/empleados/lib/empleados-paths";
 import { HOME_PATH } from "@/app/routes/paths";
@@ -39,12 +39,8 @@ export const HOME_MODULES = [
   {
     id: "sesiones-grupales",
     label: "Sesiones grupales",
-    icon: <MessageSquareText />,
-  },
-  {
-    id: "creacion-actividades",
-    label: "Creación de actividades",
     icon: <CalendarPlus />,
+    path: CREACION_ACTIVIDADES_PATH,
   },
   {
     id: "registro-alimentacion",
@@ -71,7 +67,6 @@ const MOBILE_PRIMARY_MODULE_IDS = [
   "inicio",
   "adultos-mayores",
   "sesiones-grupales",
-  "creacion-actividades",
 ] as const;
 
 export function canViewModule(module: HomeModule, role: AuthUser["role"]): boolean {

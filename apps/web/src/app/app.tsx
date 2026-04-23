@@ -4,6 +4,7 @@ import { SessionLoadingScreen } from "./components/session-loading-screen";
 import { useAppNavigation } from "./hooks/use-app-navigation";
 import { HOME_PATH, LOGIN_PATH } from "./routes/paths";
 import { isAdultosMayoresPath } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
+import { isActividadesGrupalesPath } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
 import { LoginPage } from "@/features/auth/pages/login-page";
 import { useCurrentUserQuery } from "@/features/auth/model/auth-queries";
 import { HomePage } from "@/features/home/pages/home-page";
@@ -38,10 +39,16 @@ export function App() {
       return;
     }
 
+    if (isActividadesGrupalesPath(path) && user.role !== "super_admin" && user.tenantId === null) {
+      navigate(HOME_PATH, { replace: true });
+      return;
+    }
+
     if (
       path !== HOME_PATH &&
       !isBackofficePath(path) &&
       !isAdultosMayoresPath(path) &&
+      !isActividadesGrupalesPath(path) &&
       !isEmpleadosPath(path)
     ) {
       navigate(HOME_PATH, { replace: true });
@@ -53,12 +60,14 @@ export function App() {
       user === null
         ? "Iniciar sesion | CuidarTe"
         : isBackofficePath(path)
-        ? "BackOffice | CuidarTe"
-        : isAdultosMayoresPath(path)
-          ? "Adultos mayores | CuidarTe"
-          : isEmpleadosPath(path)
-            ? "Gestion de empleados | CuidarTe"
-            : "Inicio | CuidarTe";
+          ? "BackOffice | CuidarTe"
+          : isAdultosMayoresPath(path)
+            ? "Adultos mayores | CuidarTe"
+            : isActividadesGrupalesPath(path)
+              ? "Sesiones grupales | CuidarTe"
+              : isEmpleadosPath(path)
+                ? "Gestion de empleados | CuidarTe"
+                : "Inicio | CuidarTe";
   }, [path, user]);
 
   if (currentUserQuery.isLoading) {
