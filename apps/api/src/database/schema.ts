@@ -1,5 +1,6 @@
 import {
   boolean,
+  date,
   index,
   integer,
   jsonb,
@@ -15,6 +16,13 @@ import { sql } from "drizzle-orm";
 
 export const userRole = pgEnum("user_role", ["super_admin", "tenant_admin", "employee"]);
 export const tenantDocumentType = pgEnum("tenant_document_type", ["nit", "cc", "ce"]);
+export const adultoMayorDocumentType = pgEnum("adulto_mayor_document_type", [
+  "cc",
+  "ce",
+  "passport",
+  "other",
+]);
+export const adultoMayorSex = pgEnum("adulto_mayor_sex", ["female", "male", "other"]);
 
 export const tenants = pgTable(
   "tenants",
@@ -66,6 +74,61 @@ export const users = pgTable(
       .on(table.tenantId)
       .where(sql`${table.role} = 'tenant_admin' and ${table.tenantId} is not null`),
     index("users_tenant_id_idx").on(table.tenantId),
+  ],
+);
+
+export const adultosMayores = pgTable(
+  "adultos_mayores",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    documentType: adultoMayorDocumentType("document_type").notNull(),
+    documentNumber: varchar("document_number", { length: 80 }).notNull(),
+    names: varchar("names", { length: 180 }).notNull(),
+    surnames: varchar("surnames", { length: 180 }).notNull(),
+    firstName: varchar("first_name", { length: 80 }).notNull(),
+    middleName: varchar("middle_name", { length: 80 }),
+    firstSurname: varchar("first_surname", { length: 80 }).notNull(),
+    secondSurname: varchar("second_surname", { length: 80 }),
+    educationLevel: varchar("education_level", { length: 80 }),
+    disability: varchar("disability", { length: 120 }),
+    populationGroup: varchar("population_group", { length: 120 }),
+    address: varchar("address", { length: 220 }).notNull(),
+    department: varchar("department", { length: 100 }).notNull(),
+    municipality: varchar("municipality", { length: 100 }).notNull(),
+    zone: varchar("zone", { length: 20 }).notNull(),
+    country: varchar("country", { length: 80 }).notNull().default("Colombia"),
+    phone: varchar("phone", { length: 40 }),
+    phoneSecondary: varchar("phone_secondary", { length: 40 }),
+    email: varchar("email", { length: 320 }),
+    emergencyContactFullName: varchar("emergency_contact_full_name", { length: 180 }),
+    emergencyContactRelationship: varchar("emergency_contact_relationship", { length: 80 }),
+    emergencyContactPhone: varchar("emergency_contact_phone", { length: 40 }),
+    emergencyContactAddress: varchar("emergency_contact_address", { length: 220 }),
+    bloodType: varchar("blood_type", { length: 20 }),
+    sisben: varchar("sisben", { length: 40 }),
+    healthRegime: varchar("health_regime", { length: 40 }),
+    eps: varchar("eps", { length: 160 }),
+    livesWithSomeone: boolean("lives_with_someone").notNull().default(false),
+    companion: varchar("companion", { length: 160 }),
+    economicIncome: integer("economic_income"),
+    socialProgramBeneficiary: boolean("social_program_beneficiary").notNull().default(false),
+    birthDate: date("birth_date", { mode: "string" }).notNull(),
+    sex: adultoMayorSex("sex").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("adultos_mayores_tenant_document_unique").on(
+      table.tenantId,
+      table.documentType,
+      table.documentNumber,
+    ),
+    index("adultos_mayores_tenant_id_idx").on(table.tenantId),
+    index("adultos_mayores_names_idx").on(table.names),
+    index("adultos_mayores_surnames_idx").on(table.surnames),
   ],
 );
 

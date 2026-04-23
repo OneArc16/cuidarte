@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { type ReactNode } from "react";
 
+import { ADULTOS_MAYORES_PATH } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
 import { BACKOFFICE_PATH } from "@/features/backoffice/lib/backoffice-paths";
 import { HOME_PATH } from "@/app/routes/paths";
 
@@ -32,6 +33,7 @@ export const HOME_MODULES = [
     id: "adultos-mayores",
     label: "Adultos mayores",
     icon: <UsersRound />,
+    path: ADULTOS_MAYORES_PATH,
   },
   {
     id: "sesiones-grupales",

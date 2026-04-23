@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { SessionLoadingScreen } from "./components/session-loading-screen";
 import { useAppNavigation } from "./hooks/use-app-navigation";
 import { HOME_PATH, LOGIN_PATH } from "./routes/paths";
+import { isAdultosMayoresPath } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
 import { LoginPage } from "@/features/auth/pages/login-page";
 import { useCurrentUserQuery } from "@/features/auth/model/auth-queries";
 import { HomePage } from "@/features/home/pages/home-page";
@@ -31,7 +32,7 @@ export function App() {
       return;
     }
 
-    if (path !== HOME_PATH && !isBackofficePath(path)) {
+    if (path !== HOME_PATH && !isBackofficePath(path) && !isAdultosMayoresPath(path)) {
       navigate(HOME_PATH, { replace: true });
     }
   }, [currentUserQuery.isLoading, navigate, path, user]);
@@ -42,7 +43,9 @@ export function App() {
         ? "Iniciar sesion | CuidarTe"
         : isBackofficePath(path)
           ? "BackOffice | CuidarTe"
-          : "Inicio | CuidarTe";
+          : isAdultosMayoresPath(path)
+            ? "Adultos mayores | CuidarTe"
+            : "Inicio | CuidarTe";
   }, [path, user]);
 
   if (currentUserQuery.isLoading) {

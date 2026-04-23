@@ -372,6 +372,127 @@ Es una buena eleccion para mantener todo el stack en TypeScript y organizar bien
 
 Fastify se usara por rendimiento y menor overhead frente a Express.
 
+### Arquitectura Backend Por Modulo
+
+El backend seguira una arquitectura modular por dominio, con capas internas por modulo en los dominios operativos principales. No sera MVC puro. La referencia arquitectonica sera una mezcla pragmatica de:
+
+- Modular Monolith.
+- Clean Architecture ligera.
+- Hexagonal / Ports and Adapters.
+- Service Layer.
+- Repository Pattern.
+- DTO + Controller Pattern usando contratos Zod compartidos.
+- Guards + Decorators para auth, RBAC y policies.
+
+La estructura base para modulos grandes sera:
+
+```txt
+apps/api/src/modules/adultos-mayores/
+  application/
+  domain/
+  infrastructure/
+  presentation/
+  adultos-mayores.module.ts
+```
+
+Responsabilidades:
+
+- `presentation`: controllers, validacion de entrada, lectura del usuario actual, parametros HTTP y respuestas. No debe contener logica de negocio.
+- `application`: casos de uso y servicios de aplicacion. Aplica reglas de negocio, coordina transacciones, auditoria y llamadas a repositorios.
+- `domain`: contratos, tipos, puertos de repositorio, reglas puras y policies propias del modulo.
+- `infrastructure`: adaptadores tecnicos. Principalmente implementaciones Drizzle de los repositorios y acceso a PostgreSQL.
+- `module.ts`: composicion de dependencias NestJS, providers, controllers, imports y exports.
+
+El flujo normal de un modulo operativo sera:
+
+```txt
+HTTP Request
+-> Controller
+-> Guards / Decorators / Policies
+-> Application Service / Use Case
+-> Repository Port
+-> Drizzle Repository
+-> PostgreSQL + RLS
+```
+
+Reglas del backend:
+
+- Los controllers deben ser delgados: validar entrada, resolver contexto y llamar casos de uso.
+- La logica de negocio vive en `application`, no en controllers.
+- Los services de aplicacion no deben depender directamente de detalles HTTP.
+- En modulos operativos, los services deben depender de puertos/contratos de repositorio, no directamente de Drizzle.
+- Drizzle debe quedarse en `infrastructure`, salvo excepciones pragmaticas para query services analiticos.
+- Los contratos compartidos de entrada/salida viven en `packages/contracts` con Zod.
+- La validacion de entrada seguira usando Zod y `parseZodSchema`, o un pipe/decorator propio si el patron se repite demasiado.
+- Todo modulo multi-tenant debe operar con `tenantId` desde el contexto autenticado, salvo flujos SuperAdmin explicitamente definidos.
+- Las operaciones sensibles deben generar auditoria desde los casos de uso.
+- La autorizacion debe combinar guards/decorators con policies de dominio cuando la regla dependa del estado del recurso.
+
+### Tipos De Modulos Backend
+
+No todos los modulos necesitan el mismo nivel de capas. La arquitectura sera proporcional al riesgo y complejidad del dominio.
+
+Modulos simples o transversales:
+
+```txt
+Controller -> Service -> Drizzle
+```
+
+Aplica para modulos pequenos como `health` o utilidades internas de bajo riesgo.
+
+Modulos operativos principales:
+
+```txt
+Controller -> Application Service -> Repository Port -> Drizzle Repository
+```
+
+Aplica para:
+
+- Adultos Mayores.
+- Gestion de Empleados.
+- Sesiones Grupales.
+- Registro de Alimentacion.
+- Configuracion por tenant.
+- RBAC dinamico.
+
+Estos modulos contienen reglas de negocio, datos sensibles, aislamiento multi-tenant, auditoria y permisos; por eso deben usar puertos de repositorio y separacion clara de responsabilidades.
+
+Modulos analiticos, reportes y dashboards:
+
+```txt
+Controller -> Query/Application Service -> Drizzle
+```
+
+En reportes, metricas, dashboards y exportaciones se permite acceso directo a Drizzle desde query services, porque suelen requerir agregaciones, `group by`, filtros dinamicos y calculos que no siempre representan una entidad transaccional simple. Crear repositorios para cada metrica puede meter mas complejidad que valor.
+
+### Modulo De Adultos Mayores
+
+El modulo de Adultos Mayores sera el primer modulo operativo grande que debe seguir la arquitectura por capas. Su estructura inicial recomendada sera:
+
+```txt
+apps/api/src/modules/adultos-mayores/
+  application/
+    adultos-mayores.service.ts
+  domain/
+    adultos-mayores.repository.ts
+    adulto-mayor.policy.ts
+    adulto-mayor.types.ts
+  infrastructure/
+    drizzle-adultos-mayores.repository.ts
+  presentation/
+    adultos-mayores.controller.ts
+  adultos-mayores.module.ts
+```
+
+El modulo debe nacer con:
+
+- Filtro obligatorio por `tenantId`.
+- Permisos tipo `adultos.read`, `adultos.create`, `adultos.update` y `adultos.delete`.
+- Reglas de auditoria para altas, cambios sensibles, activacion/inactivacion y eliminaciones logicas si aplican.
+- Repositorio Drizzle encapsulado en `infrastructure`.
+- Contratos Zod en `packages/contracts`.
+- Tests prioritarios para aislamiento multi-tenant, permisos y reglas criticas.
+
 ## Base De Datos
 
 ### Stack De Datos
@@ -546,6 +667,10 @@ Modulos iniciales:
 - Clean Architecture ligera.
 - Vertical Slice Architecture.
 - Domain-driven boundaries por modulo.
+- Ports and Adapters pragmatico en modulos operativos.
+- Repository Pattern para dominios transaccionales y sensibles.
+- Query/Application Services directos a Drizzle para reportes, metricas y dashboards.
+- Controllers delgados y services de aplicacion con reglas de negocio.
 - Policy-based authorization.
 - Database-first security para multi-tenancy con RLS.
 

@@ -1,6 +1,8 @@
 import { type AuthUser } from "@cuidarte/contracts";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
+import { AdultosMayoresPage } from "@/features/adultos-mayores/pages/adultos-mayores-page";
+import { isAdultosMayoresPath } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
 import { BackofficePage } from "@/features/backoffice/pages/backoffice-page";
 import { isBackofficePath } from "@/features/backoffice/lib/backoffice-paths";
 
@@ -20,7 +22,11 @@ type HomePageProps = {
 
 export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProps) {
   const isMobileViewport = useMediaQuery(MOBILE_HOME_QUERY);
-  const activeModuleId = isBackofficePath(path) ? "backoffice" : "inicio";
+  const activeModuleId = isBackofficePath(path)
+    ? "backoffice"
+    : isAdultosMayoresPath(path)
+      ? "adultos-mayores"
+      : "inicio";
 
   return (
     <main className="home-shell">
@@ -35,10 +41,18 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
 
       <section
         className="home-workspace"
-        aria-labelledby={isBackofficePath(path) ? undefined : "home-title"}
+        aria-labelledby={
+          isBackofficePath(path)
+            ? undefined
+            : isAdultosMayoresPath(path)
+              ? "adultos-mayores-title"
+              : "home-title"
+        }
       >
         {isBackofficePath(path) ? (
           <BackofficePage path={path} navigate={navigate} />
+        ) : isAdultosMayoresPath(path) ? (
+          <AdultosMayoresPage path={path} navigate={navigate} user={user} />
         ) : (
           <HomeDashboard user={user} />
         )}
