@@ -1,0 +1,491 @@
+.empleados-stack {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding-bottom: 74px;
+}
+
+.empleados-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 460px);
+  gap: 12px;
+  align-items: end;
+}
+
+.empleados-search {
+  display: grid;
+  gap: 5px;
+}
+
+.empleados-search span {
+  color: var(--color-deep);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.empleados-search__control {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  min-height: 40px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 0 10px 24px rgb(8 80 65 / 5%);
+}
+
+.empleados-search__control svg {
+  justify-self: center;
+  width: 18px;
+  height: 18px;
+  color: var(--color-care);
+}
+
+.empleados-search__control input {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 10px 0 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-deep);
+  font-size: 0.88rem;
+  outline: 0;
+}
+
+.empleados-table-wrap {
+  overflow: auto;
+  border: 1px solid rgb(8 80 65 / 11%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 90%);
+  box-shadow: 0 12px 30px rgb(8 80 65 / 6%);
+}
+
+.empleados-table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.empleados-table th,
+.empleados-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgb(8 80 65 / 10%);
+  color: var(--color-ink);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.empleados-table th {
+  background: rgb(225 245 238 / 52%);
+  color: var(--color-deep);
+  font-size: 0.68rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.empleados-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.empleados-table td strong {
+  display: block;
+  max-width: 220px;
+  color: var(--color-ink);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.empleado-status-badge {
+  display: inline-grid;
+  min-width: 72px;
+  min-height: 28px;
+  place-items: center;
+  padding: 0 10px;
+  border: 1px solid rgb(8 80 65 / 13%);
+  border-radius: 999px;
+  color: var(--color-deep);
+  font-size: 0.74rem;
+  font-weight: 900;
+  background: var(--color-soft);
+}
+
+.empleado-status-badge[data-state="inactive"] {
+  border-color: rgb(143 47 45 / 20%);
+  background: rgb(250 238 218 / 72%);
+  color: rgb(112 55 34);
+}
+
+.empleados-row-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.empleados-row-action {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  place-items: center;
+  border: 1px solid rgb(8 80 65 / 13%);
+  border-radius: 8px;
+  background: white;
+  color: var(--color-deep);
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.empleados-row-action:hover,
+.empleados-row-action:focus-visible {
+  border-color: rgb(29 158 117 / 28%);
+  background: var(--color-soft);
+  color: var(--color-deep);
+  transform: translateY(-1px);
+}
+
+.empleados-row-action svg {
+  width: 18px;
+  height: 18px;
+}
+
+.empleados-floating-action {
+  position: fixed;
+  right: clamp(18px, 3vw, 34px);
+  bottom: clamp(18px, 3vw, 34px);
+  z-index: 12;
+  display: inline-grid;
+  width: 58px;
+  height: 58px;
+  min-height: 58px;
+  place-items: center;
+  border: 1px solid rgb(8 80 65 / 16%);
+  border-radius: 999px;
+  background: var(--color-deep);
+  color: white;
+  box-shadow: 0 18px 38px rgb(8 80 65 / 24%);
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.empleados-floating-action:hover,
+.empleados-floating-action:focus-visible {
+  background: var(--color-care);
+  transform: translateY(-2px);
+  box-shadow: 0 22px 44px rgb(8 80 65 / 28%);
+}
+
+.empleados-floating-action svg {
+  width: 26px;
+  height: 26px;
+}
+
+.empleados-form-stack {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding-bottom: 74px;
+}
+
+.empleados-form-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+}
+
+.empleados-back-action {
+  width: fit-content;
+  min-height: 40px;
+  padding: 0 12px 0 10px;
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 0 8px 18px rgb(8 80 65 / 7%);
+}
+
+.empleados-form-nav__context {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.empleado-form {
+  display: grid;
+  gap: 14px;
+  width: 100%;
+}
+
+.empleado-form-panel {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgb(8 80 65 / 12%);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 94%), rgb(247 252 250 / 80%)),
+    var(--color-surface);
+  box-shadow: 0 12px 28px rgb(8 80 65 / 6%);
+}
+
+.empleado-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.empleado-form-field {
+  display: grid;
+  gap: 6px;
+}
+
+.empleado-form-field > span:first-child {
+  color: var(--color-deep);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.empleado-form-field input,
+.empleado-form-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 90%);
+  color: var(--color-ink);
+  font-size: 0.92rem;
+}
+
+.empleado-form-field input[aria-invalid="true"],
+.empleado-form-field select[aria-invalid="true"] {
+  border-color: rgb(143 47 45 / 42%);
+}
+
+.empleado-form > .form-error {
+  padding: 10px 12px;
+  font-size: 0.84rem;
+}
+
+.empleado-status-toggle {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: center;
+  width: min(420px, 100%);
+  min-height: 56px;
+  padding: 8px 12px;
+  border: 1px solid rgb(8 80 65 / 14%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 92%);
+  color: var(--color-deep);
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 10px 22px rgb(8 80 65 / 5%);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.empleado-status-toggle:hover,
+.empleado-status-toggle:focus-visible {
+  border-color: rgb(29 158 117 / 30%);
+  background: var(--color-soft);
+  transform: translateY(-1px);
+}
+
+.empleado-status-toggle[aria-pressed="false"] {
+  border-color: rgb(143 47 45 / 22%);
+  background: rgb(250 238 218 / 64%);
+  color: rgb(112 55 34);
+}
+
+.empleado-status-toggle__icon {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-deep);
+  color: white;
+}
+
+.empleado-status-toggle[aria-pressed="false"] .empleado-status-toggle__icon {
+  background: rgb(112 55 34);
+}
+
+.empleado-status-toggle svg {
+  width: 17px;
+  height: 17px;
+}
+
+.empleado-status-toggle strong,
+.empleado-status-toggle small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.empleado-status-toggle strong {
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.empleado-status-toggle small {
+  margin-top: 2px;
+  color: var(--color-muted);
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+.empleado-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.empleado-form-actions .primary-action,
+.empleado-form-actions .outline-action {
+  min-width: 132px;
+  min-height: 44px;
+  padding: 0 16px;
+  font-size: 0.92rem;
+}
+
+.empleado-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgb(8 80 65 / 22%);
+  backdrop-filter: blur(4px);
+}
+
+.empleado-modal {
+  display: grid;
+  width: min(620px, 100%);
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgb(8 80 65 / 14%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 96%);
+  box-shadow: 0 24px 58px rgb(8 80 65 / 24%);
+}
+
+.empleado-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.empleado-modal__header h2 {
+  margin: 0;
+  color: var(--color-deep);
+  font-size: clamp(1.4rem, 3vw, 2.1rem);
+  line-height: 1;
+}
+
+.empleado-modal__status {
+  margin: 0;
+  color: var(--color-muted);
+  font-weight: 800;
+}
+
+.empleado-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.empleado-detail-grid div {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgb(8 80 65 / 10%);
+  border-radius: 8px;
+  background: rgb(225 245 238 / 36%);
+}
+
+.empleado-detail-grid dt {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.empleado-detail-grid dd {
+  margin: 0;
+  color: var(--color-ink);
+  font-weight: 850;
+  overflow-wrap: anywhere;
+}
+
+.empleados-empty {
+  display: grid;
+  max-width: 560px;
+  gap: 16px;
+  padding: clamp(22px, 4vw, 42px) 0;
+}
+
+.empleados-empty h2 {
+  margin-bottom: 0;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  line-height: 1;
+}
+
+@media (max-width: 1100px) {
+  .empleado-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 800px) {
+  .empleados-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .empleados-search__control {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .empleados-floating-action {
+    right: 16px;
+    bottom: 88px;
+  }
+
+  .empleado-form-grid,
+  .empleado-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .empleado-form-actions {
+    justify-content: stretch;
+  }
+
+  .empleado-form-actions .primary-action,
+  .empleado-form-actions .outline-action {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+@media print {
+  .home-sidebar,
+  .home-mobile-nav,
+  .empleados-toolbar,
+  .empleados-row-actions,
+  .empleados-floating-action {
+    display: none !important;
+  }
+}

@@ -6,7 +6,7 @@ export const authUserFixture = {
   tenantId: "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054",
   email: "admin@centro-demo.test",
   fullName: "Admin Centro Demo",
-  role: "tenant_admin",
+  role: "admin",
   passwordSetByAdmin: true,
 } as const;
 
@@ -87,6 +87,24 @@ export const adultoMayorFixture = {
   updatedAt: "2026-04-21T12:00:00.000Z",
 } as const;
 
+export const empleadoFixture = {
+  id: "aeeb7b27-2c8d-48ce-b2f8-3397d34a6e72",
+  tenantId: backofficeTenantDetailFixture.tenant.id,
+  tenantName: backofficeTenantDetailFixture.tenant.name,
+  documentNumber: "1010101010",
+  fullName: "Laura Natalia Perez Ruiz",
+  firstName: "Laura",
+  middleName: "Natalia",
+  firstSurname: "Perez",
+  secondSurname: "Ruiz",
+  email: "laura.perez@centro-demo.test",
+  phone: "3105551212",
+  role: "medico",
+  isActive: true,
+  createdAt: "2026-04-21T12:00:00.000Z",
+  updatedAt: "2026-04-21T12:00:00.000Z",
+} as const;
+
 export const server = setupServer(
   http.get("http://localhost:3001/api/health", () =>
     HttpResponse.json({
@@ -126,6 +144,19 @@ export const server = setupServer(
   ),
   http.patch("http://localhost:3001/api/adultos-mayores/:adultoMayorId", () =>
     HttpResponse.json(adultoMayorFixture),
+  ),
+  http.get("http://localhost:3001/api/empleados", () =>
+    HttpResponse.json({ empleados: [empleadoFixture] }),
+  ),
+  http.get("http://localhost:3001/api/empleados/tenant-options", () =>
+    HttpResponse.json({ tenants: [backofficeTenantDetailFixture.tenant] }),
+  ),
+  http.get("http://localhost:3001/api/empleados/:empleadoId", () =>
+    HttpResponse.json(empleadoFixture),
+  ),
+  http.post("http://localhost:3001/api/empleados", () => HttpResponse.json(empleadoFixture)),
+  http.patch("http://localhost:3001/api/empleados/:empleadoId", () =>
+    HttpResponse.json(empleadoFixture),
   ),
   http.get(
     "http://localhost:3001/api/adultos-mayores/export/excel",

@@ -8,6 +8,7 @@ import { LoginPage } from "@/features/auth/pages/login-page";
 import { useCurrentUserQuery } from "@/features/auth/model/auth-queries";
 import { HomePage } from "@/features/home/pages/home-page";
 import { isBackofficePath } from "@/features/backoffice/lib/backoffice-paths";
+import { isEmpleadosPath } from "@/features/empleados/lib/empleados-paths";
 
 export function App() {
   const currentUserQuery = useCurrentUserQuery();
@@ -32,7 +33,17 @@ export function App() {
       return;
     }
 
-    if (path !== HOME_PATH && !isBackofficePath(path) && !isAdultosMayoresPath(path)) {
+    if (isEmpleadosPath(path) && user.role !== "super_admin" && user.role !== "admin") {
+      navigate(HOME_PATH, { replace: true });
+      return;
+    }
+
+    if (
+      path !== HOME_PATH &&
+      !isBackofficePath(path) &&
+      !isAdultosMayoresPath(path) &&
+      !isEmpleadosPath(path)
+    ) {
       navigate(HOME_PATH, { replace: true });
     }
   }, [currentUserQuery.isLoading, navigate, path, user]);
@@ -42,9 +53,11 @@ export function App() {
       user === null
         ? "Iniciar sesion | CuidarTe"
         : isBackofficePath(path)
-          ? "BackOffice | CuidarTe"
-          : isAdultosMayoresPath(path)
-            ? "Adultos mayores | CuidarTe"
+        ? "BackOffice | CuidarTe"
+        : isAdultosMayoresPath(path)
+          ? "Adultos mayores | CuidarTe"
+          : isEmpleadosPath(path)
+            ? "Gestion de empleados | CuidarTe"
             : "Inicio | CuidarTe";
   }, [path, user]);
 

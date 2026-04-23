@@ -17,7 +17,7 @@ const tenantAdminUser: AuthUser = {
   tenantId,
   email: "admin@centro-demo.test",
   fullName: "Admin Centro Demo",
-  role: "tenant_admin",
+  role: "admin",
   passwordSetByAdmin: true,
 };
 

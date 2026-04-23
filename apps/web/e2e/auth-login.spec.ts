@@ -38,7 +38,7 @@ test.describe("Auth + Login", () => {
     await expect(page.getByRole("navigation", { name: "Modulos principales" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Admin Centro Demo" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Usuario logueado" })).toContainText(
-      "Admin de tenant",
+      "Admin",
     );
     await expect(page.getByRole("button", { name: "Adultos mayores" })).toBeVisible();
     await expect(page.getByRole("button", { name: "BackOffice" })).toBeHidden();

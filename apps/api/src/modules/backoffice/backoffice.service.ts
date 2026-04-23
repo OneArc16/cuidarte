@@ -48,7 +48,7 @@ export class BackofficeService {
     const rows = await this.database.db
       .select(this.getTenantOwnerSelection())
       .from(tenants)
-      .leftJoin(users, and(eq(users.tenantId, tenants.id), eq(users.role, "tenant_admin")))
+      .leftJoin(users, and(eq(users.tenantId, tenants.id), eq(users.isTenantOwner, true)))
       .where(this.buildTenantListWhere(query))
       .orderBy(asc(tenants.name));
 
@@ -92,7 +92,8 @@ export class BackofficeService {
             tenantId: tenant.id,
             email: command.owner.email,
             fullName: command.owner.fullName,
-            role: "tenant_admin",
+            role: "admin",
+            isTenantOwner: true,
             passwordHash,
             passwordSetByAdmin: true,
             isActive: command.owner.isActive,
@@ -204,7 +205,7 @@ export class BackofficeService {
     const [row] = await this.database.db
       .select(this.getTenantOwnerSelection())
       .from(tenants)
-      .leftJoin(users, and(eq(users.tenantId, tenants.id), eq(users.role, "tenant_admin")))
+      .leftJoin(users, and(eq(users.tenantId, tenants.id), eq(users.isTenantOwner, true)))
       .where(eq(tenants.id, tenantId))
       .limit(1);
 
@@ -499,7 +500,7 @@ export class BackofficeService {
       tenantId: owner.tenantId,
       email: owner.email,
       fullName: owner.fullName,
-      role: "tenant_admin",
+      role: "admin",
       isActive: owner.isActive,
     };
   }

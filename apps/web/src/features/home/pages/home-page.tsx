@@ -5,6 +5,8 @@ import { AdultosMayoresPage } from "@/features/adultos-mayores/pages/adultos-may
 import { isAdultosMayoresPath } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
 import { BackofficePage } from "@/features/backoffice/pages/backoffice-page";
 import { isBackofficePath } from "@/features/backoffice/lib/backoffice-paths";
+import { EmpleadosPage } from "@/features/empleados/pages/empleados-page";
+import { isEmpleadosPath } from "@/features/empleados/lib/empleados-paths";
 
 import { HomeDashboard } from "../components/home-dashboard";
 import { HomeDesktopSidebar } from "../components/home-desktop-sidebar";
@@ -26,7 +28,9 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
     ? "backoffice"
     : isAdultosMayoresPath(path)
       ? "adultos-mayores"
-      : "inicio";
+      : isEmpleadosPath(path)
+        ? "gestion-empleados"
+        : "inicio";
 
   return (
     <main className="home-shell">
@@ -46,6 +50,8 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
             ? undefined
             : isAdultosMayoresPath(path)
               ? "adultos-mayores-title"
+              : isEmpleadosPath(path)
+                ? "empleados-title"
               : "home-title"
         }
       >
@@ -53,6 +59,8 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
           <BackofficePage path={path} navigate={navigate} />
         ) : isAdultosMayoresPath(path) ? (
           <AdultosMayoresPage path={path} navigate={navigate} user={user} />
+        ) : isEmpleadosPath(path) ? (
+          <EmpleadosPage path={path} navigate={navigate} user={user} />
         ) : (
           <HomeDashboard user={user} />
         )}

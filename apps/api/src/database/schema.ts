@@ -14,7 +14,18 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
-export const userRole = pgEnum("user_role", ["super_admin", "tenant_admin", "employee"]);
+export const userRole = pgEnum("user_role", [
+  "super_admin",
+  "admin",
+  "director",
+  "enfermeria",
+  "fisioterapeuta",
+  "medico",
+  "nutricionista",
+  "psicologo",
+  "recreacionista",
+  "trabajadora_social",
+]);
 export const tenantDocumentType = pgEnum("tenant_document_type", ["nit", "cc", "ce"]);
 export const adultoMayorDocumentType = pgEnum("adulto_mayor_document_type", [
   "cc",
@@ -57,7 +68,14 @@ export const users = pgTable(
     tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "restrict" }),
     email: varchar("email", { length: 320 }).notNull(),
     fullName: varchar("full_name", { length: 180 }).notNull(),
+    firstName: varchar("first_name", { length: 80 }),
+    middleName: varchar("middle_name", { length: 80 }),
+    firstSurname: varchar("first_surname", { length: 80 }),
+    secondSurname: varchar("second_surname", { length: 80 }),
+    documentNumber: varchar("document_number", { length: 80 }),
+    phone: varchar("phone", { length: 40 }),
     role: userRole("role").notNull(),
+    isTenantOwner: boolean("is_tenant_owner").notNull().default(false),
     passwordHash: text("password_hash").notNull(),
     passwordSetByAdmin: boolean("password_set_by_admin").notNull().default(true),
     passwordChangedAt: timestamp("password_changed_at", { withTimezone: true }),
@@ -72,7 +90,13 @@ export const users = pgTable(
     uniqueIndex("users_email_unique").on(table.email),
     uniqueIndex("users_tenant_owner_unique")
       .on(table.tenantId)
-      .where(sql`${table.role} = 'tenant_admin' and ${table.tenantId} is not null`),
+      .where(sql`${table.isTenantOwner} = true and ${table.tenantId} is not null`),
+    uniqueIndex("users_tenant_document_unique")
+      .on(table.tenantId, table.documentNumber)
+      .where(sql`${table.tenantId} is not null and ${table.documentNumber} is not null`),
+    uniqueIndex("users_global_document_unique")
+      .on(table.documentNumber)
+      .where(sql`${table.tenantId} is null and ${table.documentNumber} is not null`),
     index("users_tenant_id_idx").on(table.tenantId),
   ],
 );

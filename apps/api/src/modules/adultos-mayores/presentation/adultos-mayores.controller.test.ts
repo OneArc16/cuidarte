@@ -12,7 +12,7 @@ const currentUser: AuthUser = {
   tenantId: "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054",
   email: "admin@centro-demo.test",
   fullName: "Admin Centro Demo",
-  role: "tenant_admin",
+  role: "admin",
   passwordSetByAdmin: true,
 };
 

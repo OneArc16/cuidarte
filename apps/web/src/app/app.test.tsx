@@ -9,6 +9,7 @@ import {
   adultoMayorFixture,
   authUserFixture,
   backofficeTenantDetailFixture,
+  empleadoFixture,
   server,
   superAdminUserFixture,
 } from "../test/test-server";
@@ -90,7 +91,7 @@ describe("App auth routing", () => {
     const loggedUser = screen.getByRole("region", { name: "Usuario logueado" });
 
     expect(loggedUser).toHaveTextContent(authUserFixture.fullName);
-    expect(loggedUser).toHaveTextContent("Admin de tenant");
+    expect(loggedUser).toHaveTextContent("Admin");
     expect(screen.getAllByText("CuidarTe")).not.toHaveLength(0);
 
     const navigation = screen.getByRole("navigation", { name: "Modulos principales" });
@@ -589,6 +590,195 @@ describe("App auth routing", () => {
 
     await user.click(screen.getByRole("button", { name: "Imprimir listado" }));
     expect(print).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows Gestion de empleados with icon-only view and edit actions", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: authUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", "/gestion-empleados");
+
+    renderWithProviders(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Gestion de empleados" })).toHaveClass(
+      "visually-hidden",
+    );
+    expect(screen.queryByRole("columnheader", { name: "Centro" })).not.toBeInTheDocument();
+    expect(await screen.findByText(empleadoFixture.documentNumber)).toBeInTheDocument();
+    expect(screen.getByText(empleadoFixture.fullName)).toBeInTheDocument();
+    expect(screen.getByText(empleadoFixture.email)).toBeInTheDocument();
+    expect(screen.getByText("Activo")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `Ver ${empleadoFixture.fullName}` })).toHaveClass(
+      "empleados-row-action",
+    );
+    expect(
+      screen.getByRole("button", { name: `Editar ${empleadoFixture.fullName}` }),
+    ).toHaveClass("empleados-row-action");
+    expect(screen.getByRole("button", { name: "Crear usuario" })).toHaveClass(
+      "empleados-floating-action",
+    );
+  });
+
+  it("opens employee details in a modal", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: authUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", "/gestion-empleados");
+    const user = userEvent.setup();
+
+    renderWithProviders(<App />);
+
+    await user.click(
+      await screen.findByRole("button", { name: `Ver ${empleadoFixture.fullName}` }),
+    );
+
+    const detailDialog = await screen.findByRole("dialog", { name: empleadoFixture.fullName });
+
+    expect(detailDialog).toBeInTheDocument();
+    expect(within(detailDialog).getByText("Medico")).toBeInTheDocument();
+    expect(within(detailDialog).getByText("Activo")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cerrar detalle" })).toBeInTheDocument();
+  });
+
+  it("creates an employee from the reusable form", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: authUserFixture }),
+      ),
+    );
+    let createPayload: unknown = null;
+    server.use(
+      http.post("http://localhost:3001/api/empleados", async ({ request }) => {
+        createPayload = await request.json();
+
+        return HttpResponse.json({
+          ...empleadoFixture,
+          id: "d82f34b1-26d6-40b2-8980-fb63f5d6ac6b",
+          documentNumber: "2020202020",
+          fullName: "Carlos Andres Mora Diaz",
+          firstName: "Carlos",
+          middleName: "Andres",
+          firstSurname: "Mora",
+          secondSurname: "Diaz",
+          email: "carlos.mora@centro-demo.test",
+          role: "admin",
+          isActive: false,
+        });
+      }),
+    );
+    window.history.replaceState({}, "", "/gestion-empleados/new");
+    const user = userEvent.setup();
+
+    renderWithProviders(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Nuevo usuario" })).toHaveClass(
+      "visually-hidden",
+    );
+    await user.type(screen.getByLabelText("Primer nombre"), "Carlos");
+    await user.type(screen.getByLabelText("Segundo nombre"), "Andres");
+    await user.type(screen.getByLabelText("Primer apellido"), "Mora");
+    await user.type(screen.getByLabelText("Segundo apellido"), "Diaz");
+    await user.type(screen.getByLabelText("Correo electronico"), "carlos.mora@centro-demo.test");
+    await user.type(screen.getByLabelText("Numero de documento"), "2020202020");
+    await user.type(screen.getByLabelText("Telefono"), "3115552020");
+    await user.selectOptions(screen.getByLabelText("Tipo de usuario"), "admin");
+    await user.click(screen.getByRole("button", { name: /Inactivar usuario/i }));
+    await user.type(screen.getByLabelText("Contrasena"), "Cuidarte123!");
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        "/gestion-empleados/d82f34b1-26d6-40b2-8980-fb63f5d6ac6b/edit",
+      );
+    });
+    expect(createPayload).toMatchObject({
+      tenantId: null,
+      firstName: "Carlos",
+      middleName: "Andres",
+      firstSurname: "Mora",
+      secondSurname: "Diaz",
+      email: "carlos.mora@centro-demo.test",
+      documentNumber: "2020202020",
+      phone: "3115552020",
+      role: "admin",
+      isActive: false,
+      password: "Cuidarte123!",
+    });
+  });
+
+  it("edits an employee without sending a password when it is left blank", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: authUserFixture }),
+      ),
+    );
+    let updatePayload: unknown = null;
+    server.use(
+      http.patch("http://localhost:3001/api/empleados/:empleadoId", async ({ request }) => {
+        updatePayload = await request.json();
+
+        return HttpResponse.json({
+          ...empleadoFixture,
+          phone: "3125553030",
+          isActive: false,
+        });
+      }),
+    );
+    window.history.replaceState({}, "", `/gestion-empleados/${empleadoFixture.id}/edit`);
+    const user = userEvent.setup();
+
+    renderWithProviders(<App />);
+
+    const phoneInput = await screen.findByLabelText("Telefono");
+
+    await user.clear(phoneInput);
+    await user.type(phoneInput, "3125553030");
+    await user.click(screen.getByRole("button", { name: /Inactivar usuario/i }));
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Cambios guardados.");
+    expect(updatePayload).toMatchObject({
+      firstName: empleadoFixture.firstName,
+      middleName: empleadoFixture.middleName,
+      firstSurname: empleadoFixture.firstSurname,
+      secondSurname: empleadoFixture.secondSurname,
+      email: empleadoFixture.email,
+      documentNumber: empleadoFixture.documentNumber,
+      phone: "3125553030",
+      role: empleadoFixture.role,
+      isActive: false,
+    });
+    expect(updatePayload).not.toHaveProperty("password");
+  });
+
+  it("redirects professional roles away from Gestion de empleados", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({
+          user: {
+            ...authUserFixture,
+            fullName: "Medico Centro Demo",
+            role: "medico",
+          },
+        }),
+      ),
+    );
+    window.history.replaceState({}, "", "/gestion-empleados");
+
+    renderWithProviders(<App />);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/home");
+    });
+    const navigation = await screen.findByRole("navigation", { name: "Modulos principales" });
+
+    expect(
+      within(navigation).queryByRole("button", { name: "Gestión de empleados" }),
+    ).not.toBeInTheDocument();
   });
 
   it("uses a mobile bottom navigation with a more modules sheet", async () => {

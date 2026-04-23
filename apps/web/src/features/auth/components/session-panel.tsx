@@ -53,8 +53,15 @@ export function SessionPanel({ user, onLogoutSuccess }: SessionPanelProps) {
 function formatRole(role: AuthUser["role"]): string {
   const labels = {
     super_admin: "SuperAdmin",
-    tenant_admin: "Admin de tenant",
-    employee: "Empleado",
+    admin: "Admin",
+    director: "Director",
+    enfermeria: "Enfermeria",
+    fisioterapeuta: "Fisioterapeuta",
+    medico: "Medico",
+    nutricionista: "Nutricionista",
+    psicologo: "Psicologo",
+    recreacionista: "Recreacionista",
+    trabajadora_social: "Trabajadora Social",
   } satisfies Record<AuthUser["role"], string>;
 
   return labels[role];
