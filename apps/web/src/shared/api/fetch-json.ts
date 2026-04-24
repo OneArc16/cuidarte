@@ -3,8 +3,8 @@ import { type ZodSchema } from "zod";
 import { ApiError } from "./api-error";
 
 type FetchJsonOptions = {
-  method?: "GET" | "PATCH" | "POST";
-  body?: unknown;
+  method?: "GET" | "PATCH" | "POST" | "PUT";
+  body?: FormData | unknown;
 };
 
 export async function fetchJson<T>(
@@ -12,17 +12,20 @@ export async function fetchJson<T>(
   schema: ZodSchema<T>,
   options: FetchJsonOptions = {},
 ): Promise<T> {
+  const isFormDataBody = options.body instanceof FormData;
   const requestInit: RequestInit = {
     method: options.method ?? "GET",
     credentials: "include",
     headers:
       options.body === undefined
         ? { Accept: "application/json" }
-        : { Accept: "application/json", "Content-Type": "application/json" },
+        : isFormDataBody
+          ? { Accept: "application/json" }
+          : { Accept: "application/json", "Content-Type": "application/json" },
   };
 
   if (options.body !== undefined) {
-    requestInit.body = JSON.stringify(options.body);
+    requestInit.body = isFormDataBody ? (options.body as BodyInit) : JSON.stringify(options.body);
   }
 
   const response = await fetch(url, requestInit);

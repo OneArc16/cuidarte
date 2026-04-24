@@ -106,4 +106,58 @@ describe("ActividadesGrupalesController", () => {
     assert.equal(result.actaNumber, 4);
     assert.equal(result.involvedEmployeesCount, 2);
   });
+
+  it("passes diligenciamiento detail requests and current user to the service", async () => {
+    let receivedActivityId: string | null = null;
+    let receivedActorId: string | null = null;
+    const service = {
+      getActividadGrupalDiligenciamiento: async (activityId: string, actor: AuthUser) => {
+        receivedActivityId = activityId;
+        receivedActorId = actor.id;
+
+        return {
+          id: "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
+          tenantId: currentUser.tenantId,
+          tenantName: "Centro de Vida Demo",
+          actaNumber: 4,
+          activityName: "Jornada psicomotriz",
+          activityType: "fisioterapia",
+          activityDate: "2026-04-23",
+          startTime: "08:30",
+          endTime: "10:00",
+          organizer: "fisioterapeuta",
+          involvedEmployeesCount: 2,
+          assignedProfessionals: [
+            {
+              id: currentUser.id,
+              fullName: currentUser.fullName,
+              role: currentUser.role,
+            },
+          ],
+          objectives: "",
+          development: "",
+          conclusion: "",
+          responsibleDepartment: null,
+          integrantes: [],
+          photoFiles: [],
+          pdfFile: null,
+          diligenciamientoCreatedAt: null,
+          diligenciamientoUpdatedAt: null,
+          createdAt: "2026-04-23T12:00:00.000Z",
+          updatedAt: "2026-04-23T12:00:00.000Z",
+        };
+      },
+    };
+    const controller = new ActividadesGrupalesController(service as never);
+
+    const result = await controller.getActividadGrupalDiligenciamiento(
+      "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
+      { currentUser } as never,
+    );
+
+    assert.equal(receivedActivityId, "5f0361fb-ff51-43d7-a6e8-83c58df345b6");
+    assert.equal(receivedActorId, currentUser.id);
+    assert.equal(result.activityName, "Jornada psicomotriz");
+    assert.equal(result.assignedProfessionals[0]?.id, currentUser.id);
+  });
 });

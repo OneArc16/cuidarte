@@ -126,6 +126,48 @@ export const actividadGrupalFormOptionsFixture = {
   empleados: [empleadoFixture],
 } as const;
 
+export const actividadGrupalIntegranteFixture = {
+  id: adultoMayorFixture.id,
+  documentNumber: adultoMayorFixture.documentNumber,
+  fullName: `${adultoMayorFixture.names} ${adultoMayorFixture.surnames}`,
+} as const;
+
+export const actividadGrupalDiligenciamientoFixture = {
+  ...actividadGrupalFixture,
+  assignedProfessionals: [
+    {
+      id: empleadoFixture.id,
+      fullName: empleadoFixture.fullName,
+      role: empleadoFixture.role,
+    },
+  ],
+  objectives: "",
+  development: "",
+  conclusion: "",
+  responsibleDepartment: null,
+  integrantes: [],
+  photoFiles: [
+    {
+      id: "ecf23fbc-0127-45a5-bf39-f31e14902123",
+      kind: "support_photo",
+      originalName: "foto-soporte.webp",
+      mimeType: "image/webp",
+      sizeBytes: 245760,
+      createdAt: "2026-04-23T12:00:00.000Z",
+    },
+  ],
+  pdfFile: {
+    id: "514cd20a-d079-4028-a5ab-6cec0aa0abf2",
+    kind: "support_pdf",
+    originalName: "soporte.pdf",
+    mimeType: "application/pdf",
+    sizeBytes: 92500,
+    createdAt: "2026-04-23T12:00:00.000Z",
+  },
+  diligenciamientoCreatedAt: null,
+  diligenciamientoUpdatedAt: null,
+} as const;
+
 export const server = setupServer(
   http.get("http://localhost:3001/api/health", () =>
     HttpResponse.json({
@@ -207,6 +249,81 @@ export const server = setupServer(
   ),
   http.post("http://localhost:3001/api/actividades-grupales", () =>
     HttpResponse.json(actividadGrupalFixture),
+  ),
+  http.get("http://localhost:3001/api/actividades-grupales/:activityId/diligenciamiento", () =>
+    HttpResponse.json(actividadGrupalDiligenciamientoFixture),
+  ),
+  http.get(
+    "http://localhost:3001/api/actividades-grupales/:activityId/diligenciamiento/integrantes-options",
+    ({ request }) => {
+      const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? "";
+      const integrantes = [actividadGrupalIntegranteFixture].filter((integrante) =>
+        [integrante.documentNumber, integrante.fullName].join(" ").toLowerCase().includes(search),
+      );
+
+      return HttpResponse.json({ integrantes });
+    },
+  ),
+  http.put(
+    "http://localhost:3001/api/actividades-grupales/:activityId/diligenciamiento",
+    async ({ request }) => {
+      const formData = await request.formData();
+      const payload = JSON.parse(String(formData.get("payload") ?? "{}")) as Record<
+        string,
+        unknown
+      >;
+      const photoFiles = formData.getAll("photos");
+      const pdfFile = formData.get("pdf");
+
+      return HttpResponse.json({
+        ...actividadGrupalDiligenciamientoFixture,
+        objectives: payload.objectives ?? "",
+        development: payload.development ?? "",
+        conclusion: payload.conclusion ?? "",
+        responsibleDepartment: payload.responsibleDepartment ?? null,
+        integrantes:
+          Array.isArray(payload.integranteIds) &&
+          payload.integranteIds.includes(adultoMayorFixture.id)
+            ? [actividadGrupalIntegranteFixture]
+            : [],
+        photoFiles:
+          photoFiles.length === 0
+            ? actividadGrupalDiligenciamientoFixture.photoFiles
+            : photoFiles.map((file, index) => ({
+                id: `123e4567-e89b-42d3-a456-4266141740${String(index + 1).padStart(2, "0")}`,
+                kind: "support_photo",
+                originalName: file instanceof File ? file.name : `foto-${index + 1}.jpg`,
+                mimeType: file instanceof File ? file.type : "image/jpeg",
+                sizeBytes: file instanceof File ? file.size : 1024,
+                createdAt: "2026-04-24T12:00:00.000Z",
+              })),
+        pdfFile:
+          pdfFile instanceof File
+            ? {
+                id: "223e4567-e89b-42d3-a456-426614174099",
+                kind: "support_pdf",
+                originalName: pdfFile.name,
+                mimeType: pdfFile.type,
+                sizeBytes: pdfFile.size,
+                createdAt: "2026-04-24T12:00:00.000Z",
+              }
+            : actividadGrupalDiligenciamientoFixture.pdfFile,
+        diligenciamientoCreatedAt: "2026-04-24T12:00:00.000Z",
+        diligenciamientoUpdatedAt: "2026-04-24T12:00:00.000Z",
+      });
+    },
+  ),
+  http.get(
+    "http://localhost:3001/api/actividades-grupales/:activityId/diligenciamiento/files/:fileId",
+    ({ params }) => {
+      const isPdf = String(params.fileId).includes("pdf");
+
+      return new HttpResponse(isPdf ? "pdf" : "image", {
+        headers: {
+          "Content-Type": isPdf ? "application/pdf" : "image/webp",
+        },
+      });
+    },
   ),
   http.get(
     "http://localhost:3001/api/adultos-mayores/export/excel",

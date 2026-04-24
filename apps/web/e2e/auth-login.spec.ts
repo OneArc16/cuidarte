@@ -116,7 +116,7 @@ test.describe("Auth + Login", () => {
     await expect(page.getByRole("heading", { name: editedTenantName })).toBeVisible();
   });
 
-  test("permite a un admin crear una actividad grupal", async ({ page }) => {
+  test("permite a un admin crear y diligenciar una actividad grupal", async ({ page }) => {
     const runId = Date.now();
     const activityName = `Actividad E2E ${runId}`;
 
@@ -126,7 +126,7 @@ test.describe("Auth + Login", () => {
     await page.getByRole("button", { name: "Iniciar sesion" }).click();
 
     await expect(page).toHaveURL(/\/home$/);
-    await page.getByRole("button", { name: "Creación de actividades" }).click();
+    await page.getByRole("button", { name: "Sesiones grupales" }).click();
     await expect(page).toHaveURL(/\/creacion-actividades$/);
     await expect(page.getByRole("table")).toBeVisible();
 
@@ -142,5 +142,28 @@ test.describe("Auth + Login", () => {
 
     await expect(page).toHaveURL(/\/creacion-actividades$/);
     await expect(page.getByText(activityName)).toBeVisible();
+
+    await page.getByRole("button", { name: `Diligenciar actividad ${activityName}` }).click();
+    await expect(page).toHaveURL(/\/creacion-actividades\/[0-9a-f-]+\/diligenciamiento$/);
+
+    await page.getByLabel("Objetivos").fill("Objetivos E2E");
+    await page.getByLabel("Desarrollo").fill("Desarrollo E2E");
+    await page.getByLabel("Conclusion").fill("Conclusion E2E");
+    await page.getByLabel("Departamento encargado").selectOption("fisioterapia");
+    await page.getByLabel("Buscar por nombre o documento").fill("Rosa");
+    await page.getByRole("button", { name: /Rosa/i }).click();
+    await page.getByLabel("Agregar fotos de soporte").setInputFiles({
+      name: "evidencia.jpg",
+      mimeType: "image/jpeg",
+      buffer: Buffer.from("photo"),
+    });
+    await page.getByLabel("Adjuntar documento PDF").setInputFiles({
+      name: "soporte.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("pdf"),
+    });
+    await page.getByRole("button", { name: "Guardar diligenciamiento" }).click();
+
+    await expect(page.getByRole("status")).toContainText("Diligenciamiento guardado.");
   });
 });

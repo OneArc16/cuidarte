@@ -7,7 +7,10 @@ import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { ActividadesGrupalesTable } from "../components/actividades-grupales-table";
 import { ActividadesGrupalesToolbar } from "../components/actividades-grupales-toolbar";
 import { downloadActividadGrupalActa } from "../lib/download-actividad-grupal-acta";
-import { CREACION_ACTIVIDADES_NEW_PATH } from "../lib/actividades-grupales-paths";
+import {
+  buildActividadGrupalDiligenciamientoPath,
+  CREACION_ACTIVIDADES_NEW_PATH,
+} from "../lib/actividades-grupales-paths";
 import { resolveActividadesGrupalesApiError } from "../lib/actividades-grupales-formatters";
 import {
   useActividadGrupalTenantOptionsQuery,
@@ -65,6 +68,9 @@ export function ActividadesGrupalesIndexPage({
       <ActividadesGrupalesTable
         actividadesGrupales={actividadesQuery.data?.actividadesGrupales ?? []}
         isLoading={actividadesQuery.isLoading}
+        onOpenDiligenciamiento={(actividad) =>
+          navigate(buildActividadGrupalDiligenciamientoPath(actividad.id))
+        }
         onDownloadActa={downloadActividadGrupalActa}
         showTenantColumn={showTenantFilter}
       />

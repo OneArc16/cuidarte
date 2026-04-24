@@ -425,7 +425,10 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
             />
           </AdultoMayorFieldGroup>
 
-          <AdultoMayorFieldGroup label="Direccion" error={getError("emergencyContactAddress")}>
+          <AdultoMayorFieldGroup
+            label="Direccion de contacto"
+            error={getError("emergencyContactAddress")}
+          >
             <input
               type="text"
               aria-invalid={getError("emergencyContactAddress") === undefined ? "false" : "true"}

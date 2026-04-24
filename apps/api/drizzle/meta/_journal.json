@@ -43,6 +43,13 @@
       "when": 1776970697660,
       "tag": "0005_dark_quasimodo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776977992167,
+      "tag": "0006_worried_red_skull",
+      "breakpoints": true
     }
   ]
 }

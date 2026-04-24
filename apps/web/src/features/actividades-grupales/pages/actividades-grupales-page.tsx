@@ -6,8 +6,10 @@ import { type Navigate } from "@/app/hooks/use-app-navigation";
 import {
   CREACION_ACTIVIDADES_NEW_PATH,
   CREACION_ACTIVIDADES_PATH,
+  getActividadGrupalDiligenciamientoIdFromPath,
 } from "../lib/actividades-grupales-paths";
 import { ActividadGrupalCreatePage } from "./actividad-grupal-create-page";
+import { ActividadGrupalDiligenciamientoPage } from "./actividad-grupal-diligenciamiento-page";
 import { ActividadesGrupalesIndexPage } from "./actividades-grupales-index-page";
 
 type ActividadesGrupalesPageProps = {
@@ -23,6 +25,12 @@ export function ActividadesGrupalesPage({ navigate, path, user }: ActividadesGru
 
   if (path === CREACION_ACTIVIDADES_NEW_PATH) {
     return <ActividadGrupalCreatePage navigate={navigate} user={user} />;
+  }
+
+  const activityId = getActividadGrupalDiligenciamientoIdFromPath(path);
+
+  if (activityId !== null) {
+    return <ActividadGrupalDiligenciamientoPage activityId={activityId} navigate={navigate} />;
   }
 
   return (

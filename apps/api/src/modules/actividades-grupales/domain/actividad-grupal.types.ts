@@ -1,5 +1,7 @@
 import {
   type ActividadGrupalOrganizer,
+  type ActividadGrupalResponsibleDepartment,
+  type ActividadGrupalSupportFileKind,
   type ActividadGrupalType,
   type UserRole,
 } from "@cuidarte/contracts";
@@ -20,6 +22,16 @@ export type FindActividadesGrupalesQuery = {
   scope: ActividadesGrupalesScope;
 };
 
+export type FindActividadGrupalByIdQuery = {
+  activityId: string;
+  scope: ActividadesGrupalesScope;
+};
+
+export type SearchActividadGrupalIntegrantesOptionsQuery = {
+  tenantId: string;
+  search: string | null;
+};
+
 export type ActividadGrupalTenantOptionRecord = {
   id: string;
   name: string;
@@ -29,6 +41,23 @@ export type ActividadGrupalEmpleadoOptionRecord = {
   id: string;
   fullName: string;
   role: UserRole;
+};
+
+export type ActividadGrupalIntegranteOptionRecord = {
+  id: string;
+  documentNumber: string;
+  fullName: string;
+};
+
+export type ActividadGrupalSupportFileRecord = {
+  id: string;
+  activityId: string;
+  kind: ActividadGrupalSupportFileKind;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  relativePath: string;
+  createdAt: Date;
 };
 
 export type CreateActividadGrupalRecordCommand = {
@@ -41,6 +70,32 @@ export type CreateActividadGrupalRecordCommand = {
   endTime: string;
   organizer: ActividadGrupalOrganizer;
   employeeIds: string[];
+};
+
+export type PersistActividadGrupalSupportFile = {
+  kind: ActividadGrupalSupportFileKind;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  relativePath: string;
+};
+
+export type SaveActividadGrupalDiligenciamientoRecordCommand = {
+  activityId: string;
+  actorUserId: string;
+  objectives: string;
+  development: string;
+  conclusion: string;
+  responsibleDepartment: ActividadGrupalResponsibleDepartment;
+  integranteIds: string[];
+  removedPhotoFileIds: string[];
+  removePdfFile: boolean;
+  newFiles: PersistActividadGrupalSupportFile[];
+};
+
+export type SavedActividadGrupalDiligenciamientoRecord = {
+  detail: ActividadGrupalDiligenciamientoDetailRecord;
+  removedFiles: ActividadGrupalSupportFileRecord[];
 };
 
 export type ActividadGrupalRecord = {
@@ -57,4 +112,25 @@ export type ActividadGrupalRecord = {
   involvedEmployeesCount: number;
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type ActividadGrupalDiligenciamientoDetailRecord = {
+  activity: ActividadGrupalRecord;
+  assignedProfessionals: ActividadGrupalEmpleadoOptionRecord[];
+  objectives: string;
+  development: string;
+  conclusion: string;
+  responsibleDepartment: ActividadGrupalResponsibleDepartment | null;
+  integrantes: ActividadGrupalIntegranteOptionRecord[];
+  photoFiles: ActividadGrupalSupportFileRecord[];
+  pdfFile: ActividadGrupalSupportFileRecord | null;
+  diligenciamientoCreatedAt: Date | null;
+  diligenciamientoUpdatedAt: Date | null;
+};
+
+export type BufferedActividadGrupalUpload = {
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  buffer: Buffer;
 };

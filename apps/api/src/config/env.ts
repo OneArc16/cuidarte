@@ -9,6 +9,7 @@ const envSchema = z.object({
     .default("postgres://cuidarte:cuidarte_dev_password@localhost:5433/cuidarte"),
   SESSION_COOKIE_NAME: z.string().min(1).default("cuidarte_session"),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
+  ACTIVIDADES_GRUPALES_UPLOADS_DIR: z.string().min(1).default("/tmp/cuidarte/actividades-grupales"),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

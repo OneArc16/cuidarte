@@ -56,6 +56,23 @@ export const actividadGrupalOrganizer = pgEnum("actividad_grupal_organizer", [
   "fisioterapeuta",
   "recreacionista",
 ]);
+export const actividadGrupalResponsibleDepartment = pgEnum(
+  "actividad_grupal_responsible_department",
+  [
+    "direccion",
+    "medicina",
+    "enfermeria",
+    "psicologia",
+    "trabajo_social",
+    "nutricion",
+    "fisioterapia",
+    "recreacion",
+  ],
+);
+export const actividadGrupalSupportFileKind = pgEnum("actividad_grupal_support_file_kind", [
+  "support_photo",
+  "support_pdf",
+]);
 
 export const tenants = pgTable(
   "tenants",
@@ -233,6 +250,74 @@ export const actividadGrupalEmpleados = pgTable(
       columns: [table.activityId, table.employeeId],
     }),
     index("actividad_grupal_empleados_employee_idx").on(table.employeeId),
+  ],
+);
+
+export const actividadGrupalDiligenciamientos = pgTable(
+  "actividad_grupal_diligenciamientos",
+  {
+    activityId: uuid("activity_id")
+      .primaryKey()
+      .references(() => actividadesGrupales.id, { onDelete: "cascade" }),
+    objectives: text("objectives").notNull(),
+    development: text("development").notNull(),
+    conclusion: text("conclusion").notNull(),
+    responsibleDepartment: actividadGrupalResponsibleDepartment("responsible_department").notNull(),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    updatedByUserId: uuid("updated_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("actividad_grupal_diligenciamientos_created_by_user_idx").on(table.createdByUserId),
+    index("actividad_grupal_diligenciamientos_updated_by_user_idx").on(table.updatedByUserId),
+  ],
+);
+
+export const actividadGrupalDiligenciamientoIntegrantes = pgTable(
+  "actividad_grupal_diligenciamiento_integrantes",
+  {
+    activityId: uuid("activity_id")
+      .notNull()
+      .references(() => actividadesGrupales.id, { onDelete: "cascade" }),
+    adultoMayorId: uuid("adulto_mayor_id")
+      .notNull()
+      .references(() => adultosMayores.id, { onDelete: "restrict" }),
+  },
+  (table) => [
+    primaryKey({
+      name: "actividad_grupal_diligenciamiento_integrantes_pk",
+      columns: [table.activityId, table.adultoMayorId],
+    }),
+    index("actividad_grupal_dilig_integrantes_adulto_mayor_idx").on(table.adultoMayorId),
+  ],
+);
+
+export const actividadGrupalDiligenciamientoFiles = pgTable(
+  "actividad_grupal_diligenciamiento_files",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    activityId: uuid("activity_id")
+      .notNull()
+      .references(() => actividadesGrupales.id, { onDelete: "cascade" }),
+    kind: actividadGrupalSupportFileKind("kind").notNull(),
+    originalName: varchar("original_name", { length: 260 }).notNull(),
+    mimeType: varchar("mime_type", { length: 160 }).notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    relativePath: varchar("relative_path", { length: 500 }).notNull(),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("actividad_grupal_dilig_files_activity_idx").on(table.activityId),
+    index("actividad_grupal_dilig_files_kind_idx").on(table.kind),
+    index("actividad_grupal_dilig_files_created_by_user_idx").on(table.createdByUserId),
   ],
 );
 

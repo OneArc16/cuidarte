@@ -6,17 +6,24 @@ import { BadRequestException, ForbiddenException } from "@nestjs/common";
 
 import { ActividadesGrupalesService } from "./actividades-grupales.service";
 import {
+  type ActividadGrupalDiligenciamientoDetailRecord,
   type ActividadGrupalEmpleadoOptionRecord,
+  type ActividadGrupalIntegranteOptionRecord,
   type ActividadGrupalRecord,
   type FindActividadesGrupalesQuery,
 } from "../domain/actividad-grupal.types";
+import { type ActividadesGrupalesFilesStorage } from "../domain/actividades-grupales-files.storage";
 import { type ActividadesGrupalesRepository } from "../domain/actividades-grupales.repository";
 
 const tenantId = "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054";
 const otherTenantId = "3436e34e-05b3-4da7-9895-5c4ef847d23a";
+const medicoUserId = "11111111-1111-4111-8111-111111111111";
+const enfermeriaUserId = "22222222-2222-4222-8222-222222222222";
+const directorUserId = "33333333-3333-4333-8333-333333333333";
+const inactiveEmpleadoId = "44444444-4444-4444-8444-444444444444";
 
 const medicoUser: AuthUser = {
-  id: "eaebfa34-4ef2-4b10-b8a5-1db6d494a2a2",
+  id: medicoUserId,
   tenantId,
   email: "medico@centro-demo.test",
   fullName: "Medico Centro Demo",
@@ -78,7 +85,7 @@ const records: ActividadGrupalRecord[] = [
 describe("ActividadesGrupalesService", () => {
   it("allows tenant professionals to list activities within their tenant scope", async () => {
     const repository = createRepository();
-    const service = new ActividadesGrupalesService(repository);
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.listActividadesGrupales(
       { search: "bienestar", activityType: null, tenantId: null },
@@ -97,7 +104,7 @@ describe("ActividadesGrupalesService", () => {
 
   it("allows super admin users to filter the list by tenant", async () => {
     const repository = createRepository();
-    const service = new ActividadesGrupalesService(repository);
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.listActividadesGrupales(
       { search: null, activityType: null, tenantId: otherTenantId },
@@ -116,7 +123,7 @@ describe("ActividadesGrupalesService", () => {
 
   it("filters the list by activity type", async () => {
     const repository = createRepository();
-    const service = new ActividadesGrupalesService(repository);
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.listActividadesGrupales(
       { search: null, activityType: "actividad_campo", tenantId: null },
@@ -135,7 +142,7 @@ describe("ActividadesGrupalesService", () => {
 
   it("forbids tenant users from querying another center", async () => {
     const repository = createRepository();
-    const service = new ActividadesGrupalesService(repository);
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     await assert.rejects(
       () =>
@@ -149,7 +156,7 @@ describe("ActividadesGrupalesService", () => {
 
   it("requires a tenant selection when super admin loads form options", async () => {
     const repository = createRepository();
-    const service = new ActividadesGrupalesService(repository);
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     await assert.rejects(() => service.getFormOptions({ tenantId: null }, superAdminUser), {
       constructor: BadRequestException,
@@ -158,7 +165,7 @@ describe("ActividadesGrupalesService", () => {
 
   it("creates an activity with the actor tenant and active employees", async () => {
     const repository = createRepository();
-    const service = new ActividadesGrupalesService(repository);
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.createActividadGrupal(
       {
@@ -169,7 +176,7 @@ describe("ActividadesGrupalesService", () => {
         startTime: "08:30",
         endTime: "10:00",
         organizer: "fisioterapeuta",
-        employeeIds: ["empleado-1", "empleado-2"],
+        employeeIds: [medicoUserId, enfermeriaUserId],
       },
       medicoUser,
     );
@@ -177,12 +184,12 @@ describe("ActividadesGrupalesService", () => {
     assert.equal(result.tenantId, tenantId);
     assert.equal(result.actaNumber, 4);
     assert.equal(repository.created[0]?.tenantId, tenantId);
-    assert.deepEqual(repository.created[0]?.employeeIds, ["empleado-1", "empleado-2"]);
+    assert.deepEqual(repository.created[0]?.employeeIds, [medicoUserId, enfermeriaUserId]);
   });
 
   it("rejects activities with employees outside the active tenant list", async () => {
     const repository = createRepository();
-    const service = new ActividadesGrupalesService(repository);
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     await assert.rejects(
       () =>
@@ -195,7 +202,7 @@ describe("ActividadesGrupalesService", () => {
             startTime: "10:00",
             endTime: "11:00",
             organizer: "nutricionista",
-            employeeIds: ["empleado-1", "empleado-inactivo"],
+            employeeIds: [medicoUserId, inactiveEmpleadoId],
           },
           medicoUser,
         ),
@@ -205,7 +212,7 @@ describe("ActividadesGrupalesService", () => {
 
   it("forbids users without tenant from managing activities", async () => {
     const repository = createRepository();
-    const service = new ActividadesGrupalesService(repository);
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     await assert.rejects(
       () =>
@@ -214,6 +221,45 @@ describe("ActividadesGrupalesService", () => {
           tenantlessDirectorUser,
         ),
       { constructor: ForbiddenException },
+    );
+  });
+
+  it("allows assigned professionals to load diligenciamiento detail", async () => {
+    const repository = createRepository();
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+    const targetRecord = records[0]!;
+
+    const result = await service.getActividadGrupalDiligenciamiento(targetRecord.id, medicoUser);
+
+    assert.equal(result.id, targetRecord.id);
+    assert.equal(result.assignedProfessionals[0]?.id, medicoUser.id);
+  });
+
+  it("rejects diligenciamiento when integrantes belong to another center", async () => {
+    const repository = createRepository();
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+    const targetRecord = records[0]!;
+
+    await assert.rejects(
+      () =>
+        service.saveActividadGrupalDiligenciamiento(
+          {
+            activityId: targetRecord.id,
+            payload: {
+              objectives: "Objetivos",
+              development: "Desarrollo",
+              conclusion: "Conclusion",
+              responsibleDepartment: "nutricion",
+              integranteIds: ["377d9726-e3e3-4357-82bd-8f16c2d73052"],
+              removedPhotoFileIds: [],
+              removePdfFile: false,
+            },
+            newPhotos: [],
+            newPdf: null,
+          },
+          medicoUser,
+        ),
+      { constructor: BadRequestException },
     );
   });
 });
@@ -228,11 +274,33 @@ function createRepository(): ActividadesGrupalesRepository & {
     [
       tenantId,
       [
-        { id: "empleado-1", fullName: "Laura Perez", role: "medico" },
-        { id: "empleado-2", fullName: "Ana Gomez", role: "enfermeria" },
+        { id: medicoUserId, fullName: "Laura Perez", role: "medico" },
+        { id: enfermeriaUserId, fullName: "Ana Gomez", role: "enfermeria" },
       ],
     ],
-    [otherTenantId, [{ id: "empleado-3", fullName: "Carlos Rojas", role: "director" }]],
+    [otherTenantId, [{ id: directorUserId, fullName: "Carlos Rojas", role: "director" }]],
+  ]);
+  const integrantesByTenant = new Map<string, ActividadGrupalIntegranteOptionRecord[]>([
+    [
+      tenantId,
+      [
+        {
+          id: "25ce51a5-f0a6-4374-a6b4-815348cbd26d",
+          documentNumber: "1020304050",
+          fullName: "Rosa Elena Martinez Rojas",
+        },
+      ],
+    ],
+    [
+      otherTenantId,
+      [
+        {
+          id: "377d9726-e3e3-4357-82bd-8f16c2d73052",
+          documentNumber: "9988776655",
+          fullName: "Marta Ines Castro",
+        },
+      ],
+    ],
   ]);
 
   return {
@@ -264,6 +332,38 @@ function createRepository(): ActividadesGrupalesRepository & {
     async findActiveEmpleadoOptions(requestedTenantId) {
       return employeesByTenant.get(requestedTenantId) ?? [];
     },
+    async findById({ activityId, scope }) {
+      const record = records.find((item) => item.id === activityId);
+
+      if (record === undefined) {
+        return null;
+      }
+
+      if (scope.type === "tenant" && scope.tenantId !== record.tenantId) {
+        return null;
+      }
+
+      return toDiligenciamientoDetail(record, employeesByTenant, integrantesByTenant);
+    },
+    async searchIntegranteOptions({ tenantId: requestedTenantId, search }) {
+      const integrantes = integrantesByTenant.get(requestedTenantId) ?? [];
+
+      if (search === null) {
+        return integrantes;
+      }
+
+      return integrantes.filter((integrante) =>
+        [integrante.documentNumber, integrante.fullName]
+          .join(" ")
+          .toLowerCase()
+          .includes(search.toLowerCase()),
+      );
+    },
+    async findIntegrantesByIds(requestedTenantId, integranteIds) {
+      const integrantes = integrantesByTenant.get(requestedTenantId) ?? [];
+
+      return integrantes.filter((integrante) => integranteIds.includes(integrante.id));
+    },
     async getNextActaNumber() {
       return 4;
     },
@@ -289,5 +389,97 @@ function createRepository(): ActividadesGrupalesRepository & {
         updatedAt: new Date("2026-04-23T12:00:00.000Z"),
       };
     },
+    async saveDiligenciamiento(command) {
+      const record = records.find((item) => item.id === command.activityId);
+
+      if (record === undefined) {
+        throw new Error("Activity not found in test repository.");
+      }
+
+      return {
+        detail: {
+          ...toDiligenciamientoDetail(record, employeesByTenant, integrantesByTenant),
+          objectives: command.objectives,
+          development: command.development,
+          conclusion: command.conclusion,
+          responsibleDepartment: command.responsibleDepartment,
+          integrantes: (integrantesByTenant.get(record.tenantId) ?? []).filter((integrante) =>
+            command.integranteIds.includes(integrante.id),
+          ),
+          photoFiles: command.newFiles
+            .filter((file) => file.kind === "support_photo")
+            .map((file, index) => ({
+              id: `photo-${index}`,
+              activityId: command.activityId,
+              kind: file.kind,
+              originalName: file.originalName,
+              mimeType: file.mimeType,
+              sizeBytes: file.sizeBytes,
+              relativePath: file.relativePath,
+              createdAt: new Date("2026-04-23T12:00:00.000Z"),
+            })),
+          pdfFile:
+            command.newFiles.find((file) => file.kind === "support_pdf") === undefined
+              ? null
+              : {
+                  id: "pdf-1",
+                  activityId: command.activityId,
+                  kind: "support_pdf",
+                  originalName: "soporte.pdf",
+                  mimeType: "application/pdf",
+                  sizeBytes: 1024,
+                  relativePath: "pdf/soporte.pdf",
+                  createdAt: new Date("2026-04-23T12:00:00.000Z"),
+                },
+          diligenciamientoCreatedAt: new Date("2026-04-23T12:00:00.000Z"),
+          diligenciamientoUpdatedAt: new Date("2026-04-23T12:00:00.000Z"),
+        },
+        removedFiles: [],
+      };
+    },
+  };
+}
+
+function createFilesStorage(): ActividadesGrupalesFilesStorage {
+  return {
+    async saveFile(activity, kind, file) {
+      return {
+        kind,
+        originalName: file.originalName,
+        mimeType: file.mimeType,
+        sizeBytes: file.sizeBytes,
+        relativePath: `${activity.tenantId}/${activity.activityId}/${kind}/${file.originalName}`,
+      };
+    },
+    async readFile() {
+      return {
+        buffer: Buffer.from("file"),
+        contentType: "application/octet-stream",
+        originalName: "file.bin",
+      };
+    },
+    async deleteFile() {
+      return;
+    },
+  };
+}
+
+function toDiligenciamientoDetail(
+  record: ActividadGrupalRecord,
+  employeesByTenant: Map<string, ActividadGrupalEmpleadoOptionRecord[]>,
+  integrantesByTenant: Map<string, ActividadGrupalIntegranteOptionRecord[]>,
+): ActividadGrupalDiligenciamientoDetailRecord {
+  return {
+    activity: record,
+    assignedProfessionals: employeesByTenant.get(record.tenantId) ?? [],
+    objectives: "",
+    development: "",
+    conclusion: "",
+    responsibleDepartment: null,
+    integrantes: integrantesByTenant.get(record.tenantId) ?? [],
+    photoFiles: [],
+    pdfFile: null,
+    diligenciamientoCreatedAt: null,
+    diligenciamientoUpdatedAt: null,
   };
 }

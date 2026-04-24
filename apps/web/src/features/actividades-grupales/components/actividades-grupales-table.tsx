@@ -11,6 +11,7 @@ import {
 type ActividadesGrupalesTableProps = {
   actividadesGrupales: ActividadGrupalListItem[];
   isLoading: boolean;
+  onOpenDiligenciamiento: (actividad: ActividadGrupalListItem) => void;
   onDownloadActa: (actividad: ActividadGrupalListItem) => void;
   showTenantColumn: boolean;
 };
@@ -18,6 +19,7 @@ type ActividadesGrupalesTableProps = {
 export function ActividadesGrupalesTable({
   actividadesGrupales,
   isLoading,
+  onOpenDiligenciamiento,
   onDownloadActa,
   showTenantColumn,
 }: ActividadesGrupalesTableProps) {
@@ -88,7 +90,7 @@ export function ActividadesGrupalesTable({
                       type="button"
                       aria-label={`Diligenciar actividad ${actividad.activityName}`}
                       title="Diligenciar actividad"
-                      disabled
+                      onClick={() => onOpenDiligenciamiento(actividad)}
                     >
                       <ClipboardPenLine aria-hidden="true" />
                     </button>
