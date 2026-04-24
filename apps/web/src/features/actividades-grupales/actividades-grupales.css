@@ -179,9 +179,42 @@
   min-width: 0;
 }
 
+.actividades-activity-trigger {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .actividades-cell-activity strong {
   width: 100%;
   max-width: none;
+}
+
+.actividades-activity-trigger strong {
+  transition:
+    color 160ms ease,
+    text-decoration-color 160ms ease;
+}
+
+.actividades-activity-trigger:hover strong,
+.actividades-activity-trigger:focus-visible strong {
+  color: var(--color-deep);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-decoration-color: rgb(29 158 117 / 45%);
+  text-underline-offset: 0.18em;
+}
+
+.actividades-activity-trigger:focus-visible {
+  outline: 2px solid rgb(29 158 117 / 28%);
+  outline-offset: 3px;
 }
 
 .actividades-row-actions {

@@ -7,6 +7,8 @@ import { App } from "./app";
 import { renderWithProviders } from "../test/render-with-providers";
 import {
   adultoMayorFixture,
+  alimentacionAdultoOptionFixture,
+  alimentacionFixture,
   actividadGrupalDiligenciamientoFixture,
   actividadGrupalFixture,
   actividadGrupalFormOptionsFixture,
@@ -401,7 +403,7 @@ describe("App auth routing", () => {
       screen.getByRole("button", {
         name: `Alimentacion de ${adultoMayorFixture.names} ${adultoMayorFixture.surnames}`,
       }),
-    ).toBeDisabled();
+    ).toBeEnabled();
     expect(
       screen.getByRole("button", {
         name: `Atencion individual de ${adultoMayorFixture.names} ${adultoMayorFixture.surnames}`,
@@ -785,6 +787,38 @@ describe("App auth routing", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("opens the feeding create page from the adultos mayores shortcut", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: authUserFixture }),
+      ),
+      http.get(
+        "http://localhost:3001/api/registro-alimentacion/adultos-mayores/:adultoMayorId/lookup",
+        () =>
+          HttpResponse.json({
+            adultoMayor: alimentacionAdultoOptionFixture,
+            existingRecordId: null,
+          }),
+      ),
+    );
+    window.history.replaceState({}, "", "/adultos-mayores");
+    const user = userEvent.setup();
+
+    renderWithProviders(<App />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: `Alimentacion de ${adultoMayorFixture.names} ${adultoMayorFixture.surnames}`,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(`/registro-alimentacion/new/${adultoMayorFixture.id}`);
+    });
+    expect(await screen.findByRole("button", { name: "Guardar alimentación" })).toBeInTheDocument();
+    expect(screen.getByText(alimentacionAdultoOptionFixture.fullName)).toBeInTheDocument();
+  });
+
   it("shows the activities list when navigating to Sesiones grupales", async () => {
     server.use(
       http.get("http://localhost:3001/api/auth/me", () =>
@@ -796,7 +830,9 @@ describe("App auth routing", () => {
     renderWithProviders(<App />);
 
     expect(await screen.findByRole("table")).toBeInTheDocument();
-    expect(await screen.findByText(actividadGrupalFixture.activityName)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: actividadGrupalFixture.activityName }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Crear actividad" })).toBeInTheDocument();
     expect(
       screen.getByRole("button", {
@@ -824,12 +860,10 @@ describe("App auth routing", () => {
 
     renderWithProviders(<App />);
 
-    expect(await screen.findByText(actividadGrupalFixture.activityName)).toBeInTheDocument();
-    await user.click(
-      screen.getByRole("button", {
-        name: `Diligenciar actividad ${actividadGrupalFixture.activityName}`,
-      }),
-    );
+    expect(
+      await screen.findByRole("button", { name: actividadGrupalFixture.activityName }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: actividadGrupalFixture.activityName }));
 
     await waitFor(() => {
       expect(window.location.pathname).toBe(
@@ -945,7 +979,7 @@ describe("App auth routing", () => {
     await user.type(screen.getByLabelText("Desarrollo"), "Desarrollo test");
     await user.type(screen.getByLabelText("Conclusion"), "Conclusion test");
     await user.selectOptions(screen.getByLabelText("Departamento encargado"), "nutricion");
-    await user.type(screen.getByLabelText("Buscar por nombre o documento"), "Rosa");
+    await user.type(screen.getByLabelText("Buscar por nombre o documento"), "1020304050");
     await user.click(screen.getByRole("button", { name: /Rosa Elena Martinez Rojas/i }));
     await waitFor(() => {
       const integrantesSeleccionados = screen
@@ -1039,6 +1073,107 @@ describe("App auth routing", () => {
       endTime: "11:00",
       organizer: "medico",
       employeeIds: [empleadoFixture.id],
+    });
+  });
+
+  it("shows the feeding list when navigating to Registro de alimentación", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: authUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", "/registro-alimentacion");
+
+    renderWithProviders(<App />);
+
+    expect(await screen.findByRole("table")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: alimentacionFixture.fullName })).toBeInTheDocument();
+    expect(screen.getByText("Entregado")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Agregar registro de alimentación" })).toBeInTheDocument();
+  });
+
+  it("creates a feeding batch and returns to the list", async () => {
+    let createPayload: unknown = null;
+    let registros = [alimentacionFixture];
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: authUserFixture }),
+      ),
+      http.get("http://localhost:3001/api/registro-alimentacion", ({ request }) => {
+        const deliveryDate = new URL(request.url).searchParams.get("deliveryDate");
+        const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? null;
+        const filteredRecords = registros.filter((registro) => {
+          const matchesDate =
+            deliveryDate === null || deliveryDate === "" || registro.deliveryDate === deliveryDate;
+          const matchesSearch =
+            search === null ||
+            [registro.documentNumber, registro.fullName].join(" ").toLowerCase().includes(search);
+
+          return matchesDate && matchesSearch;
+        });
+
+        return HttpResponse.json({ registros: filteredRecords });
+      }),
+      http.get("http://localhost:3001/api/registro-alimentacion/adultos-mayores-options", () =>
+        HttpResponse.json({ adultosMayores: [alimentacionAdultoOptionFixture] }),
+      ),
+      http.post("http://localhost:3001/api/registro-alimentacion", async ({ request }) => {
+        createPayload = await request.json();
+        registros = [
+          {
+            ...alimentacionFixture,
+            deliveryDate: "2026-04-24",
+          },
+        ];
+
+        return HttpResponse.json({ createdCount: 1 });
+      }),
+    );
+    window.history.replaceState({}, "", "/registro-alimentacion/new");
+    const user = userEvent.setup();
+
+    renderWithProviders(<App />);
+
+    await user.clear(screen.getByLabelText("Fecha"));
+    await user.type(screen.getByLabelText("Fecha"), "2026-04-24");
+    await user.selectOptions(screen.getByLabelText("Organizador"), "nutricionista");
+    await user.type(screen.getByLabelText("Buscar por nombre o documento"), "1020304050");
+    await user.click(screen.getByRole("button", { name: /Rosa Elena Martinez Rojas/i }));
+    await user.selectOptions(
+      screen.getByLabelText(/Refrigerio 1 de Rosa Elena Martinez Rojas/i),
+      "entregado",
+    );
+    await user.selectOptions(
+      screen.getByLabelText(/^Almuerzo de Rosa Elena Martinez Rojas$/i),
+      "entregado",
+    );
+    await user.selectOptions(
+      screen.getByLabelText(/Refrigerio 2 de Rosa Elena Martinez Rojas/i),
+      "no_aplica",
+    );
+    await user.selectOptions(
+      screen.getByLabelText(/Auxilio de transporte de Rosa Elena Martinez Rojas/i),
+      "entregado",
+    );
+    await user.click(screen.getByRole("button", { name: "Guardar alimentación" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/registro-alimentacion");
+    });
+    expect(await screen.findByRole("button", { name: alimentacionFixture.fullName })).toBeInTheDocument();
+    expect(createPayload).toMatchObject({
+      tenantId: null,
+      deliveryDate: "2026-04-24",
+      organizer: "nutricionista",
+      registros: [
+        {
+          adultoMayorId: adultoMayorFixture.id,
+          refrigerio1: "entregado",
+          almuerzo: "entregado",
+          refrigerio2: "no_aplica",
+          auxilioTransporte: "entregado",
+        },
+      ],
     });
   });
 

@@ -10,6 +10,7 @@ import {
 import { type ReactNode } from "react";
 
 import { ADULTOS_MAYORES_PATH } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
+import { REGISTRO_ALIMENTACION_PATH } from "@/features/alimentacion/lib/alimentacion-paths";
 import { CREACION_ACTIVIDADES_PATH } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
 import { BACKOFFICE_PATH } from "@/features/backoffice/lib/backoffice-paths";
 import { EMPLEADOS_PATH } from "@/features/empleados/lib/empleados-paths";
@@ -46,6 +47,7 @@ export const HOME_MODULES = [
     id: "registro-alimentacion",
     label: "Registro de alimentación",
     icon: <Utensils />,
+    path: REGISTRO_ALIMENTACION_PATH,
   },
   {
     id: "gestion-empleados",

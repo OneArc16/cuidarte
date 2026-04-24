@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
+import { buildAlimentacionCreateFromAdultoPath } from "@/features/alimentacion/lib/alimentacion-paths";
 
 import { AdultosMayoresTable } from "../components/adultos-mayores-table";
 import { AdultosMayoresToolbar } from "../components/adultos-mayores-toolbar";
@@ -84,6 +85,9 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
         adultosMayores={adultosMayores}
         isLoading={adultosMayoresQuery.isLoading}
         showTenantColumn={showTenantColumn}
+        onOpenAlimentacion={(adultoMayorId) =>
+          navigate(buildAlimentacionCreateFromAdultoPath(adultoMayorId))
+        }
         onEdit={(adultoMayorId) => navigate(buildAdultoMayorEditPath(adultoMayorId))}
       />
 

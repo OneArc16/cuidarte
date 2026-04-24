@@ -11,12 +11,14 @@ type AdultosMayoresTableProps = {
   adultosMayores: AdultoMayorListItem[];
   isLoading: boolean;
   showTenantColumn: boolean;
+  onOpenAlimentacion: (adultoMayorId: string) => void;
   onEdit: (adultoMayorId: string) => void;
 };
 
 export function AdultosMayoresTable({
   adultosMayores,
   isLoading,
+  onOpenAlimentacion,
   onEdit,
   showTenantColumn,
 }: AdultosMayoresTableProps) {
@@ -74,7 +76,7 @@ export function AdultosMayoresTable({
                     type="button"
                     aria-label={`Alimentacion de ${adultoMayor.names} ${adultoMayor.surnames}`}
                     title="Alimentacion"
-                    disabled
+                    onClick={() => onOpenAlimentacion(adultoMayor.id)}
                   >
                     <Utensils aria-hidden="true" />
                   </button>

@@ -132,6 +132,31 @@ export const actividadGrupalIntegranteFixture = {
   fullName: `${adultoMayorFixture.names} ${adultoMayorFixture.surnames}`,
 } as const;
 
+export const alimentacionAdultoOptionFixture = {
+  id: adultoMayorFixture.id,
+  tenantId: adultoMayorFixture.tenantId,
+  tenantName: adultoMayorFixture.tenantName,
+  documentNumber: adultoMayorFixture.documentNumber,
+  fullName: `${adultoMayorFixture.names} ${adultoMayorFixture.surnames}`,
+} as const;
+
+export const alimentacionFixture = {
+  id: "4f3e6b3b-e94a-4791-9b94-10fdbec70eb3",
+  tenantId: backofficeTenantDetailFixture.tenant.id,
+  tenantName: backofficeTenantDetailFixture.tenant.name,
+  adultoMayorId: adultoMayorFixture.id,
+  documentNumber: adultoMayorFixture.documentNumber,
+  fullName: `${adultoMayorFixture.names} ${adultoMayorFixture.surnames}`,
+  deliveryDate: "2026-04-24",
+  organizer: "nutricionista",
+  refrigerio1: "entregado",
+  almuerzo: "entregado",
+  refrigerio2: "no_aplica",
+  auxilioTransporte: "no_entregado",
+  createdAt: "2026-04-24T12:00:00.000Z",
+  updatedAt: "2026-04-24T12:00:00.000Z",
+} as const;
+
 export const actividadGrupalDiligenciamientoFixture = {
   ...actividadGrupalFixture,
   assignedProfessionals: [
@@ -325,6 +350,68 @@ export const server = setupServer(
       });
     },
   ),
+  http.get("http://localhost:3001/api/registro-alimentacion", ({ request }) => {
+    const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? null;
+    const deliveryDate = new URL(request.url).searchParams.get("deliveryDate");
+    const registros = [alimentacionFixture].filter((registro) => {
+      const matchesSearch =
+        search === null ||
+        [registro.documentNumber, registro.fullName, registro.organizer]
+          .join(" ")
+          .toLowerCase()
+          .includes(search);
+      const matchesDate =
+        deliveryDate === null || deliveryDate === "" || registro.deliveryDate === deliveryDate;
+
+      return matchesSearch && matchesDate;
+    });
+
+    return HttpResponse.json({ registros });
+  }),
+  http.get("http://localhost:3001/api/registro-alimentacion/tenant-options", () =>
+    HttpResponse.json({ tenants: [backofficeTenantDetailFixture.tenant] }),
+  ),
+  http.get("http://localhost:3001/api/registro-alimentacion/adultos-mayores-options", ({ request }) => {
+    const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? "";
+
+    const adultosMayores = [alimentacionAdultoOptionFixture].filter((adultoMayor) =>
+      [adultoMayor.documentNumber, adultoMayor.fullName].join(" ").toLowerCase().includes(search),
+    );
+
+    return HttpResponse.json({ adultosMayores });
+  }),
+  http.get(
+    "http://localhost:3001/api/registro-alimentacion/adultos-mayores/:adultoMayorId/lookup",
+    () =>
+      HttpResponse.json({
+        adultoMayor: alimentacionAdultoOptionFixture,
+        existingRecordId: null,
+      }),
+  ),
+  http.post("http://localhost:3001/api/registro-alimentacion", async ({ request }) => {
+    const payload = (await request.json()) as { registros?: unknown[] };
+
+    return HttpResponse.json({
+      createdCount: Array.isArray(payload.registros) ? payload.registros.length : 1,
+    });
+  }),
+  http.get("http://localhost:3001/api/registro-alimentacion/:recordId", () =>
+    HttpResponse.json(alimentacionFixture),
+  ),
+  http.patch("http://localhost:3001/api/registro-alimentacion/:recordId", async ({ request }) => {
+    const payload = (await request.json()) as Record<string, unknown>;
+
+    return HttpResponse.json({
+      ...alimentacionFixture,
+      deliveryDate: payload.deliveryDate ?? alimentacionFixture.deliveryDate,
+      organizer: payload.organizer ?? alimentacionFixture.organizer,
+      refrigerio1: payload.refrigerio1 ?? alimentacionFixture.refrigerio1,
+      almuerzo: payload.almuerzo ?? alimentacionFixture.almuerzo,
+      refrigerio2: payload.refrigerio2 ?? alimentacionFixture.refrigerio2,
+      auxilioTransporte: payload.auxilioTransporte ?? alimentacionFixture.auxilioTransporte,
+      updatedAt: "2026-04-25T12:00:00.000Z",
+    });
+  }),
   http.get(
     "http://localhost:3001/api/adultos-mayores/export/excel",
     () =>

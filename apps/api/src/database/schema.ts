@@ -73,6 +73,21 @@ export const actividadGrupalSupportFileKind = pgEnum("actividad_grupal_support_f
   "support_photo",
   "support_pdf",
 ]);
+export const alimentacionStatus = pgEnum("alimentacion_status", [
+  "entregado",
+  "no_entregado",
+  "no_aplica",
+]);
+export const alimentacionOrganizer = pgEnum("alimentacion_organizer", [
+  "director",
+  "medico",
+  "enfermeria",
+  "psicologa",
+  "trabajadora_social",
+  "nutricionista",
+  "fisioterapeuta",
+  "recreacionista",
+]);
 
 export const tenants = pgTable(
   "tenants",
@@ -318,6 +333,44 @@ export const actividadGrupalDiligenciamientoFiles = pgTable(
     index("actividad_grupal_dilig_files_activity_idx").on(table.activityId),
     index("actividad_grupal_dilig_files_kind_idx").on(table.kind),
     index("actividad_grupal_dilig_files_created_by_user_idx").on(table.createdByUserId),
+  ],
+);
+
+export const alimentacionRegistros = pgTable(
+  "alimentacion_registros",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    adultoMayorId: uuid("adulto_mayor_id")
+      .notNull()
+      .references(() => adultosMayores.id, { onDelete: "restrict" }),
+    deliveryDate: date("delivery_date", { mode: "string" }).notNull(),
+    organizer: alimentacionOrganizer("organizer").notNull(),
+    refrigerio1: alimentacionStatus("refrigerio_1").notNull(),
+    almuerzo: alimentacionStatus("almuerzo").notNull(),
+    refrigerio2: alimentacionStatus("refrigerio_2").notNull(),
+    auxilioTransporte: alimentacionStatus("auxilio_transporte").notNull(),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    updatedByUserId: uuid("updated_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("alimentacion_registros_tenant_adulto_fecha_unique").on(
+      table.tenantId,
+      table.adultoMayorId,
+      table.deliveryDate,
+    ),
+    index("alimentacion_registros_tenant_date_idx").on(table.tenantId, table.deliveryDate),
+    index("alimentacion_registros_adulto_mayor_idx").on(table.adultoMayorId),
+    index("alimentacion_registros_created_by_user_idx").on(table.createdByUserId),
+    index("alimentacion_registros_updated_by_user_idx").on(table.updatedByUserId),
   ],
 );
 

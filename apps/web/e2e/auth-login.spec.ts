@@ -142,8 +142,12 @@ test.describe("Auth + Login", () => {
 
     await expect(page).toHaveURL(/\/creacion-actividades$/);
     await expect(page.getByText(activityName)).toBeVisible();
+    await expect(page.getByRole("button", { name: activityName })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: `Diligenciar actividad ${activityName}` }),
+    ).toBeVisible();
 
-    await page.getByRole("button", { name: `Diligenciar actividad ${activityName}` }).click();
+    await page.getByRole("button", { name: activityName }).click();
     await expect(page).toHaveURL(/\/creacion-actividades\/[0-9a-f-]+\/diligenciamiento$/);
 
     await page.getByLabel("Objetivos").fill("Objetivos E2E");
@@ -165,5 +169,37 @@ test.describe("Auth + Login", () => {
     await page.getByRole("button", { name: "Guardar diligenciamiento" }).click();
 
     await expect(page.getByRole("status")).toContainText("Diligenciamiento guardado.");
+  });
+
+  test("permite a un admin crear un lote de alimentación", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByLabel("Correo").fill(adminCredentials.email);
+    await page.getByLabel("Contrasena").fill(adminCredentials.password);
+    await page.getByRole("button", { name: "Iniciar sesion" }).click();
+
+    await expect(page).toHaveURL(/\/home$/);
+    await page.getByRole("button", { name: "Registro de alimentación" }).click();
+    await expect(page).toHaveURL(/\/registro-alimentacion$/);
+    await expect(page.getByRole("table")).toBeVisible();
+
+    await page.getByRole("button", { name: "Agregar registro de alimentación" }).click();
+    await expect(page).toHaveURL(/\/registro-alimentacion\/new$/);
+
+    await page.getByLabel("Fecha").fill("2026-04-24");
+    await page.getByLabel("Organizador").selectOption("nutricionista");
+    await page.getByLabel("Buscar por nombre o documento").fill("1020304050");
+    await page.getByRole("button", { name: /Rosa Elena Martinez Rojas/i }).click();
+    await page
+      .getByLabel("Refrigerio 1 de Rosa Elena Martinez Rojas")
+      .selectOption("entregado");
+    await page.getByLabel("Almuerzo de Rosa Elena Martinez Rojas").selectOption("entregado");
+    await page.getByLabel("Refrigerio 2 de Rosa Elena Martinez Rojas").selectOption("no_aplica");
+    await page
+      .getByLabel("Auxilio de transporte de Rosa Elena Martinez Rojas")
+      .selectOption("entregado");
+    await page.getByRole("button", { name: "Guardar alimentación" }).click();
+
+    await expect(page).toHaveURL(/\/registro-alimentacion$/);
+    await expect(page.getByRole("button", { name: /Rosa Elena Martinez Rojas/i })).toBeVisible();
   });
 });

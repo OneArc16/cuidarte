@@ -76,7 +76,14 @@ export function ActividadesGrupalesTable({
                   <strong>{formatActaNumber(actividad.actaNumber)}</strong>
                 </td>
                 <td className="actividades-cell-activity">
-                  <strong>{actividad.activityName}</strong>
+                  <button
+                    className="actividades-activity-trigger"
+                    type="button"
+                    title="Diligenciar actividad"
+                    onClick={() => onOpenDiligenciamiento(actividad)}
+                  >
+                    <strong>{actividad.activityName}</strong>
+                  </button>
                 </td>
                 <td>{formatActividadGrupalType(actividad.activityType)}</td>
                 <td>{actividad.activityDate}</td>
