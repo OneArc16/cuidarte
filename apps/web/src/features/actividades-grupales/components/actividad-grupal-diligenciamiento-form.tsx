@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ChevronLeft,
   ChevronRight,
-  Download,
+  ExternalLink,
   FileText,
   ImagePlus,
   Search,
@@ -679,7 +679,7 @@ function FileCard({
             aria-label={`Abrir ${title}`}
             title="Abrir soporte"
           >
-            <Download aria-hidden="true" />
+            <ExternalLink aria-hidden="true" />
           </a>
         ) : null}
         <button

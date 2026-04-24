@@ -6,12 +6,12 @@ import { type Navigate } from "@/app/hooks/use-app-navigation";
 
 import { ActividadesGrupalesTable } from "../components/actividades-grupales-table";
 import { ActividadesGrupalesToolbar } from "../components/actividades-grupales-toolbar";
-import { downloadActividadGrupalActa } from "../lib/download-actividad-grupal-acta";
 import {
   buildActividadGrupalDiligenciamientoPath,
   CREACION_ACTIVIDADES_NEW_PATH,
 } from "../lib/actividades-grupales-paths";
 import { resolveActividadesGrupalesApiError } from "../lib/actividades-grupales-formatters";
+import { openActividadGrupalActaPdf } from "../lib/open-actividad-grupal-acta-pdf";
 import {
   useActividadGrupalTenantOptionsQuery,
   useActividadesGrupalesQuery,
@@ -71,7 +71,7 @@ export function ActividadesGrupalesIndexPage({
         onOpenDiligenciamiento={(actividad) =>
           navigate(buildActividadGrupalDiligenciamientoPath(actividad.id))
         }
-        onDownloadActa={downloadActividadGrupalActa}
+        onOpenActaPdf={(actividad) => openActividadGrupalActaPdf(actividad.id)}
         showTenantColumn={showTenantFilter}
       />
 

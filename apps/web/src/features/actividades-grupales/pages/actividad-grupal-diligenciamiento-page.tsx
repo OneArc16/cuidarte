@@ -1,4 +1,4 @@
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, FileText } from "lucide-react";
 import { useState } from "react";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
@@ -6,6 +6,7 @@ import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { ActividadGrupalDiligenciamientoForm } from "../components/actividad-grupal-diligenciamiento-form";
 import { resolveActividadesGrupalesApiError } from "../lib/actividades-grupales-formatters";
 import { CREACION_ACTIVIDADES_PATH } from "../lib/actividades-grupales-paths";
+import { openActividadGrupalActaPdf } from "../lib/open-actividad-grupal-acta-pdf";
 import {
   useActividadGrupalDiligenciamientoQuery,
   useSaveActividadGrupalDiligenciamientoMutation,
@@ -72,6 +73,14 @@ export function ActividadGrupalDiligenciamientoPage({
         >
           <ChevronLeft aria-hidden="true" />
           <span>Volver</span>
+        </button>
+        <button
+          className="outline-action actividades-back-action"
+          type="button"
+          onClick={() => openActividadGrupalActaPdf(activityId)}
+        >
+          <FileText aria-hidden="true" />
+          <span>Ver PDF</span>
         </button>
         <span className="actividades-form-nav__context">Diligenciar sesion</span>
       </div>

@@ -253,7 +253,7 @@ export class ActividadesGrupalesService {
       buffer: storedFile.buffer,
       contentType: storedFile.contentType,
       filename: storedFile.originalName,
-      disposition: file.kind === "support_pdf" ? "attachment" : "inline",
+      disposition: "inline",
     };
   }
 

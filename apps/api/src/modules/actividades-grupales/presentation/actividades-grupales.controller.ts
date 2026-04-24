@@ -39,6 +39,7 @@ import { parseZodSchema } from "../../../common/parse-zod-schema";
 import { type AuthenticatedRequest } from "../../auth/authenticated-request";
 import { SessionGuard } from "../../auth/session.guard";
 import { type BufferedActividadGrupalUpload } from "../domain/actividad-grupal.types";
+import { ActividadesGrupalesActaExportService } from "../application/actividades-grupales-acta-export.service";
 import { ActividadesGrupalesService } from "../application/actividades-grupales.service";
 
 const actividadIdParamSchema = z.uuid();
@@ -53,7 +54,10 @@ type MultipartAuthenticatedRequest = AuthenticatedRequest & {
 @Controller("actividades-grupales")
 @UseGuards(SessionGuard)
 export class ActividadesGrupalesController {
-  constructor(private readonly actividadesGrupalesService: ActividadesGrupalesService) {}
+  constructor(
+    private readonly actividadesGrupalesService: ActividadesGrupalesService,
+    private readonly actividadesGrupalesActaExportService: ActividadesGrupalesActaExportService,
+  ) {}
 
   @Get()
   @ApiOkResponse({ description: "Listado de actividades grupales." })
@@ -129,6 +133,25 @@ export class ActividadesGrupalesController {
     return actividadGrupalDiligenciamientoDetailSchema.parse(detail);
   }
 
+  @Get(":id/acta/pdf")
+  @ApiOkResponse({ description: "PDF del acta de la sesion grupal." })
+  @ApiNotFoundResponse({ description: "Sesion no encontrada." })
+  @ApiForbiddenResponse({ description: "El usuario no puede acceder al acta." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async exportActividadGrupalActaPdf(
+    @Param("id") id: string,
+    @Req() request: AuthenticatedRequest,
+    @Res() reply: FastifyReply,
+  ) {
+    const activityId = parseZodSchema(actividadIdParamSchema, id);
+    const file = await this.actividadesGrupalesActaExportService.exportPdf(
+      activityId,
+      request.currentUser,
+    );
+
+    return sendFile(reply, file, "inline");
+  }
+
   @Get(":id/diligenciamiento/integrantes-options")
   @ApiOkResponse({ description: "Opciones de adultos mayores para agregar como integrantes." })
   @ApiNotFoundResponse({ description: "Sesion no encontrada." })
@@ -198,11 +221,19 @@ export class ActividadesGrupalesController {
       request.currentUser,
     );
 
-    reply.header("Content-Type", file.contentType);
-    reply.header("Content-Disposition", `${file.disposition}; filename="${file.filename}"`);
-
-    return reply.send(file.buffer);
+    return sendFile(reply, file, file.disposition);
   }
+}
+
+function sendFile(
+  reply: FastifyReply,
+  file: { buffer: Buffer; contentType: string; filename: string },
+  disposition: "attachment" | "inline",
+) {
+  reply.header("Content-Type", file.contentType);
+  reply.header("Content-Disposition", `${disposition}; filename="${file.filename}"`);
+
+  return reply.send(file.buffer);
 }
 
 async function parseDiligenciamientoMultipartRequest(request: MultipartAuthenticatedRequest) {

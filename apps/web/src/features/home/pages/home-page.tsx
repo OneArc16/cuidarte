@@ -28,17 +28,18 @@ type HomePageProps = {
 
 export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProps) {
   const isMobileViewport = useMediaQuery(MOBILE_HOME_QUERY);
+
   const activeModuleId = isBackofficePath(path)
     ? "backoffice"
     : isAdultosMayoresPath(path)
       ? "adultos-mayores"
       : isAlimentacionPath(path)
         ? "registro-alimentacion"
-      : isActividadesGrupalesPath(path)
-        ? "sesiones-grupales"
-        : isEmpleadosPath(path)
-          ? "gestion-empleados"
-          : "inicio";
+        : isActividadesGrupalesPath(path)
+          ? "sesiones-grupales"
+          : isEmpleadosPath(path)
+            ? "gestion-empleados"
+            : "inicio";
 
   return (
     <main className="home-shell">
@@ -60,11 +61,11 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
               ? "adultos-mayores-title"
               : isAlimentacionPath(path)
                 ? "alimentacion-title"
-              : isActividadesGrupalesPath(path)
-                ? "actividades-title"
-                : isEmpleadosPath(path)
-                  ? "empleados-title"
-                  : "home-title"
+                : isActividadesGrupalesPath(path)
+                  ? "actividades-title"
+                  : isEmpleadosPath(path)
+                    ? "empleados-title"
+                    : "home-title"
         }
       >
         {isBackofficePath(path) ? (

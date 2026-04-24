@@ -42,7 +42,7 @@ describe("ActividadesGrupalesController", () => {
         ];
       },
     };
-    const controller = new ActividadesGrupalesController(service as never);
+    const controller = new ActividadesGrupalesController(service as never, {} as never);
 
     const result = await controller.listActividadesGrupales(
       {
@@ -83,7 +83,7 @@ describe("ActividadesGrupalesController", () => {
         };
       },
     };
-    const controller = new ActividadesGrupalesController(service as never);
+    const controller = new ActividadesGrupalesController(service as never, {} as never);
 
     const result = await controller.createActividadGrupal(
       {
@@ -148,7 +148,7 @@ describe("ActividadesGrupalesController", () => {
         };
       },
     };
-    const controller = new ActividadesGrupalesController(service as never);
+    const controller = new ActividadesGrupalesController(service as never, {} as never);
 
     const result = await controller.getActividadGrupalDiligenciamiento(
       "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
@@ -159,5 +159,53 @@ describe("ActividadesGrupalesController", () => {
     assert.equal(receivedActorId, currentUser.id);
     assert.equal(result.activityName, "Jornada psicomotriz");
     assert.equal(result.assignedProfessionals[0]?.id, currentUser.id);
+  });
+
+  it("exports the acta pdf inline", async () => {
+    let receivedActivityId: string | null = null;
+    let receivedActorId: string | null = null;
+    let sentPayload: unknown = null;
+    const headers: Record<string, string> = {};
+    const exportService = {
+      exportPdf: async (activityId: string, actor: AuthUser) => {
+        receivedActivityId = activityId;
+        receivedActorId = actor.id;
+
+        return {
+          buffer: Buffer.from("pdf"),
+          contentType: "application/pdf",
+          filename: "acta-sesion-grupal-0004.pdf",
+        };
+      },
+    };
+    const reply = {
+      header(name: string, value: string) {
+        headers[name] = value;
+
+        return this;
+      },
+      send(payload: Buffer) {
+        sentPayload = payload;
+
+        return payload;
+      },
+    };
+    const controller = new ActividadesGrupalesController({} as never, exportService as never);
+
+    await controller.exportActividadGrupalActaPdf(
+      "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
+      { currentUser } as never,
+      reply as never,
+    );
+
+    assert.equal(receivedActivityId, "5f0361fb-ff51-43d7-a6e8-83c58df345b6");
+    assert.equal(receivedActorId, currentUser.id);
+    assert.equal(headers["Content-Type"], "application/pdf");
+    assert.equal(
+      headers["Content-Disposition"],
+      'inline; filename="acta-sesion-grupal-0004.pdf"',
+    );
+    assert.equal(Buffer.isBuffer(sentPayload), true);
+    assert.equal((sentPayload as Buffer).toString("utf8"), "pdf");
   });
 });

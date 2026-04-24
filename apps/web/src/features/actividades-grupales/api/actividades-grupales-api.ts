@@ -127,6 +127,10 @@ export function buildActividadGrupalDiligenciamientoFileUrl(
   return `${getApiBaseUrl()}/actividades-grupales/${activityId}/diligenciamiento/files/${fileId}`;
 }
 
+export function buildActividadGrupalActaPdfUrl(activityId: string): string {
+  return `${getApiBaseUrl()}/actividades-grupales/${activityId}/acta/pdf`;
+}
+
 function buildActividadesGrupalesUrl(params: ListActividadesGrupalesParams): string {
   const searchParams = new URLSearchParams();
 

@@ -1,5 +1,5 @@
 import { type ActividadGrupalListItem } from "@cuidarte/contracts";
-import { ClipboardPenLine, FileDown } from "lucide-react";
+import { ClipboardPenLine, FileText } from "lucide-react";
 
 import {
   formatActividadGrupalOrganizer,
@@ -12,7 +12,7 @@ type ActividadesGrupalesTableProps = {
   actividadesGrupales: ActividadGrupalListItem[];
   isLoading: boolean;
   onOpenDiligenciamiento: (actividad: ActividadGrupalListItem) => void;
-  onDownloadActa: (actividad: ActividadGrupalListItem) => void;
+  onOpenActaPdf: (actividad: ActividadGrupalListItem) => void;
   showTenantColumn: boolean;
 };
 
@@ -20,7 +20,7 @@ export function ActividadesGrupalesTable({
   actividadesGrupales,
   isLoading,
   onOpenDiligenciamiento,
-  onDownloadActa,
+  onOpenActaPdf,
   showTenantColumn,
 }: ActividadesGrupalesTableProps) {
   if (isLoading) {
@@ -104,11 +104,11 @@ export function ActividadesGrupalesTable({
                     <button
                       className="actividades-row-action"
                       type="button"
-                      aria-label={`Descargar acta ${formatActaNumber(actividad.actaNumber)}`}
-                      title="Descargar acta"
-                      onClick={() => onDownloadActa(actividad)}
+                      aria-label={`Ver PDF del acta ${formatActaNumber(actividad.actaNumber)}`}
+                      title="Ver PDF del acta"
+                      onClick={() => onOpenActaPdf(actividad)}
                     >
-                      <FileDown aria-hidden="true" />
+                      <FileText aria-hidden="true" />
                     </button>
                   </div>
                 </td>

@@ -110,6 +110,14 @@ pnpm --filter @cuidarte/web e2e:install
 pnpm --filter @cuidarte/web e2e
 ```
 
+Exportacion PDF de la API:
+
+```bash
+pnpm pdf:install-deps
+```
+
+Este comando instala Chromium y sus librerias nativas para los PDFs generados desde NestJS con Playwright. En Linux/WSL puede pedir contrasena de `sudo`.
+
 Verificacion completa de la slice Auth:
 
 ```bash

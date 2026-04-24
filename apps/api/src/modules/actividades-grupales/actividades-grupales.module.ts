@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 
 import { DatabaseModule } from "../../database/database.module";
 import { AuthModule } from "../auth/auth.module";
+import { ActividadesGrupalesActaExportService } from "./application/actividades-grupales-acta-export.service";
 import { ActividadesGrupalesService } from "./application/actividades-grupales.service";
 import { ACTIVIDADES_GRUPALES_FILES_STORAGE } from "./domain/actividades-grupales-files.storage";
 import { ACTIVIDADES_GRUPALES_REPOSITORY } from "./domain/actividades-grupales.repository";
@@ -13,6 +14,7 @@ import { ActividadesGrupalesController } from "./presentation/actividades-grupal
   imports: [AuthModule, DatabaseModule],
   controllers: [ActividadesGrupalesController],
   providers: [
+    ActividadesGrupalesActaExportService,
     ActividadesGrupalesService,
     {
       provide: ACTIVIDADES_GRUPALES_REPOSITORY,
