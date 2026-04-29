@@ -21,6 +21,7 @@ import {
 
 import { calculateAgeFromBirthDate } from "./age";
 import {
+  canManageAdultosMayores,
   resolveAdultoMayorTenantForCreate,
   resolveAdultosMayoresScope,
 } from "../domain/adulto-mayor.policy";
@@ -83,6 +84,7 @@ export class AdultosMayoresService {
     command: CreateAdultoMayorRequest,
     actor: AuthUser,
   ): Promise<AdultoMayorDetail> {
+    this.ensureCanManage(actor);
     const tenantId = resolveAdultoMayorTenantForCreate(actor, command.tenantId);
 
     if (tenantId === null) {
@@ -133,6 +135,7 @@ export class AdultosMayoresService {
     command: UpdateAdultoMayorRequest,
     actor: AuthUser,
   ): Promise<AdultoMayorDetail> {
+    this.ensureCanManage(actor);
     const scope = this.resolveScopeOrThrow(actor);
     const currentRecord = await this.adultosMayoresRepository.findById({
       id: adultoMayorId,
@@ -193,6 +196,12 @@ export class AdultosMayoresService {
     }
 
     return scope;
+  }
+
+  private ensureCanManage(actor: AuthUser) {
+    if (!canManageAdultosMayores(actor)) {
+      throw new ForbiddenException("No tienes permisos para crear o actualizar adultos mayores.");
+    }
   }
 
   private async ensureDocumentIsUnique(command: {

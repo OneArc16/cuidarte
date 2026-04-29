@@ -21,6 +21,15 @@ const tenantAdminUser: AuthUser = {
   passwordSetByAdmin: true,
 };
 
+const tenantAuditorUser: AuthUser = {
+  id: "6f41f9cb-b7bc-4d4b-a9d9-020ea028f787",
+  tenantId,
+  email: "auditor@centro-demo.test",
+  fullName: "Auditor Centro Demo",
+  role: "auditor",
+  passwordSetByAdmin: true,
+};
+
 const superAdminUser: AuthUser = {
   ...tenantAdminUser,
   id: "4c5b84e6-d88e-4f8a-93de-af2916d62f40",
@@ -140,6 +149,19 @@ describe("AdultosMayoresService", () => {
     });
   });
 
+  it("allows auditor users to list records from their tenant", async () => {
+    const repository = createRepository();
+    const service = new AdultosMayoresService(repository);
+
+    const result = await service.listAdultosMayores({ search: null }, tenantAuditorUser);
+
+    assert.equal(result.length, 1);
+    assert.deepEqual(repository.queries[0], {
+      search: null,
+      scope: { type: "tenant", tenantId },
+    });
+  });
+
   it("throws when a non SuperAdmin user has no tenant", async () => {
     const repository = createRepository();
     const service = new AdultosMayoresService(repository);
@@ -192,6 +214,24 @@ describe("AdultosMayoresService", () => {
     assert.equal(result.id, currentRecord.id);
     assert.equal(result.names, "Rosa Maria");
     assert.equal(result.surnames, "Martinez Rojas");
+  });
+
+  it("forbids auditor users from creating or updating adults records", async () => {
+    const repository = createRepository();
+    const service = new AdultosMayoresService(repository);
+    const currentRecord = records[0];
+
+    assert.ok(currentRecord);
+
+    await assert.rejects(
+      () => service.createAdultoMayor(createCommand(), tenantAuditorUser),
+      { constructor: ForbiddenException },
+    );
+
+    await assert.rejects(
+      () => service.updateAdultoMayor(currentRecord.id, createCommand(), tenantAuditorUser),
+      { constructor: ForbiddenException },
+    );
   });
 
   it("calculates age from birth date", () => {

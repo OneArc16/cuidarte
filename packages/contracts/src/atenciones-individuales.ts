@@ -131,6 +131,7 @@ export const atencionIndividualHistoryEditorRoleValues = [
 
 export const atencionIndividualHistoryReaderRoleValues = [
   "admin",
+  "auditor",
   "director",
   "super_admin",
 ] as const satisfies readonly UserRole[];

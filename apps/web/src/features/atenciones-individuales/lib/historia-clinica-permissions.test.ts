@@ -42,6 +42,14 @@ const adminUser = {
   role: "admin",
 } as const;
 
+const auditorUser = {
+  ...medicoUser,
+  id: "6f41f9cb-b7bc-4d4b-a9d9-020ea028f787",
+  email: "auditor@centro-demo.test",
+  fullName: "Auditor Centro Demo",
+  role: "auditor",
+} as const;
+
 const recreacionistaUser = {
   ...medicoUser,
   id: "e3ed2703-8307-4c6c-9cea-1b65ceccdb0f",
@@ -55,6 +63,7 @@ describe("historia clinica permissions", () => {
     expect(canOpenHistoriaClinica(medicoUser)).toBe(true);
     expect(canOpenHistoriaClinica(nutricionistaUser)).toBe(true);
     expect(canOpenHistoriaClinica(adminUser)).toBe(true);
+    expect(canOpenHistoriaClinica(auditorUser)).toBe(true);
     expect(canOpenHistoriaClinica(directorUser)).toBe(true);
     expect(canOpenHistoriaClinica(recreacionistaUser)).toBe(false);
   });
@@ -63,6 +72,7 @@ describe("historia clinica permissions", () => {
     expect(canCreateAtencionIndividual(medicoUser)).toBe(true);
     expect(canCreateAtencionIndividual(nutricionistaUser)).toBe(true);
     expect(canCreateAtencionIndividual(adminUser)).toBe(false);
+    expect(canCreateAtencionIndividual(auditorUser)).toBe(false);
     expect(canCreateAtencionIndividual(directorUser)).toBe(false);
   });
 
@@ -86,6 +96,11 @@ describe("historia clinica permissions", () => {
     expect(
       resolveHistoriaClinicaAction(adminUser, {
         createdByUserId: nutricionistaUser.id,
+      }),
+    ).toBe("view");
+    expect(
+      resolveHistoriaClinicaAction(auditorUser, {
+        createdByUserId: medicoUser.id,
       }),
     ).toBe("view");
     expect(

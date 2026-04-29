@@ -8,6 +8,7 @@ import { EmpleadoDetailModal } from "../components/empleado-detail-modal";
 import { EmpleadosTable } from "../components/empleados-table";
 import { EmpleadosToolbar } from "../components/empleados-toolbar";
 import { buildEmpleadoEditPath, EMPLEADOS_NEW_PATH } from "../lib/empleados-paths";
+import { canManageEmpleados } from "../lib/empleados-permissions";
 import { resolveEmpleadosApiError } from "../lib/empleados-formatters";
 import { useEmpleadosQuery } from "../model/empleados-queries";
 
@@ -22,6 +23,7 @@ export function EmpleadosIndexPage({ navigate, user }: EmpleadosIndexPageProps) 
   const empleadosQuery = useEmpleadosQuery({ search });
   const empleados = empleadosQuery.data?.empleados ?? [];
   const showTenantColumn = user.role === "super_admin";
+  const canManageUsers = canManageEmpleados(user);
 
   return (
     <section className="empleados-stack" aria-labelledby="empleados-title">
@@ -38,6 +40,7 @@ export function EmpleadosIndexPage({ navigate, user }: EmpleadosIndexPageProps) 
       ) : null}
 
       <EmpleadosTable
+        canManageEmpleados={canManageUsers}
         empleados={empleados}
         isLoading={empleadosQuery.isLoading}
         showTenantColumn={showTenantColumn}
@@ -45,15 +48,17 @@ export function EmpleadosIndexPage({ navigate, user }: EmpleadosIndexPageProps) 
         onView={setSelectedEmpleadoId}
       />
 
-      <button
-        className="empleados-floating-action"
-        type="button"
-        aria-label="Crear usuario"
-        title="Crear usuario"
-        onClick={() => navigate(EMPLEADOS_NEW_PATH)}
-      >
-        <Plus aria-hidden="true" />
-      </button>
+      {canManageUsers ? (
+        <button
+          className="empleados-floating-action"
+          type="button"
+          aria-label="Crear usuario"
+          title="Crear usuario"
+          onClick={() => navigate(EMPLEADOS_NEW_PATH)}
+        >
+          <Plus aria-hidden="true" />
+        </button>
+      ) : null}
 
       {selectedEmpleadoId !== null ? (
         <EmpleadoDetailModal

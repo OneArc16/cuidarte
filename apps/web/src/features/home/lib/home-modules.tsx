@@ -55,7 +55,7 @@ export const HOME_MODULES = [
     label: "Gestión de empleados",
     icon: <UserRoundCog />,
     path: EMPLEADOS_PATH,
-    roles: ["super_admin", "admin"],
+    roles: ["super_admin", "admin", "auditor"],
   },
   {
     id: "backoffice",

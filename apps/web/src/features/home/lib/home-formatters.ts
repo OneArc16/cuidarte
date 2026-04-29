@@ -3,6 +3,7 @@ import { type AuthUser } from "@cuidarte/contracts";
 const ROLE_LABELS = {
   super_admin: "SuperAdmin",
   admin: "Admin",
+  auditor: "Auditor",
   director: "Director",
   enfermeria: "Enfermeria",
   fisioterapeuta: "Fisioterapeuta",

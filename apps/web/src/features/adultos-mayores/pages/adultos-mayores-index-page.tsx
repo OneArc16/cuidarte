@@ -11,6 +11,7 @@ import {
   canCreateAtencionIndividual,
   canOpenHistoriaClinica,
 } from "@/features/atenciones-individuales/lib/historia-clinica-permissions";
+import { canManageAdultosMayores } from "../lib/adultos-mayores-permissions";
 
 import { AdultosMayoresTable } from "../components/adultos-mayores-table";
 import { AdultosMayoresToolbar } from "../components/adultos-mayores-toolbar";
@@ -34,6 +35,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
   const adultosMayoresQuery = useAdultosMayoresQuery({ search });
   const adultosMayores = adultosMayoresQuery.data?.adultosMayores ?? [];
   const showTenantColumn = user.role === "super_admin";
+  const canManageRecords = canManageAdultosMayores(user);
   const canCreateClinicalAttention = canCreateAtencionIndividual(user);
   const canOpenClinicalHistory = canOpenHistoriaClinica(user);
   const canCreateFeedingRecord = canManageAlimentacion(user);
@@ -97,6 +99,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
         isLoading={adultosMayoresQuery.isLoading}
         showTenantColumn={showTenantColumn}
         canCreateAtencionIndividual={canCreateClinicalAttention}
+        canManageAdultosMayores={canManageRecords}
         canOpenHistoriaClinica={canOpenClinicalHistory}
         onOpenAlimentacion={(adultoMayorId) =>
           navigate(buildAlimentacionCreateFromAdultoPath(adultoMayorId))
@@ -108,15 +111,17 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
         onEdit={(adultoMayorId) => navigate(buildAdultoMayorEditPath(adultoMayorId))}
       />
 
-      <button
-        className="adultos-floating-action"
-        type="button"
-        aria-label="Crear adulto mayor"
-        title="Crear adulto mayor"
-        onClick={() => navigate(ADULTOS_MAYORES_NEW_PATH)}
-      >
-        <Plus aria-hidden="true" />
-      </button>
+      {canManageRecords ? (
+        <button
+          className="adultos-floating-action"
+          type="button"
+          aria-label="Crear adulto mayor"
+          title="Crear adulto mayor"
+          onClick={() => navigate(ADULTOS_MAYORES_NEW_PATH)}
+        >
+          <Plus aria-hidden="true" />
+        </button>
+      ) : null}
     </section>
   );
 }

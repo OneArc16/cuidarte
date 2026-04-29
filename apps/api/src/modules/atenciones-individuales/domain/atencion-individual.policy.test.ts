@@ -47,6 +47,14 @@ const adminUser: AuthUser = {
   role: "admin",
 };
 
+const auditorUser: AuthUser = {
+  ...medicoUser,
+  id: "6f41f9cb-b7bc-4d4b-a9d9-020ea028f787",
+  email: "auditor@centro-demo.test",
+  fullName: "Auditor Centro Demo",
+  role: "auditor",
+};
+
 const directorUser: AuthUser = {
   ...medicoUser,
   id: "dcb4bafb-8470-43c8-81ab-76f51c0660f5",
@@ -86,8 +94,10 @@ describe("atencion-individual policy", () => {
     const atencion = { createdByUserId: psicologoUser.id };
 
     assert.equal(resolveAtencionIndividualHistoryAccess(adminUser, atencion), "view");
+    assert.equal(resolveAtencionIndividualHistoryAccess(auditorUser, atencion), "view");
     assert.equal(resolveAtencionIndividualHistoryAccess(directorUser, atencion), "view");
     assert.equal(canEditOwnedAtencionIndividual(adminUser, atencion), false);
+    assert.equal(canEditOwnedAtencionIndividual(auditorUser, atencion), false);
     assert.equal(canEditOwnedAtencionIndividual(directorUser, atencion), false);
   });
 

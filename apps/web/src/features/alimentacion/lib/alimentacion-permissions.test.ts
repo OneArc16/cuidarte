@@ -21,6 +21,14 @@ const adminUser = {
   role: "admin",
 } as const;
 
+const auditorUser = {
+  ...directorUser,
+  id: "6f41f9cb-b7bc-4d4b-a9d9-020ea028f787",
+  email: "auditor@centro-demo.test",
+  fullName: "Auditor Centro Demo",
+  role: "auditor",
+} as const;
+
 const superAdminUser = {
   ...directorUser,
   id: "4c5b84e6-d88e-4f8a-93de-af2916d62f40",
@@ -42,6 +50,7 @@ describe("alimentacion permissions", () => {
   it("allows only super admin, admin, and director to open the module", () => {
     expect(canOpenAlimentacion(superAdminUser)).toBe(true);
     expect(canOpenAlimentacion(adminUser)).toBe(true);
+    expect(canOpenAlimentacion(auditorUser)).toBe(true);
     expect(canOpenAlimentacion(directorUser)).toBe(true);
     expect(canOpenAlimentacion(medicoUser)).toBe(false);
   });
@@ -49,6 +58,7 @@ describe("alimentacion permissions", () => {
   it("allows only super admin, admin, and director to create or edit feeding records", () => {
     expect(canManageAlimentacion(superAdminUser)).toBe(true);
     expect(canManageAlimentacion(adminUser)).toBe(true);
+    expect(canManageAlimentacion(auditorUser)).toBe(false);
     expect(canManageAlimentacion(directorUser)).toBe(true);
     expect(canManageAlimentacion(medicoUser)).toBe(false);
   });

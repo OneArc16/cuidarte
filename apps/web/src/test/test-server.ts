@@ -19,6 +19,14 @@ export const superAdminUserFixture = {
   role: "super_admin",
 } as const;
 
+export const auditorUserFixture = {
+  ...authUserFixture,
+  id: "6f41f9cb-b7bc-4d4b-a9d9-020ea028f787",
+  email: "auditor@centro-demo.test",
+  fullName: "Auditor Centro Demo",
+  role: "auditor",
+} as const;
+
 export const medicoUserFixture = {
   ...authUserFixture,
   email: "medico@centro-demo.test",

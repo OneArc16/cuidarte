@@ -19,6 +19,7 @@ import { sql } from "drizzle-orm";
 export const userRole = pgEnum("user_role", [
   "super_admin",
   "admin",
+  "auditor",
   "director",
   "enfermeria",
   "fisioterapeuta",

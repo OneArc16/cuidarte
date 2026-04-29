@@ -28,6 +28,14 @@ const adminUser: AuthUser = {
   role: "admin",
 };
 
+const auditorUser: AuthUser = {
+  ...directorUser,
+  id: "6f41f9cb-b7bc-4d4b-a9d9-020ea028f787",
+  email: "auditor@centro-demo.test",
+  fullName: "Auditor Centro Demo",
+  role: "auditor",
+};
+
 const superAdminUser: AuthUser = {
   ...directorUser,
   id: "4c5b84e6-d88e-4f8a-93de-af2916d62f40",
@@ -46,14 +54,16 @@ const medicoUser: AuthUser = {
 };
 
 describe("alimentacion policy", () => {
-  it("allows only super admin, admin, and director to access and manage the module", () => {
+  it("allows auditor users to access the module without edit privileges", () => {
     assert.equal(canAccessAlimentacion(superAdminUser), true);
     assert.equal(canAccessAlimentacion(adminUser), true);
+    assert.equal(canAccessAlimentacion(auditorUser), true);
     assert.equal(canAccessAlimentacion(directorUser), true);
     assert.equal(canAccessAlimentacion(medicoUser), false);
 
     assert.equal(canManageAlimentacion(superAdminUser), true);
     assert.equal(canManageAlimentacion(adminUser), true);
+    assert.equal(canManageAlimentacion(auditorUser), false);
     assert.equal(canManageAlimentacion(directorUser), true);
     assert.equal(canManageAlimentacion(medicoUser), false);
   });
@@ -61,6 +71,7 @@ describe("alimentacion policy", () => {
   it("scopes supported roles by tenant and keeps super admin global", () => {
     assert.deepEqual(resolveAlimentacionScope(superAdminUser), { type: "all" });
     assert.deepEqual(resolveAlimentacionScope(adminUser), { type: "tenant", tenantId });
+    assert.deepEqual(resolveAlimentacionScope(auditorUser), { type: "tenant", tenantId });
     assert.deepEqual(resolveAlimentacionScope(directorUser), { type: "tenant", tenantId });
     assert.equal(
       resolveAlimentacionScope({

@@ -5,6 +5,7 @@ import { ApiError } from "@/shared/api/api-error";
 const ROLE_LABELS = {
   super_admin: "SuperAdmin",
   admin: "Admin",
+  auditor: "Auditor",
   director: "Director",
   enfermeria: "Enfermeria",
   fisioterapeuta: "Fisioterapeuta",

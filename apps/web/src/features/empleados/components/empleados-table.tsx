@@ -9,6 +9,7 @@ import {
 } from "../lib/empleados-formatters";
 
 type EmpleadosTableProps = {
+  canManageEmpleados: boolean;
   empleados: EmpleadoListItem[];
   isLoading: boolean;
   showTenantColumn: boolean;
@@ -17,6 +18,7 @@ type EmpleadosTableProps = {
 };
 
 export function EmpleadosTable({
+  canManageEmpleados,
   empleados,
   isLoading,
   onEdit,
@@ -84,15 +86,17 @@ export function EmpleadosTable({
                   >
                     <Eye aria-hidden="true" />
                   </button>
-                  <button
-                    className="empleados-row-action"
-                    type="button"
-                    aria-label={`Editar ${empleado.fullName}`}
-                    title="Editar"
-                    onClick={() => onEdit(empleado.id)}
-                  >
-                    <Pencil aria-hidden="true" />
-                  </button>
+                  {canManageEmpleados ? (
+                    <button
+                      className="empleados-row-action"
+                      type="button"
+                      aria-label={`Editar ${empleado.fullName}`}
+                      title="Editar"
+                      onClick={() => onEdit(empleado.id)}
+                    >
+                      <Pencil aria-hidden="true" />
+                    </button>
+                  ) : null}
                 </div>
               </td>
             </tr>

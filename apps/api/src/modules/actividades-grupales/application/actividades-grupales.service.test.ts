@@ -40,6 +40,15 @@ const superAdminUser: AuthUser = {
   passwordSetByAdmin: true,
 };
 
+const auditorUser: AuthUser = {
+  id: "6f41f9cb-b7bc-4d4b-a9d9-020ea028f787",
+  tenantId,
+  email: "auditor@centro-demo.test",
+  fullName: "Auditor Centro Demo",
+  role: "auditor",
+  passwordSetByAdmin: true,
+};
+
 const tenantlessDirectorUser: AuthUser = {
   id: "7b820700-fd7d-4b2e-9d61-2e4bca413c8a",
   tenantId: null,
@@ -118,6 +127,24 @@ describe("ActividadesGrupalesService", () => {
       activityType: null,
       tenantId: otherTenantId,
       scope: { type: "all" },
+    });
+  });
+
+  it("allows auditor users to list activities in their tenant scope", async () => {
+    const repository = createRepository();
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+
+    const result = await service.listActividadesGrupales(
+      { search: null, activityType: null, tenantId: null },
+      auditorUser,
+    );
+
+    assert.equal(result.length, 1);
+    assert.deepEqual(repository.queries[0], {
+      search: null,
+      activityType: null,
+      tenantId,
+      scope: { type: "tenant", tenantId },
     });
   });
 
@@ -235,6 +262,17 @@ describe("ActividadesGrupalesService", () => {
     assert.equal(result.assignedProfessionals[0]?.id, medicoUser.id);
   });
 
+  it("allows auditor users to open diligenciamiento details in read-only mode", async () => {
+    const repository = createRepository();
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+    const targetRecord = records[0]!;
+
+    const result = await service.getActividadGrupalDiligenciamiento(targetRecord.id, auditorUser);
+
+    assert.equal(result.id, targetRecord.id);
+    assert.equal(result.assignedProfessionals.length > 0, true);
+  });
+
   it("rejects diligenciamiento when integrantes belong to another center", async () => {
     const repository = createRepository();
     const service = new ActividadesGrupalesService(repository, createFilesStorage());
@@ -260,6 +298,56 @@ describe("ActividadesGrupalesService", () => {
           medicoUser,
         ),
       { constructor: BadRequestException },
+    );
+  });
+
+  it("forbids auditor users from create and diligenciamiento actions", async () => {
+    const repository = createRepository();
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+
+    await assert.rejects(
+      () => service.getFormOptions({ tenantId }, auditorUser),
+      { constructor: ForbiddenException },
+    );
+
+    await assert.rejects(
+      () =>
+        service.createActividadGrupal(
+          {
+            tenantId: null,
+            activityName: "Actividad en lectura",
+            activityType: "centro_vida",
+            activityDate: "2026-04-23",
+            startTime: "08:30",
+            endTime: "10:00",
+            organizer: "director",
+            employeeIds: [medicoUserId],
+          },
+          auditorUser,
+        ),
+      { constructor: ForbiddenException },
+    );
+
+    await assert.rejects(
+      () =>
+        service.saveActividadGrupalDiligenciamiento(
+          {
+            activityId: records[0]!.id,
+            payload: {
+              objectives: "Objetivos",
+              development: "Desarrollo",
+              conclusion: "Conclusion",
+              responsibleDepartment: "nutricion",
+              integranteIds: ["25ce51a5-f0a6-4374-a6b4-815348cbd26d"],
+              removedPhotoFileIds: [],
+              removePdfFile: false,
+            },
+            newPhotos: [],
+            newPdf: null,
+          },
+          auditorUser,
+        ),
+      { constructor: ForbiddenException },
     );
   });
 });

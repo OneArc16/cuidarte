@@ -113,6 +113,32 @@ async function seed(): Promise<void> {
       },
     });
 
+  await db
+    .insert(users)
+    .values({
+      tenantId: tenant.id,
+      email: "auditor@centro-demo.test",
+      fullName: "Auditor Centro Demo",
+      role: "auditor",
+      isTenantOwner: false,
+      passwordHash,
+      passwordSetByAdmin: true,
+      isActive: true,
+    })
+    .onConflictDoUpdate({
+      target: users.email,
+      set: {
+        tenantId: tenant.id,
+        fullName: "Auditor Centro Demo",
+        role: "auditor",
+        isTenantOwner: false,
+        passwordHash,
+        passwordSetByAdmin: true,
+        isActive: true,
+        updatedAt: new Date(),
+      },
+    });
+
   const demoAdultosMayores = [
     {
       documentType: "cc" as const,

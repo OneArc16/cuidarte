@@ -103,6 +103,7 @@ export class ActividadesGrupalesService {
     query: { tenantId: string | null },
     actor: AuthUser,
   ): Promise<{ nextActaNumber: number; empleados: ActividadGrupalEmpleadoOption[] }> {
+    this.ensureCanManageActivities(actor);
     const tenantId = this.resolveTenantIdForForm(actor, query.tenantId);
     const [nextActaNumber, empleados] = await Promise.all([
       this.actividadesGrupalesRepository.getNextActaNumber(tenantId),
@@ -119,6 +120,7 @@ export class ActividadesGrupalesService {
     command: CreateActividadGrupalRequest,
     actor: AuthUser,
   ): Promise<ActividadGrupalListItem> {
+    this.ensureCanManageActivities(actor);
     this.resolveScopeOrThrow(actor);
 
     const tenantId = this.resolveTenantIdForCreate(actor, command.tenantId);
@@ -164,6 +166,7 @@ export class ActividadesGrupalesService {
     query: ActividadGrupalIntegranteOptionsQuery,
     actor: AuthUser,
   ): Promise<ActividadGrupalIntegranteOption[]> {
+    this.ensureCanManageActivities(actor);
     const detail = await this.getPermittedDiligenciamientoOrThrow(activityId, actor);
     const integrantes = await this.actividadesGrupalesRepository.searchIntegranteOptions({
       tenantId: detail.activity.tenantId,
@@ -177,6 +180,7 @@ export class ActividadesGrupalesService {
     command: SaveActividadGrupalDiligenciamientoCommand,
     actor: AuthUser,
   ): Promise<ActividadGrupalDiligenciamientoDetail> {
+    this.ensureCanManageActivities(actor);
     const detail = await this.getPermittedDiligenciamientoOrThrow(command.activityId, actor);
     const removedPhotoIds = new Set(command.payload.removedPhotoFileIds);
     const currentPhotoFiles = detail.photoFiles.filter((file) => !removedPhotoIds.has(file.id));
@@ -268,15 +272,19 @@ export class ActividadesGrupalesService {
       throw new NotFoundException("La sesion grupal no fue encontrada.");
     }
 
-    this.assertCanDiligenciar(detail, actor);
+    this.assertCanViewDiligenciamiento(detail, actor);
 
     return detail;
   }
 
-  private assertCanDiligenciar(
+  private assertCanViewDiligenciamiento(
     detail: ActividadGrupalDiligenciamientoDetailRecord,
     actor: AuthUser,
   ): void {
+    if (actor.role === "auditor") {
+      return;
+    }
+
     if (actor.role === "super_admin") {
       return;
     }
@@ -291,6 +299,12 @@ export class ActividadesGrupalesService {
 
     if (!isAssignedProfessional) {
       throw new ForbiddenException("No tienes permisos para diligenciar esta sesion.");
+    }
+  }
+
+  private ensureCanManageActivities(actor: Pick<AuthUser, "role">) {
+    if (actor.role === "auditor") {
+      throw new ForbiddenException("No tienes permisos para crear o diligenciar actividades.");
     }
   }
 

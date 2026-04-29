@@ -54,6 +54,7 @@ function formatRole(role: AuthUser["role"]): string {
   const labels = {
     super_admin: "SuperAdmin",
     admin: "Admin",
+    auditor: "Auditor",
     director: "Director",
     enfermeria: "Enfermeria",
     fisioterapeuta: "Fisioterapeuta",

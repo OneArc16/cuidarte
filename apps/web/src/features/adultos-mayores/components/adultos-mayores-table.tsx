@@ -11,6 +11,7 @@ type AdultosMayoresTableProps = {
   adultosMayores: AdultoMayorListItem[];
   canManageAlimentacion: boolean;
   canCreateAtencionIndividual: boolean;
+  canManageAdultosMayores: boolean;
   canOpenHistoriaClinica: boolean;
   isLoading: boolean;
   showTenantColumn: boolean;
@@ -24,6 +25,7 @@ export function AdultosMayoresTable({
   adultosMayores,
   canManageAlimentacion,
   canCreateAtencionIndividual,
+  canManageAdultosMayores,
   canOpenHistoriaClinica,
   isLoading,
   onOpenAlimentacion,
@@ -102,15 +104,17 @@ export function AdultosMayoresTable({
                   >
                     <HeartPulse aria-hidden="true" />
                   </button>
-                  <button
-                    className="adultos-row-action"
-                    type="button"
-                    aria-label={`Editar ${adultoMayor.names} ${adultoMayor.surnames}`}
-                    title="Editar"
-                    onClick={() => onEdit(adultoMayor.id)}
-                  >
-                    <Pencil aria-hidden="true" />
-                  </button>
+                  {canManageAdultosMayores ? (
+                    <button
+                      className="adultos-row-action"
+                      type="button"
+                      aria-label={`Editar ${adultoMayor.names} ${adultoMayor.surnames}`}
+                      title="Editar"
+                      onClick={() => onEdit(adultoMayor.id)}
+                    >
+                      <Pencil aria-hidden="true" />
+                    </button>
+                  ) : null}
                   <button
                     className="adultos-row-action"
                     type="button"

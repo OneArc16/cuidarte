@@ -10,6 +10,7 @@ import {
   REGISTRO_ALIMENTACION_NEW_PATH,
   buildAlimentacionEditPath,
 } from "../lib/alimentacion-paths";
+import { canManageAlimentacion } from "../lib/alimentacion-permissions";
 import {
   getTodayDateInputValue,
   resolveAlimentacionApiError,
@@ -30,6 +31,7 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const showTenantFilter = user.role === "super_admin";
   const tenantOptionsQuery = useAlimentacionTenantOptionsQuery(showTenantFilter);
+  const canManageRecords = canManageAlimentacion(user);
   const registrosQuery = useAlimentacionListQuery({
     search,
     deliveryDate: deliveryDate.trim() === "" ? null : deliveryDate,
@@ -65,21 +67,24 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
       ) : null}
 
       <AlimentacionTable
+        canManageAlimentacion={canManageRecords}
         isLoading={registrosQuery.isLoading}
         records={registrosQuery.data?.registros ?? []}
         showTenantColumn={showTenantFilter}
         onOpenEdit={(recordId) => navigate(buildAlimentacionEditPath(recordId))}
       />
 
-      <button
-        className="alimentacion-floating-action"
-        type="button"
-        aria-label="Agregar registro de alimentación"
-        title="Agregar registro de alimentación"
-        onClick={() => navigate(REGISTRO_ALIMENTACION_NEW_PATH)}
-      >
-        <Plus aria-hidden="true" />
-      </button>
+      {canManageRecords ? (
+        <button
+          className="alimentacion-floating-action"
+          type="button"
+          aria-label="Agregar registro de alimentación"
+          title="Agregar registro de alimentación"
+          onClick={() => navigate(REGISTRO_ALIMENTACION_NEW_PATH)}
+        >
+          <Plus aria-hidden="true" />
+        </button>
+      ) : null}
     </section>
   );
 }

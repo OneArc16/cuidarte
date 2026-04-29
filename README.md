@@ -95,6 +95,7 @@ Usuarios de seed:
 ```txt
 superadmin@cuidarte.test / Cuidarte123!
 admin@centro-demo.test / Cuidarte123!
+auditor@centro-demo.test / Cuidarte123!
 ```
 
 Smoke test de auth:

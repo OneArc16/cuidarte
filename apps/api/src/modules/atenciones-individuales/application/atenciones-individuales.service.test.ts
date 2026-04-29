@@ -49,6 +49,14 @@ const adminUser: AuthUser = {
   role: "admin",
 };
 
+const auditorUser: AuthUser = {
+  ...medicoUser,
+  id: "6f41f9cb-b7bc-4d4b-a9d9-020ea028f787",
+  email: "auditor@centro-demo.test",
+  fullName: "Auditor Centro Demo",
+  role: "auditor",
+};
+
 const directorUser: AuthUser = {
   ...medicoUser,
   id: "dcb4bafb-8470-43c8-81ab-76f51c0660f5",
@@ -193,6 +201,12 @@ describe("AtencionesIndividualesService", () => {
     await assert.rejects(() => service.createAtencion(createRequest(), adminUser), {
       constructor: ForbiddenException,
     });
+    await assert.rejects(() => service.lookupAdultoMayor(adultoMayorId, auditorUser), {
+      constructor: ForbiddenException,
+    });
+    await assert.rejects(() => service.createAtencion(createRequest(), auditorUser), {
+      constructor: ForbiddenException,
+    });
   });
 
   it("filters historia clinica to the current professional and returns edit access", async () => {
@@ -211,21 +225,26 @@ describe("AtencionesIndividualesService", () => {
     });
   });
 
-  it("returns all attentions for admin and director in read-only mode", async () => {
+  it("returns all attentions for admin, auditor and director in read-only mode", async () => {
     const repository = createRepository({
       historyRecords: [historyItemRecord, otherProfessionalHistoryItemRecord],
     });
     const service = new AtencionesIndividualesService(repository, createFilesStorage());
 
     const adminHistory = await service.getHistoriaClinica(adultoMayorId, adminUser);
+    const auditorHistory = await service.getHistoriaClinica(adultoMayorId, auditorUser);
     const directorHistory = await service.getHistoriaClinica(adultoMayorId, directorUser);
 
     assert.equal(adminHistory.atenciones.length, 2);
     assert.equal(adminHistory.atenciones[0]?.access, "view");
     assert.equal(adminHistory.atenciones[1]?.access, "view");
+    assert.equal(auditorHistory.atenciones.length, 2);
+    assert.equal(auditorHistory.atenciones[0]?.access, "view");
+    assert.equal(auditorHistory.atenciones[1]?.access, "view");
     assert.equal(directorHistory.atenciones.length, 2);
     assert.equal(repository.historyQueries[0]?.createdByUserId, undefined);
     assert.equal(repository.historyQueries[1]?.createdByUserId, undefined);
+    assert.equal(repository.historyQueries[2]?.createdByUserId, undefined);
   });
 
   it("rejects historia clinica access for unsupported roles", async () => {
@@ -284,13 +303,25 @@ describe("AtencionesIndividualesService", () => {
     );
   });
 
-  it("allows admin to view any attention but blocks direct access from another professional", async () => {
+  it("allows read-only roles to view any attention but blocks direct access from another professional", async () => {
     const adminRepository = createRepository({ detail: otherProfessionalAtencionRecord });
     const adminService = new AtencionesIndividualesService(adminRepository, createFilesStorage());
 
     const adminResult = await adminService.getAtencion(otherProfessionalAtencionRecord.id, adminUser);
 
     assert.equal(adminResult.id, otherProfessionalAtencionRecord.id);
+
+    const auditorRepository = createRepository({ detail: otherProfessionalAtencionRecord });
+    const auditorService = new AtencionesIndividualesService(
+      auditorRepository,
+      createFilesStorage(),
+    );
+    const auditorResult = await auditorService.getAtencion(
+      otherProfessionalAtencionRecord.id,
+      auditorUser,
+    );
+
+    assert.equal(auditorResult.id, otherProfessionalAtencionRecord.id);
 
     const professionalRepository = createRepository({ detail: otherProfessionalAtencionRecord });
     const professionalService = new AtencionesIndividualesService(

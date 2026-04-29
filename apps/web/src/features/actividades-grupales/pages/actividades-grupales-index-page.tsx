@@ -10,6 +10,7 @@ import {
   buildActividadGrupalDiligenciamientoPath,
   CREACION_ACTIVIDADES_NEW_PATH,
 } from "../lib/actividades-grupales-paths";
+import { canManageActividadesGrupales } from "../lib/actividades-grupales-permissions";
 import { resolveActividadesGrupalesApiError } from "../lib/actividades-grupales-formatters";
 import { openActividadGrupalActaPdf } from "../lib/open-actividad-grupal-acta-pdf";
 import {
@@ -30,6 +31,7 @@ export function ActividadesGrupalesIndexPage({
   const [selectedActivityType, setSelectedActivityType] = useState<ActividadGrupalType | "">("");
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const showTenantFilter = user.role === "super_admin";
+  const canManageActivities = canManageActividadesGrupales(user);
   const tenantOptionsQuery = useActividadGrupalTenantOptionsQuery(showTenantFilter);
   const actividadesQuery = useActividadesGrupalesQuery({
     search,
@@ -67,6 +69,7 @@ export function ActividadesGrupalesIndexPage({
 
       <ActividadesGrupalesTable
         actividadesGrupales={actividadesQuery.data?.actividadesGrupales ?? []}
+        canManageActividadesGrupales={canManageActivities}
         isLoading={actividadesQuery.isLoading}
         onOpenDiligenciamiento={(actividad) =>
           navigate(buildActividadGrupalDiligenciamientoPath(actividad.id))
@@ -75,15 +78,17 @@ export function ActividadesGrupalesIndexPage({
         showTenantColumn={showTenantFilter}
       />
 
-      <button
-        className="actividades-floating-action"
-        type="button"
-        aria-label="Crear actividad"
-        title="Crear actividad"
-        onClick={() => navigate(CREACION_ACTIVIDADES_NEW_PATH)}
-      >
-        <CalendarPlus aria-hidden="true" />
-      </button>
+      {canManageActivities ? (
+        <button
+          className="actividades-floating-action"
+          type="button"
+          aria-label="Crear actividad"
+          title="Crear actividad"
+          onClick={() => navigate(CREACION_ACTIVIDADES_NEW_PATH)}
+        >
+          <CalendarPlus aria-hidden="true" />
+        </button>
+      ) : null}
     </section>
   );
 }

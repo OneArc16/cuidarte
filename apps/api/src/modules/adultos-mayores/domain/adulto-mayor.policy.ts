@@ -2,6 +2,19 @@ import { type AuthUser } from "@cuidarte/contracts";
 
 import { type AdultosMayoresScope } from "./adulto-mayor.types";
 
+const ADULTOS_MAYORES_EDITOR_ROLES: ReadonlySet<AuthUser["role"]> = new Set([
+  "super_admin",
+  "admin",
+  "director",
+  "enfermeria",
+  "fisioterapeuta",
+  "medico",
+  "nutricionista",
+  "psicologo",
+  "recreacionista",
+  "trabajadora_social",
+]);
+
 export function resolveAdultosMayoresScope(user: AuthUser): AdultosMayoresScope | null {
   if (user.role === "super_admin") {
     return { type: "all" };
@@ -26,4 +39,8 @@ export function resolveAdultoMayorTenantForCreate(
   }
 
   return user.tenantId;
+}
+
+export function canManageAdultosMayores(user: Pick<AuthUser, "role">): boolean {
+  return ADULTOS_MAYORES_EDITOR_ROLES.has(user.role);
 }

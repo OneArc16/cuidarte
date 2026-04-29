@@ -7,6 +7,7 @@ import {
 } from "../lib/alimentacion-formatters";
 
 type AlimentacionTableProps = {
+  canManageAlimentacion: boolean;
   isLoading: boolean;
   records: AlimentacionListItem[];
   showTenantColumn: boolean;
@@ -14,6 +15,7 @@ type AlimentacionTableProps = {
 };
 
 export function AlimentacionTable({
+  canManageAlimentacion,
   isLoading,
   onOpenEdit,
   records,
@@ -76,14 +78,18 @@ export function AlimentacionTable({
               <tr key={record.id}>
                 <td>{record.documentNumber}</td>
                 <td className="alimentacion-cell-name">
-                  <button
-                    className="alimentacion-record-trigger"
-                    type="button"
-                    title="Editar registro de alimentación"
-                    onClick={() => onOpenEdit(record.id)}
-                  >
+                  {canManageAlimentacion ? (
+                    <button
+                      className="alimentacion-record-trigger"
+                      type="button"
+                      title="Editar registro de alimentación"
+                      onClick={() => onOpenEdit(record.id)}
+                    >
+                      <strong>{record.fullName}</strong>
+                    </button>
+                  ) : (
                     <strong>{record.fullName}</strong>
-                  </button>
+                  )}
                 </td>
                 <td>{record.deliveryDate}</td>
                 <td>{formatAlimentacionOrganizer(record.organizer)}</td>
@@ -93,15 +99,17 @@ export function AlimentacionTable({
                 <td>{formatAlimentacionStatus(record.auxilioTransporte)}</td>
                 {showTenantColumn ? <td>{record.tenantName}</td> : null}
                 <td>
-                  <button
-                    className="alimentacion-row-action"
-                    type="button"
-                    aria-label={`Editar alimentación de ${record.fullName}`}
-                    title="Editar registro"
-                    onClick={() => onOpenEdit(record.id)}
-                  >
-                    <Pencil aria-hidden="true" />
-                  </button>
+                  {canManageAlimentacion ? (
+                    <button
+                      className="alimentacion-row-action"
+                      type="button"
+                      aria-label={`Editar alimentación de ${record.fullName}`}
+                      title="Editar registro"
+                      onClick={() => onOpenEdit(record.id)}
+                    >
+                      <Pencil aria-hidden="true" />
+                    </button>
+                  ) : null}
                 </td>
               </tr>
             ))

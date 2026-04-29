@@ -33,6 +33,14 @@ const superAdminUser: AuthUser = {
   role: "super_admin",
 };
 
+const auditorUser: AuthUser = {
+  ...adminUser,
+  id: "6f41f9cb-b7bc-4d4b-a9d9-020ea028f787",
+  email: "auditor@centro-demo.test",
+  fullName: "Auditor Centro Demo",
+  role: "auditor",
+};
+
 const medicoUser: AuthUser = {
   ...adminUser,
   id: "eaebfa34-4ef2-4b10-b8a5-1db6d494a2a2",
@@ -108,6 +116,19 @@ describe("EmpleadosService", () => {
     });
   });
 
+  it("allows auditor users to list tenant employees", async () => {
+    const repository = createRepository();
+    const service = new EmpleadosService(repository);
+
+    const result = await service.listEmpleados({ search: null }, auditorUser);
+
+    assert.equal(result.length, 1);
+    assert.deepEqual(repository.queries[0], {
+      search: null,
+      scope: { type: "tenant", tenantId },
+    });
+  });
+
   it("forbids professional roles from managing employees", async () => {
     const repository = createRepository();
     const service = new EmpleadosService(repository);
@@ -115,6 +136,35 @@ describe("EmpleadosService", () => {
     await assert.rejects(() => service.listEmpleados({ search: null }, medicoUser), {
       constructor: ForbiddenException,
     });
+  });
+
+  it("forbids auditor users from creating and updating employees", async () => {
+    const repository = createRepository();
+    const service = new EmpleadosService(repository);
+
+    await assert.rejects(() => service.createEmpleado(createCommand(), auditorUser), {
+      constructor: ForbiddenException,
+    });
+
+    await assert.rejects(
+      () =>
+        service.updateEmpleado(
+          records[0]?.id ?? "",
+          {
+            firstName: "Laura",
+            middleName: "Natalia",
+            firstSurname: "Perez",
+            secondSurname: "Ruiz",
+            email: "laura.perez@centro-demo.test",
+            documentNumber: "1010101010",
+            phone: "3125553030",
+            role: "medico",
+            isActive: true,
+          },
+          auditorUser,
+        ),
+      { constructor: ForbiddenException },
+    );
   });
 
   it("creates tenant employees in the admin tenant", async () => {

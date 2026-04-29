@@ -18,10 +18,15 @@ export const alimentacionOrganizerValues = [
 export const alimentacionAccessRoleValues = [
   "super_admin",
   "admin",
+  "auditor",
   "director",
 ] as const satisfies readonly UserRole[];
 
-export const alimentacionEditorRoleValues = alimentacionAccessRoleValues;
+export const alimentacionEditorRoleValues = [
+  "super_admin",
+  "admin",
+  "director",
+] as const satisfies readonly UserRole[];
 
 export const alimentacionStatusSchema = z.enum(alimentacionStatusValues);
 export const alimentacionOrganizerSchema = z.enum(alimentacionOrganizerValues);

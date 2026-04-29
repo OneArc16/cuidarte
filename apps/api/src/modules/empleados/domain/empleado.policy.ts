@@ -13,7 +13,7 @@ export function resolveEmpleadosScope(user: AuthUser): EmpleadosScope | null {
     return { type: "all" };
   }
 
-  if (user.role === "admin" && user.tenantId !== null) {
+  if ((user.role === "admin" || user.role === "auditor") && user.tenantId !== null) {
     return {
       type: "tenant",
       tenantId: user.tenantId,

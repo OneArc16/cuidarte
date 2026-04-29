@@ -3,6 +3,7 @@ import { z } from "zod";
 export const userRoleValues = [
   "super_admin",
   "admin",
+  "auditor",
   "director",
   "enfermeria",
   "fisioterapeuta",

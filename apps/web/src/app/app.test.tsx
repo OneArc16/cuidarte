@@ -14,6 +14,7 @@ import {
   actividadGrupalFormOptionsFixture,
   actividadGrupalIntegranteFixture,
   atencionIndividualFixture,
+  auditorUserFixture,
   authUserFixture,
   backofficeTenantDetailFixture,
   cie10OptionsFixture,
@@ -985,6 +986,101 @@ describe("App auth routing", () => {
     expect(
       within(navigation).queryByRole("button", { name: "Gestión de empleados" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("keeps auditor users in Gestion de empleados with read-only actions", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: auditorUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", "/gestion-empleados");
+
+    renderWithProviders(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Gestion de empleados" })).toBeInTheDocument();
+    const navigation = await screen.findByRole("navigation", { name: "Modulos principales" });
+
+    expect(within(navigation).getByRole("button", { name: "Gestión de empleados" })).toBeInTheDocument();
+    expect(within(navigation).queryByRole("button", { name: "BackOffice" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Crear usuario" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `Ver ${empleadoFixture.fullName}` })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: `Editar ${empleadoFixture.fullName}` })).not.toBeInTheDocument();
+  });
+
+  it("redirects auditor users away from create empleados routes", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: auditorUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", "/gestion-empleados/new");
+
+    renderWithProviders(<App />);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/gestion-empleados");
+    });
+  });
+
+  it("redirects auditor users away from edit empleados routes", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: auditorUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", `/gestion-empleados/${empleadoFixture.id}/edit`);
+
+    renderWithProviders(<App />);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/gestion-empleados");
+    });
+  });
+
+  it("redirects auditor users away from create alimentacion routes", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: auditorUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", "/registro-alimentacion/new");
+
+    renderWithProviders(<App />);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/registro-alimentacion");
+    });
+  });
+
+  it("redirects auditor users away from create actividades routes", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: auditorUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", "/creacion-actividades/new");
+
+    renderWithProviders(<App />);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/creacion-actividades");
+    });
+  });
+
+  it("redirects auditor users away from create adultos mayores routes", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: auditorUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", "/adultos-mayores/new");
+
+    renderWithProviders(<App />);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/adultos-mayores");
+    });
   });
 
   it("redirects unsupported roles away from Registro de alimentación and hides the module", async () => {

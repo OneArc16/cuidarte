@@ -27,6 +27,15 @@ const adminUser: AuthUser = {
   passwordSetByAdmin: true,
 };
 
+const auditorUser: AuthUser = {
+  id: "6f41f9cb-b7bc-4d4b-a9d9-020ea028f787",
+  tenantId,
+  email: "auditor@centro-demo.test",
+  fullName: "Auditor Centro Demo",
+  role: "auditor",
+  passwordSetByAdmin: true,
+};
+
 const superAdminUser: AuthUser = {
   id: "4c5b84e6-d88e-4f8a-93de-af2916d62f40",
   tenantId: null,
@@ -102,6 +111,24 @@ describe("AlimentacionService", () => {
     assert.equal(result[0]?.tenantId, tenantId);
     assert.deepEqual(repository.listQueries[0], {
       search: "Rosa",
+      deliveryDate: "2026-04-24",
+      tenantId,
+      scope: { type: "tenant", tenantId },
+    });
+  });
+
+  it("allows auditor users to list records in tenant scope", async () => {
+    const repository = createRepository();
+    const service = new AlimentacionService(repository);
+
+    const result = await service.listRegistros(
+      { search: null, deliveryDate: "2026-04-24", tenantId: null },
+      auditorUser,
+    );
+
+    assert.equal(result.length, 1);
+    assert.deepEqual(repository.listQueries[0], {
+      search: null,
       deliveryDate: "2026-04-24",
       tenantId,
       scope: { type: "tenant", tenantId },
@@ -325,7 +352,7 @@ describe("AlimentacionService", () => {
     );
   });
 
-  it("forbids unsupported roles from creating or editing feeding records", async () => {
+  it("forbids read-only and unsupported roles from creating or editing feeding records", async () => {
     const repository = createRepository();
     const service = new AlimentacionService(repository);
 
@@ -353,6 +380,28 @@ describe("AlimentacionService", () => {
 
     await assert.rejects(
       () =>
+        service.createBatch(
+          {
+            tenantId: null,
+            deliveryDate: "2026-04-24",
+            organizer: "director",
+            registros: [
+              {
+                adultoMayorId,
+                refrigerio1: "entregado",
+                almuerzo: "entregado",
+                refrigerio2: "entregado",
+                auxilioTransporte: "entregado",
+              },
+            ],
+          },
+          auditorUser,
+        ),
+      { constructor: ForbiddenException },
+    );
+
+    await assert.rejects(
+      () =>
         service.updateRegistro(
           existingRecordId,
           {
@@ -364,6 +413,23 @@ describe("AlimentacionService", () => {
             auxilioTransporte: "entregado",
           },
           medicoUser,
+      ),
+      { constructor: ForbiddenException },
+    );
+
+    await assert.rejects(
+      () =>
+        service.updateRegistro(
+          existingRecordId,
+          {
+            deliveryDate: "2026-04-25",
+            organizer: "director",
+            refrigerio1: "entregado",
+            almuerzo: "entregado",
+            refrigerio2: "entregado",
+            auxilioTransporte: "entregado",
+          },
+          auditorUser,
         ),
       { constructor: ForbiddenException },
     );
