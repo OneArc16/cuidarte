@@ -36,12 +36,30 @@ const superAdminUser: AuthUser = {
   passwordSetByAdmin: true,
 };
 
+const directorUser: AuthUser = {
+  id: "7b820700-fd7d-4b2e-9d61-2e4bca413c8a",
+  tenantId,
+  email: "director@centro-demo.test",
+  fullName: "Director Centro Demo",
+  role: "director",
+  passwordSetByAdmin: true,
+};
+
 const tenantlessDirectorUser: AuthUser = {
   id: "7b820700-fd7d-4b2e-9d61-2e4bca413c8a",
   tenantId: null,
   email: "director@sin-centro.test",
   fullName: "Director Sin Centro",
   role: "director",
+  passwordSetByAdmin: true,
+};
+
+const medicoUser: AuthUser = {
+  id: "eaebfa34-4ef2-4b10-b8a5-1db6d494a2a2",
+  tenantId,
+  email: "medico@centro-demo.test",
+  fullName: "Medico Centro Demo",
+  role: "medico",
   passwordSetByAdmin: true,
 };
 
@@ -105,6 +123,33 @@ describe("AlimentacionService", () => {
       tenantId: otherTenantId,
       scope: { type: "all" },
     });
+  });
+
+  it("allows director users to create feeding batches within their tenant", async () => {
+    const repository = createRepository();
+    const service = new AlimentacionService(repository);
+
+    const result = await service.createBatch(
+      {
+        tenantId: null,
+        deliveryDate: "2026-04-24",
+        organizer: "director",
+        registros: [
+          {
+            adultoMayorId,
+            refrigerio1: "entregado",
+            almuerzo: "entregado",
+            refrigerio2: "no_aplica",
+            auxilioTransporte: "no_entregado",
+          },
+        ],
+      },
+      directorUser,
+    );
+
+    assert.equal(result.createdCount, 1);
+    assert.equal(repository.createdCommands[0]?.tenantId, tenantId);
+    assert.equal(repository.createdCommands[0]?.actorUserId, directorUser.id);
   });
 
   it("requires a tenant selection when super admin searches adults for a batch", async () => {
@@ -219,6 +264,30 @@ describe("AlimentacionService", () => {
     assert.equal(result.existingRecordId, existingRecordId);
   });
 
+  it("allows director users to update feeding records in their tenant", async () => {
+    const repository = createRepository({
+      existingByAdultoAndDate: null,
+    });
+    const service = new AlimentacionService(repository);
+
+    const result = await service.updateRegistro(
+      existingRecordId,
+      {
+        deliveryDate: "2026-04-25",
+        organizer: "director",
+        refrigerio1: "entregado",
+        almuerzo: "entregado",
+        refrigerio2: "entregado",
+        auxilioTransporte: "entregado",
+      },
+      directorUser,
+    );
+
+    assert.equal(result.id, existingRecordId);
+    assert.equal(result.organizer, "director");
+    assert.equal(result.deliveryDate, "2026-04-25");
+  });
+
   it("rejects updates that collide with another record on the same date", async () => {
     const repository = createRepository({
       existingByAdultoAndDate: {
@@ -246,6 +315,60 @@ describe("AlimentacionService", () => {
     );
   });
 
+  it("forbids unsupported roles from accessing feeding records", async () => {
+    const repository = createRepository();
+    const service = new AlimentacionService(repository);
+
+    await assert.rejects(
+      () => service.listRegistros({ search: null, deliveryDate: null, tenantId: null }, medicoUser),
+      { constructor: ForbiddenException },
+    );
+  });
+
+  it("forbids unsupported roles from creating or editing feeding records", async () => {
+    const repository = createRepository();
+    const service = new AlimentacionService(repository);
+
+    await assert.rejects(
+      () =>
+        service.createBatch(
+          {
+            tenantId: null,
+            deliveryDate: "2026-04-24",
+            organizer: "director",
+            registros: [
+              {
+                adultoMayorId,
+                refrigerio1: "entregado",
+                almuerzo: "entregado",
+                refrigerio2: "entregado",
+                auxilioTransporte: "entregado",
+              },
+            ],
+          },
+          medicoUser,
+        ),
+      { constructor: ForbiddenException },
+    );
+
+    await assert.rejects(
+      () =>
+        service.updateRegistro(
+          existingRecordId,
+          {
+            deliveryDate: "2026-04-25",
+            organizer: "director",
+            refrigerio1: "entregado",
+            almuerzo: "entregado",
+            refrigerio2: "entregado",
+            auxilioTransporte: "entregado",
+          },
+          medicoUser,
+        ),
+      { constructor: ForbiddenException },
+    );
+  });
+
   it("forbids users without tenant from managing feeding records", async () => {
     const repository = createRepository();
     const service = new AlimentacionService(repository);
@@ -261,11 +384,13 @@ describe("AlimentacionService", () => {
   });
 });
 
-function createRepository(overrides: {
-  existingByAdultosAndDate?: AlimentacionRecord[];
-  existingByAdultoAndDate?: AlimentacionRecord | null;
-  records?: AlimentacionRecord[];
-} = {}): AlimentacionRepository & {
+function createRepository(
+  overrides: {
+    existingByAdultosAndDate?: AlimentacionRecord[];
+    existingByAdultoAndDate?: AlimentacionRecord | null;
+    records?: AlimentacionRecord[];
+  } = {},
+): AlimentacionRepository & {
   listQueries: FindAlimentacionRecordsQuery[];
   adultoOptionsQueries: SearchAlimentacionAdultosMayoresOptionsQuery[];
   createdCommands: Array<{
@@ -308,7 +433,8 @@ function createRepository(overrides: {
 
       return records.filter((record) => {
         const matchesTenant = query.tenantId === null || record.tenantId === query.tenantId;
-        const matchesDate = query.deliveryDate === null || record.deliveryDate === query.deliveryDate;
+        const matchesDate =
+          query.deliveryDate === null || record.deliveryDate === query.deliveryDate;
         const matchesSearch =
           query.search === null ||
           [record.documentNumber, record.fullName].some((value) =>
@@ -328,8 +454,9 @@ function createRepository(overrides: {
       adultoOptionsQueries.push(query);
 
       return query.search === null ||
-        [adultoMayorRecord.documentNumber, adultoMayorRecord.fullName]
-          .some((value) => value.toLowerCase().includes(query.search!.toLowerCase()))
+        [adultoMayorRecord.documentNumber, adultoMayorRecord.fullName].some((value) =>
+          value.toLowerCase().includes(query.search!.toLowerCase()),
+        )
         ? [adultoMayorRecord]
         : [];
     },

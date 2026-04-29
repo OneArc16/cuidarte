@@ -1,10 +1,8 @@
 import { z } from "zod";
 
-export const alimentacionStatusValues = [
-  "entregado",
-  "no_entregado",
-  "no_aplica",
-] as const;
+import { type UserRole } from "./auth.js";
+
+export const alimentacionStatusValues = ["entregado", "no_entregado", "no_aplica"] as const;
 
 export const alimentacionOrganizerValues = [
   "director",
@@ -16,6 +14,14 @@ export const alimentacionOrganizerValues = [
   "fisioterapeuta",
   "recreacionista",
 ] as const;
+
+export const alimentacionAccessRoleValues = [
+  "super_admin",
+  "admin",
+  "director",
+] as const satisfies readonly UserRole[];
+
+export const alimentacionEditorRoleValues = alimentacionAccessRoleValues;
 
 export const alimentacionStatusSchema = z.enum(alimentacionStatusValues);
 export const alimentacionOrganizerSchema = z.enum(alimentacionOrganizerValues);
@@ -182,9 +188,7 @@ export type AlimentacionTenantOptionsResponse = z.infer<
 export type AlimentacionAdultoOptionsResponse = z.infer<
   typeof alimentacionAdultoOptionsResponseSchema
 >;
-export type CreateAlimentacionBatchResponse = z.infer<
-  typeof createAlimentacionBatchResponseSchema
->;
+export type CreateAlimentacionBatchResponse = z.infer<typeof createAlimentacionBatchResponseSchema>;
 export type AlimentacionLookupByAdultoMayorResponse = z.infer<
   typeof alimentacionLookupByAdultoMayorResponseSchema
 >;

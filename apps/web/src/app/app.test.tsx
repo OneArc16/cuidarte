@@ -534,7 +534,9 @@ describe("App auth routing", () => {
         `/adultos-mayores/${adultoMayorFixture.id}/atenciones/${otherProfessionalAtencionIndividualFixture.id}`,
       );
     });
-    expect(await screen.findByText("Vista de solo lectura. Esta atencion pertenece a otro profesional.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Vista de solo lectura. Esta atencion pertenece a otro profesional."),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Guardar atencion" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Volver" })).toBeInTheDocument();
   });
@@ -985,6 +987,46 @@ describe("App auth routing", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("redirects unsupported roles away from Registro de alimentación and hides the module", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: medicoUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", "/registro-alimentacion");
+
+    renderWithProviders(<App />);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/home");
+    });
+    const navigation = await screen.findByRole("navigation", { name: "Modulos principales" });
+
+    expect(
+      within(navigation).queryByRole("button", { name: "Registro de alimentación" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hides the feeding shortcut in Adultos mayores for unsupported roles", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: medicoUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", "/adultos-mayores");
+
+    renderWithProviders(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Listado de adultos mayores" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: `Alimentacion de ${adultoMayorFixture.names} ${adultoMayorFixture.surnames}`,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
   it("opens the feeding create page from the adultos mayores shortcut", async () => {
     server.use(
       http.get("http://localhost:3001/api/auth/me", () =>
@@ -1289,6 +1331,25 @@ describe("App auth routing", () => {
       await screen.findByRole("button", { name: alimentacionFixture.fullName }),
     ).toBeInTheDocument();
     expect(screen.getByText("Entregado")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Agregar registro de alimentación" }),
+    ).toBeInTheDocument();
+  });
+
+  it("allows director users to access Registro de alimentación", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: directorUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", "/registro-alimentacion");
+
+    renderWithProviders(<App />);
+
+    expect(await screen.findByRole("table")).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: alimentacionFixture.fullName }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Agregar registro de alimentación" }),
     ).toBeInTheDocument();

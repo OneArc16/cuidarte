@@ -25,6 +25,8 @@ import {
 } from "@nestjs/common";
 
 import {
+  canAccessAlimentacion,
+  canManageAlimentacion,
   resolveAlimentacionScope,
   resolveAlimentacionTenantForCreate,
 } from "../domain/alimentacion.policy";
@@ -45,6 +47,7 @@ export class AlimentacionService {
     query: AlimentacionListQuery,
     actor: AuthUser,
   ): Promise<AlimentacionListItem[]> {
+    this.ensureCanAccess(actor);
     const scope = this.resolveScopeOrThrow(actor);
     const effectiveTenantId = this.resolveListTenantId(scope, query.tenantId);
     const records = await this.alimentacionRepository.findMany({
@@ -58,6 +61,8 @@ export class AlimentacionService {
   }
 
   async listTenantOptions(actor: AuthUser): Promise<AlimentacionTenantOption[]> {
+    this.ensureCanAccess(actor);
+
     if (actor.role !== "super_admin") {
       return [];
     }
@@ -71,6 +76,7 @@ export class AlimentacionService {
     query: AlimentacionAdultoOptionsQuery,
     actor: AuthUser,
   ): Promise<AlimentacionAdultoOption[]> {
+    this.ensureCanManage(actor);
     const tenantId = this.resolveTenantIdForSelection(actor, query.tenantId);
     const records = await this.alimentacionRepository.searchAdultosMayoresOptions({
       tenantId,
@@ -86,6 +92,7 @@ export class AlimentacionService {
     query: AlimentacionLookupByAdultoMayorQuery,
     actor: AuthUser,
   ) {
+    this.ensureCanManage(actor);
     const scope = this.resolveScopeOrThrow(actor);
     const adultoMayor = await this.alimentacionRepository.findAdultoMayorById({
       adultoMayorId,
@@ -112,6 +119,7 @@ export class AlimentacionService {
     command: CreateAlimentacionBatchRequest,
     actor: AuthUser,
   ): Promise<{ createdCount: number }> {
+    this.ensureCanManage(actor);
     const tenantId = this.resolveTenantIdForCreate(actor, command.tenantId);
     const adultoMayorIds = command.registros.map((registro) => registro.adultoMayorId);
     const adultosMayores = await this.alimentacionRepository.findAdultosMayoresByIds(
@@ -154,6 +162,7 @@ export class AlimentacionService {
   }
 
   async getRegistro(id: string, actor: AuthUser): Promise<AlimentacionDetail> {
+    this.ensureCanAccess(actor);
     const scope = this.resolveScopeOrThrow(actor);
     const record = await this.alimentacionRepository.findById({ id, scope });
 
@@ -169,6 +178,7 @@ export class AlimentacionService {
     command: UpdateAlimentacionRequest,
     actor: AuthUser,
   ): Promise<AlimentacionDetail> {
+    this.ensureCanManage(actor);
     const scope = this.resolveScopeOrThrow(actor);
     const currentRecord = await this.alimentacionRepository.findById({ id, scope });
 
@@ -218,10 +228,21 @@ export class AlimentacionService {
     return scope;
   }
 
-  private resolveListTenantId(
-    scope: AlimentacionScope,
-    requestedTenantId: string | null,
-  ) {
+  private ensureCanAccess(actor: Pick<AuthUser, "role">) {
+    if (!canAccessAlimentacion(actor)) {
+      throw new ForbiddenException("No tienes permisos para consultar alimentacion.");
+    }
+  }
+
+  private ensureCanManage(actor: Pick<AuthUser, "role">) {
+    if (!canManageAlimentacion(actor)) {
+      throw new ForbiddenException(
+        "No tienes permisos para crear o editar registros de alimentacion.",
+      );
+    }
+  }
+
+  private resolveListTenantId(scope: AlimentacionScope, requestedTenantId: string | null) {
     if (scope.type === "all") {
       return requestedTenantId;
     }

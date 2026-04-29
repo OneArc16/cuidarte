@@ -9,6 +9,7 @@ import {
 
 type AdultosMayoresTableProps = {
   adultosMayores: AdultoMayorListItem[];
+  canManageAlimentacion: boolean;
   canCreateAtencionIndividual: boolean;
   canOpenHistoriaClinica: boolean;
   isLoading: boolean;
@@ -21,6 +22,7 @@ type AdultosMayoresTableProps = {
 
 export function AdultosMayoresTable({
   adultosMayores,
+  canManageAlimentacion,
   canCreateAtencionIndividual,
   canOpenHistoriaClinica,
   isLoading,
@@ -79,15 +81,17 @@ export function AdultosMayoresTable({
               <td>{formatAdultoMayorSex(adultoMayor.sex)}</td>
               <td>
                 <div className="adultos-row-actions">
-                  <button
-                    className="adultos-row-action"
-                    type="button"
-                    aria-label={`Alimentacion de ${adultoMayor.names} ${adultoMayor.surnames}`}
-                    title="Alimentacion"
-                    onClick={() => onOpenAlimentacion(adultoMayor.id)}
-                  >
-                    <Utensils aria-hidden="true" />
-                  </button>
+                  {canManageAlimentacion ? (
+                    <button
+                      className="adultos-row-action"
+                      type="button"
+                      aria-label={`Alimentacion de ${adultoMayor.names} ${adultoMayor.surnames}`}
+                      title="Alimentacion"
+                      onClick={() => onOpenAlimentacion(adultoMayor.id)}
+                    >
+                      <Utensils aria-hidden="true" />
+                    </button>
+                  ) : null}
                   <button
                     className="adultos-row-action"
                     type="button"

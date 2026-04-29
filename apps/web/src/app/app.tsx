@@ -4,6 +4,7 @@ import { SessionLoadingScreen } from "./components/session-loading-screen";
 import { useAppNavigation } from "./hooks/use-app-navigation";
 import { HOME_PATH, LOGIN_PATH } from "./routes/paths";
 import { isAdultosMayoresPath } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
+import { canOpenAlimentacion } from "@/features/alimentacion/lib/alimentacion-permissions";
 import { isAlimentacionPath } from "@/features/alimentacion/lib/alimentacion-paths";
 import { isActividadesGrupalesPath } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
 import { LoginPage } from "@/features/auth/pages/login-page";
@@ -45,9 +46,16 @@ export function App() {
       return;
     }
 
-    if (isAlimentacionPath(path) && user.role !== "super_admin" && user.tenantId === null) {
-      navigate(HOME_PATH, { replace: true });
-      return;
+    if (isAlimentacionPath(path)) {
+      if (!canOpenAlimentacion(user)) {
+        navigate(HOME_PATH, { replace: true });
+        return;
+      }
+
+      if (user.role !== "super_admin" && user.tenantId === null) {
+        navigate(HOME_PATH, { replace: true });
+        return;
+      }
     }
 
     if (
@@ -67,16 +75,16 @@ export function App() {
       user === null
         ? "Iniciar sesion | CuidarTe"
         : isBackofficePath(path)
-        ? "BackOffice | CuidarTe"
-        : isAdultosMayoresPath(path)
-          ? "Adultos mayores | CuidarTe"
-          : isAlimentacionPath(path)
-            ? "Registro de alimentacion | CuidarTe"
-          : isActividadesGrupalesPath(path)
-              ? "Sesiones grupales | CuidarTe"
-              : isEmpleadosPath(path)
-                ? "Gestion de empleados | CuidarTe"
-                : "Inicio | CuidarTe";
+          ? "BackOffice | CuidarTe"
+          : isAdultosMayoresPath(path)
+            ? "Adultos mayores | CuidarTe"
+            : isAlimentacionPath(path)
+              ? "Registro de alimentacion | CuidarTe"
+              : isActividadesGrupalesPath(path)
+                ? "Sesiones grupales | CuidarTe"
+                : isEmpleadosPath(path)
+                  ? "Gestion de empleados | CuidarTe"
+                  : "Inicio | CuidarTe";
   }, [path, user]);
 
   if (currentUserQuery.isLoading) {

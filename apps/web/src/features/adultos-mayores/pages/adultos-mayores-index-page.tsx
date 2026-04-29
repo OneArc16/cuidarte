@@ -4,9 +4,8 @@ import { useState } from "react";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { buildAtencionIndividualCreatePath } from "@/features/atenciones-individuales/lib/atenciones-individuales-paths";
-import {
-  buildHistoriaClinicaPath,
-} from "@/features/atenciones-individuales/lib/atenciones-individuales-paths";
+import { buildHistoriaClinicaPath } from "@/features/atenciones-individuales/lib/atenciones-individuales-paths";
+import { canManageAlimentacion } from "@/features/alimentacion/lib/alimentacion-permissions";
 import { buildAlimentacionCreateFromAdultoPath } from "@/features/alimentacion/lib/alimentacion-paths";
 import {
   canCreateAtencionIndividual,
@@ -37,6 +36,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
   const showTenantColumn = user.role === "super_admin";
   const canCreateClinicalAttention = canCreateAtencionIndividual(user);
   const canOpenClinicalHistory = canOpenHistoriaClinica(user);
+  const canCreateFeedingRecord = canManageAlimentacion(user);
 
   async function handleExportExcel() {
     await exportFile("excel");
@@ -93,6 +93,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
 
       <AdultosMayoresTable
         adultosMayores={adultosMayores}
+        canManageAlimentacion={canCreateFeedingRecord}
         isLoading={adultosMayoresQuery.isLoading}
         showTenantColumn={showTenantColumn}
         canCreateAtencionIndividual={canCreateClinicalAttention}
@@ -103,9 +104,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
         onOpenAtencionIndividual={(adultoMayorId) =>
           navigate(buildAtencionIndividualCreatePath(adultoMayorId))
         }
-        onOpenHistoriaClinica={(adultoMayorId) =>
-          navigate(buildHistoriaClinicaPath(adultoMayorId))
-        }
+        onOpenHistoriaClinica={(adultoMayorId) => navigate(buildHistoriaClinicaPath(adultoMayorId))}
         onEdit={(adultoMayorId) => navigate(buildAdultoMayorEditPath(adultoMayorId))}
       />
 

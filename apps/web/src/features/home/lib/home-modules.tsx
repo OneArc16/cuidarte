@@ -1,4 +1,4 @@
-import { type AuthUser } from "@cuidarte/contracts";
+import { alimentacionAccessRoleValues, type AuthUser } from "@cuidarte/contracts";
 import {
   BriefcaseBusiness,
   CalendarPlus,
@@ -48,6 +48,7 @@ export const HOME_MODULES = [
     label: "Registro de alimentación",
     icon: <Utensils />,
     path: REGISTRO_ALIMENTACION_PATH,
+    roles: alimentacionAccessRoleValues,
   },
   {
     id: "gestion-empleados",
@@ -65,11 +66,7 @@ export const HOME_MODULES = [
   },
 ] satisfies readonly HomeModule[];
 
-const MOBILE_PRIMARY_MODULE_IDS = [
-  "inicio",
-  "adultos-mayores",
-  "sesiones-grupales",
-] as const;
+const MOBILE_PRIMARY_MODULE_IDS = ["inicio", "adultos-mayores", "sesiones-grupales"] as const;
 
 export function canViewModule(module: HomeModule, role: AuthUser["role"]): boolean {
   return module.roles === undefined || module.roles.includes(role);
