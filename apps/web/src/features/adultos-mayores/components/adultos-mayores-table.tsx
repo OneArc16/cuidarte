@@ -9,16 +9,24 @@ import {
 
 type AdultosMayoresTableProps = {
   adultosMayores: AdultoMayorListItem[];
+  canCreateAtencionIndividual: boolean;
+  canOpenHistoriaClinica: boolean;
   isLoading: boolean;
   showTenantColumn: boolean;
   onOpenAlimentacion: (adultoMayorId: string) => void;
+  onOpenAtencionIndividual: (adultoMayorId: string) => void;
+  onOpenHistoriaClinica: (adultoMayorId: string) => void;
   onEdit: (adultoMayorId: string) => void;
 };
 
 export function AdultosMayoresTable({
   adultosMayores,
+  canCreateAtencionIndividual,
+  canOpenHistoriaClinica,
   isLoading,
   onOpenAlimentacion,
+  onOpenAtencionIndividual,
+  onOpenHistoriaClinica,
   onEdit,
   showTenantColumn,
 }: AdultosMayoresTableProps) {
@@ -85,7 +93,8 @@ export function AdultosMayoresTable({
                     type="button"
                     aria-label={`Atencion individual de ${adultoMayor.names} ${adultoMayor.surnames}`}
                     title="Atencion individual"
-                    disabled
+                    disabled={!canCreateAtencionIndividual}
+                    onClick={() => onOpenAtencionIndividual(adultoMayor.id)}
                   >
                     <HeartPulse aria-hidden="true" />
                   </button>
@@ -103,7 +112,8 @@ export function AdultosMayoresTable({
                     type="button"
                     aria-label={`Historia clinica de ${adultoMayor.names} ${adultoMayor.surnames}`}
                     title="Historia clinica"
-                    disabled
+                    disabled={!canOpenHistoriaClinica}
+                    onClick={() => onOpenHistoriaClinica(adultoMayor.id)}
                   >
                     <ClipboardPlus aria-hidden="true" />
                   </button>

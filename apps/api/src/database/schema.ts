@@ -1,6 +1,7 @@
 import {
   boolean,
   date,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -88,6 +89,23 @@ export const alimentacionOrganizer = pgEnum("alimentacion_organizer", [
   "fisioterapeuta",
   "recreacionista",
 ]);
+
+export const cie10Catalog = pgTable(
+  "cie10_catalog",
+  {
+    code: varchar("code", { length: 10 }).primaryKey(),
+    title: varchar("title", { length: 255 }).notNull(),
+    titleNormalized: varchar("title_normalized", { length: 255 }).notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("cie10_catalog_title_idx").on(table.title),
+    index("cie10_catalog_title_normalized_idx").on(table.titleNormalized),
+    index("cie10_catalog_is_active_idx").on(table.isActive),
+  ],
+);
 
 export const tenants = pgTable(
   "tenants",
@@ -371,6 +389,103 @@ export const alimentacionRegistros = pgTable(
     index("alimentacion_registros_adulto_mayor_idx").on(table.adultoMayorId),
     index("alimentacion_registros_created_by_user_idx").on(table.createdByUserId),
     index("alimentacion_registros_updated_by_user_idx").on(table.updatedByUserId),
+  ],
+);
+
+export const atencionIndividualCounters = pgTable(
+  "atencion_individual_counters",
+  {
+    tenantId: uuid("tenant_id")
+      .primaryKey()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    lastValue: integer("last_value").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("atencion_individual_counters_updated_at_idx").on(table.updatedAt)],
+);
+
+export const atencionesIndividuales = pgTable(
+  "atenciones_individuales",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    adultoMayorId: uuid("adulto_mayor_id")
+      .notNull()
+      .references(() => adultosMayores.id, { onDelete: "restrict" }),
+    attentionDate: date("attention_date", { mode: "string" }).notNull(),
+    modalidad: varchar("modalidad", { length: 40 }).notNull(),
+    tipoConsulta: varchar("tipo_consulta", { length: 40 }).notNull(),
+    nombreConsulta: varchar("nombre_consulta", { length: 160 }).notNull(),
+    consecutive: integer("consecutive").notNull(),
+    finalidad: varchar("finalidad", { length: 60 }).notNull(),
+    causaExterna: varchar("causa_externa", { length: 60 }).notNull(),
+    motivoConsulta: text("motivo_consulta").notNull(),
+    enfermedadActual: text("enfermedad_actual").notNull(),
+    antecedentesPersonales: text("antecedentes_personales"),
+    antecedentesFamiliares: text("antecedentes_familiares"),
+    tensionSistolica: integer("tension_sistolica"),
+    tensionDiastolica: integer("tension_diastolica"),
+    frecuenciaCardiaca: integer("frecuencia_cardiaca"),
+    frecuenciaRespiratoria: integer("frecuencia_respiratoria"),
+    temperatura: doublePrecision("temperatura"),
+    saturacionOxigeno: integer("saturacion_oxigeno"),
+    pesoKg: doublePrecision("peso_kg"),
+    tallaCm: doublePrecision("talla_cm"),
+    imc: doublePrecision("imc"),
+    perimetroAbdominalCm: doublePrecision("perimetro_abdominal_cm"),
+    examenFisico: text("examen_fisico"),
+    resultadosLaboratorios: text("resultados_laboratorios"),
+    resultadosProcedimientos: text("resultados_procedimientos"),
+    ordenesMedicas: jsonb("ordenes_medicas")
+      .$type<Array<Record<string, unknown>>>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    diagnosticos: jsonb("diagnosticos")
+      .$type<Array<Record<string, unknown>>>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    updatedByUserId: uuid("updated_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("atenciones_individuales_tenant_consecutive_unique").on(
+      table.tenantId,
+      table.consecutive,
+    ),
+    index("atenciones_individuales_tenant_date_idx").on(table.tenantId, table.attentionDate),
+    index("atenciones_individuales_adulto_mayor_idx").on(table.adultoMayorId),
+    index("atenciones_individuales_created_by_user_idx").on(table.createdByUserId),
+    index("atenciones_individuales_updated_by_user_idx").on(table.updatedByUserId),
+  ],
+);
+
+export const atencionIndividualSupportFiles = pgTable(
+  "atencion_individual_support_files",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    atencionId: uuid("atencion_id")
+      .notNull()
+      .references(() => atencionesIndividuales.id, { onDelete: "cascade" }),
+    originalName: varchar("original_name", { length: 260 }).notNull(),
+    mimeType: varchar("mime_type", { length: 160 }).notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    relativePath: varchar("relative_path", { length: 500 }).notNull(),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("atencion_individual_support_files_atencion_idx").on(table.atencionId),
+    index("atencion_individual_support_files_created_by_user_idx").on(table.createdByUserId),
   ],
 );
 

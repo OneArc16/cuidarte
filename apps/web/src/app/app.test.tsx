@@ -13,9 +13,16 @@ import {
   actividadGrupalFixture,
   actividadGrupalFormOptionsFixture,
   actividadGrupalIntegranteFixture,
+  atencionIndividualFixture,
   authUserFixture,
   backofficeTenantDetailFixture,
+  cie10OptionsFixture,
+  directorUserFixture,
   empleadoFixture,
+  historiaClinicaFixture,
+  medicoUserFixture,
+  otherProfessionalAtencionIndividualFixture,
+  recreacionistaUserFixture,
   server,
   superAdminUserFixture,
 } from "../test/test-server";
@@ -418,10 +425,201 @@ describe("App auth routing", () => {
       screen.getByRole("button", {
         name: `Historia clinica de ${adultoMayorFixture.names} ${adultoMayorFixture.surnames}`,
       }),
-    ).toBeDisabled();
+    ).toBeEnabled();
     expect(screen.getByRole("button", { name: "Crear adulto mayor" })).toHaveClass(
       "adultos-floating-action",
     );
+  });
+
+  it("opens the individual attention form from the adultos mayores shortcut", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: medicoUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", "/adultos-mayores");
+    const user = userEvent.setup();
+
+    renderWithProviders(<App />);
+
+    const shortcut = await screen.findByRole("button", {
+      name: `Atencion individual de ${adultoMayorFixture.names} ${adultoMayorFixture.surnames}`,
+    });
+    await user.click(shortcut);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        `/adultos-mayores/${adultoMayorFixture.id}/atenciones/new`,
+      );
+    });
+    expect(await screen.findByText("Nueva atencion individual")).toBeInTheDocument();
+    expect(screen.getByText(atencionIndividualFixture.adultoMayor.fullName)).toBeInTheDocument();
+    expect(screen.getByLabelText("Consecutivo")).toHaveValue(1);
+  });
+
+  it("opens historia clinica for a professional and shows only editable owned attentions", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: medicoUserFixture }),
+      ),
+      http.get(
+        "http://localhost:3001/api/atenciones-individuales/adultos-mayores/:adultoMayorId/history",
+        () =>
+          HttpResponse.json({
+            adultoMayor: historiaClinicaFixture.adultoMayor,
+            atenciones: [historiaClinicaFixture.atenciones[0]],
+          }),
+      ),
+    );
+    window.history.replaceState({}, "", "/adultos-mayores");
+    const user = userEvent.setup();
+
+    renderWithProviders(<App />);
+
+    const shortcut = await screen.findByRole("button", {
+      name: `Historia clinica de ${adultoMayorFixture.names} ${adultoMayorFixture.surnames}`,
+    });
+    await user.click(shortcut);
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        `/adultos-mayores/${adultoMayorFixture.id}/historia-clinica`,
+      );
+    });
+    expect(await screen.findByText("Seguimiento clinico")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Nueva atencion" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Editar" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ver" })).not.toBeInTheDocument();
+  });
+
+  it("opens historia clinica for admin users and reuses the attention view in read-only mode", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: authUserFixture }),
+      ),
+      http.get(
+        "http://localhost:3001/api/atenciones-individuales/adultos-mayores/:adultoMayorId/history",
+        () =>
+          HttpResponse.json({
+            adultoMayor: historiaClinicaFixture.adultoMayor,
+            atenciones: [
+              {
+                ...historiaClinicaFixture.atenciones[1],
+                access: "view",
+              },
+            ],
+          }),
+      ),
+      http.get("http://localhost:3001/api/atenciones-individuales/:atencionId", () =>
+        HttpResponse.json(otherProfessionalAtencionIndividualFixture),
+      ),
+    );
+    window.history.replaceState({}, "", "/adultos-mayores");
+    const user = userEvent.setup();
+
+    renderWithProviders(<App />);
+
+    const shortcut = await screen.findByRole("button", {
+      name: `Historia clinica de ${adultoMayorFixture.names} ${adultoMayorFixture.surnames}`,
+    });
+    await user.click(shortcut);
+
+    expect(await screen.findByText("Seguimiento clinico")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Nueva atencion" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Ver" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        `/adultos-mayores/${adultoMayorFixture.id}/atenciones/${otherProfessionalAtencionIndividualFixture.id}`,
+      );
+    });
+    expect(await screen.findByText("Vista de solo lectura. Esta atencion pertenece a otro profesional.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Guardar atencion" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Volver" })).toBeInTheDocument();
+  });
+
+  it("keeps historia clinica disabled for unsupported roles", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: recreacionistaUserFixture }),
+      ),
+    );
+    window.history.replaceState({}, "", "/adultos-mayores");
+
+    renderWithProviders(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Listado de adultos mayores" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: `Historia clinica de ${adultoMayorFixture.names} ${adultoMayorFixture.surnames}`,
+      }),
+    ).toBeDisabled();
+  });
+
+  it("searches CIE-10 by code or name from the diagnostics tab", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({ user: { ...authUserFixture, role: "medico" } }),
+      ),
+    );
+    let createPayload: unknown = null;
+    server.use(
+      http.post("http://localhost:3001/api/atenciones-individuales", async ({ request }) => {
+        createPayload = await request.json();
+
+        return HttpResponse.json({
+          ...atencionIndividualFixture,
+          ...(createPayload as Record<string, unknown>),
+          diagnosticos: [
+            {
+              id: "diagnostico-1",
+              codigoCie10: cie10OptionsFixture[0].code,
+              descripcion: cie10OptionsFixture[0].title,
+              tipo: "principal",
+            },
+          ],
+        });
+      }),
+    );
+    window.history.replaceState({}, "", `/adultos-mayores/${adultoMayorFixture.id}/atenciones/new`);
+    const user = userEvent.setup();
+
+    renderWithProviders(<App />);
+
+    expect(await screen.findByText("Nueva atencion individual")).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Motivo de consulta"), "Dolor en mano derecha");
+    await user.type(screen.getByLabelText("Enfermedad actual"), "Paciente estable en seguimiento.");
+    await user.click(screen.getByRole("tab", { name: "Diagnosticos" }));
+
+    const cie10Input = screen.getByLabelText("Buscar CIE-10");
+
+    await user.type(cie10Input, "g56");
+    expect(
+      await screen.findByRole("button", { name: /G56\.0 SINDROME DEL TUNEL CARPIANO/i }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /G56\.0 SINDROME DEL TUNEL CARPIANO/i }));
+    expect(screen.getByDisplayValue(cie10OptionsFixture[0].title)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Guardar atencion" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        `/adultos-mayores/${adultoMayorFixture.id}/atenciones/${atencionIndividualFixture.id}`,
+      );
+    });
+    expect(createPayload).toMatchObject({
+      diagnosticos: [
+        {
+          codigoCie10: "G56.0",
+          descripcion: cie10OptionsFixture[0].title,
+          tipo: "principal",
+        },
+      ],
+    });
   });
 
   it("creates an adulto mayor from the tabbed form", async () => {
@@ -1087,9 +1285,13 @@ describe("App auth routing", () => {
     renderWithProviders(<App />);
 
     expect(await screen.findByRole("table")).toBeInTheDocument();
-    expect(await screen.findByRole("button", { name: alimentacionFixture.fullName })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: alimentacionFixture.fullName }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Entregado")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Agregar registro de alimentación" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Agregar registro de alimentación" }),
+    ).toBeInTheDocument();
   });
 
   it("creates a feeding batch and returns to the list", async () => {
@@ -1160,7 +1362,9 @@ describe("App auth routing", () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe("/registro-alimentacion");
     });
-    expect(await screen.findByRole("button", { name: alimentacionFixture.fullName })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: alimentacionFixture.fullName }),
+    ).toBeInTheDocument();
     expect(createPayload).toMatchObject({
       tenantId: null,
       deliveryDate: "2026-04-24",

@@ -1,0 +1,131 @@
+import { type AuthUser } from "@cuidarte/contracts";
+import { ChevronLeft } from "lucide-react";
+
+import { type Navigate } from "@/app/hooks/use-app-navigation";
+import { ADULTOS_MAYORES_PATH } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
+
+import { AtencionIndividualForm } from "../components/atencion-individual-form";
+import { resolveAtencionIndividualApiError } from "../lib/atenciones-individuales-formatters";
+import { buildHistoriaClinicaPath } from "../lib/atenciones-individuales-paths";
+import { resolveHistoriaClinicaAction } from "../lib/historia-clinica-permissions";
+import {
+  useAtencionIndividualQuery,
+  useUpdateAtencionIndividualMutation,
+} from "../model/atenciones-individuales-queries";
+
+type AtencionIndividualDetailPageProps = {
+  atencionId: string;
+  navigate: Navigate;
+  user: AuthUser;
+};
+
+export function AtencionIndividualDetailPage({
+  atencionId,
+  navigate,
+  user,
+}: AtencionIndividualDetailPageProps) {
+  const atencionQuery = useAtencionIndividualQuery(atencionId);
+  const updateMutation = useUpdateAtencionIndividualMutation(atencionId);
+
+  if (atencionQuery.isLoading) {
+    return (
+      <section className="adultos-empty" aria-busy="true">
+        <p className="eyebrow">Atencion individual</p>
+        <h2>Cargando atencion...</h2>
+      </section>
+    );
+  }
+
+  if (atencionQuery.isError || atencionQuery.data === undefined) {
+    return (
+      <section className="adultos-empty" aria-labelledby="atencion-detail-error-title">
+        <p className="eyebrow">Atencion individual</p>
+        <h2 id="atencion-detail-error-title">No fue posible cargar la atencion</h2>
+        <p>{resolveAtencionIndividualApiError(atencionQuery.error)}</p>
+        <button
+          className="outline-action"
+          type="button"
+          onClick={() => navigate(ADULTOS_MAYORES_PATH)}
+        >
+          <ChevronLeft aria-hidden="true" />
+          <span>Volver</span>
+        </button>
+      </section>
+    );
+  }
+
+  const access = resolveHistoriaClinicaAction(user, {
+    createdByUserId: atencionQuery.data.createdByUserId,
+  });
+  const historyPath = buildHistoriaClinicaPath(atencionQuery.data.adultoMayorId);
+
+  if (access === null) {
+    return (
+      <section className="adultos-empty" aria-labelledby="atencion-detail-forbidden-title">
+        <p className="eyebrow">Atencion individual</p>
+        <h2 id="atencion-detail-forbidden-title">No tienes permisos para consultar esta atencion</h2>
+        <button className="outline-action" type="button" onClick={() => navigate(historyPath)}>
+          <ChevronLeft aria-hidden="true" />
+          <span>Volver</span>
+        </button>
+      </section>
+    );
+  }
+
+  const isEditable = access === "edit";
+
+  return (
+    <section className="adultos-form-stack" aria-labelledby="atencion-detail-title">
+      <h1 className="visually-hidden" id="atencion-detail-title">
+        Atencion individual
+      </h1>
+
+      <div className="adultos-form-nav">
+        <button
+          className="outline-action adultos-back-action"
+          type="button"
+          onClick={() => navigate(historyPath)}
+        >
+          <ChevronLeft aria-hidden="true" />
+          <span>Volver</span>
+        </button>
+        <span className="adultos-form-nav__context">
+          Atencion #{atencionQuery.data.consecutive}
+        </span>
+      </div>
+
+      {isEditable && updateMutation.isSuccess ? (
+        <p className="form-success" role="status">
+          Atencion individual guardada.
+        </p>
+      ) : null}
+
+      {!isEditable ? (
+        <p className="atencion-readonly-banner" role="status">
+          Vista de solo lectura. Esta atencion pertenece a otro profesional.
+        </p>
+      ) : null}
+
+      {isEditable ? (
+        <AtencionIndividualForm
+          mode="edit"
+          detail={atencionQuery.data}
+          isPending={updateMutation.isPending}
+          error={
+            updateMutation.error === null
+              ? null
+              : resolveAtencionIndividualApiError(updateMutation.error)
+          }
+          onCancel={() => navigate(historyPath)}
+          onSubmit={(values) => updateMutation.mutate(values)}
+        />
+      ) : (
+        <AtencionIndividualForm
+          mode="view"
+          detail={atencionQuery.data}
+          onCancel={() => navigate(historyPath)}
+        />
+      )}
+    </section>
+  );
+}

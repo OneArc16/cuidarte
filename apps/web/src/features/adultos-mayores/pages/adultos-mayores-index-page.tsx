@@ -3,7 +3,15 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
+import { buildAtencionIndividualCreatePath } from "@/features/atenciones-individuales/lib/atenciones-individuales-paths";
+import {
+  buildHistoriaClinicaPath,
+} from "@/features/atenciones-individuales/lib/atenciones-individuales-paths";
 import { buildAlimentacionCreateFromAdultoPath } from "@/features/alimentacion/lib/alimentacion-paths";
+import {
+  canCreateAtencionIndividual,
+  canOpenHistoriaClinica,
+} from "@/features/atenciones-individuales/lib/historia-clinica-permissions";
 
 import { AdultosMayoresTable } from "../components/adultos-mayores-table";
 import { AdultosMayoresToolbar } from "../components/adultos-mayores-toolbar";
@@ -27,6 +35,8 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
   const adultosMayoresQuery = useAdultosMayoresQuery({ search });
   const adultosMayores = adultosMayoresQuery.data?.adultosMayores ?? [];
   const showTenantColumn = user.role === "super_admin";
+  const canCreateClinicalAttention = canCreateAtencionIndividual(user);
+  const canOpenClinicalHistory = canOpenHistoriaClinica(user);
 
   async function handleExportExcel() {
     await exportFile("excel");
@@ -85,8 +95,16 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
         adultosMayores={adultosMayores}
         isLoading={adultosMayoresQuery.isLoading}
         showTenantColumn={showTenantColumn}
+        canCreateAtencionIndividual={canCreateClinicalAttention}
+        canOpenHistoriaClinica={canOpenClinicalHistory}
         onOpenAlimentacion={(adultoMayorId) =>
           navigate(buildAlimentacionCreateFromAdultoPath(adultoMayorId))
+        }
+        onOpenAtencionIndividual={(adultoMayorId) =>
+          navigate(buildAtencionIndividualCreatePath(adultoMayorId))
+        }
+        onOpenHistoriaClinica={(adultoMayorId) =>
+          navigate(buildHistoriaClinicaPath(adultoMayorId))
         }
         onEdit={(adultoMayorId) => navigate(buildAdultoMayorEditPath(adultoMayorId))}
       />

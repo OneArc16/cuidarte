@@ -10,6 +10,10 @@ const envSchema = z.object({
   SESSION_COOKIE_NAME: z.string().min(1).default("cuidarte_session"),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
   ACTIVIDADES_GRUPALES_UPLOADS_DIR: z.string().min(1).default("/tmp/cuidarte/actividades-grupales"),
+  ATENCIONES_INDIVIDUALES_UPLOADS_DIR: z
+    .string()
+    .min(1)
+    .default("/tmp/cuidarte/atenciones-individuales"),
 });
 
 export type AppEnv = z.infer<typeof envSchema>;

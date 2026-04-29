@@ -19,6 +19,35 @@ export const superAdminUserFixture = {
   role: "super_admin",
 } as const;
 
+export const medicoUserFixture = {
+  ...authUserFixture,
+  email: "medico@centro-demo.test",
+  fullName: "Medico Centro Demo",
+  role: "medico",
+} as const;
+
+export const directorUserFixture = {
+  ...authUserFixture,
+  email: "director@centro-demo.test",
+  fullName: "Director Centro Demo",
+  role: "director",
+} as const;
+
+export const recreacionistaUserFixture = {
+  ...authUserFixture,
+  email: "recreacion@centro-demo.test",
+  fullName: "Recreacionista Centro Demo",
+  role: "recreacionista",
+} as const;
+
+export const psicologoUserFixture = {
+  ...authUserFixture,
+  id: "0d516183-3e18-40ba-90d0-f4e2e978bb9a",
+  email: "psicologo@centro-demo.test",
+  fullName: "Psicologo Centro Demo",
+  role: "psicologo",
+} as const;
+
 export const backofficeTenantDetailFixture = {
   tenant: {
     id: "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054",
@@ -157,6 +186,128 @@ export const alimentacionFixture = {
   updatedAt: "2026-04-24T12:00:00.000Z",
 } as const;
 
+export const atencionIndividualAdultoFixture = {
+  id: adultoMayorFixture.id,
+  tenantId: adultoMayorFixture.tenantId,
+  tenantName: adultoMayorFixture.tenantName,
+  documentNumber: adultoMayorFixture.documentNumber,
+  fullName: `${adultoMayorFixture.names} ${adultoMayorFixture.surnames}`,
+  age: adultoMayorFixture.age,
+  sex: adultoMayorFixture.sex,
+  eps: adultoMayorFixture.eps,
+  healthRegime: adultoMayorFixture.healthRegime,
+} as const;
+
+export const atencionIndividualFixture = {
+  id: "2ef00f9e-9a85-47d7-91a4-7030d6f6f951",
+  tenantId: adultoMayorFixture.tenantId,
+  tenantName: adultoMayorFixture.tenantName,
+  adultoMayorId: adultoMayorFixture.id,
+  adultoMayor: atencionIndividualAdultoFixture,
+  attentionDate: "2026-04-24",
+  modalidad: "intramural",
+  tipoConsulta: "primera_vez",
+  nombreConsulta: "Atencion individual",
+  consecutive: 1,
+  finalidad: "resolutiva_atencion_general",
+  causaExterna: "enfermedad_general",
+  motivoConsulta: "Dolor general",
+  enfermedadActual: "Paciente refiere dolor general.",
+  antecedentesPersonales: null,
+  antecedentesFamiliares: null,
+  tensionSistolica: 120,
+  tensionDiastolica: 80,
+  frecuenciaCardiaca: null,
+  frecuenciaRespiratoria: null,
+  temperatura: null,
+  saturacionOxigeno: null,
+  pesoKg: null,
+  tallaCm: null,
+  imc: null,
+  perimetroAbdominalCm: null,
+  examenFisico: null,
+  resultadosLaboratorios: null,
+  resultadosProcedimientos: null,
+  ordenesMedicas: [],
+  diagnosticos: [
+    {
+      id: "diagnostico-1",
+      codigoCie10: "I10",
+      descripcion: "Hipertension esencial",
+      tipo: "principal",
+    },
+  ],
+  supportFiles: [],
+  createdByUserId: authUserFixture.id,
+  updatedByUserId: authUserFixture.id,
+  createdAt: "2026-04-24T12:00:00.000Z",
+  updatedAt: "2026-04-24T12:00:00.000Z",
+} as const;
+
+export const otherProfessionalAtencionIndividualFixture = {
+  ...atencionIndividualFixture,
+  id: "3f8c63f0-8915-42ee-96c8-0af15b2f26a6",
+  consecutive: 2,
+  nombreConsulta: "Control de psicologia",
+  createdByUserId: psicologoUserFixture.id,
+  updatedByUserId: psicologoUserFixture.id,
+} as const;
+
+export const historiaClinicaFixture = {
+  adultoMayor: atencionIndividualAdultoFixture,
+  atenciones: [
+    {
+      id: atencionIndividualFixture.id,
+      adultoMayorId: atencionIndividualFixture.adultoMayorId,
+      attentionDate: atencionIndividualFixture.attentionDate,
+      modalidad: atencionIndividualFixture.modalidad,
+      tipoConsulta: atencionIndividualFixture.tipoConsulta,
+      nombreConsulta: atencionIndividualFixture.nombreConsulta,
+      consecutive: atencionIndividualFixture.consecutive,
+      createdAt: atencionIndividualFixture.createdAt,
+      updatedAt: atencionIndividualFixture.updatedAt,
+      professional: {
+        userId: atencionIndividualFixture.createdByUserId,
+        fullName: medicoUserFixture.fullName,
+        role: medicoUserFixture.role,
+      },
+      access: "edit",
+    },
+    {
+      id: otherProfessionalAtencionIndividualFixture.id,
+      adultoMayorId: otherProfessionalAtencionIndividualFixture.adultoMayorId,
+      attentionDate: otherProfessionalAtencionIndividualFixture.attentionDate,
+      modalidad: otherProfessionalAtencionIndividualFixture.modalidad,
+      tipoConsulta: otherProfessionalAtencionIndividualFixture.tipoConsulta,
+      nombreConsulta: otherProfessionalAtencionIndividualFixture.nombreConsulta,
+      consecutive: otherProfessionalAtencionIndividualFixture.consecutive,
+      createdAt: otherProfessionalAtencionIndividualFixture.createdAt,
+      updatedAt: otherProfessionalAtencionIndividualFixture.updatedAt,
+      professional: {
+        userId: otherProfessionalAtencionIndividualFixture.createdByUserId,
+        fullName: psicologoUserFixture.fullName,
+        role: psicologoUserFixture.role,
+      },
+      access: "view",
+    },
+  ],
+} as const;
+
+export const cie10OptionsFixture = [
+  {
+    code: "G560",
+    title: "SINDROME DEL TUNEL CARPIANO",
+  },
+  {
+    code: "G561",
+    title: "OTRAS LESIONES DEL NERVIO MEDIANO",
+  },
+  {
+    code: "G562",
+    title: "LESION DEL NERVIO CUBITAL",
+  },
+] as const;
+
 export const actividadGrupalDiligenciamientoFixture = {
   ...actividadGrupalFixture,
   assignedProfessionals: [
@@ -233,6 +384,60 @@ export const server = setupServer(
   http.patch("http://localhost:3001/api/adultos-mayores/:adultoMayorId", () =>
     HttpResponse.json(adultoMayorFixture),
   ),
+  http.get(
+    "http://localhost:3001/api/atenciones-individuales/adultos-mayores/:adultoMayorId/lookup",
+    () =>
+      HttpResponse.json({
+        adultoMayor: atencionIndividualAdultoFixture,
+        suggestedConsecutive: 1,
+      }),
+  ),
+  http.get(
+    "http://localhost:3001/api/atenciones-individuales/adultos-mayores/:adultoMayorId/history",
+    () => HttpResponse.json(historiaClinicaFixture),
+  ),
+  http.post("http://localhost:3001/api/atenciones-individuales", async ({ request }) => {
+    const payload = await readAtencionIndividualPayload(request);
+
+    return HttpResponse.json({
+      ...atencionIndividualFixture,
+      ...payload,
+      id: atencionIndividualFixture.id,
+      adultoMayor: atencionIndividualAdultoFixture,
+      tenantId: adultoMayorFixture.tenantId,
+      tenantName: adultoMayorFixture.tenantName,
+      createdByUserId: authUserFixture.id,
+      updatedByUserId: authUserFixture.id,
+      createdAt: atencionIndividualFixture.createdAt,
+      updatedAt: "2026-04-24T12:10:00.000Z",
+    });
+  }),
+  http.get("http://localhost:3001/api/atenciones-individuales/:atencionId", () =>
+    HttpResponse.json(atencionIndividualFixture),
+  ),
+  http.patch(
+    "http://localhost:3001/api/atenciones-individuales/:atencionId",
+    async ({ request }) => {
+      const payload = await readAtencionIndividualPayload(request);
+
+      return HttpResponse.json({
+        ...atencionIndividualFixture,
+        ...payload,
+        updatedAt: "2026-04-24T12:20:00.000Z",
+      });
+    },
+  ),
+  http.get("http://localhost:3001/api/cie10/options", ({ request }) => {
+    const search = new URL(request.url).searchParams.get("search")?.trim().toLowerCase() ?? "";
+    const options =
+      search.length < 3
+        ? []
+        : cie10OptionsFixture.filter((option) =>
+            [option.code, option.title].join(" ").toLowerCase().includes(search),
+          );
+
+    return HttpResponse.json({ options });
+  }),
   http.get("http://localhost:3001/api/empleados", () =>
     HttpResponse.json({ empleados: [empleadoFixture] }),
   ),
@@ -371,15 +576,18 @@ export const server = setupServer(
   http.get("http://localhost:3001/api/registro-alimentacion/tenant-options", () =>
     HttpResponse.json({ tenants: [backofficeTenantDetailFixture.tenant] }),
   ),
-  http.get("http://localhost:3001/api/registro-alimentacion/adultos-mayores-options", ({ request }) => {
-    const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? "";
+  http.get(
+    "http://localhost:3001/api/registro-alimentacion/adultos-mayores-options",
+    ({ request }) => {
+      const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? "";
 
-    const adultosMayores = [alimentacionAdultoOptionFixture].filter((adultoMayor) =>
-      [adultoMayor.documentNumber, adultoMayor.fullName].join(" ").toLowerCase().includes(search),
-    );
+      const adultosMayores = [alimentacionAdultoOptionFixture].filter((adultoMayor) =>
+        [adultoMayor.documentNumber, adultoMayor.fullName].join(" ").toLowerCase().includes(search),
+      );
 
-    return HttpResponse.json({ adultosMayores });
-  }),
+      return HttpResponse.json({ adultosMayores });
+    },
+  ),
   http.get(
     "http://localhost:3001/api/registro-alimentacion/adultos-mayores/:adultoMayorId/lookup",
     () =>
@@ -431,3 +639,30 @@ export const server = setupServer(
       }),
   ),
 );
+
+async function readAtencionIndividualPayload(request: Request): Promise<Record<string, unknown>> {
+  const contentType = request.headers.get("content-type") ?? "";
+
+  if (!contentType.includes("multipart/form-data")) {
+    return (await request.json()) as Record<string, unknown>;
+  }
+
+  const formData = await request.formData();
+  const rawPayload = formData.get("payload");
+
+  if (typeof rawPayload !== "string") {
+    return {};
+  }
+
+  const parsedPayload = JSON.parse(rawPayload) as Record<string, unknown>;
+
+  if (
+    "payload" in parsedPayload &&
+    typeof parsedPayload.payload === "object" &&
+    parsedPayload.payload !== null
+  ) {
+    return parsedPayload.payload as Record<string, unknown>;
+  }
+
+  return parsedPayload;
+}

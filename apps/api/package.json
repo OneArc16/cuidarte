@@ -8,6 +8,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/database/seed.ts",
+    "db:seed:cie10": "tsx src/database/import-cie10.ts",
     "dev": "nest start --watch",
     "pdf:install-deps": "playwright install chromium && playwright install-deps chromium",
     "start:e2e": "nest build && node dist/main.js",
