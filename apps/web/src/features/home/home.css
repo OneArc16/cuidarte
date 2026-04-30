@@ -373,63 +373,6 @@
   padding: clamp(18px, 3vw, 34px) clamp(2px, 1.5vw, 18px);
 }
 
-.home-heading {
-  position: relative;
-  display: block;
-  min-height: 0;
-  overflow: hidden;
-  padding: clamp(20px, 3vw, 30px) clamp(18px, 3.2vw, 34px);
-  border: 1px solid rgb(8 80 65 / 12%);
-  border-radius: 12px;
-  background:
-    radial-gradient(circle at top left, rgb(225 245 238 / 72%), transparent 34%),
-    linear-gradient(145deg, rgb(255 255 255 / 94%), rgb(246 251 249 / 94%)),
-    var(--color-surface);
-  box-shadow:
-    0 18px 48px rgb(8 80 65 / 8%),
-    inset 0 1px 0 rgb(255 255 255 / 72%);
-  isolation: isolate;
-}
-
-.home-heading::before {
-  position: absolute;
-  right: clamp(10px, 3vw, 24px);
-  top: clamp(10px, 3vw, 20px);
-  z-index: -1;
-  width: min(18vw, 140px);
-  height: min(14vw, 110px);
-  border: 1px solid rgb(29 158 117 / 14%);
-  border-radius: 12px;
-  background:
-    repeating-linear-gradient(135deg, rgb(8 80 65 / 5%) 0 2px, transparent 2px 14px),
-    linear-gradient(135deg, rgb(250 238 218 / 54%), rgb(233 111 93 / 10%));
-  box-shadow: 0 12px 28px rgb(8 80 65 / 6%);
-  content: "";
-}
-
-.home-heading__copy {
-  display: grid;
-  align-content: start;
-  gap: 8px;
-  max-width: 760px;
-}
-
-.home-heading__product {
-  color: var(--color-muted);
-  font-size: 0.76rem;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.home-heading h1 {
-  max-width: 760px;
-  margin-bottom: 0;
-  font-size: clamp(2rem, 3.2vw, 3.3rem);
-  line-height: 1;
-}
-
-.home-heading .eyebrow,
 .home-shortcut-card__eyebrow,
 .home-indicator-card__label {
   color: var(--color-muted);
@@ -457,15 +400,6 @@
   font-size: clamp(1.45rem, 2vw, 1.9rem);
 }
 
-.home-dashboard-section__header p:not(.eyebrow) {
-  max-width: 560px;
-  margin-bottom: 0;
-  color: var(--color-muted);
-  font-size: 0.98rem;
-  font-weight: 700;
-  line-height: 1.6;
-}
-
 .home-shortcuts-grid,
 .home-indicators-grid {
   display: grid;
@@ -485,7 +419,6 @@
   position: relative;
   display: grid;
   width: 100%;
-  min-height: 190px;
   align-content: start;
   gap: 14px;
   padding: 18px;
@@ -503,6 +436,10 @@
     border-color 180ms ease,
     box-shadow 180ms ease,
     background 180ms ease;
+}
+
+.home-shortcut-card {
+  min-height: 190px;
 }
 
 .home-shortcut-card:hover,
@@ -555,21 +492,14 @@
   line-height: 1;
 }
 
-.home-shortcut-card__description,
-.home-indicator-card small {
-  color: var(--color-muted);
-  font-size: 0.94rem;
-  font-weight: 700;
-  line-height: 1.55;
-}
-
 .home-indicator-card {
+  min-height: 128px;
+  gap: 10px;
   grid-template-columns: 1fr auto;
   align-content: start;
 }
 
 .home-indicator-card__label,
-.home-indicator-card small,
 .home-indicator-card strong {
   grid-column: 1;
 }

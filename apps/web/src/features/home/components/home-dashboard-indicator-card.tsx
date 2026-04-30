@@ -27,7 +27,6 @@ export function HomeDashboardIndicatorCard({
         <Icon />
       </span>
       <strong>{formatDashboardMetricValue(total)}</strong>
-      <small>{definition.description}</small>
     </button>
   );
 }

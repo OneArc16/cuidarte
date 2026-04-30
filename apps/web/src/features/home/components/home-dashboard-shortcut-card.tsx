@@ -29,7 +29,6 @@ export function HomeDashboardShortcutCard({
         </span>
       </span>
       <span className="home-shortcut-card__total">{formatDashboardMetricValue(total)}</span>
-      <span className="home-shortcut-card__description">{module.summaryDescription}</span>
     </button>
   );
 }

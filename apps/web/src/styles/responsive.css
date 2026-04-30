@@ -212,21 +212,6 @@
     padding: 8px 2px 24px;
   }
 
-  .home-heading {
-    min-height: 0;
-    padding: 16px 2px 18px;
-  }
-
-  .home-heading h1 {
-    font-size: 2.4rem;
-  }
-
-  .home-heading::before {
-    right: 0;
-    width: 110px;
-    height: 90px;
-  }
-
   .home-dashboard-section__header {
     gap: 12px;
   }
@@ -357,8 +342,7 @@
 }
 
 @media (max-width: 420px) {
-  h1,
-  .home-heading h1 {
+  h1 {
     font-size: 2rem;
   }
 }

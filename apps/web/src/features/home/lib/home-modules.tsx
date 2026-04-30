@@ -29,13 +29,11 @@ export type HomeModule = {
   path: string;
   roles?: readonly AuthUser["role"][];
   summaryLabel?: string;
-  summaryDescription?: string;
 };
 
 export type ShortcutHomeModule = HomeModule & {
   id: HomeDashboardShortcutModuleId;
   summaryLabel: string;
-  summaryDescription: string;
 };
 
 export const HOME_MODULES = [
@@ -51,7 +49,6 @@ export const HOME_MODULES = [
     icon: UsersRound,
     path: ADULTOS_MAYORES_PATH,
     summaryLabel: "Adultos registrados",
-    summaryDescription: "Base principal del centro y acceso a historia de seguimiento.",
   },
   {
     id: "sesiones-grupales",
@@ -59,7 +56,6 @@ export const HOME_MODULES = [
     icon: CalendarPlus,
     path: CREACION_ACTIVIDADES_PATH,
     summaryLabel: "Sesiones registradas",
-    summaryDescription: "Programacion, diligenciamiento y trazabilidad de actividades.",
   },
   {
     id: "registro-alimentacion",
@@ -68,7 +64,6 @@ export const HOME_MODULES = [
     path: REGISTRO_ALIMENTACION_PATH,
     roles: alimentacionAccessRoleValues,
     summaryLabel: "Registros cargados",
-    summaryDescription: "Control diario de raciones, refrigerios y apoyo de transporte.",
   },
   {
     id: "gestion-empleados",
@@ -77,7 +72,6 @@ export const HOME_MODULES = [
     path: EMPLEADOS_PATH,
     roles: ["super_admin", "admin", "auditor"],
     summaryLabel: "Usuarios activos",
-    summaryDescription: "Administracion del equipo del centro y sus permisos operativos.",
   },
   {
     id: "backoffice",
@@ -86,7 +80,6 @@ export const HOME_MODULES = [
     path: BACKOFFICE_PATH,
     roles: ["super_admin"],
     summaryLabel: "Centros activos",
-    summaryDescription: "Vista global de tenants, propietarios y configuracion de plataforma.",
   },
 ] satisfies readonly HomeModule[];
 

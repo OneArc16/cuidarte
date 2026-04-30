@@ -41,23 +41,16 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
 
   return (
     <>
-      <header className="home-heading">
-        <div className="home-heading__copy">
-          <p className="eyebrow">Inicio</p>
-          <span className="home-heading__product">CuidarTe</span>
-          <h1 id="home-title">{user.fullName}</h1>
-        </div>
-      </header>
+      <h1 id="home-title" className="visually-hidden">
+        {user.fullName}
+      </h1>
 
       <section className="home-dashboard-section" aria-labelledby="home-shortcuts-title">
         <div className="home-dashboard-section__header">
           <div>
-            <p className="eyebrow">Accesos</p>
+            <span className="eyebrow">Accesos</span>
             <h2 id="home-shortcuts-title">Módulos del sistema</h2>
           </div>
-          <p>
-            Accesos directos con el volumen actual de cada modulo dentro del alcance de tu sesion.
-          </p>
         </div>
 
         <div
@@ -81,12 +74,9 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
         <section className="home-dashboard-section" aria-labelledby="home-indicators-title">
           <div className="home-dashboard-section__header">
             <div>
-              <p className="eyebrow">Indicadores</p>
+              <span className="eyebrow">Indicadores</span>
               <h2 id="home-indicators-title">Resumen operativo</h2>
             </div>
-            <p>
-              Vista consolidada con las cantidades que mas se consultan en el arranque del dia.
-            </p>
           </div>
 
           <div
