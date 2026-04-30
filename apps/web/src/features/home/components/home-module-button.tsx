@@ -8,6 +8,8 @@ type HomeModuleButtonProps = {
 };
 
 export function HomeModuleButton({ module, isActive, variant, onClick }: HomeModuleButtonProps) {
+  const Icon = module.icon;
+
   return (
     <button
       className={
@@ -21,7 +23,7 @@ export function HomeModuleButton({ module, isActive, variant, onClick }: HomeMod
       onClick={onClick}
     >
       <span className="module-button__icon" aria-hidden="true">
-        {module.icon}
+        <Icon />
       </span>
       <span className="module-button__label">{module.label}</span>
     </button>

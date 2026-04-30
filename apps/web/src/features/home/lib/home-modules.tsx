@@ -1,68 +1,92 @@
-import { alimentacionAccessRoleValues, type AuthUser } from "@cuidarte/contracts";
+import {
+  alimentacionAccessRoleValues,
+  type AuthUser,
+  type HomeDashboardShortcutModuleId,
+} from "@cuidarte/contracts";
 import {
   BriefcaseBusiness,
   CalendarPlus,
   Home,
+  type LucideIcon,
   UserRoundCog,
   UsersRound,
   Utensils,
 } from "lucide-react";
-import { type ReactNode } from "react";
 
+import { HOME_PATH } from "@/app/routes/paths";
 import { ADULTOS_MAYORES_PATH } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
 import { REGISTRO_ALIMENTACION_PATH } from "@/features/alimentacion/lib/alimentacion-paths";
 import { CREACION_ACTIVIDADES_PATH } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
 import { BACKOFFICE_PATH } from "@/features/backoffice/lib/backoffice-paths";
 import { EMPLEADOS_PATH } from "@/features/empleados/lib/empleados-paths";
-import { HOME_PATH } from "@/app/routes/paths";
+
+export type HomeModuleId = "inicio" | HomeDashboardShortcutModuleId;
 
 export type HomeModule = {
-  id: string;
+  id: HomeModuleId;
   label: string;
-  icon: ReactNode;
-  path?: string;
+  icon: LucideIcon;
+  path: string;
   roles?: readonly AuthUser["role"][];
+  summaryLabel?: string;
+  summaryDescription?: string;
+};
+
+export type ShortcutHomeModule = HomeModule & {
+  id: HomeDashboardShortcutModuleId;
+  summaryLabel: string;
+  summaryDescription: string;
 };
 
 export const HOME_MODULES = [
   {
     id: "inicio",
     label: "Inicio",
-    icon: <Home />,
+    icon: Home,
     path: HOME_PATH,
   },
   {
     id: "adultos-mayores",
     label: "Adultos mayores",
-    icon: <UsersRound />,
+    icon: UsersRound,
     path: ADULTOS_MAYORES_PATH,
+    summaryLabel: "Adultos registrados",
+    summaryDescription: "Base principal del centro y acceso a historia de seguimiento.",
   },
   {
     id: "sesiones-grupales",
     label: "Sesiones grupales",
-    icon: <CalendarPlus />,
+    icon: CalendarPlus,
     path: CREACION_ACTIVIDADES_PATH,
+    summaryLabel: "Sesiones registradas",
+    summaryDescription: "Programacion, diligenciamiento y trazabilidad de actividades.",
   },
   {
     id: "registro-alimentacion",
     label: "Registro de alimentación",
-    icon: <Utensils />,
+    icon: Utensils,
     path: REGISTRO_ALIMENTACION_PATH,
     roles: alimentacionAccessRoleValues,
+    summaryLabel: "Registros cargados",
+    summaryDescription: "Control diario de raciones, refrigerios y apoyo de transporte.",
   },
   {
     id: "gestion-empleados",
     label: "Gestión de empleados",
-    icon: <UserRoundCog />,
+    icon: UserRoundCog,
     path: EMPLEADOS_PATH,
     roles: ["super_admin", "admin", "auditor"],
+    summaryLabel: "Usuarios activos",
+    summaryDescription: "Administracion del equipo del centro y sus permisos operativos.",
   },
   {
     id: "backoffice",
     label: "BackOffice",
-    icon: <BriefcaseBusiness />,
+    icon: BriefcaseBusiness,
     path: BACKOFFICE_PATH,
     roles: ["super_admin"],
+    summaryLabel: "Centros activos",
+    summaryDescription: "Vista global de tenants, propietarios y configuracion de plataforma.",
   },
 ] satisfies readonly HomeModule[];
 
@@ -76,4 +100,8 @@ export function isMobilePrimaryModule(module: HomeModule): boolean {
   return MOBILE_PRIMARY_MODULE_IDS.includes(
     module.id as (typeof MOBILE_PRIMARY_MODULE_IDS)[number],
   );
+}
+
+export function isShortcutModule(module: HomeModule): module is ShortcutHomeModule {
+  return module.id !== "inicio";
 }

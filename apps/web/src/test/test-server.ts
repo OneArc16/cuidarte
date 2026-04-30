@@ -352,6 +352,73 @@ export const actividadGrupalDiligenciamientoFixture = {
   diligenciamientoUpdatedAt: null,
 } as const;
 
+export const homeDashboardFixture = {
+  shortcuts: [
+    {
+      moduleId: "adultos-mayores",
+      total: 468,
+    },
+    {
+      moduleId: "sesiones-grupales",
+      total: 469,
+    },
+    {
+      moduleId: "registro-alimentacion",
+      total: 140,
+    },
+    {
+      moduleId: "gestion-empleados",
+      total: 42,
+    },
+    {
+      moduleId: "backoffice",
+      total: 12,
+    },
+  ],
+  indicators: [
+    {
+      id: "adultos_registrados",
+      total: 468,
+    },
+    {
+      id: "salud_preventiva",
+      total: 140,
+    },
+    {
+      id: "sesiones_psicosocial",
+      total: 140,
+    },
+    {
+      id: "raciones_entregadas",
+      total: 123200,
+    },
+    {
+      id: "encuentro_intergeneracional",
+      total: 7,
+    },
+    {
+      id: "nutricion",
+      total: 56,
+    },
+    {
+      id: "actividades_manualidad",
+      total: 42,
+    },
+    {
+      id: "fisioterapia",
+      total: 56,
+    },
+    {
+      id: "actividad_campo",
+      total: 112,
+    },
+    {
+      id: "actividades_recreacion",
+      total: 56,
+    },
+  ],
+} as const;
+
 export const server = setupServer(
   http.get("http://localhost:3001/api/health", () =>
     HttpResponse.json({
@@ -365,6 +432,9 @@ export const server = setupServer(
     HttpResponse.json({ user: authUserFixture }),
   ),
   http.post("http://localhost:3001/api/auth/logout", () => HttpResponse.json({ success: true })),
+  http.get("http://localhost:3001/api/home/dashboard", () =>
+    HttpResponse.json(homeDashboardFixture),
+  ),
   http.get("http://localhost:3001/api/backoffice/tenants", () =>
     HttpResponse.json({ tenants: [backofficeTenantDetailFixture] }),
   ),

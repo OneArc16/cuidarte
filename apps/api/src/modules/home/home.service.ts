@@ -1,0 +1,263 @@
+import {
+  type AuthUser,
+  type HomeDashboardIndicator,
+  type HomeDashboardIndicatorId,
+  type HomeDashboardResponse,
+  type HomeDashboardShortcut,
+  type HomeDashboardShortcutModuleId,
+  homeDashboardIndicatorIdValues,
+  homeDashboardResponseSchema,
+  homeDashboardShortcutModuleIdValues,
+} from "@cuidarte/contracts";
+import { Injectable } from "@nestjs/common";
+import { and, eq, sql, type SQL } from "drizzle-orm";
+import { type AnyPgColumn } from "drizzle-orm/pg-core";
+
+import { DatabaseService } from "../../database/database.service";
+import {
+  actividadesGrupales,
+  adultosMayores,
+  alimentacionRegistros,
+  tenants,
+  users,
+} from "../../database/schema";
+import { resolveActividadesGrupalesScope } from "../actividades-grupales/domain/actividad-grupal.policy";
+import { resolveAdultosMayoresScope } from "../adultos-mayores/domain/adulto-mayor.policy";
+import { resolveAlimentacionScope } from "../alimentacion/domain/alimentacion.policy";
+import { resolveEmpleadosScope } from "../empleados/domain/empleado.policy";
+
+type TenantScope = { type: "all" } | { type: "tenant"; tenantId: string };
+
+type ActivitySummary = {
+  total: number;
+  byIndicatorId: Partial<Record<HomeDashboardIndicatorId, number>>;
+};
+
+type AlimentacionSummary = {
+  recordsTotal: number;
+  deliveredRationsTotal: number;
+};
+
+const ACTIVITY_INDICATOR_IDS = [
+  "salud_preventiva",
+  "sesiones_psicosocial",
+  "encuentro_intergeneracional",
+  "nutricion",
+  "actividades_manualidad",
+  "fisioterapia",
+  "actividad_campo",
+  "actividades_recreacion",
+] as const satisfies readonly HomeDashboardIndicatorId[];
+
+type ActivityIndicatorId = (typeof ACTIVITY_INDICATOR_IDS)[number];
+
+@Injectable()
+export class HomeService {
+  constructor(private readonly database: DatabaseService) {}
+
+  async getDashboard(actor: AuthUser): Promise<HomeDashboardResponse> {
+    const adultosScope = resolveAdultosMayoresScope(actor);
+    const actividadesScope = resolveActividadesGrupalesScope(actor);
+    const alimentacionScope = resolveAlimentacionScope(actor);
+    const empleadosScope = resolveEmpleadosScope(actor);
+
+    const [adultosTotal, actividadesSummary, alimentacionSummary, empleadosTotal, tenantsTotal] =
+      await Promise.all([
+        adultosScope === null
+          ? Promise.resolve<number | null>(null)
+          : this.countAdultosMayores(adultosScope),
+        actividadesScope === null
+          ? Promise.resolve<ActivitySummary | null>(null)
+          : this.summarizeActividades(actividadesScope),
+        alimentacionScope === null
+          ? Promise.resolve<AlimentacionSummary | null>(null)
+          : this.summarizeAlimentacion(alimentacionScope),
+        empleadosScope === null ? Promise.resolve<number | null>(null) : this.countEmpleados(empleadosScope),
+        actor.role === "super_admin" ? this.countActiveTenants() : Promise.resolve<number | null>(null),
+      ]);
+
+    const shortcutTotals: Partial<Record<HomeDashboardShortcutModuleId, number>> = {};
+    const indicatorTotals: Partial<Record<HomeDashboardIndicatorId, number>> = {};
+
+    if (adultosTotal !== null) {
+      shortcutTotals["adultos-mayores"] = adultosTotal;
+      indicatorTotals.adultos_registrados = adultosTotal;
+    }
+
+    if (actividadesSummary !== null) {
+      shortcutTotals["sesiones-grupales"] = actividadesSummary.total;
+
+      for (const indicatorId of homeDashboardIndicatorIdValues) {
+        const total = actividadesSummary.byIndicatorId[indicatorId];
+
+        if (total !== undefined) {
+          indicatorTotals[indicatorId] = total;
+        }
+      }
+    }
+
+    if (alimentacionSummary !== null) {
+      shortcutTotals["registro-alimentacion"] = alimentacionSummary.recordsTotal;
+      indicatorTotals.raciones_entregadas = alimentacionSummary.deliveredRationsTotal;
+    }
+
+    if (empleadosTotal !== null) {
+      shortcutTotals["gestion-empleados"] = empleadosTotal;
+    }
+
+    if (tenantsTotal !== null) {
+      shortcutTotals.backoffice = tenantsTotal;
+    }
+
+    return homeDashboardResponseSchema.parse({
+      shortcuts: this.buildShortcuts(shortcutTotals),
+      indicators: this.buildIndicators(indicatorTotals),
+    });
+  }
+
+  private async countAdultosMayores(scope: TenantScope): Promise<number> {
+    return this.countScopedRows(adultosMayores, adultosMayores.tenantId, scope);
+  }
+
+  private async countEmpleados(scope: TenantScope): Promise<number> {
+    const scopeCondition = this.buildScopeCondition(scope, users.tenantId);
+    const where =
+      scopeCondition === undefined ? eq(users.isActive, true) : and(scopeCondition, eq(users.isActive, true));
+    const [row] = await this.database.db
+      .select({
+        total: sql<number>`count(*)::int`,
+      })
+      .from(users)
+      .where(where);
+
+    return row?.total ?? 0;
+  }
+
+  private async countActiveTenants(): Promise<number> {
+    const [row] = await this.database.db
+      .select({
+        total: sql<number>`count(*)::int`,
+      })
+      .from(tenants)
+      .where(eq(tenants.isActive, true));
+
+    return row?.total ?? 0;
+  }
+
+  private async summarizeActividades(scope: TenantScope): Promise<ActivitySummary> {
+    const scopeCondition = this.buildScopeCondition(scope, actividadesGrupales.tenantId);
+    const [totalRow, groupedRows] = await Promise.all([
+      this.database.db
+        .select({
+          total: sql<number>`count(*)::int`,
+        })
+        .from(actividadesGrupales)
+        .where(scopeCondition),
+      this.database.db
+        .select({
+          activityType: actividadesGrupales.activityType,
+          total: sql<number>`count(*)::int`,
+        })
+        .from(actividadesGrupales)
+        .where(scopeCondition)
+        .groupBy(actividadesGrupales.activityType),
+    ]);
+
+    const byIndicatorId: Partial<Record<HomeDashboardIndicatorId, number>> = {};
+
+    for (const indicatorId of ACTIVITY_INDICATOR_IDS) {
+      byIndicatorId[indicatorId] = 0;
+    }
+
+    for (const row of groupedRows) {
+      if (isActivityIndicatorId(row.activityType)) {
+        byIndicatorId[row.activityType] = row.total;
+      }
+    }
+
+    return {
+      total: totalRow[0]?.total ?? 0,
+      byIndicatorId,
+    };
+  }
+
+  private async summarizeAlimentacion(scope: TenantScope): Promise<AlimentacionSummary> {
+    const scopeCondition = this.buildScopeCondition(scope, alimentacionRegistros.tenantId);
+    const [row] = await this.database.db
+      .select({
+        recordsTotal: sql<number>`count(*)::int`,
+        deliveredRationsTotal: sql<number>`coalesce(sum(
+          (case when ${alimentacionRegistros.refrigerio1} = 'entregado' then 1 else 0 end) +
+          (case when ${alimentacionRegistros.almuerzo} = 'entregado' then 1 else 0 end) +
+          (case when ${alimentacionRegistros.refrigerio2} = 'entregado' then 1 else 0 end) +
+          (case when ${alimentacionRegistros.auxilioTransporte} = 'entregado' then 1 else 0 end)
+        ), 0)::int`,
+      })
+      .from(alimentacionRegistros)
+      .where(scopeCondition);
+
+    return {
+      recordsTotal: row?.recordsTotal ?? 0,
+      deliveredRationsTotal: row?.deliveredRationsTotal ?? 0,
+    };
+  }
+
+  private async countScopedRows(
+    table: typeof adultosMayores,
+    tenantColumn: AnyPgColumn,
+    scope: TenantScope,
+  ): Promise<number> {
+    const [row] = await this.database.db
+      .select({
+        total: sql<number>`count(*)::int`,
+      })
+      .from(table)
+      .where(this.buildScopeCondition(scope, tenantColumn));
+
+    return row?.total ?? 0;
+  }
+
+  private buildScopeCondition(scope: TenantScope, tenantColumn: AnyPgColumn): SQL | undefined {
+    if (scope.type === "tenant") {
+      return eq(tenantColumn, scope.tenantId);
+    }
+
+    return undefined;
+  }
+
+  private buildShortcuts(
+    totals: Partial<Record<HomeDashboardShortcutModuleId, number>>,
+  ): HomeDashboardShortcut[] {
+    const shortcuts: HomeDashboardShortcut[] = [];
+
+    for (const moduleId of homeDashboardShortcutModuleIdValues) {
+      const total = totals[moduleId];
+
+      if (total !== undefined) {
+        shortcuts.push({ moduleId, total });
+      }
+    }
+
+    return shortcuts;
+  }
+
+  private buildIndicators(
+    totals: Partial<Record<HomeDashboardIndicatorId, number>>,
+  ): HomeDashboardIndicator[] {
+    const indicators: HomeDashboardIndicator[] = [];
+
+    for (const indicatorId of homeDashboardIndicatorIdValues) {
+      const total = totals[indicatorId];
+
+      if (total !== undefined) {
+        indicators.push({ id: indicatorId, total });
+      }
+    }
+
+    return indicators;
+  }
+}
+
+function isActivityIndicatorId(value: typeof actividadesGrupales.$inferSelect.activityType): value is ActivityIndicatorId {
+  return ACTIVITY_INDICATOR_IDS.includes(value as ActivityIndicatorId);
+}

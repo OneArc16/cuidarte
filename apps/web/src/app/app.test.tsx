@@ -20,6 +20,7 @@ import {
   cie10OptionsFixture,
   directorUserFixture,
   empleadoFixture,
+  homeDashboardFixture,
   historiaClinicaFixture,
   medicoUserFixture,
   otherProfessionalAtencionIndividualFixture,
@@ -125,6 +126,51 @@ describe("App auth routing", () => {
       expect(window.location.pathname).toBe("/login");
     });
     expect(screen.getByRole("heading", { name: "Bienvenido" })).toBeInTheDocument();
+  });
+
+  it("shows shortcut cards and dashboard indicators on the home screen", async () => {
+    const user = userEvent.setup();
+
+    renderWithProviders(<App />);
+
+    expect(await screen.findByRole("heading", { name: "Bienvenido" })).toBeInTheDocument();
+    await user.type(screen.getByLabelText("Correo"), "admin@centro-demo.test");
+    await user.type(screen.getByLabelText("Contrasena"), "Cuidarte123!");
+    await user.click(screen.getByRole("button", { name: "Iniciar sesion" }));
+
+    expect(
+      await screen.findByRole("heading", { name: authUserFixture.fullName }),
+    ).toBeInTheDocument();
+
+    const shortcutsRegion = screen.getByRole("region", { name: "Módulos del sistema" });
+
+    expect(
+      within(shortcutsRegion).getByRole("button", { name: "Adultos mayores" }),
+    ).toHaveTextContent("468");
+    expect(
+      within(shortcutsRegion).getByRole("button", { name: "Sesiones grupales" }),
+    ).toHaveTextContent("469");
+    expect(
+      within(shortcutsRegion).getByRole("button", { name: "Registro de alimentación" }),
+    ).toHaveTextContent("140");
+    expect(
+      within(shortcutsRegion).getByRole("button", { name: "Gestión de empleados" }),
+    ).toHaveTextContent("42");
+    expect(
+      within(shortcutsRegion).queryByRole("button", { name: "BackOffice" }),
+    ).not.toBeInTheDocument();
+
+    const indicatorsRegion = screen.getByRole("region", { name: "Resumen operativo" });
+
+    expect(
+      within(indicatorsRegion).getByRole("button", { name: "Adultos registrados" }),
+    ).toHaveTextContent(String(homeDashboardFixture.indicators[0].total));
+    expect(
+      within(indicatorsRegion).getByRole("button", { name: "Raciones entregadas" }),
+    ).toHaveTextContent("123.200");
+    expect(
+      within(indicatorsRegion).getByRole("button", { name: "Fisioterapia" }),
+    ).toHaveTextContent("56");
   });
 
   it("shows an accessible error when credentials are rejected", async () => {

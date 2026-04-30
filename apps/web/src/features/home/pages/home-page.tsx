@@ -79,7 +79,7 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
         ) : isEmpleadosPath(path) ? (
           <EmpleadosPage path={path} navigate={navigate} user={user} />
         ) : (
-          <HomeDashboard user={user} />
+          <HomeDashboard navigate={navigate} user={user} />
         )}
       </section>
 

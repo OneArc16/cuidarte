@@ -7,3 +7,4 @@ export * from "./backoffice.js";
 export * from "./cie10.js";
 export * from "./empleados.js";
 export * from "./health.js";
+export * from "./home.js";

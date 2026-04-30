@@ -18,6 +18,8 @@ export function formatRole(role: AuthUser["role"]): string {
   return ROLE_LABELS[role];
 }
 
+const dashboardNumberFormatter = new Intl.NumberFormat("es-CO");
+
 export function getInitials(fullName: string): string {
   const initials = fullName
     .trim()
@@ -27,4 +29,12 @@ export function getInitials(fullName: string): string {
     .join("");
 
   return initials === "" ? "CT" : initials;
+}
+
+export function formatDashboardMetricValue(value: number | null | undefined): string {
+  if (value === null || value === undefined) {
+    return "--";
+  }
+
+  return dashboardNumberFormatter.format(value);
 }
