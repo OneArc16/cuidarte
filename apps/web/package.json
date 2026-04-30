@@ -6,9 +6,10 @@
   "scripts": {
     "build": "tsc --noEmit -p tsconfig.json && vite build",
     "dev": "vite --host 0.0.0.0",
-    "e2e": "playwright test",
+    "e2e": "pnpm run e2e:preflight && playwright test",
     "e2e:install": "playwright install chromium && playwright install-deps chromium",
-    "e2e:ui": "playwright test --ui",
+    "e2e:preflight": "bash ./scripts/check-playwright-deps.sh",
+    "e2e:ui": "pnpm run e2e:preflight && playwright test --ui",
     "lint": "echo \"lint pendiente para @cuidarte/web\"",
     "preview": "vite preview",
     "test": "vitest run",

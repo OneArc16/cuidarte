@@ -111,6 +111,9 @@ pnpm --filter @cuidarte/web e2e:install
 pnpm --filter @cuidarte/web e2e
 ```
 
+Nota: `e2e` ahora ejecuta un preflight de dependencias nativas de Playwright.
+Si detecta librerias faltantes (por ejemplo `libnspr4`), fallara temprano con instrucciones de instalacion.
+
 Exportacion PDF de la API:
 
 ```bash
@@ -124,3 +127,19 @@ Verificacion completa de la slice Auth:
 ```bash
 pnpm check:slice:auth
 ```
+
+## Arquitectura de Testing Frontend
+
+Estructura recomendada en `apps/web/src/test`:
+
+- `fixtures/`: datos de prueba por dominio (sin comportamiento HTTP).
+- `handlers/`: handlers MSW por dominio para simular la API.
+- `test-server.ts`: fachada estable que compone `setupServer(...defaultHandlers)`.
+- `helpers/`: utilidades reutilizables de testing (render, auth UI, overrides MSW).
+
+Convenciones:
+
+- Tests de flujo en `apps/web/src/app/__tests__/`.
+- `server` se importa desde `test-server`.
+- Datos de prueba se importan desde `fixtures`.
+- Overrides de sesion (`/api/auth/me`) se hacen via helper semantico (`mockAuthMe`) para evitar duplicacion.
