@@ -5,7 +5,7 @@ import {
   type CreateAlimentacionBatchRequest,
 } from "@cuidarte/contracts";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Search, Trash2, UsersRound } from "lucide-react";
+import { Check, CheckCheck, Eraser, Search, Trash2, UsersRound } from "lucide-react";
 import { useDeferredValue, useEffect, useState } from "react";
 import { type Resolver, useForm } from "react-hook-form";
 
@@ -42,6 +42,24 @@ type AlimentacionBatchFormProps = {
   onSubmit: (request: CreateAlimentacionBatchRequest) => void;
   onTenantChange: (tenantId: string) => void;
 };
+
+type AlimentacionBatchStatusField = Exclude<keyof AlimentacionBatchRowValues, "adultoMayor">;
+
+const DELIVERED_STATUS: AlimentacionStatus = "entregado";
+const UNSET_STATUS = "";
+
+function withUniformStatus(
+  row: AlimentacionBatchRowValues,
+  status: AlimentacionStatus | "",
+): AlimentacionBatchRowValues {
+  return {
+    ...row,
+    refrigerio1: status,
+    almuerzo: status,
+    refrigerio2: status,
+    auxilioTransporte: status,
+  };
+}
 
 export function AlimentacionBatchForm({
   error,
@@ -127,11 +145,7 @@ export function AlimentacionBatchForm({
 
   function updateStatus(
     adultoMayorId: string,
-    field:
-      | "refrigerio1"
-      | "almuerzo"
-      | "refrigerio2"
-      | "auxilioTransporte",
+    field: AlimentacionBatchStatusField,
     value: AlimentacionStatus | "",
   ) {
     setSelectedRows((currentRows) =>
@@ -143,6 +157,38 @@ export function AlimentacionBatchForm({
             }
           : row,
       ),
+    );
+    setSelectedRowsError(null);
+  }
+
+  function markAdultoMayorAsDelivered(adultoMayorId: string) {
+    setSelectedRows((currentRows) =>
+      currentRows.map((row) =>
+        row.adultoMayor.id === adultoMayorId ? withUniformStatus(row, DELIVERED_STATUS) : row,
+      ),
+    );
+    setSelectedRowsError(null);
+  }
+
+  function markAllRowsAsDelivered() {
+    setSelectedRows((currentRows) =>
+      currentRows.map((row) => withUniformStatus(row, DELIVERED_STATUS)),
+    );
+    setSelectedRowsError(null);
+  }
+
+  function clearAdultoMayorStatuses(adultoMayorId: string) {
+    setSelectedRows((currentRows) =>
+      currentRows.map((row) =>
+        row.adultoMayor.id === adultoMayorId ? withUniformStatus(row, UNSET_STATUS) : row,
+      ),
+    );
+    setSelectedRowsError(null);
+  }
+
+  function clearAllRowsStatuses() {
+    setSelectedRows((currentRows) =>
+      currentRows.map((row) => withUniformStatus(row, UNSET_STATUS)),
     );
     setSelectedRowsError(null);
   }
@@ -307,7 +353,31 @@ export function AlimentacionBatchForm({
               Define el estado de cada entrega antes de guardar el lote completo.
             </p>
           </div>
-          <span>Refrigerios + Almuerzo + Transporte</span>
+          <div className="alimentacion-batch-table-actions">
+            <span>Refrigerios + Almuerzo + Transporte</span>
+            <div className="alimentacion-batch-table-icon-actions">
+              <button
+                className="alimentacion-row-action alimentacion-row-action--success"
+                type="button"
+                aria-label="Marcar todos como entregados"
+                title="Marcar todos como entregados"
+                disabled={selectedRows.length === 0}
+                onClick={markAllRowsAsDelivered}
+              >
+                <CheckCheck aria-hidden="true" />
+              </button>
+              <button
+                className="alimentacion-row-action alimentacion-row-action--reset"
+                type="button"
+                aria-label="Desmarcar todos"
+                title="Desmarcar todos"
+                disabled={selectedRows.length === 0}
+                onClick={clearAllRowsStatuses}
+              >
+                <Eraser aria-hidden="true" />
+              </button>
+            </div>
+          </div>
         </div>
 
         {selectedRowsError !== null ? (
@@ -422,15 +492,35 @@ export function AlimentacionBatchForm({
                       </select>
                     </td>
                     <td>
-                      <button
-                        className="alimentacion-row-action alimentacion-row-action--danger"
-                        type="button"
-                        aria-label={`Eliminar ${row.adultoMayor.fullName}`}
-                        title="Eliminar"
-                        onClick={() => removeAdultoMayor(row.adultoMayor.id)}
-                      >
-                        <Trash2 aria-hidden="true" />
-                      </button>
+                      <div className="alimentacion-batch-row-actions">
+                        <button
+                          className="alimentacion-row-action alimentacion-row-action--success"
+                          type="button"
+                          aria-label={`Marcar entregado ${row.adultoMayor.fullName}`}
+                          title="Marcar entregado"
+                          onClick={() => markAdultoMayorAsDelivered(row.adultoMayor.id)}
+                        >
+                          <Check aria-hidden="true" />
+                        </button>
+                        <button
+                          className="alimentacion-row-action alimentacion-row-action--reset"
+                          type="button"
+                          aria-label={`Desmarcar ${row.adultoMayor.fullName}`}
+                          title="Desmarcar"
+                          onClick={() => clearAdultoMayorStatuses(row.adultoMayor.id)}
+                        >
+                          <Eraser aria-hidden="true" />
+                        </button>
+                        <button
+                          className="alimentacion-row-action alimentacion-row-action--danger"
+                          type="button"
+                          aria-label={`Eliminar ${row.adultoMayor.fullName}`}
+                          title="Eliminar"
+                          onClick={() => removeAdultoMayor(row.adultoMayor.id)}
+                        >
+                          <Trash2 aria-hidden="true" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
