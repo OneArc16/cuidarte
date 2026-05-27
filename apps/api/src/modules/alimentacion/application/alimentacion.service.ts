@@ -2,6 +2,7 @@ import {
   type AlimentacionAdultoOption,
   type AlimentacionAdultoOptionsQuery,
   type AlimentacionDetail,
+  type AlimentacionFormatoEntregaExportQuery,
   type AlimentacionListItem,
   type AlimentacionListQuery,
   type AlimentacionLookupByAdultoMayorQuery,
@@ -35,6 +36,7 @@ import {
   type AlimentacionRepository,
 } from "../domain/alimentacion.repository";
 import { type AlimentacionRecord, type AlimentacionScope } from "../domain/alimentacion.types";
+import { type AlimentacionFormatoEntregaExportData } from "./alimentacion-formato-export.types";
 
 @Injectable()
 export class AlimentacionService {
@@ -52,7 +54,7 @@ export class AlimentacionService {
     const effectiveTenantId = this.resolveListTenantId(scope, query.tenantId);
     const records = await this.alimentacionRepository.findMany({
       search: query.search,
-      deliveryDate: query.deliveryDate,
+      deliveryMonth: query.deliveryMonth,
       tenantId: effectiveTenantId,
       scope,
     });
@@ -216,6 +218,71 @@ export class AlimentacionService {
       this.throwConflictForUniqueViolation(error);
       throw error;
     }
+  }
+
+  async prepareFormatoEntregaExport(
+    adultoMayorId: string,
+    query: AlimentacionFormatoEntregaExportQuery,
+    actor: AuthUser,
+  ): Promise<AlimentacionFormatoEntregaExportData> {
+    this.ensureCanAccess(actor);
+    const scope = this.resolveScopeOrThrow(actor);
+    const adultoMayor = await this.alimentacionRepository.findAdultoMayorById({
+      adultoMayorId,
+      scope,
+    });
+
+    if (adultoMayor === null) {
+      throw new NotFoundException("Adulto mayor no encontrado.");
+    }
+
+    const records = await this.alimentacionRepository.findFormatoEntregaByAdultoAndMonth({
+      adultoMayorId,
+      deliveryMonth: query.deliveryMonth,
+      scope,
+    });
+
+    const firstRecord = records[0];
+
+    return {
+      tenantId: adultoMayor.tenantId,
+      tenantName: adultoMayor.tenantName,
+      tenantCity: firstRecord?.tenantCity ?? adultoMayor.tenantCity,
+      tenantDepartment: firstRecord?.tenantDepartment ?? adultoMayor.tenantDepartment,
+      adultoMayorId: adultoMayor.id,
+      documentNumber: adultoMayor.documentNumber,
+      fullName: adultoMayor.fullName,
+      deliveryMonth: query.deliveryMonth,
+      records: records.map((record) => ({
+        deliveryDate: record.deliveryDate,
+        organizer: record.organizer,
+        refrigerio1: record.refrigerio1,
+        almuerzo: record.almuerzo,
+        refrigerio2: record.refrigerio2,
+        auxilioTransporte: record.auxilioTransporte,
+      })),
+    };
+  }
+
+  async registerFormatoEntregaExportAudit(
+    payload: Pick<AlimentacionFormatoEntregaExportData, "tenantId" | "adultoMayorId" | "deliveryMonth">,
+    actor: AuthUser,
+  ): Promise<void> {
+    this.ensureCanAccess(actor);
+    const scope = this.resolveScopeOrThrow(actor);
+
+    if (scope.type === "tenant" && payload.tenantId !== scope.tenantId) {
+      throw new ForbiddenException(
+        "No puedes registrar auditoria de exportacion para un centro diferente al tuyo.",
+      );
+    }
+
+    await this.alimentacionRepository.createFormatoEntregaExportAudit({
+      actorUserId: actor.id,
+      targetTenantId: payload.tenantId,
+      adultoMayorId: payload.adultoMayorId,
+      deliveryMonth: payload.deliveryMonth,
+    });
   }
 
   private resolveScopeOrThrow(actor: AuthUser) {

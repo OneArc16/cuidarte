@@ -1,14 +1,31 @@
 import { Injectable } from "@nestjs/common";
-import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNull,
+  lt,
+  ne,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
 import { adultosMayores, alimentacionRegistros, auditLogs, tenants } from "../../../database/schema";
 import {
   type AlimentacionAdultoOptionRecord,
+  type AlimentacionFormatoEntregaRecord,
   type AlimentacionRecord,
   type AlimentacionTenantOptionRecord,
+  type CreateAlimentacionFormatoEntregaExportAuditCommand,
   type CreateAlimentacionBatchRecordCommand,
   type FindAlimentacionAdultoMayorByIdQuery,
+  type FindAlimentacionFormatoEntregaByAdultoAndMonthQuery,
   type FindAlimentacionExistingRecordsByAdultosAndDateQuery,
   type FindAlimentacionRecordByAdultoMayorAndDateQuery,
   type FindAlimentacionRecordByIdQuery,
@@ -40,9 +57,28 @@ type AlimentacionAdultoOptionRow = {
   id: string;
   tenantId: string;
   tenantName: string;
+  tenantCity: string | null;
+  tenantDepartment: string | null;
   documentNumber: string;
   names: string;
   surnames: string;
+};
+
+type AlimentacionFormatoEntregaRow = {
+  tenantId: string;
+  tenantName: string;
+  tenantCity: string | null;
+  tenantDepartment: string | null;
+  adultoMayorId: string;
+  documentNumber: string;
+  names: string;
+  surnames: string;
+  deliveryDate: string;
+  organizer: AlimentacionRecord["organizer"];
+  refrigerio1: AlimentacionRecord["refrigerio1"];
+  almuerzo: AlimentacionRecord["almuerzo"];
+  refrigerio2: AlimentacionRecord["refrigerio2"];
+  auxilioTransporte: AlimentacionRecord["auxilioTransporte"];
 };
 
 @Injectable()
@@ -113,6 +149,8 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         id: adultosMayores.id,
         tenantId: adultosMayores.tenantId,
         tenantName: tenants.name,
+        tenantCity: tenants.city,
+        tenantDepartment: tenants.department,
         documentNumber: adultosMayores.documentNumber,
         names: adultosMayores.names,
         surnames: adultosMayores.surnames,
@@ -146,6 +184,8 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         id: adultosMayores.id,
         tenantId: adultosMayores.tenantId,
         tenantName: tenants.name,
+        tenantCity: tenants.city,
+        tenantDepartment: tenants.department,
         documentNumber: adultosMayores.documentNumber,
         names: adultosMayores.names,
         surnames: adultosMayores.surnames,
@@ -177,6 +217,8 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         id: adultosMayores.id,
         tenantId: adultosMayores.tenantId,
         tenantName: tenants.name,
+        tenantCity: tenants.city,
+        tenantDepartment: tenants.department,
         documentNumber: adultosMayores.documentNumber,
         names: adultosMayores.names,
         surnames: adultosMayores.surnames,
@@ -187,6 +229,48 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       .limit(1);
 
     return row === undefined ? null : this.toAdultoOption(row);
+  }
+
+  async findFormatoEntregaByAdultoAndMonth(
+    query: FindAlimentacionFormatoEntregaByAdultoAndMonthQuery,
+  ): Promise<AlimentacionFormatoEntregaRecord[]> {
+    const monthRange = resolveMonthRange(query.deliveryMonth);
+    const scopedConditions: SQL[] =
+      query.scope.type === "tenant"
+        ? [eq(alimentacionRegistros.tenantId, query.scope.tenantId)]
+        : [];
+
+    const rows = await this.database.db
+      .select({
+        tenantId: alimentacionRegistros.tenantId,
+        tenantName: tenants.name,
+        tenantCity: tenants.city,
+        tenantDepartment: tenants.department,
+        adultoMayorId: alimentacionRegistros.adultoMayorId,
+        documentNumber: adultosMayores.documentNumber,
+        names: adultosMayores.names,
+        surnames: adultosMayores.surnames,
+        deliveryDate: alimentacionRegistros.deliveryDate,
+        organizer: alimentacionRegistros.organizer,
+        refrigerio1: alimentacionRegistros.refrigerio1,
+        almuerzo: alimentacionRegistros.almuerzo,
+        refrigerio2: alimentacionRegistros.refrigerio2,
+        auxilioTransporte: alimentacionRegistros.auxilioTransporte,
+      })
+      .from(alimentacionRegistros)
+      .innerJoin(adultosMayores, eq(adultosMayores.id, alimentacionRegistros.adultoMayorId))
+      .innerJoin(tenants, eq(tenants.id, alimentacionRegistros.tenantId))
+      .where(
+        and(
+          eq(alimentacionRegistros.adultoMayorId, query.adultoMayorId),
+          gte(alimentacionRegistros.deliveryDate, monthRange.startDate),
+          lt(alimentacionRegistros.deliveryDate, monthRange.endDateExclusive),
+          ...scopedConditions,
+        ),
+      )
+      .orderBy(asc(alimentacionRegistros.deliveryDate));
+
+    return rows.map((row) => this.toFormatoEntregaRecord(row));
   }
 
   async findExistingByAdultosAndDate(
@@ -345,6 +429,21 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
     });
   }
 
+  async createFormatoEntregaExportAudit(
+    command: CreateAlimentacionFormatoEntregaExportAuditCommand,
+  ): Promise<void> {
+    await this.database.db.insert(auditLogs).values({
+      actorUserId: command.actorUserId,
+      action: "alimentacion.formato_exported",
+      targetTenantId: command.targetTenantId,
+      summary: `Formato de alimentacion exportado (${command.deliveryMonth})`,
+      metadata: {
+        adultoMayorId: command.adultoMayorId,
+        deliveryMonth: command.deliveryMonth,
+      },
+    });
+  }
+
   private getRecordSelection() {
     return {
       id: alimentacionRegistros.id,
@@ -374,8 +473,13 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       conditions.push(eq(alimentacionRegistros.tenantId, query.tenantId));
     }
 
-    if (query.deliveryDate !== null) {
-      conditions.push(eq(alimentacionRegistros.deliveryDate, query.deliveryDate));
+    if (query.deliveryMonth !== null) {
+      const monthRange = resolveMonthRange(query.deliveryMonth);
+
+      conditions.push(
+        gte(alimentacionRegistros.deliveryDate, monthRange.startDate),
+        lt(alimentacionRegistros.deliveryDate, monthRange.endDateExclusive),
+      );
     }
 
     if (query.search !== null) {
@@ -410,6 +514,8 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       id: row.id,
       tenantId: row.tenantId,
       tenantName: row.tenantName,
+      tenantCity: row.tenantCity,
+      tenantDepartment: row.tenantDepartment,
       documentNumber: row.documentNumber,
       fullName: `${row.names} ${row.surnames}`.trim(),
     };
@@ -433,8 +539,49 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       updatedAt: row.updatedAt,
     };
   }
+
+  private toFormatoEntregaRecord(
+    row: AlimentacionFormatoEntregaRow,
+  ): AlimentacionFormatoEntregaRecord {
+    return {
+      tenantId: row.tenantId,
+      tenantName: row.tenantName,
+      tenantCity: row.tenantCity,
+      tenantDepartment: row.tenantDepartment,
+      adultoMayorId: row.adultoMayorId,
+      documentNumber: row.documentNumber,
+      fullName: `${row.names} ${row.surnames}`.trim(),
+      deliveryDate: row.deliveryDate,
+      organizer: row.organizer,
+      refrigerio1: row.refrigerio1,
+      almuerzo: row.almuerzo,
+      refrigerio2: row.refrigerio2,
+      auxilioTransporte: row.auxilioTransporte,
+    };
+  }
 }
 
 function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, (character) => `\\${character}`);
+}
+
+function resolveMonthRange(deliveryMonth: string): {
+  startDate: string;
+  endDateExclusive: string;
+} {
+  const [yearValue, monthValue] = deliveryMonth.split("-");
+
+  if (yearValue === undefined || monthValue === undefined) {
+    throw new Error("deliveryMonth invalido.");
+  }
+
+  const year = Number.parseInt(yearValue, 10);
+  const month = Number.parseInt(monthValue, 10);
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+
+  return {
+    startDate: `${yearValue}-${monthValue}-01`,
+    endDateExclusive: `${String(nextYear).padStart(4, "0")}-${String(nextMonth).padStart(2, "0")}-01`,
+  };
 }

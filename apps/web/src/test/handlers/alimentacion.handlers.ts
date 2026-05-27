@@ -18,7 +18,7 @@ type AlimentacionPatchPayload = Partial<{
 export const alimentacionHandlers = [
   http.get("http://localhost:3001/api/registro-alimentacion", ({ request }) => {
     const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? null;
-    const deliveryDate = new URL(request.url).searchParams.get("deliveryDate");
+    const deliveryMonth = new URL(request.url).searchParams.get("deliveryMonth");
     const registros = [alimentacionFixture].filter((registro) => {
       const matchesSearch =
         search === null ||
@@ -26,10 +26,12 @@ export const alimentacionHandlers = [
           .join(" ")
           .toLowerCase()
           .includes(search);
-      const matchesDate =
-        deliveryDate === null || deliveryDate === "" || registro.deliveryDate === deliveryDate;
+      const matchesMonth =
+        deliveryMonth === null ||
+        deliveryMonth === "" ||
+        registro.deliveryDate.startsWith(`${deliveryMonth}-`);
 
-      return matchesSearch && matchesDate;
+      return matchesSearch && matchesMonth;
     });
 
     return HttpResponse.json({ registros });
@@ -55,6 +57,15 @@ export const alimentacionHandlers = [
       HttpResponse.json({
         adultoMayor: alimentacionAdultoOptionFixture,
         existingRecordId: null,
+      }),
+  ),
+  http.get(
+    "http://localhost:3001/api/registro-alimentacion/adultos-mayores/:adultoMayorId/formato-entrega/pdf",
+    () =>
+      new HttpResponse(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
+        headers: {
+          "Content-Type": "application/pdf",
+        },
       }),
   ),
   http.post("http://localhost:3001/api/registro-alimentacion", async ({ request }) => {

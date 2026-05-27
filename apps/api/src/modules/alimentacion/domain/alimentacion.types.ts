@@ -14,7 +14,7 @@ export type AlimentacionScope =
 
 export type FindAlimentacionRecordsQuery = {
   search: string | null;
-  deliveryDate: string | null;
+  deliveryMonth: string | null;
   tenantId: string | null;
   scope: AlimentacionScope;
 };
@@ -32,6 +32,12 @@ export type SearchAlimentacionAdultosMayoresOptionsQuery = {
 
 export type FindAlimentacionAdultoMayorByIdQuery = {
   adultoMayorId: string;
+  scope: AlimentacionScope;
+};
+
+export type FindAlimentacionFormatoEntregaByAdultoAndMonthQuery = {
+  adultoMayorId: string;
+  deliveryMonth: string;
   scope: AlimentacionScope;
 };
 
@@ -57,6 +63,8 @@ export type AlimentacionAdultoOptionRecord = {
   id: string;
   tenantId: string;
   tenantName: string;
+  tenantCity: string | null;
+  tenantDepartment: string | null;
   documentNumber: string;
   fullName: string;
 };
@@ -76,6 +84,29 @@ export type AlimentacionRecord = {
   auxilioTransporte: AlimentacionStatus;
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type AlimentacionFormatoEntregaRecord = {
+  tenantId: string;
+  tenantName: string;
+  tenantCity: string | null;
+  tenantDepartment: string | null;
+  adultoMayorId: string;
+  documentNumber: string;
+  fullName: string;
+  deliveryDate: string;
+  organizer: AlimentacionOrganizer;
+  refrigerio1: AlimentacionStatus;
+  almuerzo: AlimentacionStatus;
+  refrigerio2: AlimentacionStatus;
+  auxilioTransporte: AlimentacionStatus;
+};
+
+export type CreateAlimentacionFormatoEntregaExportAuditCommand = {
+  actorUserId: string;
+  targetTenantId: string;
+  adultoMayorId: string;
+  deliveryMonth: string;
 };
 
 export type CreateAlimentacionBatchRecordCommand = {

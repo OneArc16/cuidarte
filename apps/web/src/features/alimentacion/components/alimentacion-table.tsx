@@ -1,5 +1,7 @@
 import { type AlimentacionListItem } from "@cuidarte/contracts";
-import { Pencil } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { ChevronDown, Download, LoaderCircle, Pencil, Upload } from "lucide-react";
+import { Fragment, useCallback, useMemo, useState } from "react";
 
 import {
   formatAlimentacionOrganizer,
@@ -12,15 +14,77 @@ type AlimentacionTableProps = {
   records: AlimentacionListItem[];
   showTenantColumn: boolean;
   onOpenEdit: (recordId: string) => void;
+  onExportFormato: (params: {
+    adultoMayorId: string;
+    documentNumber: string;
+    fullName: string;
+  }) => void;
+  exportingAdultoMayorId: string | null;
+};
+
+type AlimentacionGroupedRecord = {
+  adultoMayorId: string;
+  documentNumber: string;
+  fullName: string;
+  tenantName: string;
+  records: AlimentacionListItem[];
 };
 
 export function AlimentacionTable({
   canManageAlimentacion,
   isLoading,
   onOpenEdit,
+  onExportFormato,
+  exportingAdultoMayorId,
   records,
   showTenantColumn,
 }: AlimentacionTableProps) {
+  const [expandedAdultoIds, setExpandedAdultoIds] = useState<Set<string>>(new Set());
+  const shouldReduceMotion = useReducedMotion();
+  const toggleAdultoRows = useCallback((adultoMayorId: string) => {
+    setExpandedAdultoIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(adultoMayorId)) {
+        next.delete(adultoMayorId);
+      } else {
+        next.add(adultoMayorId);
+      }
+
+      return next;
+    });
+  }, []);
+
+  const groupedRecords = useMemo(() => {
+    const groupsByAdultoId = new Map<string, AlimentacionGroupedRecord>();
+
+    for (const record of records) {
+      const existingGroup = groupsByAdultoId.get(record.adultoMayorId);
+
+      if (existingGroup !== undefined) {
+        existingGroup.records.push(record);
+        continue;
+      }
+
+      groupsByAdultoId.set(record.adultoMayorId, {
+        adultoMayorId: record.adultoMayorId,
+        documentNumber: record.documentNumber,
+        fullName: record.fullName,
+        tenantName: record.tenantName,
+        records: [record],
+      });
+    }
+
+    return Array.from(groupsByAdultoId.values())
+      .map((group) => ({
+        ...group,
+        records: [...group.records].sort((leftRecord, rightRecord) =>
+          rightRecord.deliveryDate.localeCompare(leftRecord.deliveryDate),
+        ),
+      }))
+      .sort((left, right) => left.fullName.localeCompare(right.fullName, "es", { sensitivity: "base" }));
+  }, [records]);
+
   if (isLoading) {
     return (
       <div className="alimentacion-table-wrap" role="status">
@@ -74,45 +138,147 @@ export function AlimentacionTable({
               <td colSpan={columnCount}>No hay registros de alimentación para los filtros actuales.</td>
             </tr>
           ) : (
-            records.map((record) => (
-              <tr key={record.id}>
-                <td>{record.documentNumber}</td>
-                <td className="alimentacion-cell-name">
-                  {canManageAlimentacion ? (
-                    <button
-                      className="alimentacion-record-trigger"
-                      type="button"
-                      title="Editar registro de alimentación"
-                      onClick={() => onOpenEdit(record.id)}
-                    >
-                      <strong>{record.fullName}</strong>
-                    </button>
-                  ) : (
-                    <strong>{record.fullName}</strong>
-                  )}
-                </td>
-                <td>{record.deliveryDate}</td>
-                <td>{formatAlimentacionOrganizer(record.organizer)}</td>
-                <td>{formatAlimentacionStatus(record.refrigerio1)}</td>
-                <td>{formatAlimentacionStatus(record.almuerzo)}</td>
-                <td>{formatAlimentacionStatus(record.refrigerio2)}</td>
-                <td>{formatAlimentacionStatus(record.auxilioTransporte)}</td>
-                {showTenantColumn ? <td>{record.tenantName}</td> : null}
-                <td>
-                  {canManageAlimentacion ? (
-                    <button
-                      className="alimentacion-row-action"
-                      type="button"
-                      aria-label={`Editar alimentación de ${record.fullName}`}
-                      title="Editar registro"
-                      onClick={() => onOpenEdit(record.id)}
-                    >
-                      <Pencil aria-hidden="true" />
-                    </button>
-                  ) : null}
-                </td>
-              </tr>
-            ))
+            groupedRecords.map((group) => {
+              const isExpanded = expandedAdultoIds.has(group.adultoMayorId);
+              const isExporting = exportingAdultoMayorId === group.adultoMayorId;
+              const latestRecord = group.records[0];
+              const detailRowsRegionId = `alimentacion-registros-${group.adultoMayorId}`;
+
+              if (latestRecord === undefined) {
+                return null;
+              }
+
+              return (
+                <Fragment key={group.adultoMayorId}>
+                  <tr className={`alimentacion-group-row ${isExpanded ? "is-expanded" : ""}`}>
+                    <td>{group.documentNumber}</td>
+                    <td className="alimentacion-cell-name">
+                      {canManageAlimentacion ? (
+                        <button
+                          className="alimentacion-record-trigger"
+                          type="button"
+                          aria-controls={detailRowsRegionId}
+                          aria-expanded={isExpanded}
+                          title="Mostrar registros del adulto mayor en el mes"
+                          onClick={() => toggleAdultoRows(group.adultoMayorId)}
+                        >
+                          <strong>{group.fullName}</strong>
+                        </button>
+                      ) : (
+                        <strong>{group.fullName}</strong>
+                      )}
+                    </td>
+                    <td>{latestRecord.deliveryDate.slice(0, 7)}</td>
+                    <td>{formatAlimentacionOrganizer(latestRecord.organizer)}</td>
+                    <td>{formatAlimentacionStatus(latestRecord.refrigerio1)}</td>
+                    <td>{formatAlimentacionStatus(latestRecord.almuerzo)}</td>
+                    <td>{formatAlimentacionStatus(latestRecord.refrigerio2)}</td>
+                    <td>{formatAlimentacionStatus(latestRecord.auxilioTransporte)}</td>
+                    {showTenantColumn ? <td>{group.tenantName}</td> : null}
+                    <td>
+                      <div className="alimentacion-table-row-actions">
+                        {canManageAlimentacion ? (
+                          <>
+                            <button
+                              className="alimentacion-row-action"
+                              type="button"
+                              aria-label={
+                                isExporting
+                                  ? `Exportando formato de ${group.fullName}`
+                                  : `Exportar formato de ${group.fullName}`
+                              }
+                              title={isExporting ? "Exportando formato..." : "Exportar formato"}
+                              disabled={isExporting}
+                              onClick={() =>
+                                onExportFormato({
+                                  adultoMayorId: group.adultoMayorId,
+                                  documentNumber: group.documentNumber,
+                                  fullName: group.fullName,
+                                })
+                              }
+                            >
+                              {isExporting ? (
+                                <LoaderCircle aria-hidden="true" className="alimentacion-spin" />
+                              ) : (
+                                <Download aria-hidden="true" />
+                              )}
+                            </button>
+                            <button
+                              className="alimentacion-row-action"
+                              type="button"
+                              aria-label={`Importar formato diligenciado de ${group.fullName} (próximamente)`}
+                              title="Importar formato diligenciado (próximamente)"
+                              disabled
+                            >
+                              <Upload aria-hidden="true" />
+                            </button>
+                          </>
+                        ) : null}
+                        <button
+                          className="alimentacion-row-action alimentacion-row-action--toggle"
+                          type="button"
+                          aria-controls={detailRowsRegionId}
+                          aria-expanded={isExpanded}
+                          aria-label={`${isExpanded ? "Ocultar" : "Mostrar"} registros de ${group.fullName}`}
+                          title={isExpanded ? "Ocultar registros" : "Mostrar registros"}
+                          onClick={() => toggleAdultoRows(group.adultoMayorId)}
+                        >
+                          <motion.span
+                            className="alimentacion-toggle-icon"
+                            initial={false}
+                            animate={{ rotate: isExpanded ? 180 : 0 }}
+                            transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
+                          >
+                            <ChevronDown aria-hidden="true" />
+                          </motion.span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <AnimatePresence initial={false}>
+                    {isExpanded
+                      ? group.records.map((record, index) => (
+                          <motion.tr
+                            key={record.id}
+                            className={`alimentacion-detail-row ${index === 0 ? "alimentacion-detail-row--first" : ""}`}
+                            id={index === 0 ? detailRowsRegionId : undefined}
+                            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
+                            transition={{ duration: shouldReduceMotion ? 0 : 0.2 }}
+                          >
+                            <td>{record.documentNumber}</td>
+                            <td className="alimentacion-cell-name">
+                              <strong>{record.fullName}</strong>
+                            </td>
+                            <td>{record.deliveryDate}</td>
+                            <td>{formatAlimentacionOrganizer(record.organizer)}</td>
+                            <td>{formatAlimentacionStatus(record.refrigerio1)}</td>
+                            <td>{formatAlimentacionStatus(record.almuerzo)}</td>
+                            <td>{formatAlimentacionStatus(record.refrigerio2)}</td>
+                            <td>{formatAlimentacionStatus(record.auxilioTransporte)}</td>
+                            {showTenantColumn ? <td>{record.tenantName}</td> : null}
+                            <td>
+                              {canManageAlimentacion ? (
+                                <button
+                                  className="alimentacion-row-action"
+                                  type="button"
+                                  aria-label={`Editar alimentación de ${record.fullName} del día ${record.deliveryDate}`}
+                                  title="Editar registro"
+                                  onClick={() => onOpenEdit(record.id)}
+                                >
+                                  <Pencil aria-hidden="true" />
+                                </button>
+                              ) : null}
+                            </td>
+                          </motion.tr>
+                        ))
+                      : null}
+                  </AnimatePresence>
+                </Fragment>
+              );
+            })
           )}
         </tbody>
       </table>

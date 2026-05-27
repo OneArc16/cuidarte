@@ -32,6 +32,7 @@ export const alimentacionStatusSchema = z.enum(alimentacionStatusValues);
 export const alimentacionOrganizerSchema = z.enum(alimentacionOrganizerValues);
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 
 const nullableSearchSchema = z
   .union([z.string(), z.null(), z.undefined()])
@@ -59,7 +60,7 @@ const nullableTenantIdSchema = z
   })
   .pipe(z.uuid().nullable());
 
-const nullableDateSchema = z
+const nullableMonthSchema = z
   .union([z.string(), z.null(), z.undefined()])
   .transform((value) => {
     if (value === null || value === undefined) {
@@ -70,7 +71,7 @@ const nullableDateSchema = z
 
     return trimmedValue === "" ? null : trimmedValue;
   })
-  .pipe(dateSchema.nullable());
+  .pipe(monthSchema.nullable());
 
 const alimentacionBatchRecordSchema = z.object({
   adultoMayorId: z.uuid(),
@@ -82,7 +83,7 @@ const alimentacionBatchRecordSchema = z.object({
 
 export const alimentacionListQuerySchema = z.object({
   search: nullableSearchSchema.optional().default(null),
-  deliveryDate: nullableDateSchema.optional().default(null),
+  deliveryMonth: nullableMonthSchema.optional().default(null),
   tenantId: nullableTenantIdSchema.optional().default(null),
 });
 
@@ -94,6 +95,10 @@ export const alimentacionAdultoOptionsQuerySchema = z.object({
 
 export const alimentacionLookupByAdultoMayorQuerySchema = z.object({
   deliveryDate: dateSchema,
+});
+
+export const alimentacionFormatoEntregaExportQuerySchema = z.object({
+  deliveryMonth: monthSchema,
 });
 
 export const alimentacionTenantOptionSchema = z.object({
@@ -179,6 +184,9 @@ export type AlimentacionListQuery = z.infer<typeof alimentacionListQuerySchema>;
 export type AlimentacionAdultoOptionsQuery = z.infer<typeof alimentacionAdultoOptionsQuerySchema>;
 export type AlimentacionLookupByAdultoMayorQuery = z.infer<
   typeof alimentacionLookupByAdultoMayorQuerySchema
+>;
+export type AlimentacionFormatoEntregaExportQuery = z.infer<
+  typeof alimentacionFormatoEntregaExportQuerySchema
 >;
 export type AlimentacionTenantOption = z.infer<typeof alimentacionTenantOptionSchema>;
 export type AlimentacionAdultoOption = z.infer<typeof alimentacionAdultoOptionSchema>;

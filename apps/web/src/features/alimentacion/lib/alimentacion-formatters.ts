@@ -47,6 +47,10 @@ export function getTodayDateInputValue(): string {
   return localTime.toISOString().slice(0, 10);
 }
 
+export function getCurrentMonthInputValue(): string {
+  return getTodayDateInputValue().slice(0, 7);
+}
+
 export function resolveAlimentacionApiError(error: unknown): string | null {
   if (error === null) {
     return null;

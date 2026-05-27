@@ -2,30 +2,34 @@ import { type AlimentacionTenantOption } from "@cuidarte/contracts";
 import { Search } from "lucide-react";
 
 type AlimentacionToolbarProps = {
-  deliveryDate: string;
+  deliveryMonth: string;
   isTenantOptionsLoading: boolean;
   search: string;
   selectedTenantId: string;
   showTenantFilter: boolean;
   tenantOptions: AlimentacionTenantOption[];
-  onDateChange: (value: string) => void;
+  onMonthChange: (value: string) => void;
   onSearchChange: (value: string) => void;
   onTenantChange: (value: string) => void;
 };
 
 export function AlimentacionToolbar({
-  deliveryDate,
+  deliveryMonth,
   isTenantOptionsLoading,
   search,
   selectedTenantId,
   showTenantFilter,
   tenantOptions,
-  onDateChange,
+  onMonthChange,
   onSearchChange,
   onTenantChange,
 }: AlimentacionToolbarProps) {
   return (
-    <div className="alimentacion-toolbar">
+    <div
+      className={`alimentacion-toolbar ${
+        showTenantFilter ? "alimentacion-toolbar--with-tenant" : "alimentacion-toolbar--without-tenant"
+      }`}
+    >
       <label className="alimentacion-search">
         <span>Buscar</span>
         <div className="alimentacion-search__control">
@@ -41,12 +45,12 @@ export function AlimentacionToolbar({
       </label>
 
       <label className="alimentacion-filter">
-        <span>Fecha</span>
+        <span>Mes</span>
         <input
-          type="date"
-          aria-label="Fecha"
-          value={deliveryDate}
-          onChange={(event) => onDateChange(event.target.value)}
+          type="month"
+          aria-label="Mes"
+          value={deliveryMonth}
+          onChange={(event) => onMonthChange(event.target.value)}
         />
       </label>
 

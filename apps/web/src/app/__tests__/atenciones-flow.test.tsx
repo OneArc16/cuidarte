@@ -155,7 +155,7 @@ describe("App atenciones flow", () => {
           diagnosticos: [
             {
               id: "diagnostico-1",
-              codigoCie10: cie10OptionsFixture[0].code,
+              codigoCie10: "G56.0",
               descripcion: cie10OptionsFixture[0].title,
               tipo: "principal",
             },
@@ -186,7 +186,9 @@ describe("App atenciones flow", () => {
     await user.click(screen.getByRole("button", { name: "Guardar atencion" }));
 
     await waitFor(() => {
-      expect(createPayload.diagnosticos?.[0]?.codigoCie10).toBe("G56.0");
+      expect(window.location.pathname).toBe(
+        `/adultos-mayores/${adultoMayorFixture.id}/atenciones/${atencionIndividualFixture.id}`,
+      );
     });
     expect(createPayload).toMatchObject({
       diagnosticos: [

@@ -7,7 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as alimentacionApi from "../api/alimentacion-api";
 
 export const alimentacionQueryKeys = {
-  list: (params: { search: string; deliveryDate: string | null; tenantId: string | null }) =>
+  list: (params: { search: string; deliveryMonth: string | null; tenantId: string | null }) =>
     ["alimentacion", params] as const,
   detail: (recordId: string) => ["alimentacion", recordId] as const,
   tenantOptions: () => ["alimentacion", "tenant-options"] as const,
@@ -19,7 +19,7 @@ export const alimentacionQueryKeys = {
 
 export function useAlimentacionListQuery(params: {
   search: string;
-  deliveryDate: string | null;
+  deliveryMonth: string | null;
   tenantId: string | null;
 }) {
   return useQuery({

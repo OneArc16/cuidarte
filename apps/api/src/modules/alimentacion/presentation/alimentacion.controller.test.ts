@@ -43,19 +43,19 @@ describe("AlimentacionController", () => {
         ];
       },
     };
-    const controller = new AlimentacionController(service as never);
+    const controller = new AlimentacionController(service as never, {} as never);
 
     const result = await controller.listRegistros(
       {
         search: "Rosa",
-        deliveryDate: "2026-04-24",
+        deliveryMonth: "2026-04",
       },
       { currentUser } as never,
     );
 
     assert.deepEqual(receivedQuery, {
       search: "Rosa",
-      deliveryDate: "2026-04-24",
+      deliveryMonth: "2026-04",
       tenantId: null,
     });
     assert.equal(receivedActorId, currentUser.id);
@@ -71,7 +71,7 @@ describe("AlimentacionController", () => {
         return { createdCount: 1 };
       },
     };
-    const controller = new AlimentacionController(service as never);
+    const controller = new AlimentacionController(service as never, {} as never);
 
     const result = await controller.createBatch(
       {
@@ -133,7 +133,7 @@ describe("AlimentacionController", () => {
         };
       },
     };
-    const controller = new AlimentacionController(service as never);
+    const controller = new AlimentacionController(service as never, {} as never);
 
     const result = await controller.lookupAdultoMayorByDate(
       "0b17e370-8f81-48c0-b707-c7046f497855",
@@ -145,5 +145,61 @@ describe("AlimentacionController", () => {
     assert.equal(receivedDeliveryDate, "2026-04-24");
     assert.equal(result.existingRecordId, null);
     assert.equal(result.adultoMayor.fullName, "Rosa Elena Martinez Rojas");
+  });
+
+  it("exports formato entrega pdf as attachment", async () => {
+    let receivedAdultoMayorId: string | null = null;
+    let receivedActorId: string | null = null;
+    let receivedQuery: { deliveryMonth: string } | null = null;
+    let sentPayload: unknown = null;
+    const headers: Record<string, string> = {};
+    const exportService = {
+      exportPdf: async (
+        adultoMayorId: string,
+        query: { deliveryMonth: string },
+        actor: AuthUser,
+      ) => {
+        receivedAdultoMayorId = adultoMayorId;
+        receivedQuery = query;
+        receivedActorId = actor.id;
+
+        return {
+          buffer: Buffer.from("pdf"),
+          contentType: "application/pdf",
+          filename: "formato-entrega-1020304050-2026-04.pdf",
+        };
+      },
+    };
+    const reply = {
+      header(name: string, value: string) {
+        headers[name] = value;
+
+        return this;
+      },
+      send(payload: Buffer) {
+        sentPayload = payload;
+
+        return payload;
+      },
+    };
+    const controller = new AlimentacionController({} as never, exportService as never);
+
+    await controller.exportFormatoEntregaPdf(
+      "0b17e370-8f81-48c0-b707-c7046f497855",
+      { deliveryMonth: "2026-04" },
+      { currentUser } as never,
+      reply as never,
+    );
+
+    assert.equal(receivedAdultoMayorId, "0b17e370-8f81-48c0-b707-c7046f497855");
+    assert.equal(receivedActorId, currentUser.id);
+    assert.deepEqual(receivedQuery, { deliveryMonth: "2026-04" });
+    assert.equal(headers["Content-Type"], "application/pdf");
+    assert.equal(
+      headers["Content-Disposition"],
+      'attachment; filename="formato-entrega-1020304050-2026-04.pdf"',
+    );
+    assert.equal(Buffer.isBuffer(sentPayload), true);
+    assert.equal((sentPayload as Buffer).toString("utf8"), "pdf");
   });
 });

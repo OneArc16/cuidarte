@@ -1,9 +1,12 @@
 import {
   type AlimentacionAdultoOptionRecord,
+  type AlimentacionFormatoEntregaRecord,
   type AlimentacionRecord,
   type AlimentacionTenantOptionRecord,
+  type CreateAlimentacionFormatoEntregaExportAuditCommand,
   type CreateAlimentacionBatchRecordCommand,
   type FindAlimentacionAdultoMayorByIdQuery,
+  type FindAlimentacionFormatoEntregaByAdultoAndMonthQuery,
   type FindAlimentacionExistingRecordsByAdultosAndDateQuery,
   type FindAlimentacionRecordByAdultoMayorAndDateQuery,
   type FindAlimentacionRecordByIdQuery,
@@ -28,6 +31,9 @@ export type AlimentacionRepository = {
   findAdultoMayorById(
     query: FindAlimentacionAdultoMayorByIdQuery,
   ): Promise<AlimentacionAdultoOptionRecord | null>;
+  findFormatoEntregaByAdultoAndMonth(
+    query: FindAlimentacionFormatoEntregaByAdultoAndMonthQuery,
+  ): Promise<AlimentacionFormatoEntregaRecord[]>;
   findExistingByAdultosAndDate(
     query: FindAlimentacionExistingRecordsByAdultosAndDateQuery,
   ): Promise<AlimentacionRecord[]>;
@@ -36,4 +42,7 @@ export type AlimentacionRepository = {
   ): Promise<AlimentacionRecord | null>;
   createMany(command: CreateAlimentacionBatchRecordCommand): Promise<number>;
   update(command: UpdateAlimentacionRecordCommand): Promise<AlimentacionRecord>;
+  createFormatoEntregaExportAudit(
+    command: CreateAlimentacionFormatoEntregaExportAuditCommand,
+  ): Promise<void>;
 };

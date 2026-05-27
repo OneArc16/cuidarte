@@ -16,11 +16,12 @@ import {
 } from "@cuidarte/contracts";
 
 import { getApiBaseUrl } from "@/shared/api/api-config";
+import { fetchBlob } from "@/shared/api/fetch-blob";
 import { fetchJson } from "@/shared/api/fetch-json";
 
 type ListAlimentacionParams = {
   search: string;
-  deliveryDate: string | null;
+  deliveryMonth: string | null;
   tenantId: string | null;
 };
 
@@ -110,6 +111,19 @@ export function updateAlimentacionRecord(
   );
 }
 
+export function exportAlimentacionFormatoEntregaPdf(params: {
+  adultoMayorId: string;
+  deliveryMonth: string;
+}): Promise<Blob> {
+  const searchParams = new URLSearchParams({
+    deliveryMonth: params.deliveryMonth,
+  });
+
+  return fetchBlob(
+    `${getApiBaseUrl()}/registro-alimentacion/adultos-mayores/${params.adultoMayorId}/formato-entrega/pdf?${searchParams.toString()}`,
+  );
+}
+
 function buildAlimentacionUrl(params: ListAlimentacionParams): string {
   const searchParams = new URLSearchParams();
 
@@ -117,8 +131,8 @@ function buildAlimentacionUrl(params: ListAlimentacionParams): string {
     searchParams.set("search", params.search.trim());
   }
 
-  if (params.deliveryDate !== null) {
-    searchParams.set("deliveryDate", params.deliveryDate);
+  if (params.deliveryMonth !== null) {
+    searchParams.set("deliveryMonth", params.deliveryMonth);
   }
 
   if (params.tenantId !== null) {

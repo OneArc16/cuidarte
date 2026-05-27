@@ -7,6 +7,7 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from "@nestjs/common";
 import {
@@ -15,6 +16,7 @@ import {
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
+  ApiProduces,
   ApiTags,
   ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
@@ -22,6 +24,7 @@ import {
   alimentacionAdultoOptionsQuerySchema,
   alimentacionAdultoOptionsResponseSchema,
   alimentacionDetailSchema,
+  alimentacionFormatoEntregaExportQuerySchema,
   alimentacionListQuerySchema,
   alimentacionListResponseSchema,
   alimentacionLookupByAdultoMayorQuerySchema,
@@ -31,11 +34,13 @@ import {
   createAlimentacionBatchResponseSchema,
   updateAlimentacionRequestSchema,
 } from "@cuidarte/contracts";
+import { type FastifyReply } from "fastify";
 import { z } from "zod";
 
 import { parseZodSchema } from "../../../common/parse-zod-schema";
 import { type AuthenticatedRequest } from "../../auth/authenticated-request";
 import { SessionGuard } from "../../auth/session.guard";
+import { AlimentacionFormatoExportService } from "../application/alimentacion-formato-export.service";
 import { AlimentacionService } from "../application/alimentacion.service";
 
 const recordIdParamSchema = z.uuid();
@@ -45,7 +50,10 @@ const adultoMayorIdParamSchema = z.uuid();
 @Controller("registro-alimentacion")
 @UseGuards(SessionGuard)
 export class AlimentacionController {
-  constructor(private readonly alimentacionService: AlimentacionService) {}
+  constructor(
+    private readonly alimentacionService: AlimentacionService,
+    private readonly alimentacionFormatoExportService: AlimentacionFormatoExportService,
+  ) {}
 
   @Get()
   @ApiOkResponse({ description: "Listado de registros de alimentacion." })
@@ -109,6 +117,30 @@ export class AlimentacionController {
     return alimentacionLookupByAdultoMayorResponseSchema.parse(result);
   }
 
+  @Get("adultos-mayores/:adultoMayorId/formato-entrega/pdf")
+  @ApiOkResponse({ description: "PDF de formato individual de entrega de alimentos." })
+  @ApiBadRequestResponse({ description: "deliveryMonth invalido o faltante." })
+  @ApiForbiddenResponse({ description: "No tienes permisos para exportar este formato." })
+  @ApiNotFoundResponse({ description: "Adulto mayor no encontrado." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  @ApiProduces("application/pdf")
+  async exportFormatoEntregaPdf(
+    @Param("adultoMayorId") adultoMayorIdParam: string,
+    @Query() query: unknown,
+    @Req() request: AuthenticatedRequest,
+    @Res() reply: FastifyReply,
+  ) {
+    const adultoMayorId = parseZodSchema(adultoMayorIdParamSchema, adultoMayorIdParam);
+    const parsedQuery = parseZodSchema(alimentacionFormatoEntregaExportQuerySchema, query);
+    const file = await this.alimentacionFormatoExportService.exportPdf(
+      adultoMayorId,
+      parsedQuery,
+      request.currentUser,
+    );
+
+    return sendFile(reply, file);
+  }
+
   @Post()
   @ApiOkResponse({ description: "Lote de registros de alimentacion creado." })
   @ApiBadRequestResponse({ description: "Solicitud invalida." })
@@ -152,4 +184,14 @@ export class AlimentacionController {
 
     return alimentacionDetailSchema.parse(record);
   }
+}
+
+function sendFile(
+  reply: FastifyReply,
+  file: { buffer: Buffer; contentType: string; filename: string },
+) {
+  reply.header("Content-Type", file.contentType);
+  reply.header("Content-Disposition", `attachment; filename="${file.filename}"`);
+
+  return reply.send(file.buffer);
 }

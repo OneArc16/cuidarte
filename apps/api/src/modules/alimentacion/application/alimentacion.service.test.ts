@@ -2,12 +2,19 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { type AuthUser } from "@cuidarte/contracts";
-import { BadRequestException, ConflictException, ForbiddenException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from "@nestjs/common";
 
 import { AlimentacionService } from "./alimentacion.service";
 import {
   type AlimentacionAdultoOptionRecord,
   type AlimentacionRecord,
+  type CreateAlimentacionFormatoEntregaExportAuditCommand,
+  type FindAlimentacionFormatoEntregaByAdultoAndMonthQuery,
   type FindAlimentacionRecordsQuery,
   type SearchAlimentacionAdultosMayoresOptionsQuery,
 } from "../domain/alimentacion.types";
@@ -76,6 +83,8 @@ const adultoMayorRecord: AlimentacionAdultoOptionRecord = {
   id: adultoMayorId,
   tenantId,
   tenantName: "Centro de Vida Demo",
+  tenantCity: "El Banco",
+  tenantDepartment: "Magdalena",
   documentNumber: "1020304050",
   fullName: "Rosa Elena Martinez Rojas",
 };
@@ -103,7 +112,7 @@ describe("AlimentacionService", () => {
     const service = new AlimentacionService(repository);
 
     const result = await service.listRegistros(
-      { search: "Rosa", deliveryDate: "2026-04-24", tenantId: null },
+      { search: "Rosa", deliveryMonth: "2026-04", tenantId: null },
       adminUser,
     );
 
@@ -111,7 +120,7 @@ describe("AlimentacionService", () => {
     assert.equal(result[0]?.tenantId, tenantId);
     assert.deepEqual(repository.listQueries[0], {
       search: "Rosa",
-      deliveryDate: "2026-04-24",
+      deliveryMonth: "2026-04",
       tenantId,
       scope: { type: "tenant", tenantId },
     });
@@ -122,14 +131,14 @@ describe("AlimentacionService", () => {
     const service = new AlimentacionService(repository);
 
     const result = await service.listRegistros(
-      { search: null, deliveryDate: "2026-04-24", tenantId: null },
+      { search: null, deliveryMonth: "2026-04", tenantId: null },
       auditorUser,
     );
 
     assert.equal(result.length, 1);
     assert.deepEqual(repository.listQueries[0], {
       search: null,
-      deliveryDate: "2026-04-24",
+      deliveryMonth: "2026-04",
       tenantId,
       scope: { type: "tenant", tenantId },
     });
@@ -140,13 +149,13 @@ describe("AlimentacionService", () => {
     const service = new AlimentacionService(repository);
 
     await service.listRegistros(
-      { search: null, deliveryDate: "2026-04-24", tenantId: otherTenantId },
+      { search: null, deliveryMonth: "2026-04", tenantId: otherTenantId },
       superAdminUser,
     );
 
     assert.deepEqual(repository.listQueries[0], {
       search: null,
-      deliveryDate: "2026-04-24",
+      deliveryMonth: "2026-04",
       tenantId: otherTenantId,
       scope: { type: "all" },
     });
@@ -342,12 +351,115 @@ describe("AlimentacionService", () => {
     );
   });
 
+  it("prepares export data for an adult and month within actor scope", async () => {
+    const repository = createRepository();
+    const service = new AlimentacionService(repository);
+
+    const result = await service.prepareFormatoEntregaExport(
+      adultoMayorId,
+      { deliveryMonth: "2026-04" },
+      adminUser,
+    );
+
+    assert.equal(result.adultoMayorId, adultoMayorId);
+    assert.equal(result.deliveryMonth, "2026-04");
+    assert.equal(result.tenantId, tenantId);
+    assert.equal(result.tenantCity, "El Banco");
+    assert.equal(result.tenantDepartment, "Magdalena");
+    assert.equal(result.records.length, 1);
+    assert.deepEqual(repository.formatoEntregaQueries[0], {
+      adultoMayorId,
+      deliveryMonth: "2026-04",
+      scope: { type: "tenant", tenantId },
+    });
+  });
+
+  it("registers export audit entries for formato entrega", async () => {
+    const repository = createRepository();
+    const service = new AlimentacionService(repository);
+
+    await service.registerFormatoEntregaExportAudit(
+      {
+        tenantId,
+        adultoMayorId,
+        deliveryMonth: "2026-04",
+      },
+      adminUser,
+    );
+
+    assert.deepEqual(repository.formatoEntregaAuditCommands[0], {
+      actorUserId: adminUser.id,
+      targetTenantId: tenantId,
+      adultoMayorId,
+      deliveryMonth: "2026-04",
+    });
+  });
+
+  it("rejects export audit registration for a different tenant scope", async () => {
+    const repository = createRepository();
+    const service = new AlimentacionService(repository);
+
+    await assert.rejects(
+      () =>
+        service.registerFormatoEntregaExportAudit(
+          {
+            tenantId: otherTenantId,
+            adultoMayorId,
+            deliveryMonth: "2026-04",
+          },
+          adminUser,
+        ),
+      { constructor: ForbiddenException },
+    );
+  });
+
+  it("fails export preparation when the adult does not exist in scope", async () => {
+    const repository = createRepository({
+      adultoMayorById: null,
+    });
+    const service = new AlimentacionService(repository);
+
+    await assert.rejects(
+      () =>
+        service.prepareFormatoEntregaExport(
+          adultoMayorId,
+          { deliveryMonth: "2026-04" },
+          adminUser,
+        ),
+      { constructor: NotFoundException },
+    );
+  });
+
   it("forbids unsupported roles from accessing feeding records", async () => {
     const repository = createRepository();
     const service = new AlimentacionService(repository);
 
     await assert.rejects(
-      () => service.listRegistros({ search: null, deliveryDate: null, tenantId: null }, medicoUser),
+      () =>
+        service.listRegistros({ search: null, deliveryMonth: null, tenantId: null }, medicoUser),
+      { constructor: ForbiddenException },
+    );
+
+    await assert.rejects(
+      () =>
+        service.prepareFormatoEntregaExport(
+          adultoMayorId,
+          { deliveryMonth: "2026-04" },
+          medicoUser,
+        ),
+      { constructor: ForbiddenException },
+    );
+
+    await assert.rejects(
+      () =>
+        service.registerFormatoEntregaExportAudit(
+          {
+            tenantId,
+            adultoMayorId,
+            deliveryMonth: "2026-04",
+          },
+          medicoUser,
+        ),
       { constructor: ForbiddenException },
     );
   });
@@ -442,7 +554,7 @@ describe("AlimentacionService", () => {
     await assert.rejects(
       () =>
         service.listRegistros(
-          { search: null, deliveryDate: "2026-04-24", tenantId: null },
+          { search: null, deliveryMonth: "2026-04", tenantId: null },
           tenantlessDirectorUser,
         ),
       { constructor: ForbiddenException },
@@ -455,10 +567,14 @@ function createRepository(
     existingByAdultosAndDate?: AlimentacionRecord[];
     existingByAdultoAndDate?: AlimentacionRecord | null;
     records?: AlimentacionRecord[];
+    adultoMayorById?: AlimentacionAdultoOptionRecord | null;
+    formatoEntregaRecords?: AlimentacionRecord[];
   } = {},
 ): AlimentacionRepository & {
   listQueries: FindAlimentacionRecordsQuery[];
   adultoOptionsQueries: SearchAlimentacionAdultosMayoresOptionsQuery[];
+  formatoEntregaQueries: FindAlimentacionFormatoEntregaByAdultoAndMonthQuery[];
+  formatoEntregaAuditCommands: CreateAlimentacionFormatoEntregaExportAuditCommand[];
   createdCommands: Array<{
     tenantId: string;
     actorUserId: string;
@@ -476,6 +592,8 @@ function createRepository(
   const records = overrides.records ?? [alimentacionRecord];
   const listQueries: FindAlimentacionRecordsQuery[] = [];
   const adultoOptionsQueries: SearchAlimentacionAdultosMayoresOptionsQuery[] = [];
+  const formatoEntregaQueries: FindAlimentacionFormatoEntregaByAdultoAndMonthQuery[] = [];
+  const formatoEntregaAuditCommands: CreateAlimentacionFormatoEntregaExportAuditCommand[] = [];
   const createdCommands: Array<{
     tenantId: string;
     actorUserId: string;
@@ -493,21 +611,23 @@ function createRepository(
   return {
     listQueries,
     adultoOptionsQueries,
+    formatoEntregaQueries,
+    formatoEntregaAuditCommands,
     createdCommands,
     async findMany(query) {
       listQueries.push(query);
 
       return records.filter((record) => {
         const matchesTenant = query.tenantId === null || record.tenantId === query.tenantId;
-        const matchesDate =
-          query.deliveryDate === null || record.deliveryDate === query.deliveryDate;
+        const matchesMonth =
+          query.deliveryMonth === null || record.deliveryDate.startsWith(`${query.deliveryMonth}-`);
         const matchesSearch =
           query.search === null ||
           [record.documentNumber, record.fullName].some((value) =>
             value.toLowerCase().includes(query.search!.toLowerCase()),
           );
 
-        return matchesTenant && matchesDate && matchesSearch;
+        return matchesTenant && matchesMonth && matchesSearch;
       });
     },
     async findById({ id }) {
@@ -532,7 +652,38 @@ function createRepository(
         : [];
     },
     async findAdultoMayorById({ adultoMayorId: requestedId }) {
+      if (overrides.adultoMayorById !== undefined) {
+        return overrides.adultoMayorById;
+      }
+
       return requestedId === adultoMayorId ? adultoMayorRecord : null;
+    },
+    async findFormatoEntregaByAdultoAndMonth(query) {
+      formatoEntregaQueries.push(query);
+
+      const sourceRecords = overrides.formatoEntregaRecords ?? records;
+
+      return sourceRecords
+        .filter(
+          (record) =>
+            record.adultoMayorId === query.adultoMayorId &&
+            record.deliveryDate.startsWith(`${query.deliveryMonth}-`),
+        )
+        .map((record) => ({
+          tenantId: record.tenantId,
+          tenantName: record.tenantName,
+          tenantCity: adultoMayorRecord.tenantCity,
+          tenantDepartment: adultoMayorRecord.tenantDepartment,
+          adultoMayorId: record.adultoMayorId,
+          documentNumber: record.documentNumber,
+          fullName: record.fullName,
+          deliveryDate: record.deliveryDate,
+          organizer: record.organizer,
+          refrigerio1: record.refrigerio1,
+          almuerzo: record.almuerzo,
+          refrigerio2: record.refrigerio2,
+          auxilioTransporte: record.auxilioTransporte,
+        }));
     },
     async findExistingByAdultosAndDate() {
       return overrides.existingByAdultosAndDate ?? [];
@@ -567,6 +718,9 @@ function createRepository(
         auxilioTransporte: command.auxilioTransporte,
         updatedAt: new Date("2026-04-25T12:00:00.000Z"),
       };
+    },
+    async createFormatoEntregaExportAudit(command) {
+      formatoEntregaAuditCommands.push(command);
     },
   };
 }

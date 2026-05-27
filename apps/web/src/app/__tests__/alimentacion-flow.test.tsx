@@ -61,6 +61,7 @@ describe("App alimentacion flow", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it("hides the feeding shortcut in Adultos mayores for unsupported roles", async () => {
@@ -113,7 +114,9 @@ describe("App alimentacion flow", () => {
 
     expect(alimentacionRow).not.toBeNull();
     expect(
-      within(alimentacionRow as HTMLTableRowElement).getByText(alimentacionFixture.deliveryDate),
+      within(alimentacionRow as HTMLTableRowElement).getByText(
+        alimentacionFixture.deliveryDate.slice(0, 7),
+      ),
     ).toBeInTheDocument();
     expect(
       within(alimentacionRow as HTMLTableRowElement).getAllByText("Entregado").length,
@@ -136,6 +139,44 @@ describe("App alimentacion flow", () => {
     ).toBeInTheDocument();
   });
 
+  it("exports individual feeding format from the grouped row", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-04-24T12:00:00.000Z"));
+
+    let receivedAdultoMayorId: string | null = null;
+    let receivedDeliveryMonth: string | null = null;
+    server.use(
+      mockAuthMe(authUserFixture),
+      mockAlimentacionListForTests(),
+      http.get(
+        "http://localhost:3001/api/registro-alimentacion/adultos-mayores/:adultoMayorId/formato-entrega/pdf",
+        ({ params, request }) => {
+          receivedAdultoMayorId = params.adultoMayorId as string;
+          receivedDeliveryMonth = new URL(request.url).searchParams.get("deliveryMonth");
+
+          return new HttpResponse(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
+            headers: {
+              "Content-Type": "application/pdf",
+            },
+          });
+        },
+      ),
+    );
+    const user = userEvent.setup();
+    renderAppAtPath("/registro-alimentacion");
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: `Exportar formato de ${alimentacionFixture.fullName}`,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(receivedAdultoMayorId).toBe(alimentacionFixture.adultoMayorId);
+    });
+    expect(receivedDeliveryMonth).toBe("2026-04");
+  });
+
   it("creates a feeding batch and returns to the list", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-04-24T12:00:00.000Z"));
@@ -145,16 +186,18 @@ describe("App alimentacion flow", () => {
     server.use(
       mockAuthMe(authUserFixture),
       http.get(ALIMENTACION_LIST_ENDPOINT, ({ request }) => {
-        const deliveryDate = new URL(request.url).searchParams.get("deliveryDate");
+        const deliveryMonth = new URL(request.url).searchParams.get("deliveryMonth");
         const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? null;
         const filteredRecords = registros.filter((registro) => {
-          const matchesDate =
-            deliveryDate === null || deliveryDate === "" || registro.deliveryDate === deliveryDate;
+          const matchesMonth =
+            deliveryMonth === null ||
+            deliveryMonth === "" ||
+            registro.deliveryDate.startsWith(`${deliveryMonth}-`);
           const matchesSearch =
             search === null ||
             [registro.documentNumber, registro.fullName].join(" ").toLowerCase().includes(search);
 
-          return matchesDate && matchesSearch;
+          return matchesMonth && matchesSearch;
         });
 
         return HttpResponse.json({ registros: filteredRecords });

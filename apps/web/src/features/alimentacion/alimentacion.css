@@ -8,9 +8,16 @@
 
 .alimentacion-toolbar {
   display: grid;
-  grid-template-columns: minmax(240px, 1.6fr) minmax(180px, 220px) minmax(220px, 280px);
   gap: 12px;
   align-items: end;
+}
+
+.alimentacion-toolbar--without-tenant {
+  grid-template-columns: minmax(240px, 1.6fr) minmax(180px, 220px);
+}
+
+.alimentacion-toolbar--with-tenant {
+  grid-template-columns: minmax(240px, 1.6fr) minmax(180px, 220px) minmax(220px, 280px);
 }
 
 .alimentacion-search,
@@ -112,7 +119,7 @@
 }
 
 .alimentacion-table--without-tenant .alimentacion-col-acciones {
-  width: 7%;
+  width: 13%;
 }
 
 .alimentacion-table--with-tenant .alimentacion-col-documento {
@@ -140,7 +147,7 @@
 }
 
 .alimentacion-table--with-tenant .alimentacion-col-acciones {
-  width: 7%;
+  width: 13%;
 }
 
 .alimentacion-table th,
@@ -166,6 +173,58 @@
 .alimentacion-table tbody tr:last-child td,
 .alimentacion-batch-table tbody tr:last-child td {
   border-bottom: 0;
+}
+
+.alimentacion-group-row td {
+  background: rgb(255 255 255 / 90%);
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+
+.alimentacion-group-row.is-expanded td {
+  background: rgb(236 249 243 / 88%);
+  border-bottom-color: rgb(29 158 117 / 22%);
+}
+
+.alimentacion-detail-row td {
+  background: rgb(248 252 250 / 94%);
+}
+
+.alimentacion-detail-row--first td {
+  border-top: 1px dashed rgb(29 158 117 / 24%);
+}
+
+.alimentacion-detail-row td:first-child {
+  position: relative;
+  padding-left: 30px;
+}
+
+.alimentacion-detail-row td:first-child::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 99px;
+  background: rgb(29 158 117 / 36%);
+}
+
+.alimentacion-detail-row .alimentacion-cell-name {
+  position: relative;
+  padding-left: 20px;
+}
+
+.alimentacion-detail-row .alimentacion-cell-name::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  width: 8px;
+  height: 1px;
+  background: rgb(29 158 117 / 40%);
+  transform: translateY(-50%);
 }
 
 .alimentacion-table td strong,
@@ -232,6 +291,13 @@
     opacity 160ms ease;
 }
 
+.alimentacion-table-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
 .alimentacion-row-action:not(:disabled):hover,
 .alimentacion-row-action:not(:disabled):focus-visible {
   border-color: rgb(29 158 117 / 28%);
@@ -255,6 +321,44 @@
 .alimentacion-row-action svg {
   width: 17px;
   height: 17px;
+}
+
+.alimentacion-row-action--toggle {
+  border-color: rgb(8 80 65 / 18%);
+}
+
+.alimentacion-group-row.is-expanded .alimentacion-row-action--toggle {
+  border-color: rgb(29 158 117 / 34%);
+  background: rgb(226 246 237 / 88%);
+}
+
+.alimentacion-toggle-icon {
+  display: inline-grid;
+  place-items: center;
+}
+
+.alimentacion-spin {
+  animation: alimentacion-spin 0.9s linear infinite;
+}
+
+.alimentacion-row-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@keyframes alimentacion-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alimentacion-spin {
+    animation: none;
+  }
 }
 
 .alimentacion-floating-action {
