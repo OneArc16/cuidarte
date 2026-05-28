@@ -68,6 +68,81 @@
   outline: 0;
 }
 
+.alimentacion-month-trigger {
+  width: 100%;
+  min-height: 40px;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid rgb(8 80 65 / 12%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 88%);
+  color: var(--color-deep);
+  font-size: 0.86rem;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.alimentacion-month-trigger svg {
+  width: 16px;
+  height: 16px;
+  color: var(--color-care);
+}
+
+.alimentacion-month-picker {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(110px, 120px);
+  gap: 10px;
+  align-items: end;
+}
+
+.alimentacion-month-field {
+  display: grid;
+  gap: 4px;
+}
+
+.alimentacion-month-field span {
+  color: var(--color-deep);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.alimentacion-month-field select {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid rgb(8 80 65 / 14%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 92%);
+  color: var(--color-deep);
+  font-size: 0.84rem;
+}
+
+.alimentacion-month-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 4px 2px;
+  border-top: 1px solid rgb(8 80 65 / 10%);
+}
+
+.alimentacion-month-actions-buttons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.alimentacion-month-apply {
+  background: var(--color-care);
+  color: #fff;
+}
+
+.alimentacion-month-apply:hover {
+  background: #188965;
+}
+
 .alimentacion-search__control input,
 .alimentacion-search-input input {
   min-height: 38px;

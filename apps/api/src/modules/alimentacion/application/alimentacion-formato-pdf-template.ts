@@ -1,7 +1,3 @@
-import {
-  type AlimentacionStatus,
-} from "@cuidarte/contracts";
-
 import { type AlimentacionFormatoEntregaExportData } from "./alimentacion-formato-export.types";
 
 const DAYS_PER_BLOCK = 12;
@@ -22,8 +18,6 @@ type DayBlock = {
   slots: Array<number | null>;
 };
 
-type DailyStatusMap = Map<number, AlimentacionFormatoEntregaExportData["records"][number]>;
-
 export function buildFormatoEntregaPdfFilename(
   documentNumber: string,
   deliveryMonth: string,
@@ -38,7 +32,6 @@ export function buildFormatoEntregaPdfHtml({
   generatedAt,
   logoDataUrl,
 }: BuildFormatoEntregaPdfHtmlParams): string {
-  const dailyStatusMap = buildDailyStatusMap(data.deliveryMonth, data.records);
   const dayBlocks = resolveDayBlocks(data.deliveryMonth);
   const generatedDateLabel = formatBogotaDate(generatedAt);
   const cityLabel = formatTenantCityLabel(data.tenantCity, data.tenantDepartment);
@@ -47,7 +40,6 @@ export function buildFormatoEntregaPdfHtml({
       buildPageHtml({
         blockIndex,
         dayBlock,
-        dailyStatusMap,
         generatedDateLabel,
         cityLabel,
         fullName: data.fullName,
@@ -196,7 +188,6 @@ export function buildFormatoEntregaPdfHtml({
 function buildPageHtml({
   blockIndex,
   dayBlock,
-  dailyStatusMap,
   generatedDateLabel,
   cityLabel,
   fullName,
@@ -205,7 +196,6 @@ function buildPageHtml({
 }: {
   blockIndex: number;
   dayBlock: DayBlock;
-  dailyStatusMap: DailyStatusMap;
   generatedDateLabel: string;
   cityLabel: string;
   fullName: string;
@@ -215,7 +205,6 @@ function buildPageHtml({
   const stubs = Array.from({ length: STUBS_PER_PAGE }, (_, stubIndex) =>
     buildStubHtml({
       dayBlock,
-      dailyStatusMap,
       generatedDateLabel,
       cityLabel,
       fullName,
@@ -231,7 +220,6 @@ function buildPageHtml({
 
 function buildStubHtml({
   dayBlock,
-  dailyStatusMap,
   generatedDateLabel,
   cityLabel,
   fullName,
@@ -241,7 +229,6 @@ function buildStubHtml({
   stubIndex,
 }: {
   dayBlock: DayBlock;
-  dailyStatusMap: DailyStatusMap;
   generatedDateLabel: string;
   cityLabel: string;
   fullName: string;
@@ -262,26 +249,18 @@ function buildStubHtml({
   const rowRefrigerio1 = buildProductRow(
     "Refrigerio 1",
     dayBlock.slots,
-    dailyStatusMap,
-    "refrigerio1",
   );
   const rowAlmuerzo = buildProductRow(
     "Almuerzo",
     dayBlock.slots,
-    dailyStatusMap,
-    "almuerzo",
   );
   const rowRefrigerio2 = buildProductRow(
     "Refrigerio 2",
     dayBlock.slots,
-    dailyStatusMap,
-    "refrigerio2",
   );
   const rowAuxilio = buildProductRow(
     "Auxilio de transporte",
     dayBlock.slots,
-    dailyStatusMap,
-    "auxilioTransporte",
   );
   const logoHtml =
     logoDataUrl === null
@@ -343,8 +322,6 @@ function buildStubHtml({
 function buildProductRow(
   label: string,
   daySlots: Array<number | null>,
-  dailyStatusMap: DailyStatusMap,
-  key: "refrigerio1" | "almuerzo" | "refrigerio2" | "auxilioTransporte",
 ): string {
   const cells = daySlots
     .map((day) => {
@@ -352,35 +329,11 @@ function buildProductRow(
         return '<td class="status-cell"></td>';
       }
 
-      const status = dailyStatusMap.get(day)?.[key] ?? null;
-      const mark = status === null ? "" : formatStatusMark(status);
-
-      return `<td class="status-cell">${escapeHtml(mark)}</td>`;
+      return '<td class="status-cell"></td>';
     })
     .join("");
 
   return `<tr><td class="product-label">${escapeHtml(label)}</td>${cells}</tr>`;
-}
-
-function buildDailyStatusMap(
-  deliveryMonth: string,
-  records: AlimentacionFormatoEntregaExportData["records"],
-): DailyStatusMap {
-  const map: DailyStatusMap = new Map();
-
-  for (const record of records) {
-    if (!record.deliveryDate.startsWith(`${deliveryMonth}-`)) {
-      continue;
-    }
-
-    const day = parseDayFromDate(record.deliveryDate);
-
-    if (day !== null) {
-      map.set(day, record);
-    }
-  }
-
-  return map;
 }
 
 function resolveDayBlocks(deliveryMonth: string): DayBlock[] {
@@ -392,44 +345,12 @@ function resolveDayBlocks(deliveryMonth: string): DayBlock[] {
     throw new Error("deliveryMonth invalido para construir el formato.");
   }
 
-  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-  const blocks: DayBlock[] = [];
-
-  for (let startDay = 1; startDay <= daysInMonth; startDay += DAYS_PER_BLOCK) {
-    const slots = Array.from({ length: DAYS_PER_BLOCK }, (_, index) => {
-      const day = startDay + index;
-
-      return day <= daysInMonth ? day : null;
-    });
-
-    blocks.push({ startDay, slots });
-  }
-
-  return blocks;
-}
-
-function parseDayFromDate(value: string): number | null {
-  const splitDate = value.split("-");
-  const dayValue = splitDate[2];
-
-  if (dayValue === undefined) {
-    return null;
-  }
-
-  const day = Number.parseInt(dayValue, 10);
-
-  return Number.isInteger(day) && day >= 1 && day <= 31 ? day : null;
-}
-
-function formatStatusMark(status: AlimentacionStatus): string {
-  switch (status) {
-    case "entregado":
-      return "X";
-    case "no_aplica":
-      return "N/A";
-    default:
-      return "";
-  }
+  return [
+    {
+      startDay: 1,
+      slots: Array.from({ length: DAYS_PER_BLOCK }, (_, index) => index + 1),
+    },
+  ];
 }
 
 function formatBogotaDate(value: Date): string {

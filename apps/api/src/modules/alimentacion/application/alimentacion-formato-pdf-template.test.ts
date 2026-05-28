@@ -7,7 +7,7 @@ import {
 } from "./alimentacion-formato-pdf-template";
 
 describe("alimentacion-formato-pdf-template", () => {
-  it("builds duplicated stubs by 12-day blocks and maps status marks", () => {
+  it("builds duplicated stubs with only days 1 to 12 and empty status cells", () => {
     const html = buildFormatoEntregaPdfHtml({
       data: {
         tenantId: "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054",
@@ -51,18 +51,18 @@ describe("alimentacion-formato-pdf-template", () => {
 
     assert.equal(
       (html.match(/Formato de Entrega de Alimentos y Auxilio de Transporte/g) ?? []).length,
-      6,
+      3,
     );
     assert.match(html, /EL BANCO - MAGDALENA/);
     assert.match(html, /Dia<br>1/);
     assert.match(html, /Dia<br>12/);
-    assert.match(html, /Dia<br>13/);
-    assert.match(html, /Dia<br>24/);
-    assert.match(html, /Dia<br>25/);
-    assert.match(html, /Dia<br>30/);
+    assert.ok(!html.includes("Dia<br>13"));
+    assert.ok(!html.includes("Dia<br>24"));
+    assert.ok(!html.includes("Dia<br>25"));
+    assert.ok(!html.includes("Dia<br>30"));
     assert.ok(!html.includes("Dia<br>31"));
-    assert.match(html, />X</);
-    assert.match(html, />N\/A</);
+    assert.ok(!html.includes(">X<"));
+    assert.ok(!html.includes(">N/A<"));
   });
 
   it("uses city fallback when city and department are missing", () => {
