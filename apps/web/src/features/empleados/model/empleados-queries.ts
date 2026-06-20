@@ -1,4 +1,8 @@
-import { type CreateEmpleadoRequest, type UpdateEmpleadoRequest } from "@cuidarte/contracts";
+import {
+  type AssignEmpleadoDirectorSignatureRequest,
+  type CreateEmpleadoRequest,
+  type UpdateEmpleadoRequest,
+} from "@cuidarte/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import * as empleadosApi from "../api/empleados-api";
@@ -7,6 +11,7 @@ export const empleadosQueryKeys = {
   list: (params: { search: string }) => ["empleados", params] as const,
   detail: (empleadoId: string) => ["empleados", empleadoId] as const,
   tenantOptions: () => ["empleados", "tenant-options"] as const,
+  signaturePreview: (empleadoId: string) => ["empleados", empleadoId, "signature-preview"] as const,
 };
 
 export function useEmpleadosQuery(params: { search: string }) {
@@ -41,6 +46,15 @@ export function useEmpleadoQuery(empleadoId: string | null) {
   });
 }
 
+export function useEmpleadoSignaturePreviewQuery(empleadoId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: empleadosQueryKeys.signaturePreview(empleadoId),
+    queryFn: () => empleadosApi.getEmpleadoSignatureFile(empleadoId),
+    enabled,
+    retry: false,
+  });
+}
+
 export function useCreateEmpleadoMutation() {
   const queryClient = useQueryClient();
 
@@ -58,6 +72,36 @@ export function useUpdateEmpleadoMutation(empleadoId: string) {
 
   return useMutation({
     mutationFn: (request: UpdateEmpleadoRequest) => empleadosApi.updateEmpleado(empleadoId, request),
+    onSuccess: async (detail) => {
+      queryClient.setQueryData(empleadosQueryKeys.detail(empleadoId), detail);
+      await queryClient.invalidateQueries({ queryKey: ["empleados"] });
+    },
+  });
+}
+
+export function useUploadEmpleadoSignatureMutation(empleadoId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (file: File) => empleadosApi.uploadEmpleadoSignature(empleadoId, file),
+    onSuccess: async (detail) => {
+      queryClient.setQueryData(empleadosQueryKeys.detail(empleadoId), detail);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["empleados"] }),
+        queryClient.invalidateQueries({
+          queryKey: empleadosQueryKeys.signaturePreview(empleadoId),
+        }),
+      ]);
+    },
+  });
+}
+
+export function useAssignEmpleadoDirectorSignatureMutation(empleadoId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: AssignEmpleadoDirectorSignatureRequest) =>
+      empleadosApi.assignEmpleadoDirectorSignature(empleadoId, request),
     onSuccess: async (detail) => {
       queryClient.setQueryData(empleadosQueryKeys.detail(empleadoId), detail);
       await queryClient.invalidateQueries({ queryKey: ["empleados"] });

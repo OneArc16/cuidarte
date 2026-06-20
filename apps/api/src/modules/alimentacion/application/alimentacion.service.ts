@@ -35,7 +35,12 @@ import {
   ALIMENTACION_REPOSITORY,
   type AlimentacionRepository,
 } from "../domain/alimentacion.repository";
-import { type AlimentacionRecord, type AlimentacionScope } from "../domain/alimentacion.types";
+import {
+  type AlimentacionFormatoEmissionRecord,
+  type AlimentacionRecord,
+  type AlimentacionScope,
+  type CreateAlimentacionFormatoEmissionCommand,
+} from "../domain/alimentacion.types";
 import { type AlimentacionFormatoEntregaExportData } from "./alimentacion-formato-export.types";
 
 @Injectable()
@@ -262,6 +267,27 @@ export class AlimentacionService {
         auxilioTransporte: record.auxilioTransporte,
       })),
     };
+  }
+
+  async findLatestFormatoEntregaEmission(
+    adultoMayorId: string,
+    query: AlimentacionFormatoEntregaExportQuery,
+    actor: AuthUser,
+  ): Promise<AlimentacionFormatoEmissionRecord | null> {
+    this.ensureCanAccess(actor);
+    const scope = this.resolveScopeOrThrow(actor);
+
+    return await this.alimentacionRepository.findLatestFormatoEntregaEmission({
+      adultoMayorId,
+      deliveryMonth: query.deliveryMonth,
+      scope,
+    });
+  }
+
+  async createFormatoEntregaEmission(
+    command: CreateAlimentacionFormatoEmissionCommand,
+  ): Promise<AlimentacionFormatoEmissionRecord> {
+    return await this.alimentacionRepository.createFormatoEntregaEmission(command);
   }
 
   async registerFormatoEntregaExportAudit(

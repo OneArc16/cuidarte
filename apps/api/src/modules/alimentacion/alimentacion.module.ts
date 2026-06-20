@@ -2,14 +2,17 @@ import { Module } from "@nestjs/common";
 
 import { DatabaseModule } from "../../database/database.module";
 import { AuthModule } from "../auth/auth.module";
+import { EmpleadosModule } from "../empleados/empleados.module";
 import { AlimentacionFormatoExportService } from "./application/alimentacion-formato-export.service";
 import { AlimentacionService } from "./application/alimentacion.service";
+import { ALIMENTACION_FORMATO_FILES_STORAGE } from "./domain/alimentacion-formato-files.storage";
 import { ALIMENTACION_REPOSITORY } from "./domain/alimentacion.repository";
+import { LocalAlimentacionFormatoFilesStorage } from "./infrastructure/local-alimentacion-formato-files.storage";
 import { DrizzleAlimentacionRepository } from "./infrastructure/drizzle-alimentacion.repository";
 import { AlimentacionController } from "./presentation/alimentacion.controller";
 
 @Module({
-  imports: [AuthModule, DatabaseModule],
+  imports: [AuthModule, DatabaseModule, EmpleadosModule],
   controllers: [AlimentacionController],
   providers: [
     AlimentacionService,
@@ -17,6 +20,10 @@ import { AlimentacionController } from "./presentation/alimentacion.controller";
     {
       provide: ALIMENTACION_REPOSITORY,
       useClass: DrizzleAlimentacionRepository,
+    },
+    {
+      provide: ALIMENTACION_FORMATO_FILES_STORAGE,
+      useClass: LocalAlimentacionFormatoFilesStorage,
     },
   ],
 })

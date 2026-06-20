@@ -1,14 +1,29 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  Res,
+  UseGuards,
+} from "@nestjs/common";
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
+  ApiConsumes,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
+  ApiProduces,
   ApiTags,
   ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
 import {
+  assignEmpleadoDirectorSignatureRequestSchema,
   createEmpleadoRequestSchema,
   empleadoDetailResponseSchema,
   empleadoListQuerySchema,
@@ -16,20 +31,32 @@ import {
   empleadoTenantOptionsResponseSchema,
   updateEmpleadoRequestSchema,
 } from "@cuidarte/contracts";
+import { type FastifyReply } from "fastify";
+import { type Multipart, type MultipartFile } from "@fastify/multipart";
 import { z } from "zod";
 
 import { parseZodSchema } from "../../../common/parse-zod-schema";
 import { type AuthenticatedRequest } from "../../auth/authenticated-request";
 import { SessionGuard } from "../../auth/session.guard";
+import { EmpleadosSignatureService } from "../application/empleados-signature.service";
 import { EmpleadosService } from "../application/empleados.service";
+import { type BufferedEmpleadoSignatureUpload } from "../domain/empleado.types";
 
 const empleadoIdParamSchema = z.uuid();
+
+type MultipartAuthenticatedRequest = AuthenticatedRequest & {
+  isMultipart: () => boolean;
+  parts: () => AsyncIterableIterator<Multipart>;
+};
 
 @ApiTags("empleados")
 @Controller("empleados")
 @UseGuards(SessionGuard)
 export class EmpleadosController {
-  constructor(private readonly empleadosService: EmpleadosService) {}
+  constructor(
+    private readonly empleadosService: EmpleadosService,
+    private readonly empleadosSignatureService: EmpleadosSignatureService,
+  ) {}
 
   @Get()
   @ApiOkResponse({ description: "Listado de empleados." })
@@ -90,6 +117,79 @@ export class EmpleadosController {
     return empleadoDetailResponseSchema.parse(detail);
   }
 
+  @Post(":id/signature")
+  @ApiOkResponse({ description: "Firma del director cargada." })
+  @ApiConsumes("multipart/form-data")
+  @ApiBadRequestResponse({ description: "Archivo de firma invalido." })
+  @ApiNotFoundResponse({ description: "Usuario no encontrado." })
+  @ApiForbiddenResponse({ description: "El usuario no tiene permisos de empleados." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async uploadSignature(
+    @Param("id") id: string,
+    @Req() request: MultipartAuthenticatedRequest,
+  ) {
+    const empleadoId = parseZodSchema(empleadoIdParamSchema, id);
+    const signature = await parseEmpleadoSignatureMultipartRequest(request);
+
+    await this.empleadosSignatureService.uploadSignature(
+      empleadoId,
+      signature,
+      request.currentUser,
+    );
+
+    const detail = await this.empleadosService.getEmpleado(empleadoId, request.currentUser);
+
+    return empleadoDetailResponseSchema.parse(detail);
+  }
+
+  @Get(":id/signature/file")
+  @ApiOkResponse({ description: "Archivo de firma del director." })
+  @ApiProduces("image/png", "image/jpeg", "image/webp")
+  @ApiNotFoundResponse({ description: "Usuario o firma no encontrados." })
+  @ApiForbiddenResponse({ description: "El usuario no tiene permisos sobre esta firma." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async downloadSignatureFile(
+    @Param("id") id: string,
+    @Req() request: AuthenticatedRequest,
+    @Res() reply: FastifyReply,
+  ) {
+    const empleadoId = parseZodSchema(empleadoIdParamSchema, id);
+    const file = await this.empleadosSignatureService.downloadLatestSignatureFile(
+      empleadoId,
+      request.currentUser,
+    );
+
+    reply.header("Content-Type", file.contentType);
+    reply.header("Content-Disposition", `inline; filename="${file.originalName}"`);
+
+    return reply.send(file.buffer);
+  }
+
+  @Post(":id/director-signature-assignment")
+  @ApiOkResponse({ description: "Director firmante vigente asignado." })
+  @ApiBadRequestResponse({ description: "Solicitud invalida." })
+  @ApiNotFoundResponse({ description: "Usuario no encontrado." })
+  @ApiForbiddenResponse({ description: "El usuario no tiene permisos de empleados." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async assignDirectorSignature(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const empleadoId = parseZodSchema(empleadoIdParamSchema, id);
+    const command = parseZodSchema(assignEmpleadoDirectorSignatureRequestSchema, body);
+
+    await this.empleadosSignatureService.assignDirectorSignature(
+      empleadoId,
+      command,
+      request.currentUser,
+    );
+
+    const detail = await this.empleadosService.getEmpleado(empleadoId, request.currentUser);
+
+    return empleadoDetailResponseSchema.parse(detail);
+  }
+
   @Get(":id")
   @ApiOkResponse({ description: "Detalle de empleado." })
   @ApiNotFoundResponse({ description: "Usuario no encontrado." })
@@ -101,4 +201,45 @@ export class EmpleadosController {
 
     return empleadoDetailResponseSchema.parse(detail);
   }
+}
+
+async function parseEmpleadoSignatureMultipartRequest(request: MultipartAuthenticatedRequest) {
+  if (!request.isMultipart()) {
+    throw new BadRequestException("La solicitud debe enviarse como multipart/form-data.");
+  }
+
+  let signature: BufferedEmpleadoSignatureUpload | null = null;
+
+  for await (const part of request.parts()) {
+    if (part.type === "field") {
+      throw new BadRequestException("El formulario de firma no admite campos adicionales.");
+    }
+
+    if (part.fieldname !== "signature") {
+      throw new BadRequestException("El formulario contiene un archivo no soportado.");
+    }
+
+    if (signature !== null) {
+      throw new BadRequestException("Solo puedes adjuntar un archivo de firma por solicitud.");
+    }
+
+    signature = await toBufferedUpload(part);
+  }
+
+  if (signature === null) {
+    throw new BadRequestException("Debes adjuntar la imagen de la firma.");
+  }
+
+  return signature;
+}
+
+async function toBufferedUpload(part: MultipartFile): Promise<BufferedEmpleadoSignatureUpload> {
+  const buffer = await part.toBuffer();
+
+  return {
+    originalName: part.filename.trim() === "" ? "firma" : part.filename,
+    mimeType: part.mimetype === "" ? "application/octet-stream" : part.mimetype,
+    sizeBytes: buffer.byteLength,
+    buffer,
+  };
 }

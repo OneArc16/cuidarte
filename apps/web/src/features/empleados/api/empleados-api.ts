@@ -1,4 +1,5 @@
 import {
+  type AssignEmpleadoDirectorSignatureRequest,
   type CreateEmpleadoRequest,
   type EmpleadoDetailResponse,
   type EmpleadoListResponse,
@@ -10,6 +11,7 @@ import {
 } from "@cuidarte/contracts";
 
 import { getApiBaseUrl } from "@/shared/api/api-config";
+import { fetchBlob } from "@/shared/api/fetch-blob";
 import { fetchJson } from "@/shared/api/fetch-json";
 
 type ListEmpleadosParams = {
@@ -42,6 +44,43 @@ export function updateEmpleado(
   return fetchJson(`${getApiBaseUrl()}/empleados/${empleadoId}`, empleadoDetailResponseSchema, {
     method: "PATCH",
     body: request,
+  });
+}
+
+export async function uploadEmpleadoSignature(
+  empleadoId: string,
+  file: File,
+): Promise<EmpleadoDetailResponse> {
+  const formData = new FormData();
+  formData.set("signature", await toMultipartBlob(file), file.name);
+
+  return fetchJson(`${getApiBaseUrl()}/empleados/${empleadoId}/signature`, empleadoDetailResponseSchema, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export function assignEmpleadoDirectorSignature(
+  empleadoId: string,
+  request: AssignEmpleadoDirectorSignatureRequest,
+): Promise<EmpleadoDetailResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/empleados/${empleadoId}/director-signature-assignment`,
+    empleadoDetailResponseSchema,
+    {
+      method: "POST",
+      body: request,
+    },
+  );
+}
+
+export function getEmpleadoSignatureFile(empleadoId: string): Promise<Blob> {
+  return fetchBlob(`${getApiBaseUrl()}/empleados/${empleadoId}/signature/file`);
+}
+
+async function toMultipartBlob(file: File): Promise<Blob> {
+  return new Blob([await file.arrayBuffer()], {
+    type: file.type === "" ? "application/octet-stream" : file.type,
   });
 }
 

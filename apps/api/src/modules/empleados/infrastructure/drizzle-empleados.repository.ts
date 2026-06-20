@@ -1,18 +1,31 @@
 import { Injectable } from "@nestjs/common";
-import { and, asc, eq, ilike, isNull, ne, or, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, isNull, lte, ne, or, type SQL } from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
-import { auditLogs, tenants, users } from "../../../database/schema";
 import {
+  auditLogs,
+  employeeSignatureVersions,
+  tenantDirectorSignatureAssignments,
+  tenants,
+  users,
+} from "../../../database/schema";
+import {
+  type AssignDirectorSignatureCommand,
   type CreateEmpleadoRecordCommand,
+  type CreateEmpleadoSignatureVersionCommand,
   type EmpleadoAuditCommand,
   type EmpleadoCommandRecord,
   type EmpleadoRecord,
+  type EmpleadoSignatureVersionRecord,
   type EmpleadoTenantOptionRecord,
+  type DirectorSignatureAssignmentRecord,
+  type DirectorSignatureMonthResolutionRecord,
   type FindEmpleadoByDocumentQuery,
   type FindEmpleadoByEmailQuery,
   type FindEmpleadoByIdQuery,
+  type FindEmpleadoSignatureVersionByIdQuery,
   type FindEmpleadosQuery,
+  type ResolveDirectorSignatureForMonthQuery,
   type UpdateEmpleadoRecordCommand,
 } from "../domain/empleado.types";
 import { type EmpleadosRepository } from "../domain/empleados.repository";
@@ -59,7 +72,19 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       .where(this.buildScopedWhere(query.scope, [eq(users.id, query.id)]))
       .limit(1);
 
-    return row === undefined ? null : this.toRecord(row);
+    if (row === undefined) {
+      return null;
+    }
+
+    const [latestSignature, currentDirectorSignatureAssignment] = await Promise.all([
+      this.findLatestSignatureVersionByEmployeeId(row.id),
+      this.findCurrentDirectorSignatureAssignmentByEmployeeId(row.id),
+    ]);
+
+    return this.toRecord(row, {
+      latestSignature,
+      currentDirectorSignatureAssignment,
+    });
   }
 
   async findByEmail(query: FindEmpleadoByEmailQuery): Promise<EmpleadoRecord | null> {
@@ -113,11 +138,186 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       .orderBy(asc(tenants.name));
   }
 
+  async findLatestSignatureVersionByEmployeeId(
+    employeeId: string,
+  ): Promise<EmpleadoSignatureVersionRecord | null> {
+    const [row] = await this.database.db
+      .select({
+        id: employeeSignatureVersions.id,
+        employeeId: employeeSignatureVersions.employeeId,
+        tenantId: employeeSignatureVersions.tenantId,
+        originalName: employeeSignatureVersions.originalName,
+        mimeType: employeeSignatureVersions.mimeType,
+        sizeBytes: employeeSignatureVersions.sizeBytes,
+        checksum: employeeSignatureVersions.checksum,
+        relativePath: employeeSignatureVersions.relativePath,
+        createdAt: employeeSignatureVersions.createdAt,
+      })
+      .from(employeeSignatureVersions)
+      .where(eq(employeeSignatureVersions.employeeId, employeeId))
+      .orderBy(desc(employeeSignatureVersions.createdAt))
+      .limit(1);
+
+    return row === undefined ? null : row;
+  }
+
+  async findSignatureVersionById(
+    query: FindEmpleadoSignatureVersionByIdQuery,
+  ): Promise<EmpleadoSignatureVersionRecord | null> {
+    const [row] = await this.database.db
+      .select({
+        id: employeeSignatureVersions.id,
+        employeeId: employeeSignatureVersions.employeeId,
+        tenantId: employeeSignatureVersions.tenantId,
+        originalName: employeeSignatureVersions.originalName,
+        mimeType: employeeSignatureVersions.mimeType,
+        sizeBytes: employeeSignatureVersions.sizeBytes,
+        checksum: employeeSignatureVersions.checksum,
+        relativePath: employeeSignatureVersions.relativePath,
+        createdAt: employeeSignatureVersions.createdAt,
+      })
+      .from(employeeSignatureVersions)
+      .where(
+        and(
+          eq(employeeSignatureVersions.id, query.signatureVersionId),
+          eq(employeeSignatureVersions.employeeId, query.employeeId),
+        ),
+      )
+      .limit(1);
+
+    return row === undefined ? null : row;
+  }
+
+  async findCurrentDirectorSignatureAssignmentByEmployeeId(
+    employeeId: string,
+  ): Promise<DirectorSignatureAssignmentRecord | null> {
+    const [row] = await this.database.db
+      .select({
+        id: tenantDirectorSignatureAssignments.id,
+        tenantId: tenantDirectorSignatureAssignments.tenantId,
+        employeeId: tenantDirectorSignatureAssignments.employeeId,
+        signatureVersionId: tenantDirectorSignatureAssignments.signatureVersionId,
+        effectiveFrom: tenantDirectorSignatureAssignments.effectiveFrom,
+        effectiveTo: tenantDirectorSignatureAssignments.effectiveTo,
+        createdAt: tenantDirectorSignatureAssignments.createdAt,
+      })
+      .from(tenantDirectorSignatureAssignments)
+      .where(
+        and(
+          eq(tenantDirectorSignatureAssignments.employeeId, employeeId),
+          isNull(tenantDirectorSignatureAssignments.effectiveTo),
+        ),
+      )
+      .orderBy(
+        desc(tenantDirectorSignatureAssignments.effectiveFrom),
+        desc(tenantDirectorSignatureAssignments.createdAt),
+      )
+      .limit(1);
+
+    return row === undefined ? null : row;
+  }
+
+  async findLatestDirectorSignatureAssignmentByTenantId(
+    tenantId: string,
+  ): Promise<DirectorSignatureAssignmentRecord | null> {
+    const [row] = await this.database.db
+      .select({
+        id: tenantDirectorSignatureAssignments.id,
+        tenantId: tenantDirectorSignatureAssignments.tenantId,
+        employeeId: tenantDirectorSignatureAssignments.employeeId,
+        signatureVersionId: tenantDirectorSignatureAssignments.signatureVersionId,
+        effectiveFrom: tenantDirectorSignatureAssignments.effectiveFrom,
+        effectiveTo: tenantDirectorSignatureAssignments.effectiveTo,
+        createdAt: tenantDirectorSignatureAssignments.createdAt,
+      })
+      .from(tenantDirectorSignatureAssignments)
+      .where(eq(tenantDirectorSignatureAssignments.tenantId, tenantId))
+      .orderBy(
+        desc(tenantDirectorSignatureAssignments.effectiveFrom),
+        desc(tenantDirectorSignatureAssignments.createdAt),
+      )
+      .limit(1);
+
+    return row === undefined ? null : row;
+  }
+
+  async resolveDirectorSignatureForMonth(
+    query: ResolveDirectorSignatureForMonthQuery,
+  ): Promise<DirectorSignatureMonthResolutionRecord[]> {
+    const monthRange = resolveInclusiveMonthRange(query.deliveryMonth);
+    const rows = await this.database.db
+      .select({
+        assignmentId: tenantDirectorSignatureAssignments.id,
+        assignmentTenantId: tenantDirectorSignatureAssignments.tenantId,
+        assignmentEmployeeId: tenantDirectorSignatureAssignments.employeeId,
+        assignmentSignatureVersionId: tenantDirectorSignatureAssignments.signatureVersionId,
+        assignmentEffectiveFrom: tenantDirectorSignatureAssignments.effectiveFrom,
+        assignmentEffectiveTo: tenantDirectorSignatureAssignments.effectiveTo,
+        assignmentCreatedAt: tenantDirectorSignatureAssignments.createdAt,
+        employeeFullName: users.fullName,
+        employeeRole: users.role,
+        signatureId: employeeSignatureVersions.id,
+        signatureEmployeeId: employeeSignatureVersions.employeeId,
+        signatureTenantId: employeeSignatureVersions.tenantId,
+        signatureOriginalName: employeeSignatureVersions.originalName,
+        signatureMimeType: employeeSignatureVersions.mimeType,
+        signatureSizeBytes: employeeSignatureVersions.sizeBytes,
+        signatureChecksum: employeeSignatureVersions.checksum,
+        signatureRelativePath: employeeSignatureVersions.relativePath,
+        signatureCreatedAt: employeeSignatureVersions.createdAt,
+      })
+      .from(tenantDirectorSignatureAssignments)
+      .innerJoin(users, eq(users.id, tenantDirectorSignatureAssignments.employeeId))
+      .innerJoin(
+        employeeSignatureVersions,
+        eq(employeeSignatureVersions.id, tenantDirectorSignatureAssignments.signatureVersionId),
+      )
+      .where(
+        and(
+          eq(tenantDirectorSignatureAssignments.tenantId, query.tenantId),
+          lte(tenantDirectorSignatureAssignments.effectiveFrom, monthRange.endDateInclusive),
+          or(
+            isNull(tenantDirectorSignatureAssignments.effectiveTo),
+            gte(tenantDirectorSignatureAssignments.effectiveTo, monthRange.startDate),
+          )!,
+        ),
+      )
+      .orderBy(
+        desc(tenantDirectorSignatureAssignments.effectiveFrom),
+        desc(tenantDirectorSignatureAssignments.createdAt),
+      );
+
+    return rows.map((row) => ({
+      assignment: {
+        id: row.assignmentId,
+        tenantId: row.assignmentTenantId,
+        employeeId: row.assignmentEmployeeId,
+        signatureVersionId: row.assignmentSignatureVersionId,
+        effectiveFrom: row.assignmentEffectiveFrom,
+        effectiveTo: row.assignmentEffectiveTo,
+        createdAt: row.assignmentCreatedAt,
+      },
+      employeeFullName: row.employeeFullName,
+      employeeRole: row.employeeRole,
+      signature: {
+        id: row.signatureId,
+        employeeId: row.signatureEmployeeId,
+        tenantId: row.signatureTenantId,
+        originalName: row.signatureOriginalName,
+        mimeType: row.signatureMimeType,
+        sizeBytes: row.signatureSizeBytes,
+        checksum: row.signatureChecksum,
+        relativePath: row.signatureRelativePath,
+        createdAt: row.signatureCreatedAt,
+      },
+    }));
+  }
+
   async create(
     command: CreateEmpleadoRecordCommand,
     audit: EmpleadoAuditCommand,
   ): Promise<EmpleadoRecord> {
-    return await this.database.db.transaction(async (tx) => {
+    const createdId = await this.database.db.transaction(async (tx) => {
       const now = new Date();
       const [created] = await tx
         .insert(users)
@@ -139,26 +339,17 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
 
       await tx.insert(auditLogs).values(this.toAuditInsert(audit, created.id));
 
-      const [row] = await tx
-        .select(this.getEmpleadoSelection())
-        .from(users)
-        .leftJoin(tenants, eq(tenants.id, users.tenantId))
-        .where(eq(users.id, created.id))
-        .limit(1);
-
-      if (row === undefined) {
-        throw new Error("No fue posible consultar el usuario creado.");
-      }
-
-      return this.toRecord(row);
+      return created.id;
     });
+
+    return await this.getEmpleadoRecordByIdOrThrow(createdId, "No fue posible consultar el usuario creado.");
   }
 
   async update(
     command: UpdateEmpleadoRecordCommand,
     auditEntries: EmpleadoAuditCommand[],
   ): Promise<EmpleadoRecord> {
-    return await this.database.db.transaction(async (tx) => {
+    const updatedId = await this.database.db.transaction(async (tx) => {
       const updateValues: Partial<typeof users.$inferInsert> = {
         ...this.buildMutableValues(command),
         updatedAt: new Date(),
@@ -186,19 +377,114 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
         auditEntries.map((audit) => this.toAuditInsert(audit, command.id)),
       );
 
-      const [row] = await tx
-        .select(this.getEmpleadoSelection())
-        .from(users)
-        .leftJoin(tenants, eq(tenants.id, users.tenantId))
-        .where(eq(users.id, updated.id))
-        .limit(1);
+      return updated.id;
+    });
 
-      if (row === undefined) {
-        throw new Error("No fue posible consultar el usuario actualizado.");
+    return await this.getEmpleadoRecordByIdOrThrow(
+      updatedId,
+      "No fue posible consultar el usuario actualizado.",
+    );
+  }
+
+  async createSignatureVersion(
+    command: CreateEmpleadoSignatureVersionCommand,
+    audit: EmpleadoAuditCommand,
+  ): Promise<EmpleadoSignatureVersionRecord> {
+    const createdId = await this.database.db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(employeeSignatureVersions)
+        .values({
+          employeeId: command.employeeId,
+          tenantId: command.tenantId,
+          originalName: command.originalName,
+          mimeType: command.mimeType,
+          sizeBytes: command.sizeBytes,
+          checksum: command.checksum,
+          relativePath: command.relativePath,
+          uploadedByUserId: command.uploadedByUserId,
+          createdAt: new Date(),
+        })
+        .returning({ id: employeeSignatureVersions.id });
+
+      if (created === undefined) {
+        throw new Error("No fue posible guardar la firma del director.");
       }
 
-      return this.toRecord(row);
+      await tx.insert(auditLogs).values(this.toAuditInsert(audit, command.employeeId));
+
+      return created.id;
     });
+
+    const signature = await this.getSignatureVersionById(createdId);
+
+    if (signature === null) {
+      throw new Error("No fue posible consultar la firma guardada.");
+    }
+
+    return signature;
+  }
+
+  async assignDirectorSignature(
+    command: AssignDirectorSignatureCommand,
+    auditEntries: EmpleadoAuditCommand[],
+  ): Promise<DirectorSignatureAssignmentRecord> {
+    const createdId = await this.database.db.transaction(async (tx) => {
+      const [currentActiveAssignment] = await tx
+        .select({
+          id: tenantDirectorSignatureAssignments.id,
+        })
+        .from(tenantDirectorSignatureAssignments)
+        .where(
+          and(
+            eq(tenantDirectorSignatureAssignments.tenantId, command.tenantId),
+            isNull(tenantDirectorSignatureAssignments.effectiveTo),
+          ),
+        )
+        .orderBy(
+          desc(tenantDirectorSignatureAssignments.effectiveFrom),
+          desc(tenantDirectorSignatureAssignments.createdAt),
+        )
+        .limit(1);
+
+      if (currentActiveAssignment !== undefined) {
+        await tx
+          .update(tenantDirectorSignatureAssignments)
+          .set({
+            effectiveTo: resolvePreviousDate(command.effectiveFrom),
+          })
+          .where(eq(tenantDirectorSignatureAssignments.id, currentActiveAssignment.id));
+      }
+
+      const [created] = await tx
+        .insert(tenantDirectorSignatureAssignments)
+        .values({
+          tenantId: command.tenantId,
+          employeeId: command.employeeId,
+          signatureVersionId: command.signatureVersionId,
+          effectiveFrom: command.effectiveFrom,
+          createdByUserId: command.createdByUserId,
+          createdAt: new Date(),
+        })
+        .returning({ id: tenantDirectorSignatureAssignments.id });
+
+      if (created === undefined) {
+        throw new Error("No fue posible guardar la vigencia de la firma del director.");
+      }
+
+      await tx.insert(auditLogs).values(
+        auditEntries.map((audit) => this.toAuditInsert(audit, command.employeeId)),
+      );
+
+      return created.id;
+    });
+
+    const assignment = await this.getDirectorSignatureAssignmentById(createdId);
+
+    if (assignment === null) {
+      throw new Error("No fue posible consultar la vigencia de firma guardada.");
+    }
+
+    return assignment;
   }
 
   private buildWhere(query: FindEmpleadosQuery): SQL | undefined {
@@ -289,13 +575,121 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
     };
   }
 
-  private toRecord(row: EmpleadoSelectionRow): EmpleadoRecord {
-    return row;
+  private async getEmpleadoRecordByIdOrThrow(id: string, errorMessage: string): Promise<EmpleadoRecord> {
+    const [row] = await this.database.db
+      .select(this.getEmpleadoSelection())
+      .from(users)
+      .leftJoin(tenants, eq(tenants.id, users.tenantId))
+      .where(eq(users.id, id))
+      .limit(1);
+
+    if (row === undefined) {
+      throw new Error(errorMessage);
+    }
+
+    const [latestSignature, currentDirectorSignatureAssignment] = await Promise.all([
+      this.findLatestSignatureVersionByEmployeeId(id),
+      this.findCurrentDirectorSignatureAssignmentByEmployeeId(id),
+    ]);
+
+    return this.toRecord(row, {
+      latestSignature,
+      currentDirectorSignatureAssignment,
+    });
+  }
+
+  private async getSignatureVersionById(
+    signatureVersionId: string,
+  ): Promise<EmpleadoSignatureVersionRecord | null> {
+    const [row] = await this.database.db
+      .select({
+        id: employeeSignatureVersions.id,
+        employeeId: employeeSignatureVersions.employeeId,
+        tenantId: employeeSignatureVersions.tenantId,
+        originalName: employeeSignatureVersions.originalName,
+        mimeType: employeeSignatureVersions.mimeType,
+        sizeBytes: employeeSignatureVersions.sizeBytes,
+        checksum: employeeSignatureVersions.checksum,
+        relativePath: employeeSignatureVersions.relativePath,
+        createdAt: employeeSignatureVersions.createdAt,
+      })
+      .from(employeeSignatureVersions)
+      .where(eq(employeeSignatureVersions.id, signatureVersionId))
+      .limit(1);
+
+    return row === undefined ? null : row;
+  }
+
+  private async getDirectorSignatureAssignmentById(
+    assignmentId: string,
+  ): Promise<DirectorSignatureAssignmentRecord | null> {
+    const [row] = await this.database.db
+      .select({
+        id: tenantDirectorSignatureAssignments.id,
+        tenantId: tenantDirectorSignatureAssignments.tenantId,
+        employeeId: tenantDirectorSignatureAssignments.employeeId,
+        signatureVersionId: tenantDirectorSignatureAssignments.signatureVersionId,
+        effectiveFrom: tenantDirectorSignatureAssignments.effectiveFrom,
+        effectiveTo: tenantDirectorSignatureAssignments.effectiveTo,
+        createdAt: tenantDirectorSignatureAssignments.createdAt,
+      })
+      .from(tenantDirectorSignatureAssignments)
+      .where(eq(tenantDirectorSignatureAssignments.id, assignmentId))
+      .limit(1);
+
+    return row === undefined ? null : row;
+  }
+
+  private toRecord(
+    row: EmpleadoSelectionRow,
+    relations?: {
+      latestSignature?: EmpleadoSignatureVersionRecord | null;
+      currentDirectorSignatureAssignment?: DirectorSignatureAssignmentRecord | null;
+    },
+  ): EmpleadoRecord {
+    return {
+      ...row,
+      latestSignature: relations?.latestSignature ?? null,
+      currentDirectorSignatureAssignment:
+        relations?.currentDirectorSignatureAssignment ?? null,
+    };
   }
 }
 
 function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, (character) => `\\${character}`);
+}
+
+function resolveInclusiveMonthRange(deliveryMonth: string): {
+  startDate: string;
+  endDateInclusive: string;
+} {
+  const [yearValue, monthValue] = deliveryMonth.split("-");
+
+  if (yearValue === undefined || monthValue === undefined) {
+    throw new Error("deliveryMonth invalido.");
+  }
+
+  const year = Number.parseInt(yearValue, 10);
+  const month = Number.parseInt(monthValue, 10);
+  const nextMonthDate =
+    month === 12
+      ? new Date(Date.UTC(year + 1, 0, 1))
+      : new Date(Date.UTC(year, month, 1));
+
+  nextMonthDate.setUTCDate(nextMonthDate.getUTCDate() - 1);
+
+  return {
+    startDate: `${yearValue}-${monthValue}-01`,
+    endDateInclusive: nextMonthDate.toISOString().slice(0, 10),
+  };
+}
+
+function resolvePreviousDate(dateValue: string): string {
+  const currentDate = new Date(`${dateValue}T00:00:00.000Z`);
+  currentDate.setUTCDate(currentDate.getUTCDate() - 1);
+
+  return currentDate.toISOString().slice(0, 10);
 }
 
 function joinFullName(command: {

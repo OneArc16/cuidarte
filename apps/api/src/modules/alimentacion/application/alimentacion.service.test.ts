@@ -685,6 +685,9 @@ function createRepository(
           auxilioTransporte: record.auxilioTransporte,
         }));
     },
+    async findLatestFormatoEntregaEmission() {
+      return null;
+    },
     async findExistingByAdultosAndDate() {
       return overrides.existingByAdultosAndDate ?? [];
     },
@@ -721,6 +724,26 @@ function createRepository(
     },
     async createFormatoEntregaExportAudit(command) {
       formatoEntregaAuditCommands.push(command);
+    },
+    async createFormatoEntregaEmission(command) {
+      return {
+        id: "5e0c3f9e-bff4-4084-ab9e-0a59a2e2ee39",
+        tenantId: command.tenantId,
+        adultoMayorId: command.adultoMayorId,
+        deliveryMonth: command.deliveryMonth,
+        version: 1,
+        signerEmployeeIdSnapshot: command.signerEmployeeIdSnapshot,
+        signerNameSnapshot: command.signerNameSnapshot,
+        signerRoleSnapshot: command.signerRoleSnapshot,
+        signatureVersionIdSnapshot: command.signatureVersionIdSnapshot,
+        filename: command.filename,
+        pdfRelativePath: command.pdfRelativePath,
+        sourceRecordCount: command.sourceRecordCount,
+        sourceDateFrom: command.sourceDateFrom,
+        sourceDateTo: command.sourceDateTo,
+        issuedByUserId: command.issuedByUserId,
+        issuedAt: new Date("2026-04-25T12:00:00.000Z"),
+      };
     },
   };
 }

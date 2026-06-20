@@ -147,8 +147,23 @@ export class EmpleadosService {
       throw new BadRequestException("El propietario del centro debe conservar el rol Admin.");
     }
 
+    if (
+      currentRecord.currentDirectorSignatureAssignment !== null &&
+      command.role !== "director"
+    ) {
+      throw new BadRequestException(
+        "No puedes cambiar el rol de un director que tiene una firma vigente asignada al centro.",
+      );
+    }
+
     if (currentRecord.id === actor.id && !command.isActive) {
       throw new BadRequestException("No puedes inactivar tu propia cuenta.");
+    }
+
+    if (currentRecord.currentDirectorSignatureAssignment !== null && !command.isActive) {
+      throw new BadRequestException(
+        "No puedes inactivar un director que tiene una firma vigente asignada al centro.",
+      );
     }
 
     await this.ensureEmailIsUnique({ email: command.email, excludeId: empleadoId });
@@ -307,6 +322,27 @@ export class EmpleadosService {
       middleName: nameParts.middleName,
       firstSurname: nameParts.firstSurname,
       secondSurname: nameParts.secondSurname,
+      latestSignature:
+        record.latestSignature === null
+          ? null
+          : {
+              id: record.latestSignature.id,
+              originalName: record.latestSignature.originalName,
+              mimeType: record.latestSignature.mimeType,
+              sizeBytes: record.latestSignature.sizeBytes,
+              createdAt: record.latestSignature.createdAt.toISOString(),
+            },
+      currentDirectorSignatureAssignment:
+        record.currentDirectorSignatureAssignment === null
+          ? null
+          : {
+              id: record.currentDirectorSignatureAssignment.id,
+              tenantId: record.currentDirectorSignatureAssignment.tenantId,
+              employeeId: record.currentDirectorSignatureAssignment.employeeId,
+              signatureVersionId: record.currentDirectorSignatureAssignment.signatureVersionId,
+              effectiveFrom: record.currentDirectorSignatureAssignment.effectiveFrom,
+              effectiveTo: record.currentDirectorSignatureAssignment.effectiveTo,
+            },
     });
   }
 

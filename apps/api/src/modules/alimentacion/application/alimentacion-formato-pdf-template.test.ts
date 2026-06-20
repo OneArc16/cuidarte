@@ -47,6 +47,7 @@ describe("alimentacion-formato-pdf-template", () => {
       },
       generatedAt: new Date("2026-04-30T15:00:00.000Z"),
       logoDataUrl: null,
+      directorSignatureDataUrl: "data:image/png;base64,ZmlybWE=",
     });
 
     assert.equal(
@@ -63,6 +64,7 @@ describe("alimentacion-formato-pdf-template", () => {
     assert.ok(!html.includes("Dia<br>31"));
     assert.ok(!html.includes(">X<"));
     assert.ok(!html.includes(">N/A<"));
+    assert.match(html, /data:image\/png;base64,ZmlybWE=/);
   });
 
   it("uses city fallback when city and department are missing", () => {
@@ -80,6 +82,7 @@ describe("alimentacion-formato-pdf-template", () => {
       },
       generatedAt: new Date("2026-02-01T15:00:00.000Z"),
       logoDataUrl: null,
+      directorSignatureDataUrl: "data:image/png;base64,ZmlybWE=",
     });
 
     assert.match(html, /CIUDAD NO CONFIGURADA/);

@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
+import { EmpleadoDirectorSignaturePanel } from "../components/empleado-director-signature-panel";
 import { EmpleadoForm } from "../components/empleado-form";
 import { EMPLEADOS_PATH } from "../lib/empleados-paths";
 import { resolveEmpleadosApiError } from "../lib/empleados-formatters";
@@ -85,6 +86,8 @@ export function EmpleadoEditPage({ empleadoId, navigate, user }: EmpleadoEditPag
           });
         }}
       />
+
+      <EmpleadoDirectorSignaturePanel detail={empleadoQuery.data} />
     </section>
   );
 }

@@ -65,6 +65,8 @@ const records: EmpleadoRecord[] = [
     role: "medico",
     isActive: true,
     isTenantOwner: false,
+    latestSignature: null,
+    currentDirectorSignatureAssignment: null,
     createdAt: new Date("2026-04-21T12:00:00.000Z"),
     updatedAt: new Date("2026-04-21T12:00:00.000Z"),
   },
@@ -83,6 +85,8 @@ const records: EmpleadoRecord[] = [
     role: "director",
     isActive: true,
     isTenantOwner: false,
+    latestSignature: null,
+    currentDirectorSignatureAssignment: null,
     createdAt: new Date("2026-04-21T12:00:00.000Z"),
     updatedAt: new Date("2026-04-21T12:00:00.000Z"),
   },
@@ -329,6 +333,21 @@ function createRepository(overrides: {
     async findTenantOptions() {
       return [{ id: tenantId, name: "Centro de Vida Demo" }];
     },
+    async findLatestSignatureVersionByEmployeeId() {
+      return null;
+    },
+    async findSignatureVersionById() {
+      return null;
+    },
+    async findCurrentDirectorSignatureAssignmentByEmployeeId() {
+      return null;
+    },
+    async findLatestDirectorSignatureAssignmentByTenantId() {
+      return null;
+    },
+    async resolveDirectorSignatureForMonth() {
+      return [];
+    },
     async create(command, audit) {
       const baseRecord = records[0];
 
@@ -393,6 +412,12 @@ function createRepository(overrides: {
         role: command.role,
         isActive: command.isActive,
       } satisfies EmpleadoRecord;
+    },
+    async createSignatureVersion() {
+      throw new Error("No implementado para esta prueba.");
+    },
+    async assignDirectorSignature() {
+      throw new Error("No implementado para esta prueba.");
     },
   } satisfies EmpleadosRepository & {
     queries: FindEmpleadosQuery[];

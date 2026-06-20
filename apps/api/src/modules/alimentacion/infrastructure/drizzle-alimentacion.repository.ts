@@ -16,15 +16,24 @@ import {
 } from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
-import { adultosMayores, alimentacionRegistros, auditLogs, tenants } from "../../../database/schema";
+import {
+  adultosMayores,
+  alimentacionFormatoEmissions,
+  alimentacionRegistros,
+  auditLogs,
+  tenants,
+} from "../../../database/schema";
 import {
   type AlimentacionAdultoOptionRecord,
+  type AlimentacionFormatoEmissionRecord,
   type AlimentacionFormatoEntregaRecord,
   type AlimentacionRecord,
   type AlimentacionTenantOptionRecord,
+  type CreateAlimentacionFormatoEmissionCommand,
   type CreateAlimentacionFormatoEntregaExportAuditCommand,
   type CreateAlimentacionBatchRecordCommand,
   type FindAlimentacionAdultoMayorByIdQuery,
+  type FindLatestAlimentacionFormatoEmissionQuery,
   type FindAlimentacionFormatoEntregaByAdultoAndMonthQuery,
   type FindAlimentacionExistingRecordsByAdultosAndDateQuery,
   type FindAlimentacionRecordByAdultoMayorAndDateQuery,
@@ -79,6 +88,25 @@ type AlimentacionFormatoEntregaRow = {
   almuerzo: AlimentacionRecord["almuerzo"];
   refrigerio2: AlimentacionRecord["refrigerio2"];
   auxilioTransporte: AlimentacionRecord["auxilioTransporte"];
+};
+
+type AlimentacionFormatoEmissionRow = {
+  id: string;
+  tenantId: string;
+  adultoMayorId: string;
+  deliveryMonth: string;
+  version: number;
+  signerEmployeeIdSnapshot: string;
+  signerNameSnapshot: string;
+  signerRoleSnapshot: string;
+  signatureVersionIdSnapshot: string;
+  filename: string;
+  pdfRelativePath: string;
+  sourceRecordCount: number;
+  sourceDateFrom: string | null;
+  sourceDateTo: string | null;
+  issuedByUserId: string;
+  issuedAt: Date;
 };
 
 @Injectable()
@@ -273,6 +301,48 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
     return rows.map((row) => this.toFormatoEntregaRecord(row));
   }
 
+  async findLatestFormatoEntregaEmission(
+    query: FindLatestAlimentacionFormatoEmissionQuery,
+  ): Promise<AlimentacionFormatoEmissionRecord | null> {
+    const conditions: SQL[] = [
+      eq(alimentacionFormatoEmissions.adultoMayorId, query.adultoMayorId),
+      eq(alimentacionFormatoEmissions.deliveryMonth, query.deliveryMonth),
+    ];
+
+    if (query.scope.type === "tenant") {
+      conditions.push(eq(alimentacionFormatoEmissions.tenantId, query.scope.tenantId));
+    }
+
+    const [row] = await this.database.db
+      .select({
+        id: alimentacionFormatoEmissions.id,
+        tenantId: alimentacionFormatoEmissions.tenantId,
+        adultoMayorId: alimentacionFormatoEmissions.adultoMayorId,
+        deliveryMonth: alimentacionFormatoEmissions.deliveryMonth,
+        version: alimentacionFormatoEmissions.version,
+        signerEmployeeIdSnapshot: alimentacionFormatoEmissions.signerEmployeeIdSnapshot,
+        signerNameSnapshot: alimentacionFormatoEmissions.signerNameSnapshot,
+        signerRoleSnapshot: alimentacionFormatoEmissions.signerRoleSnapshot,
+        signatureVersionIdSnapshot: alimentacionFormatoEmissions.signatureVersionIdSnapshot,
+        filename: alimentacionFormatoEmissions.filename,
+        pdfRelativePath: alimentacionFormatoEmissions.pdfRelativePath,
+        sourceRecordCount: alimentacionFormatoEmissions.sourceRecordCount,
+        sourceDateFrom: alimentacionFormatoEmissions.sourceDateFrom,
+        sourceDateTo: alimentacionFormatoEmissions.sourceDateTo,
+        issuedByUserId: alimentacionFormatoEmissions.issuedByUserId,
+        issuedAt: alimentacionFormatoEmissions.issuedAt,
+      })
+      .from(alimentacionFormatoEmissions)
+      .where(and(...conditions))
+      .orderBy(
+        desc(alimentacionFormatoEmissions.version),
+        desc(alimentacionFormatoEmissions.issuedAt),
+      )
+      .limit(1);
+
+    return row === undefined ? null : this.toFormatoEmissionRecord(row);
+  }
+
   async findExistingByAdultosAndDate(
     query: FindAlimentacionExistingRecordsByAdultosAndDateQuery,
   ): Promise<AlimentacionRecord[]> {
@@ -444,6 +514,83 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
     });
   }
 
+  async createFormatoEntregaEmission(
+    command: CreateAlimentacionFormatoEmissionCommand,
+  ): Promise<AlimentacionFormatoEmissionRecord> {
+    const createdId = await this.database.db.transaction(async (tx) => {
+      const [latestVersionRow] = await tx
+        .select({
+          version: alimentacionFormatoEmissions.version,
+        })
+        .from(alimentacionFormatoEmissions)
+        .where(
+          and(
+            eq(alimentacionFormatoEmissions.adultoMayorId, command.adultoMayorId),
+            eq(alimentacionFormatoEmissions.deliveryMonth, command.deliveryMonth),
+          ),
+        )
+        .orderBy(desc(alimentacionFormatoEmissions.version))
+        .limit(1);
+
+      const nextVersion = (latestVersionRow?.version ?? 0) + 1;
+      const [created] = await tx
+        .insert(alimentacionFormatoEmissions)
+        .values({
+          tenantId: command.tenantId,
+          adultoMayorId: command.adultoMayorId,
+          deliveryMonth: command.deliveryMonth,
+          version: nextVersion,
+          signerEmployeeIdSnapshot: command.signerEmployeeIdSnapshot,
+          signerNameSnapshot: command.signerNameSnapshot,
+          signerRoleSnapshot: command.signerRoleSnapshot,
+          signatureVersionIdSnapshot: command.signatureVersionIdSnapshot,
+          filename: command.filename,
+          pdfRelativePath: command.pdfRelativePath,
+          sourceRecordCount: command.sourceRecordCount,
+          sourceDateFrom: command.sourceDateFrom,
+          sourceDateTo: command.sourceDateTo,
+          issuedByUserId: command.issuedByUserId,
+          issuedAt: new Date(),
+        })
+        .returning({
+          id: alimentacionFormatoEmissions.id,
+          version: alimentacionFormatoEmissions.version,
+        });
+
+      if (created === undefined) {
+        throw new Error("No fue posible guardar la emision del formato de alimentacion.");
+      }
+
+      await tx.insert(auditLogs).values({
+        actorUserId: command.issuedByUserId,
+        action:
+          created.version === 1 ? "alimentacion.formato_emitted" : "alimentacion.formato_reissued",
+        targetTenantId: command.tenantId,
+        summary:
+          created.version === 1
+            ? `Formato de alimentacion emitido (${command.deliveryMonth})`
+            : `Formato de alimentacion reemitido (${command.deliveryMonth}) v${created.version}`,
+        metadata: {
+          adultoMayorId: command.adultoMayorId,
+          deliveryMonth: command.deliveryMonth,
+          version: created.version,
+          signerEmployeeIdSnapshot: command.signerEmployeeIdSnapshot,
+          signatureVersionIdSnapshot: command.signatureVersionIdSnapshot,
+        },
+      });
+
+      return created.id;
+    });
+
+    const emission = await this.getFormatoEntregaEmissionById(createdId);
+
+    if (emission === null) {
+      throw new Error("No fue posible consultar la emision del formato de alimentacion.");
+    }
+
+    return emission;
+  }
+
   private getRecordSelection() {
     return {
       id: alimentacionRegistros.id,
@@ -557,6 +704,58 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       almuerzo: row.almuerzo,
       refrigerio2: row.refrigerio2,
       auxilioTransporte: row.auxilioTransporte,
+    };
+  }
+
+  private async getFormatoEntregaEmissionById(
+    emissionId: string,
+  ): Promise<AlimentacionFormatoEmissionRecord | null> {
+    const [row] = await this.database.db
+      .select({
+        id: alimentacionFormatoEmissions.id,
+        tenantId: alimentacionFormatoEmissions.tenantId,
+        adultoMayorId: alimentacionFormatoEmissions.adultoMayorId,
+        deliveryMonth: alimentacionFormatoEmissions.deliveryMonth,
+        version: alimentacionFormatoEmissions.version,
+        signerEmployeeIdSnapshot: alimentacionFormatoEmissions.signerEmployeeIdSnapshot,
+        signerNameSnapshot: alimentacionFormatoEmissions.signerNameSnapshot,
+        signerRoleSnapshot: alimentacionFormatoEmissions.signerRoleSnapshot,
+        signatureVersionIdSnapshot: alimentacionFormatoEmissions.signatureVersionIdSnapshot,
+        filename: alimentacionFormatoEmissions.filename,
+        pdfRelativePath: alimentacionFormatoEmissions.pdfRelativePath,
+        sourceRecordCount: alimentacionFormatoEmissions.sourceRecordCount,
+        sourceDateFrom: alimentacionFormatoEmissions.sourceDateFrom,
+        sourceDateTo: alimentacionFormatoEmissions.sourceDateTo,
+        issuedByUserId: alimentacionFormatoEmissions.issuedByUserId,
+        issuedAt: alimentacionFormatoEmissions.issuedAt,
+      })
+      .from(alimentacionFormatoEmissions)
+      .where(eq(alimentacionFormatoEmissions.id, emissionId))
+      .limit(1);
+
+    return row === undefined ? null : this.toFormatoEmissionRecord(row);
+  }
+
+  private toFormatoEmissionRecord(
+    row: AlimentacionFormatoEmissionRow,
+  ): AlimentacionFormatoEmissionRecord {
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      adultoMayorId: row.adultoMayorId,
+      deliveryMonth: row.deliveryMonth,
+      version: row.version,
+      signerEmployeeIdSnapshot: row.signerEmployeeIdSnapshot,
+      signerNameSnapshot: row.signerNameSnapshot,
+      signerRoleSnapshot: row.signerRoleSnapshot as AlimentacionFormatoEmissionRecord["signerRoleSnapshot"],
+      signatureVersionIdSnapshot: row.signatureVersionIdSnapshot,
+      filename: row.filename,
+      pdfRelativePath: row.pdfRelativePath,
+      sourceRecordCount: row.sourceRecordCount,
+      sourceDateFrom: row.sourceDateFrom,
+      sourceDateTo: row.sourceDateTo,
+      issuedByUserId: row.issuedByUserId,
+      issuedAt: row.issuedAt,
     };
   }
 }

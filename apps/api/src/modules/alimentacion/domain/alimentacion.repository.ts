@@ -1,11 +1,14 @@
 import {
   type AlimentacionAdultoOptionRecord,
+  type AlimentacionFormatoEmissionRecord,
   type AlimentacionFormatoEntregaRecord,
   type AlimentacionRecord,
   type AlimentacionTenantOptionRecord,
+  type CreateAlimentacionFormatoEmissionCommand,
   type CreateAlimentacionFormatoEntregaExportAuditCommand,
   type CreateAlimentacionBatchRecordCommand,
   type FindAlimentacionAdultoMayorByIdQuery,
+  type FindLatestAlimentacionFormatoEmissionQuery,
   type FindAlimentacionFormatoEntregaByAdultoAndMonthQuery,
   type FindAlimentacionExistingRecordsByAdultosAndDateQuery,
   type FindAlimentacionRecordByAdultoMayorAndDateQuery,
@@ -34,6 +37,9 @@ export type AlimentacionRepository = {
   findFormatoEntregaByAdultoAndMonth(
     query: FindAlimentacionFormatoEntregaByAdultoAndMonthQuery,
   ): Promise<AlimentacionFormatoEntregaRecord[]>;
+  findLatestFormatoEntregaEmission(
+    query: FindLatestAlimentacionFormatoEmissionQuery,
+  ): Promise<AlimentacionFormatoEmissionRecord | null>;
   findExistingByAdultosAndDate(
     query: FindAlimentacionExistingRecordsByAdultosAndDateQuery,
   ): Promise<AlimentacionRecord[]>;
@@ -45,4 +51,7 @@ export type AlimentacionRepository = {
   createFormatoEntregaExportAudit(
     command: CreateAlimentacionFormatoEntregaExportAuditCommand,
   ): Promise<void>;
+  createFormatoEntregaEmission(
+    command: CreateAlimentacionFormatoEmissionCommand,
+  ): Promise<AlimentacionFormatoEmissionRecord>;
 };

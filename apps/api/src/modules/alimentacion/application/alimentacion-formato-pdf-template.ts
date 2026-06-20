@@ -11,6 +11,7 @@ type BuildFormatoEntregaPdfHtmlParams = {
   data: AlimentacionFormatoEntregaExportData;
   generatedAt: Date;
   logoDataUrl: string | null;
+  directorSignatureDataUrl: string;
 };
 
 type DayBlock = {
@@ -31,6 +32,7 @@ export function buildFormatoEntregaPdfHtml({
   data,
   generatedAt,
   logoDataUrl,
+  directorSignatureDataUrl,
 }: BuildFormatoEntregaPdfHtmlParams): string {
   const dayBlocks = resolveDayBlocks(data.deliveryMonth);
   const generatedDateLabel = formatBogotaDate(generatedAt);
@@ -42,6 +44,7 @@ export function buildFormatoEntregaPdfHtml({
         dayBlock,
         generatedDateLabel,
         cityLabel,
+        directorSignatureDataUrl,
         fullName: data.fullName,
         documentNumber: data.documentNumber,
         logoDataUrl,
@@ -167,15 +170,34 @@ export function buildFormatoEntregaPdfHtml({
             display: grid;
             grid-template-columns: 1fr 1fr;
           }
-          .signature-grid > div {
-            min-height: 52px;
+          .signature-cell {
+            position: relative;
+            min-height: 60px;
             border-top: 1px solid #111;
-            padding-top: 34px;
+            padding: 6px 8px 18px;
             text-align: center;
             font-size: 11px;
           }
-          .signature-grid > div + div {
+          .signature-cell + .signature-cell {
             border-left: 1px solid #111;
+          }
+          .signature-cell__image-wrap {
+            display: flex;
+            min-height: 34px;
+            align-items: flex-end;
+            justify-content: center;
+          }
+          .signature-cell__image {
+            max-width: 150px;
+            max-height: 34px;
+            object-fit: contain;
+          }
+          .signature-cell__label {
+            position: absolute;
+            right: 0;
+            bottom: 5px;
+            left: 0;
+            text-align: center;
           }
         </style>
       </head>
@@ -190,6 +212,7 @@ function buildPageHtml({
   dayBlock,
   generatedDateLabel,
   cityLabel,
+  directorSignatureDataUrl,
   fullName,
   documentNumber,
   logoDataUrl,
@@ -198,6 +221,7 @@ function buildPageHtml({
   dayBlock: DayBlock;
   generatedDateLabel: string;
   cityLabel: string;
+  directorSignatureDataUrl: string;
   fullName: string;
   documentNumber: string;
   logoDataUrl: string | null;
@@ -207,6 +231,7 @@ function buildPageHtml({
       dayBlock,
       generatedDateLabel,
       cityLabel,
+      directorSignatureDataUrl,
       fullName,
       documentNumber,
       logoDataUrl,
@@ -222,6 +247,7 @@ function buildStubHtml({
   dayBlock,
   generatedDateLabel,
   cityLabel,
+  directorSignatureDataUrl,
   fullName,
   documentNumber,
   logoDataUrl,
@@ -231,6 +257,7 @@ function buildStubHtml({
   dayBlock: DayBlock;
   generatedDateLabel: string;
   cityLabel: string;
+  directorSignatureDataUrl: string;
   fullName: string;
   documentNumber: string;
   logoDataUrl: string | null;
@@ -313,8 +340,19 @@ function buildStubHtml({
     </section>
 
     <section class="signature-grid">
-      <div>Firma del Beneficiado</div>
-      <div>Firma del Director o quien entrega</div>
+      <div class="signature-cell">
+        <span class="signature-cell__label">Firma del Beneficiado</span>
+      </div>
+      <div class="signature-cell">
+        <div class="signature-cell__image-wrap">
+          <img
+            class="signature-cell__image"
+            src="${directorSignatureDataUrl}"
+            alt="Firma del Director o quien entrega"
+          />
+        </div>
+        <span class="signature-cell__label">Firma del Director o quien entrega</span>
+      </div>
     </section>
   </section>`;
 }

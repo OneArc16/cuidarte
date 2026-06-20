@@ -359,6 +359,164 @@
   font-size: 0.92rem;
 }
 
+.empleado-signature-panel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgb(8 80 65 / 12%);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 94%), rgb(247 252 250 / 80%)),
+    var(--color-surface);
+  box-shadow: 0 12px 28px rgb(8 80 65 / 6%);
+}
+
+.empleado-signature-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.empleado-signature-panel__header h2 {
+  margin: 0;
+  color: var(--color-deep);
+  font-size: clamp(1.2rem, 2vw, 1.6rem);
+}
+
+.empleado-signature-panel__eyebrow {
+  margin: 0 0 4px;
+  color: var(--color-care);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.empleado-signature-panel__summary,
+.empleado-signature-panel__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.empleado-signature-card,
+.empleado-signature-action-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgb(8 80 65 / 10%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 86%);
+}
+
+.empleado-signature-card strong,
+.empleado-signature-action-card strong {
+  color: var(--color-deep);
+  font-size: 0.94rem;
+}
+
+.empleado-signature-card p,
+.empleado-signature-action-card p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.empleado-signature-preview {
+  display: grid;
+  min-height: 124px;
+  place-items: center;
+  padding: 12px;
+  border: 1px dashed rgb(8 80 65 / 18%);
+  border-radius: 8px;
+  background: rgb(244 250 248 / 80%);
+}
+
+.empleado-signature-preview img {
+  max-width: 100%;
+  max-height: 84px;
+  object-fit: contain;
+}
+
+.empleado-signature-preview--empty span {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.empleado-signature-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.empleado-signature-meta div {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgb(8 80 65 / 10%);
+  border-radius: 8px;
+  background: rgb(225 245 238 / 34%);
+}
+
+.empleado-signature-meta dt {
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.empleado-signature-meta dd {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.85rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.empleado-signature-card__note {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgb(225 245 238 / 34%);
+}
+
+.empleado-signature-file-input {
+  display: grid;
+  gap: 8px;
+}
+
+.empleado-signature-file-input > span,
+.empleado-signature-date-field > span {
+  color: var(--color-deep);
+  font-size: 0.8rem;
+  font-weight: 850;
+}
+
+.empleado-signature-file-input input,
+.empleado-signature-date-field input {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 90%);
+  color: var(--color-ink);
+  font-size: 0.9rem;
+}
+
+.empleado-signature-date-field {
+  display: grid;
+  gap: 8px;
+}
+
+.empleado-signature-file-name {
+  min-height: 20px;
+}
+
 .empleado-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -465,7 +623,10 @@
   }
 
   .empleado-form-grid,
-  .empleado-detail-grid {
+  .empleado-detail-grid,
+  .empleado-signature-panel__summary,
+  .empleado-signature-panel__actions,
+  .empleado-signature-meta {
     grid-template-columns: 1fr;
   }
 

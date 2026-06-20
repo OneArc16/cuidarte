@@ -1,6 +1,7 @@
 import {
   type AlimentacionOrganizer,
   type AlimentacionStatus,
+  type UserRole,
 } from "@cuidarte/contracts";
 
 export type AlimentacionScope =
@@ -36,6 +37,12 @@ export type FindAlimentacionAdultoMayorByIdQuery = {
 };
 
 export type FindAlimentacionFormatoEntregaByAdultoAndMonthQuery = {
+  adultoMayorId: string;
+  deliveryMonth: string;
+  scope: AlimentacionScope;
+};
+
+export type FindLatestAlimentacionFormatoEmissionQuery = {
   adultoMayorId: string;
   deliveryMonth: string;
   scope: AlimentacionScope;
@@ -102,11 +109,46 @@ export type AlimentacionFormatoEntregaRecord = {
   auxilioTransporte: AlimentacionStatus;
 };
 
+export type AlimentacionFormatoEmissionRecord = {
+  id: string;
+  tenantId: string;
+  adultoMayorId: string;
+  deliveryMonth: string;
+  version: number;
+  signerEmployeeIdSnapshot: string;
+  signerNameSnapshot: string;
+  signerRoleSnapshot: UserRole;
+  signatureVersionIdSnapshot: string;
+  filename: string;
+  pdfRelativePath: string;
+  sourceRecordCount: number;
+  sourceDateFrom: string | null;
+  sourceDateTo: string | null;
+  issuedByUserId: string;
+  issuedAt: Date;
+};
+
 export type CreateAlimentacionFormatoEntregaExportAuditCommand = {
   actorUserId: string;
   targetTenantId: string;
   adultoMayorId: string;
   deliveryMonth: string;
+};
+
+export type CreateAlimentacionFormatoEmissionCommand = {
+  tenantId: string;
+  adultoMayorId: string;
+  deliveryMonth: string;
+  signerEmployeeIdSnapshot: string;
+  signerNameSnapshot: string;
+  signerRoleSnapshot: UserRole;
+  signatureVersionIdSnapshot: string;
+  filename: string;
+  pdfRelativePath: string;
+  sourceRecordCount: number;
+  sourceDateFrom: string | null;
+  sourceDateTo: string | null;
+  issuedByUserId: string;
 };
 
 export type CreateAlimentacionBatchRecordCommand = {

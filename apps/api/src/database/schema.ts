@@ -174,6 +174,67 @@ export const users = pgTable(
   ],
 );
 
+export const employeeSignatureVersions = pgTable(
+  "employee_signature_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    originalName: varchar("original_name", { length: 260 }).notNull(),
+    mimeType: varchar("mime_type", { length: 160 }).notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    checksum: varchar("checksum", { length: 64 }).notNull(),
+    relativePath: varchar("relative_path", { length: 500 }).notNull(),
+    uploadedByUserId: uuid("uploaded_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("employee_signature_versions_employee_idx").on(table.employeeId),
+    index("employee_signature_versions_tenant_idx").on(table.tenantId),
+    index("employee_signature_versions_uploaded_by_user_idx").on(table.uploadedByUserId),
+    index("employee_signature_versions_created_at_idx").on(table.createdAt),
+  ],
+);
+
+export const tenantDirectorSignatureAssignments = pgTable(
+  "tenant_director_signature_assignments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    signatureVersionId: uuid("signature_version_id")
+      .notNull()
+      .references(() => employeeSignatureVersions.id, { onDelete: "restrict" }),
+    effectiveFrom: date("effective_from", { mode: "string" }).notNull(),
+    effectiveTo: date("effective_to", { mode: "string" }),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("tenant_director_signature_assignments_active_unique")
+      .on(table.tenantId)
+      .where(sql`${table.effectiveTo} is null`),
+    index("tenant_director_signature_assignments_tenant_idx").on(table.tenantId),
+    index("tenant_director_signature_assignments_employee_idx").on(table.employeeId),
+    index("tenant_director_signature_assignments_signature_version_idx").on(
+      table.signatureVersionId,
+    ),
+    index("tenant_director_signature_assignments_effective_from_idx").on(table.effectiveFrom),
+  ],
+);
+
 export const adultosMayores = pgTable(
   "adultos_mayores",
   {
@@ -390,6 +451,52 @@ export const alimentacionRegistros = pgTable(
     index("alimentacion_registros_adulto_mayor_idx").on(table.adultoMayorId),
     index("alimentacion_registros_created_by_user_idx").on(table.createdByUserId),
     index("alimentacion_registros_updated_by_user_idx").on(table.updatedByUserId),
+  ],
+);
+
+export const alimentacionFormatoEmissions = pgTable(
+  "alimentacion_formato_emissions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    adultoMayorId: uuid("adulto_mayor_id")
+      .notNull()
+      .references(() => adultosMayores.id, { onDelete: "restrict" }),
+    deliveryMonth: varchar("delivery_month", { length: 7 }).notNull(),
+    version: integer("version").notNull(),
+    signerEmployeeIdSnapshot: uuid("signer_employee_id_snapshot")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    signerNameSnapshot: varchar("signer_name_snapshot", { length: 180 }).notNull(),
+    signerRoleSnapshot: varchar("signer_role_snapshot", { length: 80 }).notNull(),
+    signatureVersionIdSnapshot: uuid("signature_version_id_snapshot")
+      .notNull()
+      .references(() => employeeSignatureVersions.id, { onDelete: "restrict" }),
+    filename: varchar("filename", { length: 260 }).notNull(),
+    pdfRelativePath: varchar("pdf_relative_path", { length: 500 }).notNull(),
+    sourceRecordCount: integer("source_record_count").notNull(),
+    sourceDateFrom: date("source_date_from", { mode: "string" }),
+    sourceDateTo: date("source_date_to", { mode: "string" }),
+    issuedByUserId: uuid("issued_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("alimentacion_formato_emissions_unique_version").on(
+      table.adultoMayorId,
+      table.deliveryMonth,
+      table.version,
+    ),
+    index("alimentacion_formato_emissions_tenant_month_idx").on(
+      table.tenantId,
+      table.deliveryMonth,
+    ),
+    index("alimentacion_formato_emissions_adulto_mayor_idx").on(table.adultoMayorId),
+    index("alimentacion_formato_emissions_signer_employee_idx").on(table.signerEmployeeIdSnapshot),
+    index("alimentacion_formato_emissions_issued_at_idx").on(table.issuedAt),
   ],
 );
 

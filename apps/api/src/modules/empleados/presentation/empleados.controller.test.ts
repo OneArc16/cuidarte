@@ -31,11 +31,13 @@ describe("EmpleadosController", () => {
         phone: "3105551212",
         role: "medico",
         isActive: true,
+        latestSignature: null,
+        currentDirectorSignatureAssignment: null,
         createdAt: "2026-04-21T12:00:00.000Z",
         updatedAt: "2026-04-21T12:00:00.000Z",
       }),
     };
-    const controller = new EmpleadosController(service as never);
+    const controller = new EmpleadosController(service as never, {} as never);
 
     const result = await controller.createEmpleado(
       {
@@ -77,12 +79,14 @@ describe("EmpleadosController", () => {
           phone: "3125553030",
           role: "medico",
           isActive: false,
+          latestSignature: null,
+          currentDirectorSignatureAssignment: null,
           createdAt: "2026-04-21T12:00:00.000Z",
           updatedAt: "2026-04-21T12:00:00.000Z",
         };
       },
     };
-    const controller = new EmpleadosController(service as never);
+    const controller = new EmpleadosController(service as never, {} as never);
 
     const result = await controller.updateEmpleado(
       "aeeb7b27-2c8d-48ce-b2f8-3397d34a6e72",

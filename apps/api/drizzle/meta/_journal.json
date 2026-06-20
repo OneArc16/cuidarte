@@ -85,6 +85,13 @@
       "when": 1777482000000,
       "tag": "0011_auditor_role",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1781917200000,
+      "tag": "0012_director_signature_history",
+      "breakpoints": true
     }
   ]
 }

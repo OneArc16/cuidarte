@@ -35,6 +35,35 @@ export type EmpleadoTenantOptionRecord = {
   name: string;
 };
 
+export type BufferedEmpleadoSignatureUpload = {
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  buffer: Buffer;
+};
+
+export type EmpleadoSignatureVersionRecord = {
+  id: string;
+  employeeId: string;
+  tenantId: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  checksum: string;
+  relativePath: string;
+  createdAt: Date;
+};
+
+export type DirectorSignatureAssignmentRecord = {
+  id: string;
+  tenantId: string;
+  employeeId: string;
+  signatureVersionId: string;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  createdAt: Date;
+};
+
 export type EmpleadoCommandRecord = {
   tenantId: string | null;
   firstName: string;
@@ -64,10 +93,49 @@ export type EmpleadoAuditCommand = {
     | "empleados.updated"
     | "empleados.activated"
     | "empleados.deactivated"
-    | "empleados.password_reset";
+    | "empleados.password_reset"
+    | "empleados.signature_uploaded"
+    | "empleados.director_signature_assigned"
+    | "empleados.director_signature_assignment_closed";
   targetTenantId: string | null;
   summary: string;
   metadata: Record<string, unknown>;
+};
+
+export type CreateEmpleadoSignatureVersionCommand = {
+  employeeId: string;
+  tenantId: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  checksum: string;
+  relativePath: string;
+  uploadedByUserId: string;
+};
+
+export type FindEmpleadoSignatureVersionByIdQuery = {
+  employeeId: string;
+  signatureVersionId: string;
+};
+
+export type AssignDirectorSignatureCommand = {
+  tenantId: string;
+  employeeId: string;
+  signatureVersionId: string;
+  effectiveFrom: string;
+  createdByUserId: string;
+};
+
+export type ResolveDirectorSignatureForMonthQuery = {
+  tenantId: string;
+  deliveryMonth: string;
+};
+
+export type DirectorSignatureMonthResolutionRecord = {
+  assignment: DirectorSignatureAssignmentRecord;
+  employeeFullName: string;
+  employeeRole: UserRole;
+  signature: EmpleadoSignatureVersionRecord;
 };
 
 export type EmpleadoRecord = {
@@ -85,6 +153,8 @@ export type EmpleadoRecord = {
   role: UserRole;
   isActive: boolean;
   isTenantOwner: boolean;
+  latestSignature: EmpleadoSignatureVersionRecord | null;
+  currentDirectorSignatureAssignment: DirectorSignatureAssignmentRecord | null;
   createdAt: Date;
   updatedAt: Date;
 };
