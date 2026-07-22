@@ -10,7 +10,8 @@ const ACTIVITY_DESCRIPTION_VALUE = "Entrega de alimentos";
 type BuildFormatoEntregaPdfHtmlParams = {
   data: AlimentacionFormatoEntregaExportData;
   generatedAt: Date;
-  logoDataUrl: string | null;
+  institutionalLogoDataUrl: string | null;
+  tenantLogoDataUrl: string;
   directorSignatureDataUrl: string;
 };
 
@@ -31,7 +32,8 @@ export function buildFormatoEntregaPdfFilename(
 export function buildFormatoEntregaPdfHtml({
   data,
   generatedAt,
-  logoDataUrl,
+  institutionalLogoDataUrl,
+  tenantLogoDataUrl,
   directorSignatureDataUrl,
 }: BuildFormatoEntregaPdfHtmlParams): string {
   const dayBlocks = resolveDayBlocks(data.deliveryMonth);
@@ -47,7 +49,9 @@ export function buildFormatoEntregaPdfHtml({
         directorSignatureDataUrl,
         fullName: data.fullName,
         documentNumber: data.documentNumber,
-        logoDataUrl,
+        institutionalLogoDataUrl,
+        tenantLogoDataUrl,
+        tenantName: data.tenantName,
       }),
     )
     .join("");
@@ -82,7 +86,8 @@ export function buildFormatoEntregaPdfHtml({
             border: 1px solid #111;
           }
           .stub-header {
-            display: flex;
+            display: grid;
+            grid-template-columns: 110px minmax(0, 1fr) 110px;
             align-items: center;
             justify-content: space-between;
             min-height: 32px;
@@ -90,19 +95,24 @@ export function buildFormatoEntregaPdfHtml({
             border-bottom: 1px solid #111;
           }
           .stub-header-title {
-            flex: 1;
             text-align: center;
             font-size: 12px;
             font-weight: 500;
           }
           .stub-logo {
             width: 110px;
-            min-width: 110px;
-            text-align: right;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
           }
           .stub-logo img {
+            display: block;
+            width: 100%;
+            height: 100%;
             max-height: 24px;
             max-width: 100%;
+            object-fit: contain;
           }
           .stub-logo-fallback {
             color: #4f5e59;
@@ -215,7 +225,9 @@ function buildPageHtml({
   directorSignatureDataUrl,
   fullName,
   documentNumber,
-  logoDataUrl,
+  institutionalLogoDataUrl,
+  tenantLogoDataUrl,
+  tenantName,
 }: {
   blockIndex: number;
   dayBlock: DayBlock;
@@ -224,7 +236,9 @@ function buildPageHtml({
   directorSignatureDataUrl: string;
   fullName: string;
   documentNumber: string;
-  logoDataUrl: string | null;
+  institutionalLogoDataUrl: string | null;
+  tenantLogoDataUrl: string;
+  tenantName: string;
 }): string {
   const stubs = Array.from({ length: STUBS_PER_PAGE }, (_, stubIndex) =>
     buildStubHtml({
@@ -234,7 +248,9 @@ function buildPageHtml({
       directorSignatureDataUrl,
       fullName,
       documentNumber,
-      logoDataUrl,
+      institutionalLogoDataUrl,
+      tenantLogoDataUrl,
+      tenantName,
       blockIndex,
       stubIndex,
     }),
@@ -250,7 +266,9 @@ function buildStubHtml({
   directorSignatureDataUrl,
   fullName,
   documentNumber,
-  logoDataUrl,
+  institutionalLogoDataUrl,
+  tenantLogoDataUrl,
+  tenantName,
   blockIndex,
   stubIndex,
 }: {
@@ -260,7 +278,9 @@ function buildStubHtml({
   directorSignatureDataUrl: string;
   fullName: string;
   documentNumber: string;
-  logoDataUrl: string | null;
+  institutionalLogoDataUrl: string | null;
+  tenantLogoDataUrl: string;
+  tenantName: string;
   blockIndex: number;
   stubIndex: number;
 }): string {
@@ -289,15 +309,17 @@ function buildStubHtml({
     "Auxilio de transporte",
     dayBlock.slots,
   );
-  const logoHtml =
-    logoDataUrl === null
+  const institutionalLogoHtml =
+    institutionalLogoDataUrl === null
       ? `<div class="stub-logo-fallback">Gobernacion del Magdalena</div>`
-      : `<img src="${logoDataUrl}" alt="Gobernacion del Magdalena" />`;
+      : `<img src="${escapeHtml(institutionalLogoDataUrl)}" alt="Gobernacion del Magdalena" />`;
+  const tenantLogoHtml = `<img src="${escapeHtml(tenantLogoDataUrl)}" alt="Logo de ${escapeHtml(tenantName)}" />`;
 
   return `<section class="stub" data-block-index="${blockIndex}" data-stub-index="${stubIndex}">
     <header class="stub-header">
+      <div class="stub-logo stub-logo--institutional">${institutionalLogoHtml}</div>
       <div class="stub-header-title">${escapeHtml(HEADER_TITLE)}</div>
-      <div class="stub-logo">${logoHtml}</div>
+      <div class="stub-logo stub-logo--tenant">${tenantLogoHtml}</div>
     </header>
 
     <table class="meta-table">

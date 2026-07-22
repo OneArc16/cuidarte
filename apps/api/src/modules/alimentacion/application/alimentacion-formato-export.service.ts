@@ -6,6 +6,7 @@ import { Inject, Injectable, InternalServerErrorException } from "@nestjs/common
 import { chromium, type Browser } from "playwright";
 
 import { EmpleadosSignatureService } from "../../empleados/application/empleados-signature.service";
+import { TenantBrandingService } from "../../tenant-branding/application/tenant-branding.service";
 import {
   ALIMENTACION_FORMATO_FILES_STORAGE,
   type AlimentacionFormatoFilesStorage,
@@ -23,19 +24,20 @@ export type ExportedAlimentacionFormatoEntregaPdf = {
   filename: string;
 };
 
-const ALIMENTACION_LOGO_RELATIVE_PATH = path.join(
+const INSTITUTIONAL_LOGO_RELATIVE_PATH = path.join(
   "public",
   "logos",
   "gobernacion-magdalena.png",
 );
 
-let cachedLogoDataUrl: string | null | undefined;
+let cachedInstitutionalLogoDataUrl: string | null | undefined;
 
 @Injectable()
 export class AlimentacionFormatoExportService {
   constructor(
     private readonly alimentacionService: AlimentacionService,
     private readonly empleadosSignatureService: EmpleadosSignatureService,
+    private readonly tenantBrandingService: TenantBrandingService,
     @Inject(ALIMENTACION_FORMATO_FILES_STORAGE)
     private readonly formatoFilesStorage: AlimentacionFormatoFilesStorage,
   ) {}
@@ -71,18 +73,24 @@ export class AlimentacionFormatoExportService {
       query,
       actor,
     );
-    const directorSignature = await this.empleadosSignatureService.resolveDirectorSignatureForMonth(
-      exportData.tenantId,
-      exportData.deliveryMonth,
-    );
-    const [logoDataUrl, directorSignatureDataUrl] = await Promise.all([
-      this.getLogoDataUrl(),
-      this.getDirectorSignatureDataUrl(directorSignature.signature),
+    const [directorSignature, tenantLogoVersion] = await Promise.all([
+      this.empleadosSignatureService.resolveDirectorSignatureForMonth(
+        exportData.tenantId,
+        exportData.deliveryMonth,
+      ),
+      this.tenantBrandingService.resolveActiveLogo(exportData.tenantId),
     ]);
+    const [institutionalLogoDataUrl, directorSignatureDataUrl, tenantLogoFile] = await Promise.all([
+      this.getInstitutionalLogoDataUrl(),
+      this.getDirectorSignatureDataUrl(directorSignature.signature),
+      this.tenantBrandingService.readLogoVersionFile(tenantLogoVersion),
+    ]);
+    const tenantLogoDataUrl = `data:${tenantLogoFile.contentType};base64,${tenantLogoFile.buffer.toString("base64")}`;
     const generatedAt = new Date();
     const pdfBuffer = await this.renderPdf(
       exportData,
-      logoDataUrl,
+      institutionalLogoDataUrl,
+      tenantLogoDataUrl,
       directorSignatureDataUrl,
       generatedAt,
     );
@@ -112,6 +120,7 @@ export class AlimentacionFormatoExportService {
         signerNameSnapshot: directorSignature.employeeFullName,
         signerRoleSnapshot: directorSignature.employeeRole,
         signatureVersionIdSnapshot: directorSignature.signature.id,
+        tenantLogoVersionIdSnapshot: tenantLogoVersion.id,
         filename: storedFile.filename,
         pdfRelativePath: storedFile.relativePath,
         sourceRecordCount: exportData.records.length,
@@ -142,7 +151,8 @@ export class AlimentacionFormatoExportService {
 
   private async renderPdf(
     data: AlimentacionFormatoEntregaExportData,
-    logoDataUrl: string | null,
+    institutionalLogoDataUrl: string | null,
+    tenantLogoDataUrl: string,
     directorSignatureDataUrl: string,
     generatedAt: Date,
   ): Promise<Buffer> {
@@ -155,7 +165,8 @@ export class AlimentacionFormatoExportService {
         buildFormatoEntregaPdfHtml({
           data,
           generatedAt,
-          logoDataUrl,
+          institutionalLogoDataUrl,
+          tenantLogoDataUrl,
           directorSignatureDataUrl,
         }),
         {
@@ -221,17 +232,17 @@ export class AlimentacionFormatoExportService {
     return `data:${file.contentType};base64,${file.buffer.toString("base64")}`;
   }
 
-  private async getLogoDataUrl(): Promise<string | null> {
-    if (cachedLogoDataUrl !== undefined) {
-      return cachedLogoDataUrl;
+  private async getInstitutionalLogoDataUrl(): Promise<string | null> {
+    if (cachedInstitutionalLogoDataUrl !== undefined) {
+      return cachedInstitutionalLogoDataUrl;
     }
 
     const logoBuffer = await readLogoFile();
 
-    cachedLogoDataUrl =
+    cachedInstitutionalLogoDataUrl =
       logoBuffer === null ? null : `data:image/png;base64,${logoBuffer.toString("base64")}`;
 
-    return cachedLogoDataUrl;
+    return cachedInstitutionalLogoDataUrl;
   }
 
   private async deleteStoredPdfBestEffort(relativePath: string) {
@@ -245,8 +256,8 @@ export class AlimentacionFormatoExportService {
 
 async function readLogoFile(): Promise<Buffer | null> {
   const candidatePaths = [
-    path.resolve(process.cwd(), "apps", "web", ALIMENTACION_LOGO_RELATIVE_PATH),
-    path.resolve(process.cwd(), "..", "web", ALIMENTACION_LOGO_RELATIVE_PATH),
+    path.resolve(process.cwd(), "apps", "web", INSTITUTIONAL_LOGO_RELATIVE_PATH),
+    path.resolve(process.cwd(), "..", "web", INSTITUTIONAL_LOGO_RELATIVE_PATH),
   ];
 
   for (const candidatePath of candidatePaths) {

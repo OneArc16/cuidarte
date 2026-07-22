@@ -46,7 +46,8 @@ describe("alimentacion-formato-pdf-template", () => {
         ],
       },
       generatedAt: new Date("2026-04-30T15:00:00.000Z"),
-      logoDataUrl: null,
+      institutionalLogoDataUrl: null,
+      tenantLogoDataUrl: "data:image/png;base64,bG9nbw==",
       directorSignatureDataUrl: "data:image/png;base64,ZmlybWE=",
     });
 
@@ -65,13 +66,16 @@ describe("alimentacion-formato-pdf-template", () => {
     assert.ok(!html.includes(">X<"));
     assert.ok(!html.includes(">N/A<"));
     assert.match(html, /data:image\/png;base64,ZmlybWE=/);
+    assert.match(html, /alt="Logo de Centro de Vida Demo"/);
+    assert.match(html, /stub-logo--institutional/);
+    assert.match(html, /stub-logo--tenant/);
   });
 
   it("uses city fallback when city and department are missing", () => {
     const html = buildFormatoEntregaPdfHtml({
       data: {
         tenantId: "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054",
-        tenantName: "Centro de Vida Demo",
+        tenantName: 'Centro <Vida> "Norte"',
         tenantCity: null,
         tenantDepartment: null,
         adultoMayorId: "0b17e370-8f81-48c0-b707-c7046f497855",
@@ -81,11 +85,13 @@ describe("alimentacion-formato-pdf-template", () => {
         records: [],
       },
       generatedAt: new Date("2026-02-01T15:00:00.000Z"),
-      logoDataUrl: null,
+      institutionalLogoDataUrl: null,
+      tenantLogoDataUrl: "data:image/png;base64,bG9nbw==",
       directorSignatureDataUrl: "data:image/png;base64,ZmlybWE=",
     });
 
     assert.match(html, /CIUDAD NO CONFIGURADA/);
+    assert.match(html, /alt="Logo de Centro &lt;Vida&gt; &quot;Norte&quot;"/);
   });
 
   it("builds a sanitized filename", () => {

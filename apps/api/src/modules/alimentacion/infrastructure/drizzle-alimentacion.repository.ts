@@ -100,6 +100,7 @@ type AlimentacionFormatoEmissionRow = {
   signerNameSnapshot: string;
   signerRoleSnapshot: string;
   signatureVersionIdSnapshot: string;
+  tenantLogoVersionIdSnapshot: string | null;
   filename: string;
   pdfRelativePath: string;
   sourceRecordCount: number;
@@ -324,6 +325,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         signerNameSnapshot: alimentacionFormatoEmissions.signerNameSnapshot,
         signerRoleSnapshot: alimentacionFormatoEmissions.signerRoleSnapshot,
         signatureVersionIdSnapshot: alimentacionFormatoEmissions.signatureVersionIdSnapshot,
+        tenantLogoVersionIdSnapshot: alimentacionFormatoEmissions.tenantLogoVersionIdSnapshot,
         filename: alimentacionFormatoEmissions.filename,
         pdfRelativePath: alimentacionFormatoEmissions.pdfRelativePath,
         sourceRecordCount: alimentacionFormatoEmissions.sourceRecordCount,
@@ -544,6 +546,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
           signerNameSnapshot: command.signerNameSnapshot,
           signerRoleSnapshot: command.signerRoleSnapshot,
           signatureVersionIdSnapshot: command.signatureVersionIdSnapshot,
+          tenantLogoVersionIdSnapshot: command.tenantLogoVersionIdSnapshot,
           filename: command.filename,
           pdfRelativePath: command.pdfRelativePath,
           sourceRecordCount: command.sourceRecordCount,
@@ -576,6 +579,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
           version: created.version,
           signerEmployeeIdSnapshot: command.signerEmployeeIdSnapshot,
           signatureVersionIdSnapshot: command.signatureVersionIdSnapshot,
+          tenantLogoVersionIdSnapshot: command.tenantLogoVersionIdSnapshot,
         },
       });
 
@@ -721,6 +725,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         signerNameSnapshot: alimentacionFormatoEmissions.signerNameSnapshot,
         signerRoleSnapshot: alimentacionFormatoEmissions.signerRoleSnapshot,
         signatureVersionIdSnapshot: alimentacionFormatoEmissions.signatureVersionIdSnapshot,
+        tenantLogoVersionIdSnapshot: alimentacionFormatoEmissions.tenantLogoVersionIdSnapshot,
         filename: alimentacionFormatoEmissions.filename,
         pdfRelativePath: alimentacionFormatoEmissions.pdfRelativePath,
         sourceRecordCount: alimentacionFormatoEmissions.sourceRecordCount,
@@ -749,6 +754,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       signerNameSnapshot: row.signerNameSnapshot,
       signerRoleSnapshot: row.signerRoleSnapshot as AlimentacionFormatoEmissionRecord["signerRoleSnapshot"],
       signatureVersionIdSnapshot: row.signatureVersionIdSnapshot,
+      tenantLogoVersionIdSnapshot: row.tenantLogoVersionIdSnapshot,
       filename: row.filename,
       pdfRelativePath: row.pdfRelativePath,
       sourceRecordCount: row.sourceRecordCount,

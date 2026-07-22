@@ -1,5 +1,6 @@
 import {
   boolean,
+  check,
   date,
   doublePrecision,
   index,
@@ -172,6 +173,49 @@ export const users = pgTable(
       .where(sql`${table.tenantId} is null and ${table.documentNumber} is not null`),
     index("users_tenant_id_idx").on(table.tenantId),
   ],
+);
+
+export const tenantLogoVersions = pgTable(
+  "tenant_logo_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    originalName: varchar("original_name", { length: 260 }).notNull(),
+    mimeType: varchar("mime_type", { length: 100 }).notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    checksum: varchar("checksum", { length: 64 }).notNull(),
+    relativePath: varchar("relative_path", { length: 500 }).notNull(),
+    uploadedByUserId: uuid("uploaded_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("tenant_logo_versions_tenant_created_at_idx").on(table.tenantId, table.createdAt),
+    index("tenant_logo_versions_uploaded_by_user_idx").on(table.uploadedByUserId),
+    check("tenant_logo_versions_size_positive", sql`${table.sizeBytes} > 0`),
+  ],
+);
+
+export const tenantBranding = pgTable(
+  "tenant_branding",
+  {
+    tenantId: uuid("tenant_id")
+      .primaryKey()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    activeLogoVersionId: uuid("active_logo_version_id").references(
+      () => tenantLogoVersions.id,
+      { onDelete: "restrict" },
+    ),
+    updatedByUserId: uuid("updated_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("tenant_branding_active_logo_version_idx").on(table.activeLogoVersionId)],
 );
 
 export const employeeSignatureVersions = pgTable(
@@ -474,6 +518,10 @@ export const alimentacionFormatoEmissions = pgTable(
     signatureVersionIdSnapshot: uuid("signature_version_id_snapshot")
       .notNull()
       .references(() => employeeSignatureVersions.id, { onDelete: "restrict" }),
+    tenantLogoVersionIdSnapshot: uuid("tenant_logo_version_id_snapshot").references(
+      () => tenantLogoVersions.id,
+      { onDelete: "restrict" },
+    ),
     filename: varchar("filename", { length: 260 }).notNull(),
     pdfRelativePath: varchar("pdf_relative_path", { length: 500 }).notNull(),
     sourceRecordCount: integer("source_record_count").notNull(),

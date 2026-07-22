@@ -119,6 +119,7 @@ export type AlimentacionFormatoEmissionRecord = {
   signerNameSnapshot: string;
   signerRoleSnapshot: UserRole;
   signatureVersionIdSnapshot: string;
+  tenantLogoVersionIdSnapshot: string | null;
   filename: string;
   pdfRelativePath: string;
   sourceRecordCount: number;
@@ -143,6 +144,7 @@ export type CreateAlimentacionFormatoEmissionCommand = {
   signerNameSnapshot: string;
   signerRoleSnapshot: UserRole;
   signatureVersionIdSnapshot: string;
+  tenantLogoVersionIdSnapshot: string;
   filename: string;
   pdfRelativePath: string;
   sourceRecordCount: number;

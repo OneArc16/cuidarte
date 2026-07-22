@@ -5,6 +5,7 @@ import { type Navigate } from "@/app/hooks/use-app-navigation";
 
 import { BackofficeTenantForm } from "../components/tenant-form";
 import { BackofficeTopBar } from "../components/backoffice-top-bar";
+import { TenantBrandingPanel } from "../components/tenant-branding-panel";
 import { BACKOFFICE_PATH } from "../lib/backoffice-paths";
 import { resolveApiError } from "../lib/backoffice-formatters";
 import {
@@ -77,6 +78,12 @@ export function BackofficeTenantDetailPage({
             },
           });
         }}
+      />
+
+      <TenantBrandingPanel
+        tenantId={tenantQuery.data.tenant.id}
+        tenantName={tenantQuery.data.tenant.name}
+        logo={tenantQuery.data.logo}
       />
     </section>
   );

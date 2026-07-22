@@ -153,10 +153,16 @@ export class AdultosMayoresService {
       excludeId: adultoMayorId,
     });
 
+    // Nunca propagar un tenantId inesperado hacia persistencia, incluso si este caso de uso
+    // se invoca por fuera del controller que aplica el schema de actualizacion.
+    const { tenantId: _ignoredTenantId, ...safeCommand } = command as UpdateAdultoMayorRequest & {
+      tenantId?: unknown;
+    };
+
     try {
       const record = await this.adultosMayoresRepository.update(
         {
-          ...command,
+          ...safeCommand,
           id: adultoMayorId,
         },
         {

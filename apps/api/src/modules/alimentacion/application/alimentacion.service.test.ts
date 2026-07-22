@@ -736,6 +736,7 @@ function createRepository(
         signerNameSnapshot: command.signerNameSnapshot,
         signerRoleSnapshot: command.signerRoleSnapshot,
         signatureVersionIdSnapshot: command.signatureVersionIdSnapshot,
+        tenantLogoVersionIdSnapshot: command.tenantLogoVersionIdSnapshot,
         filename: command.filename,
         pdfRelativePath: command.pdfRelativePath,
         sourceRecordCount: command.sourceRecordCount,

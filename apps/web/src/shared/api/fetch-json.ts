@@ -3,7 +3,7 @@ import { type ZodSchema } from "zod";
 import { ApiError } from "./api-error";
 
 type FetchJsonOptions = {
-  method?: "GET" | "PATCH" | "POST" | "PUT";
+  method?: "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
   body?: FormData | unknown;
 };
 

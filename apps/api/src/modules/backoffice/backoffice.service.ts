@@ -39,6 +39,7 @@ type TenantOwnerSelection = {
 };
 
 type AuditEntry = typeof auditLogs.$inferInsert;
+type BackofficeTenantCoreDetail = Omit<BackofficeTenantDetail, "logo">;
 
 @Injectable()
 export class BackofficeService {
@@ -58,14 +59,14 @@ export class BackofficeService {
     }));
   }
 
-  async getTenantDetail(tenantId: string): Promise<BackofficeTenantDetail> {
+  async getTenantDetail(tenantId: string): Promise<BackofficeTenantCoreDetail> {
     return this.findTenantDetailOrThrow(tenantId);
   }
 
   async createTenant(
     command: CreateBackofficeTenantRequest,
     actor: AuthUser,
-  ): Promise<BackofficeTenantDetail> {
+  ): Promise<BackofficeTenantCoreDetail> {
     await this.ensureTenantIsUnique(command.tenant);
     await this.ensureOwnerEmailIsUnique(command.owner);
 
@@ -133,7 +134,7 @@ export class BackofficeService {
     tenantId: string,
     command: UpdateBackofficeTenantRequest,
     actor: AuthUser,
-  ): Promise<BackofficeTenantDetail> {
+  ): Promise<BackofficeTenantCoreDetail> {
     const currentDetail = await this.findTenantDetailOrThrow(tenantId);
 
     await this.ensureTenantIsUnique(command.tenant, tenantId);
@@ -201,7 +202,7 @@ export class BackofficeService {
     }
   }
 
-  private async findTenantDetailOrThrow(tenantId: string): Promise<BackofficeTenantDetail> {
+  private async findTenantDetailOrThrow(tenantId: string): Promise<BackofficeTenantCoreDetail> {
     const [row] = await this.database.db
       .select(this.getTenantOwnerSelection())
       .from(tenants)
@@ -333,7 +334,7 @@ export class BackofficeService {
 
   private buildUpdateAuditEntries(command: {
     actor: AuthUser;
-    before: BackofficeTenantDetail;
+    before: BackofficeTenantCoreDetail;
     afterTenant: TenantRow;
     afterOwner: UserRow;
     passwordWasReset: boolean;

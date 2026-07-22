@@ -71,6 +71,15 @@ export const backofficeTenantOwnerSchema = z.object({
   updatedAt: z.string().min(1),
 });
 
+export const tenantLogoMetadataSchema = z.object({
+  versionId: z.uuid(),
+  originalName: z.string().min(1),
+  mimeType: z.literal("image/png"),
+  sizeBytes: z.number().int().positive(),
+  checksum: z.string().regex(/^[a-f0-9]{64}$/),
+  updatedAt: z.string().min(1),
+});
+
 export const backofficeTenantListItemSchema = z.object({
   tenant: backofficeTenantSchema,
   owner: backofficeTenantOwnerSchema.nullable(),
@@ -79,6 +88,12 @@ export const backofficeTenantListItemSchema = z.object({
 export const backofficeTenantDetailSchema = z.object({
   tenant: backofficeTenantSchema,
   owner: backofficeTenantOwnerSchema,
+  logo: tenantLogoMetadataSchema.nullable(),
+});
+
+export const uploadTenantLogoResponseSchema = tenantLogoMetadataSchema;
+export const removeTenantLogoResponseSchema = z.object({
+  success: z.literal(true),
 });
 
 export const backofficeTenantCommandSchema = z.object({
@@ -132,6 +147,9 @@ export type TenantDocumentType = z.infer<typeof tenantDocumentTypeSchema>;
 export type TenantStatusFilter = z.infer<typeof tenantStatusFilterSchema>;
 export type BackofficeTenant = z.infer<typeof backofficeTenantSchema>;
 export type BackofficeTenantOwner = z.infer<typeof backofficeTenantOwnerSchema>;
+export type TenantLogoMetadata = z.infer<typeof tenantLogoMetadataSchema>;
+export type UploadTenantLogoResponse = z.infer<typeof uploadTenantLogoResponseSchema>;
+export type RemoveTenantLogoResponse = z.infer<typeof removeTenantLogoResponseSchema>;
 export type BackofficeTenantListItem = z.infer<typeof backofficeTenantListItemSchema>;
 export type BackofficeTenantDetail = z.infer<typeof backofficeTenantDetailSchema>;
 export type CreateBackofficeTenantRequest = z.infer<typeof createBackofficeTenantRequestSchema>;

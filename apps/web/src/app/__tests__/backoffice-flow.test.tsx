@@ -107,6 +107,7 @@ describe("App backoffice flow", () => {
             email: "propietario@centro-nuevo.test",
             fullName: "Propietario Centro Nuevo",
           },
+          logo: null,
         });
       }),
       http.get(
@@ -124,6 +125,7 @@ describe("App backoffice flow", () => {
               email: "propietario@centro-nuevo.test",
               fullName: "Propietario Centro Nuevo",
             },
+            logo: null,
           }),
       ),
     );
@@ -184,6 +186,7 @@ describe("App backoffice flow", () => {
             name: "Centro Demo Editado",
           },
           owner: backofficeTenantDetailFixture.owner,
+          logo: null,
         });
       }),
     );
@@ -208,6 +211,68 @@ describe("App backoffice flow", () => {
         email: backofficeTenantDetailFixture.owner.email,
       },
     });
+  });
+
+  it("uploads, previews and removes a tenant logo with explicit confirmation", async () => {
+    server.use(
+      mockAuthMe(superAdminUserFixture),
+      http.put(
+        "http://localhost:3001/api/backoffice/tenants/:tenantId/logo",
+        () => {
+          return HttpResponse.json({
+            versionId: "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054",
+            originalName: "logo-centro.png",
+            mimeType: "image/png",
+            sizeBytes: 1_204,
+            checksum: "a".repeat(64),
+            updatedAt: "2026-07-22T12:00:00.000Z",
+          });
+        },
+      ),
+      http.get(
+        "http://localhost:3001/api/backoffice/tenants/:tenantId/logo/file",
+        () =>
+          new HttpResponse(new Blob(["normalized-logo"], { type: "image/png" }), {
+            headers: { "Content-Type": "image/png" },
+          }),
+      ),
+      http.delete(
+        "http://localhost:3001/api/backoffice/tenants/:tenantId/logo",
+        () => HttpResponse.json({ success: true }),
+      ),
+    );
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:tenant-logo");
+    const revokeObjectUrl = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const user = userEvent.setup();
+
+    renderAppAtPath(`/backoffice/tenants/${backofficeTenantDetailFixture.tenant.id}`);
+
+    expect(await screen.findByText("Logo pendiente")).toBeInTheDocument();
+    const fileInput = screen.getByLabelText("Seleccionar logo");
+    await user.upload(
+      fileInput,
+      new File([new Uint8Array(2 * 1024 * 1024 + 1)], "too-large.png", {
+        type: "image/png",
+      }),
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("no puede superar 2 MB");
+
+    await user.upload(
+      fileInput,
+      new File(["valid-logo"], "logo-centro.png", { type: "image/png" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Subir logo" }));
+
+    expect(await screen.findByText("Logo configurado")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Logo de Centro de Vida Demo" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Logo cargado correctamente");
+
+    await user.click(screen.getByRole("button", { name: "Retirar logo" }));
+
+    expect(await screen.findByText("Logo pendiente")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Logo retirado");
+    expect(revokeObjectUrl).toHaveBeenCalled();
   });
 
   it("shows controlled conflict errors from BackOffice mutations", async () => {

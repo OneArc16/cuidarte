@@ -3,6 +3,7 @@ import { Module } from "@nestjs/common";
 import { DatabaseModule } from "../../database/database.module";
 import { AuthModule } from "../auth/auth.module";
 import { EmpleadosModule } from "../empleados/empleados.module";
+import { TenantBrandingModule } from "../tenant-branding/tenant-branding.module";
 import { AlimentacionFormatoExportService } from "./application/alimentacion-formato-export.service";
 import { AlimentacionService } from "./application/alimentacion.service";
 import { ALIMENTACION_FORMATO_FILES_STORAGE } from "./domain/alimentacion-formato-files.storage";
@@ -12,7 +13,7 @@ import { DrizzleAlimentacionRepository } from "./infrastructure/drizzle-alimenta
 import { AlimentacionController } from "./presentation/alimentacion.controller";
 
 @Module({
-  imports: [AuthModule, DatabaseModule, EmpleadosModule],
+  imports: [AuthModule, DatabaseModule, EmpleadosModule, TenantBrandingModule],
   controllers: [AlimentacionController],
   providers: [
     AlimentacionService,

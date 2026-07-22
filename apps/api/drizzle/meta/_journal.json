@@ -92,6 +92,13 @@
       "when": 1781917200000,
       "tag": "0012_director_signature_history",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1784707200000,
+      "tag": "0013_tenant_branding",
+      "breakpoints": true
     }
   ]
 }

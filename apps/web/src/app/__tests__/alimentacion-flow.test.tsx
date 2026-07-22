@@ -334,6 +334,7 @@ describe("App alimentacion flow", () => {
     await user.type(deliveryDateInput, "2026-04-24");
     await user.type(screen.getByLabelText("Buscar por nombre o documento"), "10");
     await user.click(screen.getByRole("button", { name: /Rosa Elena Martinez Rojas/i }));
+    await user.type(screen.getByLabelText("Buscar por nombre o documento"), "10");
     await user.click(screen.getByRole("button", { name: /Daniel Andres Castano Navarro/i }));
     await user.click(screen.getByRole("button", { name: /Marcar todos como entregados/i }));
 
