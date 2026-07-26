@@ -19,13 +19,14 @@ import {
   type EmpleadoSignatureVersionRecord,
   type EmpleadoTenantOptionRecord,
   type DirectorSignatureAssignmentRecord,
-  type DirectorSignatureMonthResolutionRecord,
+  type DirectorSignatureAssignmentHistoryRecord,
+  type DirectorSignatureDateResolutionRecord,
   type FindEmpleadoByDocumentQuery,
   type FindEmpleadoByEmailQuery,
   type FindEmpleadoByIdQuery,
   type FindEmpleadoSignatureVersionByIdQuery,
   type FindEmpleadosQuery,
-  type ResolveDirectorSignatureForMonthQuery,
+  type ResolveDirectorSignatureForDateQuery,
   type UpdateEmpleadoRecordCommand,
 } from "../domain/empleado.types";
 import { type EmpleadosRepository } from "../domain/empleados.repository";
@@ -76,14 +77,22 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       return null;
     }
 
-    const [latestSignature, currentDirectorSignatureAssignment] = await Promise.all([
+    const [
+      latestSignature,
+      currentDirectorSignatureAssignment,
+      directorSignatureAssignmentHistory,
+    ] = await Promise.all([
       this.findLatestSignatureVersionByEmployeeId(row.id),
       this.findCurrentDirectorSignatureAssignmentByEmployeeId(row.id),
+      row.tenantId === null || row.role !== "director"
+        ? Promise.resolve([])
+        : this.findDirectorSignatureAssignmentHistoryByTenantId(row.tenantId),
     ]);
 
     return this.toRecord(row, {
       latestSignature,
       currentDirectorSignatureAssignment,
+      directorSignatureAssignmentHistory,
     });
   }
 
@@ -241,10 +250,37 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
     return row === undefined ? null : row;
   }
 
-  async resolveDirectorSignatureForMonth(
-    query: ResolveDirectorSignatureForMonthQuery,
-  ): Promise<DirectorSignatureMonthResolutionRecord[]> {
-    const monthRange = resolveInclusiveMonthRange(query.deliveryMonth);
+  async findDirectorSignatureAssignmentHistoryByTenantId(
+    tenantId: string,
+  ): Promise<DirectorSignatureAssignmentHistoryRecord[]> {
+    return await this.database.db
+      .select({
+        id: tenantDirectorSignatureAssignments.id,
+        tenantId: tenantDirectorSignatureAssignments.tenantId,
+        employeeId: tenantDirectorSignatureAssignments.employeeId,
+        signatureVersionId: tenantDirectorSignatureAssignments.signatureVersionId,
+        effectiveFrom: tenantDirectorSignatureAssignments.effectiveFrom,
+        effectiveTo: tenantDirectorSignatureAssignments.effectiveTo,
+        createdAt: tenantDirectorSignatureAssignments.createdAt,
+        employeeFullName: users.fullName,
+        signatureOriginalName: employeeSignatureVersions.originalName,
+      })
+      .from(tenantDirectorSignatureAssignments)
+      .innerJoin(users, eq(users.id, tenantDirectorSignatureAssignments.employeeId))
+      .innerJoin(
+        employeeSignatureVersions,
+        eq(employeeSignatureVersions.id, tenantDirectorSignatureAssignments.signatureVersionId),
+      )
+      .where(eq(tenantDirectorSignatureAssignments.tenantId, tenantId))
+      .orderBy(
+        desc(tenantDirectorSignatureAssignments.effectiveFrom),
+        desc(tenantDirectorSignatureAssignments.createdAt),
+      );
+  }
+
+  async resolveDirectorSignatureForDate(
+    query: ResolveDirectorSignatureForDateQuery,
+  ): Promise<DirectorSignatureDateResolutionRecord[]> {
     const rows = await this.database.db
       .select({
         assignmentId: tenantDirectorSignatureAssignments.id,
@@ -275,10 +311,10 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       .where(
         and(
           eq(tenantDirectorSignatureAssignments.tenantId, query.tenantId),
-          lte(tenantDirectorSignatureAssignments.effectiveFrom, monthRange.endDateInclusive),
+          lte(tenantDirectorSignatureAssignments.effectiveFrom, query.effectiveDate),
           or(
             isNull(tenantDirectorSignatureAssignments.effectiveTo),
-            gte(tenantDirectorSignatureAssignments.effectiveTo, monthRange.startDate),
+            gte(tenantDirectorSignatureAssignments.effectiveTo, query.effectiveDate),
           )!,
         ),
       )
@@ -587,14 +623,22 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       throw new Error(errorMessage);
     }
 
-    const [latestSignature, currentDirectorSignatureAssignment] = await Promise.all([
+    const [
+      latestSignature,
+      currentDirectorSignatureAssignment,
+      directorSignatureAssignmentHistory,
+    ] = await Promise.all([
       this.findLatestSignatureVersionByEmployeeId(id),
       this.findCurrentDirectorSignatureAssignmentByEmployeeId(id),
+      row.tenantId === null || row.role !== "director"
+        ? Promise.resolve([])
+        : this.findDirectorSignatureAssignmentHistoryByTenantId(row.tenantId),
     ]);
 
     return this.toRecord(row, {
       latestSignature,
       currentDirectorSignatureAssignment,
+      directorSignatureAssignmentHistory,
     });
   }
 
@@ -645,6 +689,7 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
     relations?: {
       latestSignature?: EmpleadoSignatureVersionRecord | null;
       currentDirectorSignatureAssignment?: DirectorSignatureAssignmentRecord | null;
+      directorSignatureAssignmentHistory?: DirectorSignatureAssignmentHistoryRecord[];
     },
   ): EmpleadoRecord {
     return {
@@ -652,37 +697,14 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       latestSignature: relations?.latestSignature ?? null,
       currentDirectorSignatureAssignment:
         relations?.currentDirectorSignatureAssignment ?? null,
+      directorSignatureAssignmentHistory:
+        relations?.directorSignatureAssignmentHistory ?? [],
     };
   }
 }
 
 function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, (character) => `\\${character}`);
-}
-
-function resolveInclusiveMonthRange(deliveryMonth: string): {
-  startDate: string;
-  endDateInclusive: string;
-} {
-  const [yearValue, monthValue] = deliveryMonth.split("-");
-
-  if (yearValue === undefined || monthValue === undefined) {
-    throw new Error("deliveryMonth invalido.");
-  }
-
-  const year = Number.parseInt(yearValue, 10);
-  const month = Number.parseInt(monthValue, 10);
-  const nextMonthDate =
-    month === 12
-      ? new Date(Date.UTC(year + 1, 0, 1))
-      : new Date(Date.UTC(year, month, 1));
-
-  nextMonthDate.setUTCDate(nextMonthDate.getUTCDate() - 1);
-
-  return {
-    startDate: `${yearValue}-${monthValue}-01`,
-    endDateInclusive: nextMonthDate.toISOString().slice(0, 10),
-  };
 }
 
 function resolvePreviousDate(dateValue: string): string {

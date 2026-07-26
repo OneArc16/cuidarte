@@ -3,7 +3,8 @@ import {
   type CreateEmpleadoRecordCommand,
   type CreateEmpleadoSignatureVersionCommand,
   type DirectorSignatureAssignmentRecord,
-  type DirectorSignatureMonthResolutionRecord,
+  type DirectorSignatureAssignmentHistoryRecord,
+  type DirectorSignatureDateResolutionRecord,
   type EmpleadoAuditCommand,
   type EmpleadoRecord,
   type EmpleadoSignatureVersionRecord,
@@ -13,7 +14,7 @@ import {
   type FindEmpleadoByEmailQuery,
   type FindEmpleadoByIdQuery,
   type FindEmpleadosQuery,
-  type ResolveDirectorSignatureForMonthQuery,
+  type ResolveDirectorSignatureForDateQuery,
   type UpdateEmpleadoRecordCommand,
 } from "./empleado.types";
 
@@ -37,9 +38,12 @@ export type EmpleadosRepository = {
   findLatestDirectorSignatureAssignmentByTenantId(
     tenantId: string,
   ): Promise<DirectorSignatureAssignmentRecord | null>;
-  resolveDirectorSignatureForMonth(
-    query: ResolveDirectorSignatureForMonthQuery,
-  ): Promise<DirectorSignatureMonthResolutionRecord[]>;
+  findDirectorSignatureAssignmentHistoryByTenantId(
+    tenantId: string,
+  ): Promise<DirectorSignatureAssignmentHistoryRecord[]>;
+  resolveDirectorSignatureForDate(
+    query: ResolveDirectorSignatureForDateQuery,
+  ): Promise<DirectorSignatureDateResolutionRecord[]>;
   create(command: CreateEmpleadoRecordCommand, audit: EmpleadoAuditCommand): Promise<EmpleadoRecord>;
   update(
     command: UpdateEmpleadoRecordCommand,

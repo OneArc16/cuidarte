@@ -87,6 +87,13 @@ export const empleadoDirectorSignatureAssignmentSchema = z.object({
   effectiveTo: dateSchema.nullable(),
 });
 
+export const empleadoDirectorSignatureAssignmentHistoryItemSchema =
+  empleadoDirectorSignatureAssignmentSchema.extend({
+    employeeFullName: z.string().min(1).max(180),
+    signatureOriginalName: z.string().min(1).max(260),
+    createdAt: z.string().min(1),
+  });
+
 export const empleadoDetailSchema = empleadoListItemSchema.extend({
   firstName: z.string().min(1).max(80),
   middleName: z.string().max(80).nullable(),
@@ -97,6 +104,10 @@ export const empleadoDetailSchema = empleadoListItemSchema.extend({
     .nullable()
     .optional()
     .default(null),
+  directorSignatureAssignmentHistory: z
+    .array(empleadoDirectorSignatureAssignmentHistoryItemSchema)
+    .optional()
+    .default([]),
 });
 
 export const empleadoCommandSchema = z.object({
@@ -141,6 +152,9 @@ export type EmpleadoListItem = z.infer<typeof empleadoListItemSchema>;
 export type EmpleadoSignature = z.infer<typeof empleadoSignatureSchema>;
 export type EmpleadoDirectorSignatureAssignment = z.infer<
   typeof empleadoDirectorSignatureAssignmentSchema
+>;
+export type EmpleadoDirectorSignatureAssignmentHistoryItem = z.infer<
+  typeof empleadoDirectorSignatureAssignmentHistoryItemSchema
 >;
 export type EmpleadoDetail = z.infer<typeof empleadoDetailSchema>;
 export type CreateEmpleadoRequest = z.infer<typeof createEmpleadoRequestSchema>;

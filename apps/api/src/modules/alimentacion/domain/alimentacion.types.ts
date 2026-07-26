@@ -151,6 +151,7 @@ export type CreateAlimentacionFormatoEmissionCommand = {
   sourceDateFrom: string | null;
   sourceDateTo: string | null;
   issuedByUserId: string;
+  issuedAt: Date;
 };
 
 export type CreateAlimentacionBatchRecordCommand = {

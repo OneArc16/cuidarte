@@ -553,7 +553,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
           sourceDateFrom: command.sourceDateFrom,
           sourceDateTo: command.sourceDateTo,
           issuedByUserId: command.issuedByUserId,
-          issuedAt: new Date(),
+          issuedAt: command.issuedAt,
         })
         .returning({
           id: alimentacionFormatoEmissions.id,

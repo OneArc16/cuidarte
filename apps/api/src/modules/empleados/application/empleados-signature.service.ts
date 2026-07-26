@@ -17,7 +17,7 @@ import {
 import { canManageEmpleados, resolveEmpleadosScope } from "../domain/empleado.policy";
 import {
   type BufferedEmpleadoSignatureUpload,
-  type DirectorSignatureMonthResolutionRecord,
+  type DirectorSignatureDateResolutionRecord,
   type EmpleadoAuditCommand,
   type EmpleadoRecord,
   type EmpleadoSignatureVersionRecord,
@@ -162,16 +162,26 @@ export class EmpleadosSignatureService {
       },
     });
 
-    return await this.empleadosRepository.assignDirectorSignature(
-      {
-        tenantId,
-        employeeId: empleado.id,
-        signatureVersionId: signatureVersion.id,
-        effectiveFrom: command.effectiveFrom,
-        createdByUserId: actor.id,
-      },
-      auditEntries,
-    );
+    try {
+      return await this.empleadosRepository.assignDirectorSignature(
+        {
+          tenantId,
+          employeeId: empleado.id,
+          signatureVersionId: signatureVersion.id,
+          effectiveFrom: command.effectiveFrom,
+          createdByUserId: actor.id,
+        },
+        auditEntries,
+      );
+    } catch (error: unknown) {
+      if (isDirectorSignatureAssignmentOverlap(error)) {
+        throw new ConflictException(
+          "La nueva vigencia se cruza con otra vigencia de firma del centro. Revisa el historial y selecciona una fecha posterior.",
+        );
+      }
+
+      throw error;
+    }
   }
 
   async downloadLatestSignatureFile(empleadoId: string, actor: AuthUser) {
@@ -188,24 +198,24 @@ export class EmpleadosSignatureService {
     );
   }
 
-  async resolveDirectorSignatureForMonth(
+  async resolveDirectorSignatureForDate(
     tenantId: string,
-    deliveryMonth: string,
-  ): Promise<DirectorSignatureMonthResolutionRecord> {
-    const matches = await this.empleadosRepository.resolveDirectorSignatureForMonth({
+    effectiveDate: string,
+  ): Promise<DirectorSignatureDateResolutionRecord> {
+    const matches = await this.empleadosRepository.resolveDirectorSignatureForDate({
       tenantId,
-      deliveryMonth,
+      effectiveDate,
     });
 
     if (matches.length === 0) {
       throw new BadRequestException(
-        "El centro no tiene un director firmante configurado para el periodo seleccionado.",
+        "El centro no tiene un director firmante vigente para la fecha de emision del formato.",
       );
     }
 
     if (matches.length > 1) {
       throw new ConflictException(
-        "El centro tiene mas de un director firmante vigente para este periodo. Revisa la configuracion de firmas antes de exportar el formato.",
+        "El centro tiene mas de una vigencia de firma aplicable a la fecha de emision. Revisa el historial de vigencias antes de exportar el formato.",
       );
     }
 
@@ -320,4 +330,22 @@ function resolvePreviousDate(dateValue: string): string {
   currentDate.setUTCDate(currentDate.getUTCDate() - 1);
 
   return currentDate.toISOString().slice(0, 10);
+}
+
+function isDirectorSignatureAssignmentOverlap(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  const postgresError = error as {
+    code?: unknown;
+    constraint?: unknown;
+    constraint_name?: unknown;
+  };
+  const constraintName = postgresError.constraint_name ?? postgresError.constraint;
+
+  return (
+    postgresError.code === "23P01" ||
+    constraintName === "tenant_director_signature_assignments_no_overlap"
+  );
 }

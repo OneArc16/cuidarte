@@ -64,6 +64,12 @@ export type DirectorSignatureAssignmentRecord = {
   createdAt: Date;
 };
 
+export type DirectorSignatureAssignmentHistoryRecord =
+  DirectorSignatureAssignmentRecord & {
+    employeeFullName: string;
+    signatureOriginalName: string;
+  };
+
 export type EmpleadoCommandRecord = {
   tenantId: string | null;
   firstName: string;
@@ -126,12 +132,12 @@ export type AssignDirectorSignatureCommand = {
   createdByUserId: string;
 };
 
-export type ResolveDirectorSignatureForMonthQuery = {
+export type ResolveDirectorSignatureForDateQuery = {
   tenantId: string;
-  deliveryMonth: string;
+  effectiveDate: string;
 };
 
-export type DirectorSignatureMonthResolutionRecord = {
+export type DirectorSignatureDateResolutionRecord = {
   assignment: DirectorSignatureAssignmentRecord;
   employeeFullName: string;
   employeeRole: UserRole;
@@ -155,6 +161,7 @@ export type EmpleadoRecord = {
   isTenantOwner: boolean;
   latestSignature: EmpleadoSignatureVersionRecord | null;
   currentDirectorSignatureAssignment: DirectorSignatureAssignmentRecord | null;
+  directorSignatureAssignmentHistory: DirectorSignatureAssignmentHistoryRecord[];
   createdAt: Date;
   updatedAt: Date;
 };

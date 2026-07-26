@@ -67,6 +67,7 @@ const records: EmpleadoRecord[] = [
     isTenantOwner: false,
     latestSignature: null,
     currentDirectorSignatureAssignment: null,
+    directorSignatureAssignmentHistory: [],
     createdAt: new Date("2026-04-21T12:00:00.000Z"),
     updatedAt: new Date("2026-04-21T12:00:00.000Z"),
   },
@@ -87,6 +88,7 @@ const records: EmpleadoRecord[] = [
     isTenantOwner: false,
     latestSignature: null,
     currentDirectorSignatureAssignment: null,
+    directorSignatureAssignmentHistory: [],
     createdAt: new Date("2026-04-21T12:00:00.000Z"),
     updatedAt: new Date("2026-04-21T12:00:00.000Z"),
   },
@@ -345,7 +347,10 @@ function createRepository(overrides: {
     async findLatestDirectorSignatureAssignmentByTenantId() {
       return null;
     },
-    async resolveDirectorSignatureForMonth() {
+    async findDirectorSignatureAssignmentHistoryByTenantId() {
+      return [];
+    },
+    async resolveDirectorSignatureForDate() {
       return [];
     },
     async create(command, audit) {

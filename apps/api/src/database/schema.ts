@@ -276,6 +276,10 @@ export const tenantDirectorSignatureAssignments = pgTable(
       table.signatureVersionId,
     ),
     index("tenant_director_signature_assignments_effective_from_idx").on(table.effectiveFrom),
+    check(
+      "tenant_director_signature_assignments_valid_range",
+      sql`${table.effectiveTo} is null or ${table.effectiveTo} >= ${table.effectiveFrom}`,
+    ),
   ],
 );
 

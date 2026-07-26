@@ -1,4 +1,5 @@
 import { type EmpleadoDetail } from "@cuidarte/contracts";
+import { History } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { resolveEmpleadosApiError } from "../lib/empleados-formatters";
@@ -142,6 +143,71 @@ export function EmpleadoDirectorSignaturePanel({
         </article>
       </div>
 
+      <details className="empleado-signature-history">
+        <summary>
+          <span className="empleado-signature-history__icon" aria-hidden="true">
+            <History />
+          </span>
+          <span className="empleado-signature-history__heading">
+            <strong>Historial de vigencias</strong>
+            <small>Consulta los directores y firmas asignados anteriormente al centro.</small>
+          </span>
+          <span className="empleado-signature-history__count">
+            {detail.directorSignatureAssignmentHistory.length}
+          </span>
+        </summary>
+
+        {detail.directorSignatureAssignmentHistory.length === 0 ? (
+          <p className="empleado-signature-history__empty">
+            Aun no existen vigencias de firma registradas para este centro.
+          </p>
+        ) : (
+          <ol className="empleado-signature-timeline">
+            {detail.directorSignatureAssignmentHistory.map((assignment) => {
+              const isCurrent = assignment.effectiveTo === null;
+
+              return (
+                <li key={assignment.id}>
+                  <span
+                    className="empleado-signature-timeline__marker"
+                    data-state={isCurrent ? "current" : "closed"}
+                    aria-hidden="true"
+                  />
+                  <div className="empleado-signature-timeline__content">
+                    <div className="empleado-signature-timeline__identity">
+                      <div>
+                        <strong>{assignment.employeeFullName}</strong>
+                        <span>{assignment.signatureOriginalName}</span>
+                      </div>
+                      <span
+                        className="empleado-signature-timeline__status"
+                        data-state={isCurrent ? "current" : "closed"}
+                      >
+                        {isCurrent ? "Vigente" : "Finalizada"}
+                      </span>
+                    </div>
+                    <dl>
+                      <div>
+                        <dt>Desde</dt>
+                        <dd>{formatAssignmentDate(assignment.effectiveFrom)}</dd>
+                      </div>
+                      <div>
+                        <dt>Hasta</dt>
+                        <dd>
+                          {assignment.effectiveTo === null
+                            ? "Actualidad"
+                            : formatAssignmentDate(assignment.effectiveTo)}
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </details>
+
       <div className="empleado-signature-panel__actions">
         <form
           className="empleado-signature-action-card"
@@ -260,4 +326,11 @@ function resolveTodayDate(): string {
   const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
 
   return localDate.toISOString().slice(0, 10);
+}
+
+function formatAssignmentDate(value: string): string {
+  return new Intl.DateTimeFormat("es-CO", {
+    dateStyle: "medium",
+    timeZone: "UTC",
+  }).format(new Date(`${value}T00:00:00.000Z`));
 }

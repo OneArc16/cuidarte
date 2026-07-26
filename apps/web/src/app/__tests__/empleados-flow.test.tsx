@@ -176,6 +176,66 @@ describe("App empleados flow", () => {
     expect(updatePayload).not.toHaveProperty("password");
   });
 
+  it("shows the signature assignment history for a director", async () => {
+    const directorDetail = {
+      ...empleadoFixture,
+      role: "director" as const,
+      latestSignature: null,
+      currentDirectorSignatureAssignment: {
+        id: "8f41c6e2-6c19-42c4-821d-5e0eb5bd784f",
+        tenantId: empleadoFixture.tenantId,
+        employeeId: empleadoFixture.id,
+        signatureVersionId: "dc8e2c42-8f96-4f19-b204-adf90e139bf4",
+        effectiveFrom: "2026-07-22",
+        effectiveTo: null,
+      },
+      directorSignatureAssignmentHistory: [
+        {
+          id: "8f41c6e2-6c19-42c4-821d-5e0eb5bd784f",
+          tenantId: empleadoFixture.tenantId,
+          employeeId: empleadoFixture.id,
+          employeeFullName: empleadoFixture.fullName,
+          signatureVersionId: "dc8e2c42-8f96-4f19-b204-adf90e139bf4",
+          signatureOriginalName: "firma-vigente.jpeg",
+          effectiveFrom: "2026-07-22",
+          effectiveTo: null,
+          createdAt: "2026-07-22T19:20:34.531Z",
+        },
+        {
+          id: "49cf7bc9-f5e3-4ea1-a210-1500ff969434",
+          tenantId: empleadoFixture.tenantId,
+          employeeId: empleadoFixture.id,
+          employeeFullName: empleadoFixture.fullName,
+          signatureVersionId: "ab906f9d-0e7f-473a-8630-23b877aa6048",
+          signatureOriginalName: "firma-anterior.jpg",
+          effectiveFrom: "2026-06-20",
+          effectiveTo: "2026-07-21",
+          createdAt: "2026-06-20T23:55:42.848Z",
+        },
+      ],
+    };
+    server.use(
+      mockAuthMe(authUserFixture),
+      http.get("http://localhost:3001/api/empleados/:empleadoId", () =>
+        HttpResponse.json(directorDetail),
+      ),
+    );
+    const user = userEvent.setup();
+
+    renderAppAtPath(`/gestion-empleados/${empleadoFixture.id}/edit`);
+
+    const historyTitle = await screen.findByText("Historial de vigencias");
+    const history = historyTitle.closest("details");
+
+    expect(history).not.toBeNull();
+    await user.click(historyTitle);
+
+    expect(within(history as HTMLElement).getByText("firma-vigente.jpeg")).toBeVisible();
+    expect(within(history as HTMLElement).getByText("firma-anterior.jpg")).toBeVisible();
+    expect(within(history as HTMLElement).getByText("Vigente")).toBeVisible();
+    expect(within(history as HTMLElement).getByText("Finalizada")).toBeVisible();
+  });
+
   it("keeps auditor users in Gestion de empleados with read-only actions", async () => {
     server.use(mockAuthMe(auditorUserFixture));
     renderAppAtPath("/gestion-empleados");

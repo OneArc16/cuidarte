@@ -225,8 +225,8 @@
 
 .empleado-form-panel {
   display: grid;
-  gap: 16px;
-  padding: 18px;
+  gap: 14px;
+  padding: 16px;
   border: 1px solid rgb(8 80 65 / 12%);
   border-radius: 8px;
   background:
@@ -238,12 +238,38 @@
 .empleado-form-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px 14px;
 }
 
 .empleado-form-field {
   display: grid;
   gap: 6px;
+}
+
+@media (min-width: 1440px) {
+  .empleado-form-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+
+  .empleado-form-field--name {
+    grid-column: span 3;
+  }
+
+  .empleado-form-grid--with-tenant .empleado-form-field--tenant {
+    grid-column: span 4;
+  }
+
+  .empleado-form-grid--with-tenant .empleado-form-field--name {
+    grid-column: span 2;
+  }
+
+  .empleado-form-field--email {
+    grid-column: span 4;
+  }
+
+  .empleado-form-field--compact {
+    grid-column: span 2;
+  }
 }
 
 .empleado-form-field > span:first-child {
@@ -275,11 +301,18 @@
   font-size: 0.84rem;
 }
 
+.empleado-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
 .empleado-status-toggle {
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr);
   align-items: center;
-  width: min(420px, 100%);
+  width: min(360px, 100%);
   min-height: 56px;
   padding: 8px 12px;
   border: 1px solid rgb(8 80 65 / 14%);
@@ -483,6 +516,205 @@
   background: rgb(225 245 238 / 34%);
 }
 
+.empleado-signature-history {
+  overflow: hidden;
+  border: 1px solid rgb(8 80 65 / 11%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 82%);
+}
+
+.empleado-signature-history summary {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  min-height: 56px;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  color: var(--color-deep);
+  cursor: pointer;
+  list-style: none;
+  transition: background 160ms ease;
+}
+
+.empleado-signature-history summary::-webkit-details-marker {
+  display: none;
+}
+
+.empleado-signature-history summary:hover,
+.empleado-signature-history summary:focus-visible {
+  background: rgb(225 245 238 / 38%);
+}
+
+.empleado-signature-history__icon {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--color-soft);
+  color: var(--color-deep);
+}
+
+.empleado-signature-history__icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+.empleado-signature-history__heading {
+  display: grid;
+  gap: 2px;
+}
+
+.empleado-signature-history__heading strong {
+  font-size: 0.9rem;
+}
+
+.empleado-signature-history__heading small {
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.empleado-signature-history__count {
+  display: inline-grid;
+  min-width: 28px;
+  height: 28px;
+  place-items: center;
+  padding-inline: 8px;
+  border-radius: 999px;
+  background: var(--color-deep);
+  color: white;
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+
+.empleado-signature-history__empty {
+  margin: 0;
+  padding: 12px 16px 16px 58px;
+  border-top: 1px solid rgb(8 80 65 / 9%);
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+
+.empleado-signature-timeline {
+  display: grid;
+  gap: 0;
+  padding: 4px 14px 12px 30px;
+  margin: 0;
+  border-top: 1px solid rgb(8 80 65 / 9%);
+  list-style: none;
+}
+
+.empleado-signature-timeline li {
+  position: relative;
+  padding: 10px 0 10px 24px;
+}
+
+.empleado-signature-timeline li:not(:last-child)::before {
+  position: absolute;
+  top: 26px;
+  bottom: -6px;
+  left: 6px;
+  width: 1px;
+  background: rgb(8 80 65 / 18%);
+  content: "";
+}
+
+.empleado-signature-timeline__marker {
+  position: absolute;
+  top: 16px;
+  left: 1px;
+  width: 11px;
+  height: 11px;
+  border: 2px solid white;
+  border-radius: 999px;
+  background: var(--color-muted);
+  box-shadow: 0 0 0 1px rgb(8 80 65 / 22%);
+}
+
+.empleado-signature-timeline__marker[data-state="current"] {
+  background: var(--color-care);
+  box-shadow: 0 0 0 3px rgb(29 158 117 / 14%);
+}
+
+.empleado-signature-timeline__content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.empleado-signature-timeline__identity {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.empleado-signature-timeline__identity > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.empleado-signature-timeline__identity strong,
+.empleado-signature-timeline__identity span {
+  overflow-wrap: anywhere;
+}
+
+.empleado-signature-timeline__identity strong {
+  color: var(--color-ink);
+  font-size: 0.84rem;
+}
+
+.empleado-signature-timeline__identity > div > span {
+  color: var(--color-muted);
+  font-size: 0.76rem;
+}
+
+.empleado-signature-timeline__status {
+  flex: 0 0 auto;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgb(93 113 107 / 10%);
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.empleado-signature-timeline__status[data-state="current"] {
+  background: var(--color-soft);
+  color: var(--color-deep);
+}
+
+.empleado-signature-timeline dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(96px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.empleado-signature-timeline dl div {
+  display: grid;
+  gap: 1px;
+}
+
+.empleado-signature-timeline dt {
+  color: var(--color-muted);
+  font-size: 0.65rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.empleado-signature-timeline dd {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
 .empleado-signature-file-input {
   display: grid;
   gap: 8px;
@@ -632,6 +864,39 @@
 
   .empleado-form-actions {
     justify-content: stretch;
+  }
+
+  .empleado-form-footer {
+    display: grid;
+  }
+
+  .empleado-status-toggle {
+    width: 100%;
+  }
+
+  .empleado-signature-history summary {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+  }
+
+  .empleado-signature-history__heading small {
+    display: none;
+  }
+
+  .empleado-signature-history__empty {
+    padding-left: 14px;
+  }
+
+  .empleado-signature-timeline {
+    padding-left: 18px;
+  }
+
+  .empleado-signature-timeline__content {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .empleado-signature-timeline dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .empleado-form-actions .primary-action,

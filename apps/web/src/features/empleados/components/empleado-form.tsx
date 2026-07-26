@@ -114,9 +114,17 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
       }}
     >
       <section className="empleado-form-panel">
-        <div className="empleado-form-grid">
+        <div
+          className={`empleado-form-grid${
+            shouldShowTenantSelect ? " empleado-form-grid--with-tenant" : ""
+          }`}
+        >
           {shouldShowTenantSelect ? (
-            <EmpleadoFieldGroup label="Centro" error={getError("tenantId")}>
+            <EmpleadoFieldGroup
+              className="empleado-form-field--tenant"
+              label="Centro"
+              error={getError("tenantId")}
+            >
               <select
                 aria-invalid={getError("tenantId") === undefined ? "false" : "true"}
                 disabled={props.mode === "create" && props.areTenantOptionsLoading}
@@ -134,7 +142,11 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
             </EmpleadoFieldGroup>
           ) : null}
 
-          <EmpleadoFieldGroup label="Primer nombre" error={getError("firstName")}>
+          <EmpleadoFieldGroup
+            className="empleado-form-field--name"
+            label="Primer nombre"
+            error={getError("firstName")}
+          >
             <input
               type="text"
               autoComplete="given-name"
@@ -143,7 +155,11 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
             />
           </EmpleadoFieldGroup>
 
-          <EmpleadoFieldGroup label="Segundo nombre" error={getError("middleName")}>
+          <EmpleadoFieldGroup
+            className="empleado-form-field--name"
+            label="Segundo nombre"
+            error={getError("middleName")}
+          >
             <input
               type="text"
               autoComplete="additional-name"
@@ -152,7 +168,11 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
             />
           </EmpleadoFieldGroup>
 
-          <EmpleadoFieldGroup label="Primer apellido" error={getError("firstSurname")}>
+          <EmpleadoFieldGroup
+            className="empleado-form-field--name"
+            label="Primer apellido"
+            error={getError("firstSurname")}
+          >
             <input
               type="text"
               autoComplete="family-name"
@@ -161,7 +181,11 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
             />
           </EmpleadoFieldGroup>
 
-          <EmpleadoFieldGroup label="Segundo apellido" error={getError("secondSurname")}>
+          <EmpleadoFieldGroup
+            className="empleado-form-field--name"
+            label="Segundo apellido"
+            error={getError("secondSurname")}
+          >
             <input
               type="text"
               aria-invalid={getError("secondSurname") === undefined ? "false" : "true"}
@@ -169,7 +193,11 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
             />
           </EmpleadoFieldGroup>
 
-          <EmpleadoFieldGroup label="Correo electronico" error={getError("email")}>
+          <EmpleadoFieldGroup
+            className="empleado-form-field--email"
+            label="Correo electronico"
+            error={getError("email")}
+          >
             <input
               type="email"
               autoComplete="email"
@@ -178,7 +206,11 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
             />
           </EmpleadoFieldGroup>
 
-          <EmpleadoFieldGroup label="Numero de documento" error={getError("documentNumber")}>
+          <EmpleadoFieldGroup
+            className="empleado-form-field--compact"
+            label="Numero de documento"
+            error={getError("documentNumber")}
+          >
             <input
               type="text"
               inputMode="text"
@@ -187,7 +219,11 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
             />
           </EmpleadoFieldGroup>
 
-          <EmpleadoFieldGroup label="Telefono" error={getError("phone")}>
+          <EmpleadoFieldGroup
+            className="empleado-form-field--compact"
+            label="Telefono"
+            error={getError("phone")}
+          >
             <input
               type="tel"
               autoComplete="tel"
@@ -196,7 +232,11 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
             />
           </EmpleadoFieldGroup>
 
-          <EmpleadoFieldGroup label="Tipo de usuario" error={getError("role")}>
+          <EmpleadoFieldGroup
+            className="empleado-form-field--compact"
+            label="Tipo de usuario"
+            error={getError("role")}
+          >
             <select
               aria-invalid={getError("role") === undefined ? "false" : "true"}
               {...form.register("role")}
@@ -210,6 +250,7 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
           </EmpleadoFieldGroup>
 
           <EmpleadoFieldGroup
+            className="empleado-form-field--compact"
             label={props.mode === "create" ? "Contrasena" : "Nueva contrasena"}
             error={getError("password")}
           >
@@ -223,40 +264,42 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
         </div>
       </section>
 
-      <button
-        className="empleado-status-toggle"
-        type="button"
-        aria-pressed={isActive}
-        onClick={() =>
-          setValue("isActive", !isActive, {
-            shouldDirty: true,
-            shouldTouch: true,
-            shouldValidate: true,
-          })
-        }
-      >
-        <span className="empleado-status-toggle__icon" aria-hidden="true">
-          <Power />
-        </span>
-        <span>
-          <strong>{isActive ? "Usuario activo" : "Usuario inactivo"}</strong>
-          <small>{isActive ? "Inactivar usuario" : "Activar usuario"}</small>
-        </span>
-      </button>
-
       {props.error !== null ? (
         <p className="form-error" role="alert">
           {props.error}
         </p>
       ) : null}
 
-      <div className="empleado-form-actions">
-        <button className="outline-action" type="button" onClick={props.onCancel}>
-          Cancelar
+      <div className="empleado-form-footer">
+        <button
+          className="empleado-status-toggle"
+          type="button"
+          aria-pressed={isActive}
+          onClick={() =>
+            setValue("isActive", !isActive, {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true,
+            })
+          }
+        >
+          <span className="empleado-status-toggle__icon" aria-hidden="true">
+            <Power />
+          </span>
+          <span>
+            <strong>{isActive ? "Usuario activo" : "Usuario inactivo"}</strong>
+            <small>{isActive ? "Inactivar usuario" : "Activar usuario"}</small>
+          </span>
         </button>
-        <button className="primary-action" type="submit" disabled={props.isPending}>
-          {props.isPending ? "Guardando..." : "Guardar"}
-        </button>
+
+        <div className="empleado-form-actions">
+          <button className="outline-action" type="button" onClick={props.onCancel}>
+            Cancelar
+          </button>
+          <button className="primary-action" type="submit" disabled={props.isPending}>
+            {props.isPending ? "Guardando..." : "Guardar"}
+          </button>
+        </div>
       </div>
     </form>
   );

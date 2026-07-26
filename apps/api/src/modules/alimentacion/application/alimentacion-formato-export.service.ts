@@ -73,10 +73,12 @@ export class AlimentacionFormatoExportService {
       query,
       actor,
     );
+    const generatedAt = new Date();
+    const signatureEffectiveDate = resolveBogotaDateValue(generatedAt);
     const [directorSignature, tenantLogoVersion] = await Promise.all([
-      this.empleadosSignatureService.resolveDirectorSignatureForMonth(
+      this.empleadosSignatureService.resolveDirectorSignatureForDate(
         exportData.tenantId,
-        exportData.deliveryMonth,
+        signatureEffectiveDate,
       ),
       this.tenantBrandingService.resolveActiveLogo(exportData.tenantId),
     ]);
@@ -86,7 +88,6 @@ export class AlimentacionFormatoExportService {
       this.tenantBrandingService.readLogoVersionFile(tenantLogoVersion),
     ]);
     const tenantLogoDataUrl = `data:${tenantLogoFile.contentType};base64,${tenantLogoFile.buffer.toString("base64")}`;
-    const generatedAt = new Date();
     const pdfBuffer = await this.renderPdf(
       exportData,
       institutionalLogoDataUrl,
@@ -127,6 +128,7 @@ export class AlimentacionFormatoExportService {
         sourceDateFrom: exportData.records[0]?.deliveryDate ?? null,
         sourceDateTo: exportData.records.at(-1)?.deliveryDate ?? null,
         issuedByUserId: actor.id,
+        issuedAt: generatedAt,
       });
     } catch (error) {
       await this.deleteStoredPdfBestEffort(storedFile.relativePath);
@@ -269,4 +271,22 @@ async function readLogoFile(): Promise<Buffer | null> {
   }
 
   return null;
+}
+
+function resolveBogotaDateValue(value: Date): string {
+  const dateParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(value);
+  const year = dateParts.find((part) => part.type === "year")?.value;
+  const month = dateParts.find((part) => part.type === "month")?.value;
+  const day = dateParts.find((part) => part.type === "day")?.value;
+
+  if (year === undefined || month === undefined || day === undefined) {
+    throw new Error("No fue posible resolver la fecha de emision.");
+  }
+
+  return `${year}-${month}-${day}`;
 }

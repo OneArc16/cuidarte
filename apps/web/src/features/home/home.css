@@ -12,6 +12,12 @@
       rgb(255 246 232 / 86%)
     ),
     var(--color-page);
+  transition: grid-template-columns 240ms ease;
+}
+
+.home-shell:has(> .home-sidebar:not(.home-sidebar--collapse-after-action):hover),
+.home-shell:has(> .home-sidebar:not(.home-sidebar--collapse-after-action) :focus-visible) {
+  grid-template-columns: var(--home-sidebar-expanded) minmax(0, 1fr);
 }
 
 .home-sidebar {

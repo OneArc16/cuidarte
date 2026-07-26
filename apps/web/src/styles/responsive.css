@@ -382,6 +382,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .home-shell {
+    transition: none;
+  }
+
   .hero__slogan {
     animation: none;
     transition: opacity 1ms linear;

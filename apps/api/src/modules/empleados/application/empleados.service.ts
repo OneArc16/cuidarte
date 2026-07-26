@@ -343,6 +343,19 @@ export class EmpleadosService {
               effectiveFrom: record.currentDirectorSignatureAssignment.effectiveFrom,
               effectiveTo: record.currentDirectorSignatureAssignment.effectiveTo,
             },
+      directorSignatureAssignmentHistory: record.directorSignatureAssignmentHistory.map(
+        (assignment) => ({
+          id: assignment.id,
+          tenantId: assignment.tenantId,
+          employeeId: assignment.employeeId,
+          employeeFullName: assignment.employeeFullName,
+          signatureVersionId: assignment.signatureVersionId,
+          signatureOriginalName: assignment.signatureOriginalName,
+          effectiveFrom: assignment.effectiveFrom,
+          effectiveTo: assignment.effectiveTo,
+          createdAt: assignment.createdAt.toISOString(),
+        }),
+      ),
     });
   }
 

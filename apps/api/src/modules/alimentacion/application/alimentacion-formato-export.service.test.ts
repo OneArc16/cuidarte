@@ -85,6 +85,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
 
   it("persists the exact resolved logo version in a new emission snapshot", async () => {
     const createdEmissions: Array<Record<string, unknown>> = [];
+    let resolvedSignatureDate: string | null = null;
     const alimentacionService = {
       ...alimentacionServiceForNewEmission(),
       async createFormatoEntregaEmission(command: Record<string, unknown>) {
@@ -93,7 +94,9 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
     };
     const service = new AlimentacionFormatoExportService(
       alimentacionService as never,
-      directorSignatureService() as never,
+      directorSignatureService((effectiveDate) => {
+        resolvedSignatureDate = effectiveDate;
+      }) as never,
       {
         async resolveActiveLogo() {
           return {
@@ -124,6 +127,11 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
     await service.exportPdf(adultoMayorId, { deliveryMonth: "2026-07" }, actor);
 
     assert.equal(createdEmissions[0]?.tenantLogoVersionIdSnapshot, logoVersionId);
+    assert.ok(createdEmissions[0]?.issuedAt instanceof Date);
+    assert.equal(
+      resolvedSignatureDate,
+      resolveBogotaDateValue(createdEmissions[0].issuedAt as Date),
+    );
   });
 });
 
@@ -150,9 +158,11 @@ function alimentacionServiceForNewEmission() {
   };
 }
 
-function directorSignatureService() {
+function directorSignatureService(onResolve?: (effectiveDate: string) => void) {
   return {
-    async resolveDirectorSignatureForMonth() {
+    async resolveDirectorSignatureForDate(_tenantId: string, effectiveDate: string) {
+      onResolve?.(effectiveDate);
+
       return {
         assignment: { employeeId: "2b93919b-182e-49a9-a61c-85f55428061b" },
         employeeFullName: "Director Centro",
@@ -169,4 +179,18 @@ function directorSignatureService() {
       return { buffer: Buffer.from("signature"), contentType: "image/png" };
     },
   };
+}
+
+function resolveBogotaDateValue(value: Date): string {
+  const dateParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Bogota",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(value);
+  const year = dateParts.find((part) => part.type === "year")?.value;
+  const month = dateParts.find((part) => part.type === "month")?.value;
+  const day = dateParts.find((part) => part.type === "day")?.value;
+
+  return `${year}-${month}-${day}`;
 }
