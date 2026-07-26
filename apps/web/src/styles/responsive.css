@@ -294,7 +294,7 @@
   }
 
   .backoffice-topbar h1 {
-    font-size: 3.1rem;
+    font-size: clamp(2rem, 8vw, 2.6rem);
   }
 
   .outline-action {

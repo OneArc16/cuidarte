@@ -74,10 +74,6 @@ export function TenantBrandingPanel({ tenantId, tenantName, logo }: TenantBrandi
         <div>
           <p className="eyebrow">Identidad visual</p>
           <h2 id="tenant-branding-title">Logo del Centro de Vida</h2>
-          <p>
-            Se incorpora a las nuevas emisiones del formato de alimentación y queda congelado en
-            cada PDF histórico.
-          </p>
         </div>
         <span
           className={`tenant-branding-status${logo === null ? " tenant-branding-status--pending" : ""}`}

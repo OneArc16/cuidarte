@@ -1,6 +1,6 @@
 .backoffice-stack {
   display: grid;
-  gap: clamp(10px, 1.8vw, 18px);
+  gap: clamp(10px, 1.2vw, 14px);
   min-width: 0;
 }
 
@@ -16,22 +16,17 @@
 
 .backoffice-topbar {
   display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 18px;
-  padding: clamp(18px, 3.5vw, 38px) 0 16px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
+  padding: 8px 0 12px;
   border-bottom: 1px solid rgb(8 80 65 / 12%);
 }
 
 .backoffice-topbar h1 {
   margin-bottom: 0;
-  font-size: clamp(3rem, 6vw, 5.5rem);
-  line-height: 0.9;
-}
-
-.backoffice-topbar {
-  align-items: center;
-  justify-content: flex-start;
+  font-size: clamp(2rem, 2.8vw, 3.25rem);
+  line-height: 0.95;
 }
 
 .backoffice-back-action {
@@ -216,7 +211,7 @@
 .backoffice-form {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(360px, 0.9fr);
-  gap: 16px;
+  gap: 12px;
   width: 100%;
   max-width: none;
 }
@@ -224,8 +219,8 @@
 .form-panel {
   display: grid;
   align-content: start;
-  gap: 14px;
-  padding: 20px;
+  gap: 10px;
+  padding: 14px 16px;
   border: 1px solid rgb(8 80 65 / 12%);
   border-radius: 8px;
   background:
@@ -243,19 +238,19 @@
 
 .form-panel__header h2 {
   margin-bottom: 0;
-  font-size: clamp(1.45rem, 1.4vw, 1.8rem);
+  font-size: clamp(1.25rem, 1.25vw, 1.55rem);
   line-height: 1;
 }
 
 .form-panel__header .eyebrow {
-  margin-bottom: 6px;
-  font-size: 0.7rem;
+  margin-bottom: 4px;
+  font-size: 0.66rem;
 }
 
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: 9px 12px;
 }
 
 .form-panel--owner .form-grid {
@@ -263,34 +258,34 @@
 }
 
 .backoffice-form .field-group {
-  gap: 6px;
+  gap: 4px;
 }
 
 .backoffice-form .field-group > span:first-child {
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 800;
 }
 
 .backoffice-form .field-group input,
 .backoffice-form .field-group select {
-  min-height: 44px;
-  padding: 0 12px;
-  font-size: 0.92rem;
+  min-height: 38px;
+  padding: 0 10px;
+  font-size: 0.86rem;
 }
 
 .backoffice-form .password-field input {
-  padding-right: 50px;
+  padding-right: 42px;
 }
 
 .backoffice-form .password-visibility {
-  right: 5px;
-  width: 38px;
-  height: 38px;
+  right: 3px;
+  width: 32px;
+  height: 32px;
 }
 
 .backoffice-form .password-visibility svg {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 .switch-field {
@@ -299,14 +294,14 @@
   gap: 8px;
   width: fit-content;
   color: var(--color-deep);
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   font-weight: 800;
   cursor: pointer;
 }
 
 .switch-field input {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   margin: 0;
   accent-color: var(--color-care);
 }
@@ -318,10 +313,10 @@
 }
 
 .form-actions .primary-action {
-  min-width: 156px;
-  min-height: 44px;
-  padding: 0 18px;
-  font-size: 0.92rem;
+  min-width: 140px;
+  min-height: 40px;
+  padding: 0 16px;
+  font-size: 0.86rem;
 }
 
 .backoffice-form > .form-error {
@@ -332,7 +327,7 @@
 
 .success-banner {
   margin-bottom: 0;
-  padding: 12px 14px;
+  padding: 9px 12px;
   border: 1px solid rgb(29 158 117 / 18%);
   border-radius: 8px;
   background: var(--color-soft);
@@ -342,8 +337,8 @@
 
 .tenant-branding-panel {
   display: grid;
-  gap: 20px;
-  padding: clamp(20px, 3vw, 30px);
+  gap: 14px;
+  padding: clamp(16px, 1.8vw, 22px);
   border: 1px solid rgb(8 80 65 / 13%);
   border-radius: 12px;
   background:
@@ -362,13 +357,13 @@
 .tenant-branding-panel__header h2 {
   margin: 0;
   color: var(--color-deep);
-  font-size: clamp(1.55rem, 2.5vw, 2.25rem);
+  font-size: clamp(1.4rem, 1.8vw, 1.85rem);
   line-height: 1;
 }
 
 .tenant-branding-panel__header p:last-child {
   max-width: 680px;
-  margin: 10px 0 0;
+  margin: 7px 0 0;
   color: var(--color-muted);
   font-size: 0.88rem;
   line-height: 1.55;
@@ -396,15 +391,15 @@
 
 .tenant-branding-panel__body {
   display: grid;
-  grid-template-columns: minmax(240px, 0.72fr) minmax(0, 1.28fr);
-  gap: clamp(18px, 3vw, 34px);
+  grid-template-columns: minmax(240px, 0.58fr) minmax(0, 1.42fr);
+  gap: clamp(16px, 2vw, 24px);
   align-items: start;
 }
 
 .tenant-branding-preview {
   display: grid;
-  min-height: 220px;
-  aspect-ratio: 4 / 3;
+  min-height: 180px;
+  height: clamp(180px, 15vw, 230px);
   place-items: center;
   overflow: hidden;
   padding: 24px;
@@ -424,7 +419,7 @@
   display: block;
   width: 100%;
   height: 100%;
-  max-height: 220px;
+  max-height: 190px;
   object-fit: contain;
 }
 
@@ -455,7 +450,7 @@
 .tenant-branding-panel__content,
 .tenant-branding-upload {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .tenant-branding-panel__warning {
@@ -564,6 +559,12 @@
 
 .tenant-branding-remove {
   color: var(--color-danger);
+}
+
+@media (min-width: 1440px) {
+  .form-panel--tenant .form-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 840px) {

@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "turbo run dev",
+    "dev:free-ports": "bash scripts/free-dev-ports.sh",
     "build": "turbo run build",
     "check:slice:auth": "bash scripts/check-slice-auth.sh",
     "dev:stop": "bash scripts/stop-dev.sh",
