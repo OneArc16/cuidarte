@@ -10,9 +10,9 @@ services:
       POSTGRES_USER: cuidarte
       POSTGRES_PASSWORD: cuidarte_dev_password
     ports:
-      - "5433:5432"
+      - "15432:5432"
     volumes:
-      - cuidarte_postgres_data:/var/lib/postgresql/data
+      - cuidarte_postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cuidarte -d cuidarte"]
       interval: 10s

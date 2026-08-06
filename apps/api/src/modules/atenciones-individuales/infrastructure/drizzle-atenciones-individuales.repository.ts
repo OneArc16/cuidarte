@@ -123,7 +123,11 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
       .innerJoin(tenants, eq(tenants.id, atencionesIndividuales.tenantId))
       .innerJoin(users, eq(users.id, atencionesIndividuales.createdByUserId))
       .where(and(...conditions))
-      .orderBy(desc(atencionesIndividuales.attentionDate), desc(atencionesIndividuales.consecutive), asc(users.fullName));
+      .orderBy(
+        desc(atencionesIndividuales.attentionDate),
+        desc(atencionesIndividuales.consecutive),
+        asc(users.fullName),
+      );
 
     return rows.map((row) => this.toHistoryRecord(row));
   }
@@ -205,6 +209,7 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
         .insert(atencionesIndividuales)
         .values({
           ...this.toMutableValues(command),
+          id: command.id,
           tenantId: command.tenantId,
           adultoMayorId: command.adultoMayorId,
           createdByUserId: command.actorUserId,
@@ -223,8 +228,10 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
           command.supportFiles.map((file) => ({
             atencionId: created.id,
             originalName: file.originalName,
+            storedName: file.storedName,
             mimeType: file.mimeType,
             sizeBytes: file.sizeBytes,
+            checksum: file.checksum,
             relativePath: file.relativePath,
             createdByUserId: command.actorUserId,
             createdAt: now,
@@ -243,6 +250,20 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
           consecutive: command.consecutive,
         },
       });
+
+      if (command.supportFiles.length > 0) {
+        await tx.insert(auditLogs).values({
+          actorUserId: command.actorUserId,
+          action: "atenciones-individuales.support-files-uploaded",
+          targetTenantId: command.tenantId,
+          summary: `${command.supportFiles.length} soporte(s) PDF cargado(s) para la atencion.`,
+          metadata: {
+            atencionId: created.id,
+            fileCount: command.supportFiles.length,
+            fileIds: command.supportFiles.map((file) => file.storedName),
+          },
+        });
+      }
 
       const [row] = await tx
         .select(this.getAtencionSelection())
@@ -265,7 +286,9 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
     });
   }
 
-  async update(command: UpdateAtencionIndividualRecordCommand): Promise<SavedAtencionIndividualRecord> {
+  async update(
+    command: UpdateAtencionIndividualRecordCommand,
+  ): Promise<SavedAtencionIndividualRecord> {
     return await this.database.db.transaction(async (tx) => {
       const [beforeRow] = await tx
         .select(this.getAtencionSelection())
@@ -333,8 +356,10 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
           command.supportFiles.map((file) => ({
             atencionId: command.id,
             originalName: file.originalName,
+            storedName: file.storedName,
             mimeType: file.mimeType,
             sizeBytes: file.sizeBytes,
+            checksum: file.checksum,
             relativePath: file.relativePath,
             createdByUserId: command.actorUserId,
             createdAt: now,
@@ -361,6 +386,20 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
         },
       });
 
+      if (command.supportFiles.length > 0) {
+        await tx.insert(auditLogs).values({
+          actorUserId: command.actorUserId,
+          action: "atenciones-individuales.support-files-uploaded",
+          targetTenantId: beforeRow.tenantId,
+          summary: `${command.supportFiles.length} soporte(s) PDF cargado(s) para la atencion.`,
+          metadata: {
+            atencionId: command.id,
+            fileCount: command.supportFiles.length,
+            fileIds: command.supportFiles.map((file) => file.storedName),
+          },
+        });
+      }
+
       const [afterRow] = await tx
         .select(this.getAtencionSelection())
         .from(atencionesIndividuales)
@@ -379,6 +418,24 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
         .where(eq(atencionIndividualSupportFiles.atencionId, command.id));
 
       return { record: this.toAtencionRecord(afterRow, supportFiles), removedFiles };
+    });
+  }
+
+  async recordSupportFileDownload(command: {
+    atencionId: string;
+    tenantId: string;
+    fileId: string;
+    actorUserId: string;
+  }): Promise<void> {
+    await this.database.db.insert(auditLogs).values({
+      actorUserId: command.actorUserId,
+      action: "atenciones-individuales.support-file-downloaded",
+      targetTenantId: command.tenantId,
+      summary: "Soporte PDF descargado desde una atencion individual.",
+      metadata: {
+        atencionId: command.atencionId,
+        fileId: command.fileId,
+      },
     });
   }
 
@@ -447,10 +504,13 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
       id: atencionIndividualSupportFiles.id,
       atencionId: atencionIndividualSupportFiles.atencionId,
       originalName: atencionIndividualSupportFiles.originalName,
+      storedName: atencionIndividualSupportFiles.storedName,
       mimeType: atencionIndividualSupportFiles.mimeType,
       sizeBytes: atencionIndividualSupportFiles.sizeBytes,
+      checksum: atencionIndividualSupportFiles.checksum,
       relativePath: atencionIndividualSupportFiles.relativePath,
       createdAt: atencionIndividualSupportFiles.createdAt,
+      updatedAt: atencionIndividualSupportFiles.updatedAt,
     };
   }
 

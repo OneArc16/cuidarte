@@ -2,13 +2,19 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { type AuthUser } from "@cuidarte/contracts";
-import { ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+} from "@nestjs/common";
 
 import { AtencionesIndividualesService } from "./atenciones-individuales.service";
 import {
   type AtencionIndividualAdultoRecord,
   type AtencionIndividualHistoryItemRecord,
   type AtencionIndividualRecord,
+  type AtencionIndividualSupportFileRecord,
   type BufferedAtencionIndividualUpload,
   type CreateAtencionIndividualRecordCommand,
   type FindAtencionIndividualAdultoByIdQuery,
@@ -138,6 +144,19 @@ const otherProfessionalAtencionRecord: AtencionIndividualRecord = {
   updatedByUserId: psicologoUser.id,
 };
 
+const supportFileRecord: AtencionIndividualSupportFileRecord = {
+  id: "3d6d6039-9bc7-45ef-82c3-2479ed9c49de",
+  atencionId,
+  originalName: "resultado.pdf",
+  storedName: "f76b7e2e-1d44-43f4-8baf-8f57478a0c35.pdf",
+  mimeType: "application/pdf",
+  sizeBytes: 23,
+  checksum: "a".repeat(64),
+  relativePath: `${tenantId}/atenciones-individuales/${atencionId}/f76b7e2e-1d44-43f4-8baf-8f57478a0c35.pdf`,
+  createdAt: atencionRecord.createdAt,
+  updatedAt: atencionRecord.updatedAt,
+};
+
 const historyItemRecord: AtencionIndividualHistoryItemRecord = {
   id: atencionId,
   tenantId,
@@ -186,9 +205,64 @@ describe("AtencionesIndividualesService", () => {
 
     const result = await service.createAtencion(createRequest(), psicologoUser);
 
-    assert.equal(result.id, atencionId);
+    assert.match(result.id, /^[0-9a-f-]{36}$/);
     assert.equal(repository.createdCommands[0]?.actorUserId, psicologoUser.id);
     assert.equal(repository.createdCommands[0]?.tenantId, tenantId);
+  });
+
+  it("accepts only real PDFs and stores their metadata before creating the record", async () => {
+    const repository = createRepository();
+    const service = new AtencionesIndividualesService(repository, createFilesStorage());
+    const pdf = "%PDF-1.7\n%%EOF\n";
+    const upload: BufferedAtencionIndividualUpload = {
+      originalName: "resultado.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from(pdf),
+      sizeBytes: Buffer.byteLength(pdf),
+    };
+
+    await service.createAtencion(createRequest(), medicoUser, [upload]);
+
+    assert.match(repository.createdCommands[0]?.id ?? "", /^[0-9a-f-]{36}$/);
+    assert.equal(repository.createdCommands[0]?.supportFiles[0]?.originalName, "resultado.pdf");
+    assert.equal(
+      repository.createdCommands[0]?.supportFiles[0]?.storedName,
+      "stored-resultado.pdf",
+    );
+
+    const nonPdf = "<script>alert('no es un pdf')</script>";
+    await assert.rejects(
+      () =>
+        service.createAtencion(createRequest(), medicoUser, [
+          {
+            ...upload,
+            originalName: "malicioso.pdf",
+            buffer: Buffer.from(nonPdf),
+            sizeBytes: Buffer.byteLength(nonPdf),
+          },
+        ]),
+      { constructor: BadRequestException },
+    );
+    assert.equal(repository.createdCommands.length, 1);
+  });
+
+  it("audits an authorized support-file download", async () => {
+    const repository = createRepository({
+      detail: { ...atencionRecord, supportFiles: [supportFileRecord] },
+    });
+    const service = new AtencionesIndividualesService(repository, createFilesStorage());
+
+    const result = await service.downloadSupportFile(atencionId, supportFileRecord.id, medicoUser);
+
+    assert.equal(result.contentType, "application/pdf");
+    assert.deepEqual(repository.downloadCommands, [
+      {
+        atencionId,
+        tenantId,
+        fileId: supportFileRecord.id,
+        actorUserId: medicoUser.id,
+      },
+    ]);
   });
 
   it("rejects creation lookup and write operations for non clinical roles", async () => {
@@ -307,7 +381,10 @@ describe("AtencionesIndividualesService", () => {
     const adminRepository = createRepository({ detail: otherProfessionalAtencionRecord });
     const adminService = new AtencionesIndividualesService(adminRepository, createFilesStorage());
 
-    const adminResult = await adminService.getAtencion(otherProfessionalAtencionRecord.id, adminUser);
+    const adminResult = await adminService.getAtencion(
+      otherProfessionalAtencionRecord.id,
+      adminUser,
+    );
 
     assert.equal(adminResult.id, otherProfessionalAtencionRecord.id);
 
@@ -394,6 +471,12 @@ function createRepository(
     consecutiveQueries: [] as FindAtencionIndividualByConsecutiveQuery[],
     createdCommands: [] as CreateAtencionIndividualRecordCommand[],
     updatedCommands: [] as UpdateAtencionIndividualRecordCommand[],
+    downloadCommands: [] as Array<{
+      atencionId: string;
+      tenantId: string;
+      fileId: string;
+      actorUserId: string;
+    }>,
     async findAdultoMayorById(query) {
       this.adultoQueries.push(query);
       return options.adulto === undefined ? adultoRecord : options.adulto;
@@ -401,9 +484,7 @@ function createRepository(
     async findHistoryByAdultoMayor(query) {
       this.historyQueries.push(query);
       const records =
-        options.historyRecords === undefined
-          ? [historyItemRecord]
-          : options.historyRecords;
+        options.historyRecords === undefined ? [historyItemRecord] : options.historyRecords;
 
       if (query.createdByUserId === undefined) {
         return records;
@@ -438,6 +519,7 @@ function createRepository(
           id: `00000000-0000-4000-8000-00000000000${index}`,
           atencionId,
           createdAt: atencionRecord.createdAt,
+          updatedAt: atencionRecord.updatedAt,
         })),
       };
     },
@@ -460,10 +542,15 @@ function createRepository(
             id: `00000000-0000-4000-8000-00000000001${index}`,
             atencionId,
             createdAt: new Date("2026-04-24T12:10:00.000Z"),
+            updatedAt: new Date("2026-04-24T12:10:00.000Z"),
           })),
         },
         removedFiles: [],
       };
+    },
+    async recordSupportFileDownload(command) {
+      this.downloadCommands.push(command);
+      return undefined;
     },
   } satisfies AtencionesIndividualesRepository & {
     adultoQueries: FindAtencionIndividualAdultoByIdQuery[];
@@ -472,6 +559,12 @@ function createRepository(
     consecutiveQueries: FindAtencionIndividualByConsecutiveQuery[];
     createdCommands: CreateAtencionIndividualRecordCommand[];
     updatedCommands: UpdateAtencionIndividualRecordCommand[];
+    downloadCommands: Array<{
+      atencionId: string;
+      tenantId: string;
+      fileId: string;
+      actorUserId: string;
+    }>;
   };
 
   return repository;
@@ -485,8 +578,10 @@ function createFilesStorage(): AtencionesIndividualesFilesStorage {
     ) {
       return {
         originalName: file.originalName,
+        storedName: `stored-${file.originalName}`,
         mimeType: file.mimeType,
         sizeBytes: file.sizeBytes,
+        checksum: "a".repeat(64),
         relativePath: `soportes/${file.originalName}`,
       };
     },

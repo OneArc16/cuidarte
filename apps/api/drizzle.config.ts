@@ -1,7 +1,7 @@
 import { defineConfig } from "drizzle-kit";
 
 const databaseUrl =
-  process.env.DATABASE_URL ?? "postgres://cuidarte:cuidarte_dev_password@localhost:5433/cuidarte";
+  process.env.DATABASE_URL ?? "postgres://cuidarte:cuidarte_dev_password@localhost:15432/cuidarte";
 
 export default defineConfig({
   schema: "./src/database/schema.ts",

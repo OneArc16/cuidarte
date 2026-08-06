@@ -60,10 +60,28 @@ docker compose down
 
 Servicios:
 
-- PostgreSQL en `localhost:5433`.
+- PostgreSQL en `localhost:15432`.
 - Redis en `localhost:6379`.
 
 Las apps `web` y `api` se ejecutan en WSL/host durante desarrollo para mantener recarga rapida y evitar friccion innecesaria.
+
+## PDFs de soportes
+
+En local, los PDFs de atenciones individuales se guardan en `apps/api/.data/uploads` (al ejecutar los comandos del paquete API), fuera de `dist/` y sin exponerse como contenido publico. La API conserva el nombre original solo como metadata, escribe un UUID interno bajo `<tenantId>/atenciones-individuales/<atencionId>/` y sirve la descarga autenticada desde su endpoint existente.
+
+La carpeta se crea al subir el primer archivo. Para probarla localmente:
+
+```bash
+find apps/api/.data/uploads -type f
+```
+
+En la VPS, use [docker-compose.vps.yml](docker-compose.vps.yml) con un archivo `.env.vps` basado en `.env.vps.example`:
+
+```bash
+docker compose --env-file .env.vps -f docker-compose.vps.yml up -d
+```
+
+Esta configuración monta `/var/lib/cuidarte/uploads:/data/uploads` solamente en el contenedor de API y no publica PostgreSQL ni Redis. Cree la ruta del host con permisos restrictivos para el usuario que ejecuta Docker; no la publique mediante Nginx ni otro servidor estático.
 
 ## Auth Local
 

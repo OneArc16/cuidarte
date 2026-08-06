@@ -1,11 +1,12 @@
 import { Injectable } from "@nestjs/common";
-import { randomUUID } from "node:crypto";
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { getEnv } from "../../../config/env";
 import {
   type AtencionesIndividualesFilesStorage,
+  AtencionIndividualStoredFileNotFoundError,
   type ReadAtencionIndividualStoredFile,
 } from "../domain/atenciones-individuales-files.storage";
 import {
@@ -15,24 +16,45 @@ import {
 
 @Injectable()
 export class LocalAtencionesIndividualesFilesStorage implements AtencionesIndividualesFilesStorage {
-  private readonly baseDir = path.resolve(getEnv().ATENCIONES_INDIVIDUALES_UPLOADS_DIR);
+  private baseDir = path.resolve(getEnv().DOCUMENTS_UPLOADS_DIR);
+
+  static forBaseDir(baseDir: string): LocalAtencionesIndividualesFilesStorage {
+    const storage = new LocalAtencionesIndividualesFilesStorage();
+    storage.baseDir = path.resolve(baseDir);
+
+    return storage;
+  }
 
   async saveFile(
     atencion: { tenantId: string; atencionId: string },
     file: BufferedAtencionIndividualUpload,
   ): Promise<PersistAtencionIndividualSupportFile> {
-    const extension = path.extname(file.originalName).trim().toLowerCase();
-    const relativeDirectory = path.posix.join(atencion.tenantId, atencion.atencionId, "soportes");
-    const relativePath = path.posix.join(relativeDirectory, `${randomUUID()}${extension}`);
+    const storedName = `${randomUUID()}.pdf`;
+    const relativeDirectory = path.posix.join(
+      atencion.tenantId,
+      "atenciones-individuales",
+      atencion.atencionId,
+    );
+    const relativePath = path.posix.join(relativeDirectory, storedName);
     const absolutePath = this.resolveStoredPath(relativePath);
+    const temporaryPath = `${absolutePath}.${randomUUID()}.part`;
 
-    await mkdir(path.dirname(absolutePath), { recursive: true });
-    await writeFile(absolutePath, file.buffer);
+    await mkdir(path.dirname(absolutePath), { recursive: true, mode: 0o750 });
+
+    try {
+      await writeFile(temporaryPath, file.buffer, { flag: "wx", mode: 0o640 });
+      await rename(temporaryPath, absolutePath);
+    } catch (error) {
+      await unlink(temporaryPath).catch(() => undefined);
+      throw error;
+    }
 
     return {
       originalName: file.originalName,
+      storedName,
       mimeType: file.mimeType,
       sizeBytes: file.sizeBytes,
+      checksum: createHash("sha256").update(file.buffer).digest("hex"),
       relativePath,
     };
   }
@@ -40,13 +62,23 @@ export class LocalAtencionesIndividualesFilesStorage implements AtencionesIndivi
   async readFile(
     relativePath: string,
     originalName: string,
-    contentType: string,
+    _contentType: string,
   ): Promise<ReadAtencionIndividualStoredFile> {
-    const buffer = await readFile(this.resolveStoredPath(relativePath));
+    let buffer: Buffer;
+
+    try {
+      buffer = await readFile(this.resolveStoredPath(relativePath));
+    } catch (error) {
+      if (isFileNotFoundError(error)) {
+        throw new AtencionIndividualStoredFileNotFoundError();
+      }
+
+      throw error;
+    }
 
     return {
       buffer,
-      contentType,
+      contentType: "application/pdf",
       originalName,
     };
   }

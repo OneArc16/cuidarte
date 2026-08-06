@@ -8,7 +8,7 @@ COOKIE_JAR="$ROOT_DIR/.tools/auth-cookies.txt"
 export PATH="$ROOT_DIR/.tools/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export PORT="$API_PORT"
 export WEB_ORIGIN="http://localhost:5173"
-export DATABASE_URL="${DATABASE_URL:-postgres://cuidarte:cuidarte_dev_password@localhost:5433/cuidarte}"
+export DATABASE_URL="${DATABASE_URL:-postgres://cuidarte:cuidarte_dev_password@localhost:15432/cuidarte}"
 
 cd "$ROOT_DIR"
 mkdir -p .tools/logs

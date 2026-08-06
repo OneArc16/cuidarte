@@ -17,6 +17,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 
 import { calculateAgeFromBirthDate } from "../../adultos-mayores/application/age";
 import {
@@ -39,14 +40,18 @@ import {
 } from "../domain/atencion-individual.types";
 import {
   ATENCIONES_INDIVIDUALES_FILES_STORAGE,
+  AtencionIndividualStoredFileNotFoundError,
   type AtencionesIndividualesFilesStorage,
 } from "../domain/atenciones-individuales-files.storage";
+import {
+  MAX_ATENCION_SUPPORT_FILES,
+  MAX_PDF_REQUEST_SIZE_BYTES,
+  validatePdfSupportUpload,
+} from "../domain/pdf-support-file";
 import {
   ATENCIONES_INDIVIDUALES_REPOSITORY,
   type AtencionesIndividualesRepository,
 } from "../domain/atenciones-individuales.repository";
-
-const MAX_SUPPORT_FILES = 3;
 
 @Injectable()
 export class AtencionesIndividualesService {
@@ -113,19 +118,7 @@ export class AtencionesIndividualesService {
   }
 
   async getAtencion(id: string, actor: AuthUser): Promise<AtencionIndividualDetail> {
-    this.ensureCanAccessHistory(actor);
-    const scope = this.resolveScopeOrThrow(actor);
-    const record = await this.atencionesRepository.findById({ id, scope });
-
-    if (record === null) {
-      throw new NotFoundException("Atencion individual no encontrada.");
-    }
-
-    if (!canViewAtencionIndividual(actor, record)) {
-      throw new ForbiddenException("No puedes consultar atenciones registradas por otro profesional.");
-    }
-
-    return this.toDetail(record);
+    return this.toDetail(await this.getAccessibleAtencionOrThrow(id, actor));
   }
 
   async createAtencion(
@@ -149,39 +142,29 @@ export class AtencionesIndividualesService {
       consecutive: command.consecutive,
     });
 
-    this.ensureSupportFileLimit(supportUploads.length);
-    let record: AtencionIndividualRecord;
+    const validatedUploads = this.validateSupportUploads(supportUploads);
+    const atencionId = randomUUID();
     let storedFiles: PersistAtencionIndividualSupportFile[] = [];
 
     try {
-      record = await this.atencionesRepository.create({
-        ...command,
-        tenantId: adultoMayor.tenantId,
-        actorUserId: actor.id,
-        supportFiles: [],
-      });
-
       storedFiles = await this.saveSupportFiles(
-        { tenantId: adultoMayor.tenantId, atencionId: record.id },
-        supportUploads,
+        { tenantId: adultoMayor.tenantId, atencionId },
+        validatedUploads,
       );
 
-      if (storedFiles.length > 0) {
-        const saved = await this.atencionesRepository.update({
-          ...command,
-          id: record.id,
-          actorUserId: actor.id,
-          removedSupportFileIds: [],
-          supportFiles: storedFiles,
-        });
-        record = saved.record;
-      }
+      const record = await this.atencionesRepository.create({
+        ...command,
+        id: atencionId,
+        tenantId: adultoMayor.tenantId,
+        actorUserId: actor.id,
+        supportFiles: storedFiles,
+      });
+
+      return this.toDetail(record);
     } catch (error) {
       await this.deleteFilesBestEffort(storedFiles);
       throw error;
     }
-
-    return this.toDetail(record);
   }
 
   async updateAtencion(
@@ -211,20 +194,27 @@ export class AtencionesIndividualesService {
       excludeId: id,
     });
 
-    const supportUploads = options.supportUploads ?? [];
+    const supportUploads = this.validateSupportUploads(options.supportUploads ?? []);
     const removedSupportFileIds = options.removedSupportFileIds ?? [];
 
     this.ensureSupportFileRemovals(currentRecord.supportFiles, removedSupportFileIds);
-    this.ensureSupportFileLimit(
-      currentRecord.supportFiles.length - new Set(removedSupportFileIds).size + supportUploads.length,
-    );
+    const finalSupportFileCount =
+      currentRecord.supportFiles.length -
+      new Set(removedSupportFileIds).size +
+      supportUploads.length;
 
-    const storedFiles = await this.saveSupportFiles(
-      { tenantId: currentRecord.tenantId, atencionId: id },
-      supportUploads,
-    );
+    if (finalSupportFileCount > MAX_ATENCION_SUPPORT_FILES) {
+      throw new BadRequestException("Puedes adjuntar maximo 3 soportes.");
+    }
+
+    let storedFiles: PersistAtencionIndividualSupportFile[] = [];
 
     try {
+      storedFiles = await this.saveSupportFiles(
+        { tenantId: currentRecord.tenantId, atencionId: id },
+        supportUploads,
+      );
+
       const saved = await this.atencionesRepository.update({
         ...command,
         id,
@@ -243,28 +233,35 @@ export class AtencionesIndividualesService {
   }
 
   async downloadSupportFile(id: string, fileId: string, actor: AuthUser) {
-    const detail = await this.getAtencion(id, actor);
-    const file = detail.supportFiles.find((item) => item.id === fileId);
-
-    if (file === undefined) {
-      throw new NotFoundException("El soporte solicitado no existe para esta atencion.");
-    }
-
-    const record = (await this.atencionesRepository.findById({
-      id,
-      scope: this.resolveScopeOrThrow(actor),
-    })) as AtencionIndividualRecord;
+    const record = await this.getAccessibleAtencionOrThrow(id, actor);
     const supportRecord = record.supportFiles.find((item) => item.id === fileId);
 
     if (supportRecord === undefined) {
       throw new NotFoundException("El soporte solicitado no existe para esta atencion.");
     }
 
-    const storedFile = await this.filesStorage.readFile(
-      supportRecord.relativePath,
-      supportRecord.originalName,
-      supportRecord.mimeType,
-    );
+    let storedFile;
+
+    try {
+      storedFile = await this.filesStorage.readFile(
+        supportRecord.relativePath,
+        supportRecord.originalName,
+        supportRecord.mimeType,
+      );
+    } catch (error) {
+      if (error instanceof AtencionIndividualStoredFileNotFoundError) {
+        throw new NotFoundException("El archivo solicitado ya no esta disponible.");
+      }
+
+      throw error;
+    }
+
+    await this.atencionesRepository.recordSupportFileDownload({
+      atencionId: record.id,
+      tenantId: record.tenantId,
+      fileId: supportRecord.id,
+      actorUserId: actor.id,
+    });
 
     return {
       buffer: storedFile.buffer,
@@ -282,6 +279,29 @@ export class AtencionesIndividualesService {
     }
 
     return scope;
+  }
+
+  private async getAccessibleAtencionOrThrow(
+    id: string,
+    actor: AuthUser,
+  ): Promise<AtencionIndividualRecord> {
+    this.ensureCanAccessHistory(actor);
+    const record = await this.atencionesRepository.findById({
+      id,
+      scope: this.resolveScopeOrThrow(actor),
+    });
+
+    if (record === null) {
+      throw new NotFoundException("Atencion individual no encontrada.");
+    }
+
+    if (!canViewAtencionIndividual(actor, record)) {
+      throw new ForbiddenException(
+        "No puedes consultar atenciones registradas por otro profesional.",
+      );
+    }
+
+    return record;
   }
 
   private ensureCanEdit(actor: AuthUser) {
@@ -320,10 +340,20 @@ export class AtencionesIndividualesService {
     }
   }
 
-  private ensureSupportFileLimit(totalFiles: number) {
-    if (totalFiles > MAX_SUPPORT_FILES) {
+  private validateSupportUploads(
+    uploads: BufferedAtencionIndividualUpload[],
+  ): BufferedAtencionIndividualUpload[] {
+    if (uploads.length > MAX_ATENCION_SUPPORT_FILES) {
       throw new BadRequestException("Puedes adjuntar maximo 3 soportes.");
     }
+
+    const totalSizeBytes = uploads.reduce((total, upload) => total + upload.sizeBytes, 0);
+
+    if (totalSizeBytes > MAX_PDF_REQUEST_SIZE_BYTES) {
+      throw new BadRequestException("La carga completa de PDFs puede pesar maximo 30 MB.");
+    }
+
+    return uploads.map(validatePdfSupportUpload);
   }
 
   private ensureSupportFileRemovals(
@@ -334,7 +364,9 @@ export class AtencionesIndividualesService {
 
     for (const fileId of removedSupportFileIds) {
       if (!removableIds.has(fileId)) {
-        throw new BadRequestException("Uno de los soportes a eliminar no pertenece a esta atencion.");
+        throw new BadRequestException(
+          "Uno de los soportes a eliminar no pertenece a esta atencion.",
+        );
       }
     }
   }
@@ -357,9 +389,7 @@ export class AtencionesIndividualesService {
     return savedFiles;
   }
 
-  private async deleteFilesBestEffort(
-    files: Array<{ relativePath: string }>,
-  ): Promise<void> {
+  private async deleteFilesBestEffort(files: Array<{ relativePath: string }>): Promise<void> {
     await Promise.allSettled(files.map((file) => this.filesStorage.deleteFile(file.relativePath)));
   }
 
@@ -397,7 +427,9 @@ export class AtencionesIndividualesService {
     const access = resolveAtencionIndividualHistoryAccess(actor, record);
 
     if (access === null) {
-      throw new ForbiddenException("No puedes consultar atenciones registradas por otro profesional.");
+      throw new ForbiddenException(
+        "No puedes consultar atenciones registradas por otro profesional.",
+      );
     }
 
     return {

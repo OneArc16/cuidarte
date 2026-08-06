@@ -5,7 +5,7 @@ const webPort = process.env.PLAYWRIGHT_WEB_PORT ?? "4173";
 const apiBaseUrl = `http://127.0.0.1:${apiPort}/api`;
 const webBaseUrl = `http://127.0.0.1:${webPort}`;
 const databaseUrl =
-  process.env.DATABASE_URL ?? "postgres://cuidarte:cuidarte_dev_password@localhost:5433/cuidarte";
+  process.env.DATABASE_URL ?? "postgres://cuidarte:cuidarte_dev_password@localhost:15432/cuidarte";
 
 export default defineConfig({
   testDir: "./e2e",

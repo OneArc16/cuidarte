@@ -13,6 +13,13 @@ export type ReadAtencionIndividualStoredFile = {
   originalName: string;
 };
 
+export class AtencionIndividualStoredFileNotFoundError extends Error {
+  constructor() {
+    super("El archivo almacenado no existe.");
+    this.name = "AtencionIndividualStoredFileNotFoundError";
+  }
+}
+
 export type AtencionesIndividualesFilesStorage = {
   saveFile(
     atencion: { tenantId: string; atencionId: string },

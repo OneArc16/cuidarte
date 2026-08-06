@@ -27,4 +27,10 @@ export type AtencionesIndividualesRepository = {
   peekNextConsecutive(tenantId: string): Promise<number>;
   create(command: CreateAtencionIndividualRecordCommand): Promise<AtencionIndividualRecord>;
   update(command: UpdateAtencionIndividualRecordCommand): Promise<SavedAtencionIndividualRecord>;
+  recordSupportFileDownload(command: {
+    atencionId: string;
+    tenantId: string;
+    fileId: string;
+    actorUserId: string;
+  }): Promise<void>;
 };

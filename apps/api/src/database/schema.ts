@@ -647,13 +647,16 @@ export const atencionIndividualSupportFiles = pgTable(
       .notNull()
       .references(() => atencionesIndividuales.id, { onDelete: "cascade" }),
     originalName: varchar("original_name", { length: 260 }).notNull(),
+    storedName: varchar("stored_name", { length: 260 }).notNull(),
     mimeType: varchar("mime_type", { length: 160 }).notNull(),
     sizeBytes: integer("size_bytes").notNull(),
+    checksum: varchar("checksum", { length: 64 }),
     relativePath: varchar("relative_path", { length: 500 }).notNull(),
     createdByUserId: uuid("created_by_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("atencion_individual_support_files_atencion_idx").on(table.atencionId),

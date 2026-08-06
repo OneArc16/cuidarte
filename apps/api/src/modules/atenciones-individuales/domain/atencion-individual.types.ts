@@ -73,10 +73,13 @@ export type AtencionIndividualSupportFileRecord = {
   id: string;
   atencionId: string;
   originalName: string;
+  storedName: string;
   mimeType: string;
   sizeBytes: number;
+  checksum: string | null;
   relativePath: string;
   createdAt: Date;
+  updatedAt: Date;
 };
 
 export type AtencionIndividualHistoryItemRecord = {
@@ -151,6 +154,8 @@ export type PersistAtencionIndividualSupportFile = Omit<
   AtencionIndividualSupportFile,
   "id" | "createdAt"
 > & {
+  storedName: string;
+  checksum: string;
   relativePath: string;
 };
 
@@ -162,6 +167,7 @@ export type BufferedAtencionIndividualUpload = {
 };
 
 export type CreateAtencionIndividualRecordCommand = AtencionIndividualMutableCommand & {
+  id: string;
   tenantId: string;
   adultoMayorId: string;
   actorUserId: string;

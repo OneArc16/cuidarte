@@ -1,0 +1,53 @@
+name: cuidarte
+
+# Despliegue de referencia para la VPS. No se usa en desarrollo local.
+# Antes de levantarlo, cree /var/lib/cuidarte/uploads en el host y entregue
+# permisos al usuario que ejecuta Docker.
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cuidarte
+      POSTGRES_USER: cuidarte
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env.vps}
+    volumes:
+      - cuidarte_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cuidarte -d cuidarte"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    volumes:
+      - cuidarte_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    image: ${CUIDARTE_API_IMAGE:?Define CUIDARTE_API_IMAGE en .env.vps}
+    restart: unless-stopped
+    env_file:
+      - ${CUIDARTE_ENV_FILE:-.env.vps}
+    environment:
+      NODE_ENV: production
+      DOCUMENTS_UPLOADS_DIR: /data/uploads
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - /var/lib/cuidarte/uploads:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  cuidarte_postgres_data:
+  cuidarte_redis_data:

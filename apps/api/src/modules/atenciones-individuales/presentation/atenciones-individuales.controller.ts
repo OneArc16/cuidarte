@@ -187,7 +187,10 @@ function sendFile(
   disposition: "attachment",
 ) {
   reply.header("Content-Type", file.contentType);
-  reply.header("Content-Disposition", `${disposition}; filename="${file.filename}"`);
+  reply.header(
+    "Content-Disposition",
+    `${disposition}; filename*=UTF-8''${encodeURIComponent(file.filename)}`,
+  );
 
   return reply.send(file.buffer);
 }
