@@ -109,6 +109,19 @@ export const cie10Catalog = pgTable(
   ],
 );
 
+export const referenceDataVersions = pgTable(
+  "reference_data_versions",
+  {
+    dataset: varchar("dataset", { length: 100 }).primaryKey(),
+    version: varchar("version", { length: 50 }).notNull(),
+    checksumSha256: varchar("checksum_sha256", { length: 64 }).notNull(),
+    rowCount: integer("row_count").notNull(),
+    source: varchar("source", { length: 500 }).notNull(),
+    appliedAt: timestamp("applied_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [check("reference_data_versions_row_count_positive", sql`${table.rowCount} > 0`)],
+);
+
 export const tenants = pgTable(
   "tenants",
   {
@@ -205,10 +218,9 @@ export const tenantBranding = pgTable(
     tenantId: uuid("tenant_id")
       .primaryKey()
       .references(() => tenants.id, { onDelete: "cascade" }),
-    activeLogoVersionId: uuid("active_logo_version_id").references(
-      () => tenantLogoVersions.id,
-      { onDelete: "restrict" },
-    ),
+    activeLogoVersionId: uuid("active_logo_version_id").references(() => tenantLogoVersions.id, {
+      onDelete: "restrict",
+    }),
     updatedByUserId: uuid("updated_by_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),

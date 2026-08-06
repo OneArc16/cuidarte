@@ -11,6 +11,8 @@
     "dev": "turbo run dev",
     "dev:free-ports": "bash scripts/free-dev-ports.sh",
     "build": "turbo run build",
+    "db:bootstrap": "pnpm --filter @cuidarte/api db:bootstrap",
+    "db:reference-data": "pnpm --filter @cuidarte/api db:reference-data",
     "check:slice:auth": "bash scripts/check-slice-auth.sh",
     "dev:stop": "bash scripts/stop-dev.sh",
     "e2e": "turbo run e2e",

@@ -144,9 +144,7 @@ export const atencionIndividualFinalidadSchema = z.enum(atencionIndividualFinali
 export const atencionIndividualCausaExternaSchema = z.enum(atencionIndividualCausaExternaValues);
 export const atencionOrdenTipoSchema = z.enum(atencionOrdenTipoValues);
 export const atencionDiagnosticoTipoSchema = z.enum(atencionDiagnosticoTipoValues);
-export const atencionIndividualHistoryAccessSchema = z.enum(
-  atencionIndividualHistoryAccessValues,
-);
+export const atencionIndividualHistoryAccessSchema = z.enum(atencionIndividualHistoryAccessValues);
 
 export const atencionIndividualAdultoResumenSchema = z.object({
   id: z.uuid(),
@@ -176,7 +174,7 @@ export const atencionDiagnosticoSchema = z.object({
     .string()
     .trim()
     .toUpperCase()
-    .regex(/^[A-TV-Z][0-9][0-9AB](\.[0-9A-TV-Z]{1,2})?$/, "Digite un codigo CIE-10 valido."),
+    .regex(/^[A-Z][0-9][0-9AB](\.[0-9A-Z]{1,2})?$/, "Digite un codigo CIE-10 valido."),
   descripcion: requiredTextSchema(220),
   tipo: atencionDiagnosticoTipoSchema,
 });
@@ -282,9 +280,7 @@ export type AtencionIndividualFinalidad = z.infer<typeof atencionIndividualFinal
 export type AtencionIndividualCausaExterna = z.infer<typeof atencionIndividualCausaExternaSchema>;
 export type AtencionOrdenTipo = z.infer<typeof atencionOrdenTipoSchema>;
 export type AtencionDiagnosticoTipo = z.infer<typeof atencionDiagnosticoTipoSchema>;
-export type AtencionIndividualHistoryAccess = z.infer<
-  typeof atencionIndividualHistoryAccessSchema
->;
+export type AtencionIndividualHistoryAccess = z.infer<typeof atencionIndividualHistoryAccessSchema>;
 export type AtencionIndividualAdultoResumen = z.infer<typeof atencionIndividualAdultoResumenSchema>;
 export type AtencionOrdenMedica = z.infer<typeof atencionOrdenMedicaSchema>;
 export type AtencionDiagnostico = z.infer<typeof atencionDiagnosticoSchema>;

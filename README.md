@@ -84,10 +84,21 @@ Para preparar la base local:
 
 ```bash
 docker compose up -d
-cd apps/api
-pnpm db:generate
-pnpm db:migrate
-pnpm db:seed
+pnpm db:bootstrap
+pnpm --filter @cuidarte/api db:seed
+```
+
+`db:bootstrap` ejecuta las migraciones y sincroniza los datos de referencia obligatorios,
+incluido el catalogo CIE-10 versionado. Es idempotente y debe ejecutarse en cada despliegue,
+antes de iniciar la API. No requiere descargar datos de Internet.
+
+`db:seed` crea exclusivamente datos demo para desarrollo y pruebas; no debe ejecutarse en
+produccion.
+
+Para actualizar unicamente los datos de referencia:
+
+```bash
+pnpm db:reference-data
 ```
 
 Usuarios de seed:
