@@ -48,6 +48,18 @@ export type FindLatestAlimentacionFormatoEmissionQuery = {
   scope: AlimentacionScope;
 };
 
+export type FindAlimentacionImportedFormatoVersionsQuery = {
+  tenantId: string;
+  adultoMayorId: string;
+  deliveryMonth: string;
+};
+
+export type FindAlimentacionImportedFormatoVersionByIdQuery = {
+  id: string;
+  tenantId: string;
+  adultoMayorId: string;
+};
+
 export type FindAlimentacionExistingRecordsByAdultosAndDateQuery = {
   tenantId: string;
   deliveryDate: string;
@@ -91,6 +103,31 @@ export type AlimentacionRecord = {
   auxilioTransporte: AlimentacionStatus;
   createdAt: Date;
   updatedAt: Date;
+  importedFormato: AlimentacionImportedFormatoVersionRecord | null;
+};
+
+export type AlimentacionImportedFormatoVersionRecord = {
+  id: string;
+  tenantId: string;
+  adultoMayorId: string;
+  deliveryMonth: string;
+  version: number;
+  source: "importado";
+  originalName: string;
+  storedName: string;
+  pdfRelativePath: string;
+  mimeType: "application/pdf";
+  sizeBytes: number;
+  importedByUserId: string;
+  importedByUserFullName: string;
+  importedAt: Date;
+};
+
+export type BufferedAlimentacionFormatoPdfUpload = {
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  buffer: Buffer;
 };
 
 export type AlimentacionFormatoEntregaRecord = {
@@ -136,6 +173,15 @@ export type CreateAlimentacionFormatoEntregaExportAuditCommand = {
   deliveryMonth: string;
 };
 
+export type CreateAlimentacionImportedFormatoDownloadAuditCommand = {
+  actorUserId: string;
+  targetTenantId: string;
+  adultoMayorId: string;
+  deliveryMonth: string;
+  versionId: string;
+  version: number;
+};
+
 export type CreateAlimentacionFormatoEmissionCommand = {
   tenantId: string;
   adultoMayorId: string;
@@ -152,6 +198,19 @@ export type CreateAlimentacionFormatoEmissionCommand = {
   sourceDateTo: string | null;
   issuedByUserId: string;
   issuedAt: Date;
+};
+
+export type CreateAlimentacionImportedFormatoVersionCommand = {
+  tenantId: string;
+  adultoMayorId: string;
+  deliveryMonth: string;
+  originalName: string;
+  storedName: string;
+  pdfRelativePath: string;
+  mimeType: "application/pdf";
+  sizeBytes: number;
+  importedByUserId: string;
+  importedAt: Date;
 };
 
 export type CreateAlimentacionBatchRecordCommand = {

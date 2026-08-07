@@ -564,6 +564,45 @@ export const alimentacionFormatoEmissions = pgTable(
   ],
 );
 
+export const alimentacionFormatoImportedVersions = pgTable(
+  "alimentacion_formato_imported_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    adultoMayorId: uuid("adulto_mayor_id")
+      .notNull()
+      .references(() => adultosMayores.id, { onDelete: "restrict" }),
+    deliveryMonth: varchar("delivery_month", { length: 7 }).notNull(),
+    version: integer("version").notNull(),
+    source: varchar("source", { length: 20 }).notNull().default("importado"),
+    originalName: varchar("original_name", { length: 260 }).notNull(),
+    storedName: varchar("stored_name", { length: 260 }).notNull(),
+    pdfRelativePath: varchar("pdf_relative_path", { length: 500 }).notNull(),
+    mimeType: varchar("mime_type", { length: 100 }).notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    importedByUserId: uuid("imported_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    importedAt: timestamp("imported_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("alimentacion_formato_imported_versions_unique_version").on(
+      table.adultoMayorId,
+      table.deliveryMonth,
+      table.version,
+    ),
+    index("alimentacion_formato_imported_versions_tenant_month_idx").on(
+      table.tenantId,
+      table.deliveryMonth,
+    ),
+    index("alimentacion_formato_imported_versions_adulto_mayor_idx").on(table.adultoMayorId),
+    index("alimentacion_formato_imported_versions_imported_by_user_idx").on(table.importedByUserId),
+    check("alimentacion_formato_imported_versions_size_positive", sql`${table.sizeBytes} > 0`),
+  ],
+);
+
 export const atencionIndividualCounters = pgTable(
   "atencion_individual_counters",
   {

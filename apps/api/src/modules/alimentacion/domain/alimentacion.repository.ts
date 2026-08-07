@@ -2,14 +2,19 @@ import {
   type AlimentacionAdultoOptionRecord,
   type AlimentacionFormatoEmissionRecord,
   type AlimentacionFormatoEntregaRecord,
+  type AlimentacionImportedFormatoVersionRecord,
   type AlimentacionRecord,
   type AlimentacionTenantOptionRecord,
   type CreateAlimentacionFormatoEmissionCommand,
+  type CreateAlimentacionImportedFormatoVersionCommand,
   type CreateAlimentacionFormatoEntregaExportAuditCommand,
+  type CreateAlimentacionImportedFormatoDownloadAuditCommand,
   type CreateAlimentacionBatchRecordCommand,
   type FindAlimentacionAdultoMayorByIdQuery,
   type FindLatestAlimentacionFormatoEmissionQuery,
   type FindAlimentacionFormatoEntregaByAdultoAndMonthQuery,
+  type FindAlimentacionImportedFormatoVersionByIdQuery,
+  type FindAlimentacionImportedFormatoVersionsQuery,
   type FindAlimentacionExistingRecordsByAdultosAndDateQuery,
   type FindAlimentacionRecordByAdultoMayorAndDateQuery,
   type FindAlimentacionRecordByIdQuery,
@@ -40,6 +45,12 @@ export type AlimentacionRepository = {
   findLatestFormatoEntregaEmission(
     query: FindLatestAlimentacionFormatoEmissionQuery,
   ): Promise<AlimentacionFormatoEmissionRecord | null>;
+  findImportedFormatoVersions(
+    query: FindAlimentacionImportedFormatoVersionsQuery,
+  ): Promise<AlimentacionImportedFormatoVersionRecord[]>;
+  findImportedFormatoVersionById(
+    query: FindAlimentacionImportedFormatoVersionByIdQuery,
+  ): Promise<AlimentacionImportedFormatoVersionRecord | null>;
   findExistingByAdultosAndDate(
     query: FindAlimentacionExistingRecordsByAdultosAndDateQuery,
   ): Promise<AlimentacionRecord[]>;
@@ -51,7 +62,13 @@ export type AlimentacionRepository = {
   createFormatoEntregaExportAudit(
     command: CreateAlimentacionFormatoEntregaExportAuditCommand,
   ): Promise<void>;
+  createImportedFormatoDownloadAudit(
+    command: CreateAlimentacionImportedFormatoDownloadAuditCommand,
+  ): Promise<void>;
   createFormatoEntregaEmission(
     command: CreateAlimentacionFormatoEmissionCommand,
   ): Promise<AlimentacionFormatoEmissionRecord>;
+  createImportedFormatoVersion(
+    command: CreateAlimentacionImportedFormatoVersionCommand,
+  ): Promise<AlimentacionImportedFormatoVersionRecord>;
 };

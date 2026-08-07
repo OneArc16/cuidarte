@@ -1,6 +1,8 @@
 import {
   type AlimentacionAdultoOptionsResponse,
   type AlimentacionDetail,
+  type AlimentacionImportedFormatoUploadResponse,
+  type AlimentacionImportedFormatoVersionsResponse,
   type AlimentacionListResponse,
   type AlimentacionLookupByAdultoMayorResponse,
   type AlimentacionTenantOptionsResponse,
@@ -9,6 +11,8 @@ import {
   type UpdateAlimentacionRequest,
   alimentacionAdultoOptionsResponseSchema,
   alimentacionDetailSchema,
+  alimentacionImportedFormatoUploadResponseSchema,
+  alimentacionImportedFormatoVersionsResponseSchema,
   alimentacionListResponseSchema,
   alimentacionLookupByAdultoMayorResponseSchema,
   alimentacionTenantOptionsResponseSchema,
@@ -121,6 +125,47 @@ export function exportAlimentacionFormatoEntregaPdf(params: {
 
   return fetchBlob(
     `${getApiBaseUrl()}/registro-alimentacion/adultos-mayores/${params.adultoMayorId}/formato-entrega/pdf?${searchParams.toString()}`,
+  );
+}
+
+export function importAlimentacionFormatoEntregaPdf(params: {
+  adultoMayorId: string;
+  deliveryMonth: string;
+  file: File;
+}): Promise<AlimentacionImportedFormatoUploadResponse> {
+  const searchParams = new URLSearchParams({ deliveryMonth: params.deliveryMonth });
+  const formData = new FormData();
+
+  formData.set("file", params.file, params.file.name);
+
+  return fetchJson(
+    `${getApiBaseUrl()}/registro-alimentacion/adultos-mayores/${params.adultoMayorId}/formato-entrega/imported-pdfs?${searchParams.toString()}`,
+    alimentacionImportedFormatoUploadResponseSchema,
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
+}
+
+export function listAlimentacionImportedFormatoVersions(params: {
+  adultoMayorId: string;
+  deliveryMonth: string;
+}): Promise<AlimentacionImportedFormatoVersionsResponse> {
+  const searchParams = new URLSearchParams({ deliveryMonth: params.deliveryMonth });
+
+  return fetchJson(
+    `${getApiBaseUrl()}/registro-alimentacion/adultos-mayores/${params.adultoMayorId}/formato-entrega/imported-pdfs?${searchParams.toString()}`,
+    alimentacionImportedFormatoVersionsResponseSchema,
+  );
+}
+
+export function downloadAlimentacionImportedFormatoVersion(params: {
+  adultoMayorId: string;
+  versionId: string;
+}): Promise<Blob> {
+  return fetchBlob(
+    `${getApiBaseUrl()}/registro-alimentacion/adultos-mayores/${params.adultoMayorId}/formato-entrega/imported-pdfs/${params.versionId}/download`,
   );
 }
 

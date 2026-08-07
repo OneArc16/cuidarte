@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import {
@@ -177,6 +177,102 @@ describe("App alimentacion flow", () => {
     expect(receivedDeliveryMonth).toBe("2026-04");
   });
 
+  it("imports a PDF after showing the beneficiary, month and file details", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-04-24T12:00:00.000Z"));
+
+    let uploadedDeliveryMonth: string | null = null;
+    let uploadedContentType: string | null = null;
+    server.use(
+      mockAuthMe(authUserFixture),
+      mockAlimentacionListForTests(),
+      http.post(
+        "http://localhost:3001/api/registro-alimentacion/adultos-mayores/:adultoMayorId/formato-entrega/imported-pdfs",
+        ({ request }) => {
+          uploadedDeliveryMonth = new URL(request.url).searchParams.get("deliveryMonth");
+          uploadedContentType = request.headers.get("content-type");
+
+          return HttpResponse.json({
+            version: {
+              id: "1a3782f0-b999-412c-a0f4-31ed47cb8f3f",
+              version: 1,
+              originalName: "formato-diligenciado.pdf",
+              mimeType: "application/pdf",
+              sizeBytes: 16,
+              importedByUserId: authUserFixture.id,
+              importedByUserFullName: authUserFixture.fullName,
+              importedAt: "2026-04-24T12:00:00.000Z",
+            },
+          });
+        },
+      ),
+    );
+    const user = userEvent.setup();
+    renderAppAtPath("/registro-alimentacion");
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: `Importar formato diligenciado de ${alimentacionFixture.fullName}`,
+      }),
+    );
+
+    const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]');
+
+    expect(fileInput).not.toBeNull();
+    await user.upload(
+      fileInput!,
+      new File(["%PDF-1.7\ncontenido"], "formato-diligenciado.pdf", {
+        type: "application/pdf",
+      }),
+    );
+
+    const importDialog = await screen.findByRole("dialog", { name: "Confirmar importacion" });
+
+    expect(importDialog).toBeInTheDocument();
+    expect(within(importDialog).getByText(alimentacionFixture.fullName)).toBeInTheDocument();
+    expect(within(importDialog).getByText("2026-04")).toBeInTheDocument();
+    expect(within(importDialog).getByText("formato-diligenciado.pdf")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Confirmar importacion" }));
+
+    await waitFor(() => {
+      expect(uploadedContentType).toContain("multipart/form-data");
+    });
+    expect(uploadedDeliveryMonth).toBe("2026-04");
+    expect(
+      await screen.findByText(
+        `PDF importado correctamente como versión 1 para ${alimentacionFixture.fullName}.`,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("rejects a non-PDF before opening the import confirmation", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-04-24T12:00:00.000Z"));
+
+    server.use(mockAuthMe(authUserFixture), mockAlimentacionListForTests());
+    const user = userEvent.setup();
+    renderAppAtPath("/registro-alimentacion");
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: `Importar formato diligenciado de ${alimentacionFixture.fullName}`,
+      }),
+    );
+
+    const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]');
+
+    expect(fileInput).not.toBeNull();
+    fireEvent.change(fileInput!, {
+      target: {
+        files: [new File(["not a pdf"], "formato.txt", { type: "text/plain" })],
+      },
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Selecciona un archivo PDF válido.");
+    expect(screen.queryByRole("dialog", { name: "Confirmar importacion" })).not.toBeInTheDocument();
+  });
+
   it("creates a feeding batch and returns to the list", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-04-24T12:00:00.000Z"));
@@ -290,15 +386,15 @@ describe("App alimentacion flow", () => {
       screen.getByRole("button", { name: /Marcar entregado Rosa Elena Martinez Rojas/i }),
     );
 
-    expect(
-      screen.getByLabelText(/Refrigerio 1 de Rosa Elena Martinez Rojas/i),
-    ).toHaveValue("entregado");
+    expect(screen.getByLabelText(/Refrigerio 1 de Rosa Elena Martinez Rojas/i)).toHaveValue(
+      "entregado",
+    );
     expect(screen.getByLabelText(/^Almuerzo de Rosa Elena Martinez Rojas$/i)).toHaveValue(
       "entregado",
     );
-    expect(
-      screen.getByLabelText(/Refrigerio 2 de Rosa Elena Martinez Rojas/i),
-    ).toHaveValue("entregado");
+    expect(screen.getByLabelText(/Refrigerio 2 de Rosa Elena Martinez Rojas/i)).toHaveValue(
+      "entregado",
+    );
     expect(
       screen.getByLabelText(/Auxilio de transporte de Rosa Elena Martinez Rojas/i),
     ).toHaveValue("entregado");
@@ -308,9 +404,9 @@ describe("App alimentacion flow", () => {
     expect(screen.getByLabelText(/Refrigerio 1 de Rosa Elena Martinez Rojas/i)).toHaveValue("");
     expect(screen.getByLabelText(/^Almuerzo de Rosa Elena Martinez Rojas$/i)).toHaveValue("");
     expect(screen.getByLabelText(/Refrigerio 2 de Rosa Elena Martinez Rojas/i)).toHaveValue("");
-    expect(screen.getByLabelText(/Auxilio de transporte de Rosa Elena Martinez Rojas/i)).toHaveValue(
-      "",
-    );
+    expect(
+      screen.getByLabelText(/Auxilio de transporte de Rosa Elena Martinez Rojas/i),
+    ).toHaveValue("");
   });
 
   it("marks and clears all rows with global actions", async () => {
@@ -338,28 +434,28 @@ describe("App alimentacion flow", () => {
     await user.click(screen.getByRole("button", { name: /Daniel Andres Castano Navarro/i }));
     await user.click(screen.getByRole("button", { name: /Marcar todos como entregados/i }));
 
-    expect(
-      screen.getByLabelText(/Refrigerio 1 de Rosa Elena Martinez Rojas/i),
-    ).toHaveValue("entregado");
+    expect(screen.getByLabelText(/Refrigerio 1 de Rosa Elena Martinez Rojas/i)).toHaveValue(
+      "entregado",
+    );
     expect(screen.getByLabelText(/^Almuerzo de Rosa Elena Martinez Rojas$/i)).toHaveValue(
       "entregado",
     );
-    expect(
-      screen.getByLabelText(/Refrigerio 2 de Rosa Elena Martinez Rojas/i),
-    ).toHaveValue("entregado");
+    expect(screen.getByLabelText(/Refrigerio 2 de Rosa Elena Martinez Rojas/i)).toHaveValue(
+      "entregado",
+    );
     expect(
       screen.getByLabelText(/Auxilio de transporte de Rosa Elena Martinez Rojas/i),
     ).toHaveValue("entregado");
 
-    expect(
-      screen.getByLabelText(/Refrigerio 1 de Daniel Andres Castano Navarro/i),
-    ).toHaveValue("entregado");
+    expect(screen.getByLabelText(/Refrigerio 1 de Daniel Andres Castano Navarro/i)).toHaveValue(
+      "entregado",
+    );
     expect(screen.getByLabelText(/^Almuerzo de Daniel Andres Castano Navarro$/i)).toHaveValue(
       "entregado",
     );
-    expect(
-      screen.getByLabelText(/Refrigerio 2 de Daniel Andres Castano Navarro/i),
-    ).toHaveValue("entregado");
+    expect(screen.getByLabelText(/Refrigerio 2 de Daniel Andres Castano Navarro/i)).toHaveValue(
+      "entregado",
+    );
     expect(
       screen.getByLabelText(/Auxilio de transporte de Daniel Andres Castano Navarro/i),
     ).toHaveValue("entregado");
@@ -369,9 +465,9 @@ describe("App alimentacion flow", () => {
     expect(screen.getByLabelText(/Refrigerio 1 de Rosa Elena Martinez Rojas/i)).toHaveValue("");
     expect(screen.getByLabelText(/^Almuerzo de Rosa Elena Martinez Rojas$/i)).toHaveValue("");
     expect(screen.getByLabelText(/Refrigerio 2 de Rosa Elena Martinez Rojas/i)).toHaveValue("");
-    expect(screen.getByLabelText(/Auxilio de transporte de Rosa Elena Martinez Rojas/i)).toHaveValue(
-      "",
-    );
+    expect(
+      screen.getByLabelText(/Auxilio de transporte de Rosa Elena Martinez Rojas/i),
+    ).toHaveValue("");
 
     expect(screen.getByLabelText(/Refrigerio 1 de Daniel Andres Castano Navarro/i)).toHaveValue("");
     expect(screen.getByLabelText(/^Almuerzo de Daniel Andres Castano Navarro$/i)).toHaveValue("");

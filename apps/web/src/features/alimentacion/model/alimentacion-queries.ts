@@ -1,5 +1,6 @@
 import {
   type CreateAlimentacionBatchRequest,
+  type AlimentacionImportedFormatoUploadResponse,
   type UpdateAlimentacionRequest,
 } from "@cuidarte/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -15,6 +16,8 @@ export const alimentacionQueryKeys = {
     ["alimentacion", "adultos-mayores-options", params] as const,
   adultoLookup: (adultoMayorId: string, deliveryDate: string) =>
     ["alimentacion", "adulto-lookup", adultoMayorId, deliveryDate] as const,
+  importedVersions: (adultoMayorId: string, deliveryMonth: string) =>
+    ["alimentacion", "imported-formato-versions", adultoMayorId, deliveryMonth] as const,
 };
 
 export function useAlimentacionListQuery(params: {
@@ -102,6 +105,54 @@ export function useUpdateAlimentacionRecordMutation(recordId: string) {
     onSuccess: async (detail) => {
       queryClient.setQueryData(alimentacionQueryKeys.detail(recordId), detail);
       await queryClient.invalidateQueries({ queryKey: ["alimentacion"] });
+    },
+  });
+}
+
+export function useAlimentacionImportedFormatoVersionsQuery(
+  adultoMayorId: string | null,
+  deliveryMonth: string | null,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: alimentacionQueryKeys.importedVersions(
+      adultoMayorId ?? "none",
+      deliveryMonth ?? "none",
+    ),
+    queryFn: () => {
+      if (adultoMayorId === null || deliveryMonth === null) {
+        throw new Error("Selecciona un beneficiario y mes para consultar las versiones.");
+      }
+
+      return alimentacionApi.listAlimentacionImportedFormatoVersions({
+        adultoMayorId,
+        deliveryMonth,
+      });
+    },
+    enabled,
+    retry: false,
+  });
+}
+
+export function useImportAlimentacionFormatoEntregaMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: { adultoMayorId: string; deliveryMonth: string; file: File }) =>
+      alimentacionApi.importAlimentacionFormatoEntregaPdf(request),
+    onSuccess: async (
+      _response: AlimentacionImportedFormatoUploadResponse,
+      request: { adultoMayorId: string; deliveryMonth: string; file: File },
+    ) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["alimentacion"] }),
+        queryClient.invalidateQueries({
+          queryKey: alimentacionQueryKeys.importedVersions(
+            request.adultoMayorId,
+            request.deliveryMonth,
+          ),
+        }),
+      ]);
     },
   });
 }

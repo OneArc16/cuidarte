@@ -291,7 +291,10 @@ export class AlimentacionService {
   }
 
   async registerFormatoEntregaExportAudit(
-    payload: Pick<AlimentacionFormatoEntregaExportData, "tenantId" | "adultoMayorId" | "deliveryMonth">,
+    payload: Pick<
+      AlimentacionFormatoEntregaExportData,
+      "tenantId" | "adultoMayorId" | "deliveryMonth"
+    >,
     actor: AuthUser,
   ): Promise<void> {
     this.ensureCanAccess(actor);
@@ -409,6 +412,19 @@ export class AlimentacionService {
       auxilioTransporte: record.auxilioTransporte,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
+      importedFormato:
+        record.importedFormato === null
+          ? null
+          : {
+              id: record.importedFormato.id,
+              version: record.importedFormato.version,
+              originalName: record.importedFormato.originalName,
+              mimeType: record.importedFormato.mimeType,
+              sizeBytes: record.importedFormato.sizeBytes,
+              importedByUserId: record.importedFormato.importedByUserId,
+              importedByUserFullName: record.importedFormato.importedByUserFullName,
+              importedAt: record.importedFormato.importedAt.toISOString(),
+            },
     });
   }
 

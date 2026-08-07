@@ -32,7 +32,7 @@ export const alimentacionStatusSchema = z.enum(alimentacionStatusValues);
 export const alimentacionOrganizerSchema = z.enum(alimentacionOrganizerValues);
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
+export const alimentacionDeliveryMonthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 
 const nullableSearchSchema = z
   .union([z.string(), z.null(), z.undefined()])
@@ -71,7 +71,7 @@ const nullableMonthSchema = z
 
     return trimmedValue === "" ? null : trimmedValue;
   })
-  .pipe(monthSchema.nullable());
+  .pipe(alimentacionDeliveryMonthSchema.nullable());
 
 const alimentacionBatchRecordSchema = z.object({
   adultoMayorId: z.uuid(),
@@ -98,7 +98,26 @@ export const alimentacionLookupByAdultoMayorQuerySchema = z.object({
 });
 
 export const alimentacionFormatoEntregaExportQuerySchema = z.object({
-  deliveryMonth: monthSchema,
+  deliveryMonth: alimentacionDeliveryMonthSchema,
+});
+
+export const alimentacionImportedFormatoVersionSchema = z.object({
+  id: z.uuid(),
+  version: z.number().int().positive(),
+  originalName: z.string().min(1).max(260),
+  mimeType: z.literal("application/pdf"),
+  sizeBytes: z.number().int().positive(),
+  importedByUserId: z.uuid(),
+  importedByUserFullName: z.string().min(1).max(180),
+  importedAt: z.string().min(1),
+});
+
+export const alimentacionImportedFormatoVersionsResponseSchema = z.object({
+  versions: z.array(alimentacionImportedFormatoVersionSchema),
+});
+
+export const alimentacionImportedFormatoUploadResponseSchema = z.object({
+  version: alimentacionImportedFormatoVersionSchema,
 });
 
 export const alimentacionTenantOptionSchema = z.object({
@@ -129,6 +148,7 @@ export const alimentacionListItemSchema = z.object({
   auxilioTransporte: alimentacionStatusSchema,
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
+  importedFormato: alimentacionImportedFormatoVersionSchema.nullable().optional().default(null),
 });
 
 export const alimentacionDetailSchema = alimentacionListItemSchema;
@@ -187,6 +207,15 @@ export type AlimentacionLookupByAdultoMayorQuery = z.infer<
 >;
 export type AlimentacionFormatoEntregaExportQuery = z.infer<
   typeof alimentacionFormatoEntregaExportQuerySchema
+>;
+export type AlimentacionImportedFormatoVersion = z.infer<
+  typeof alimentacionImportedFormatoVersionSchema
+>;
+export type AlimentacionImportedFormatoVersionsResponse = z.infer<
+  typeof alimentacionImportedFormatoVersionsResponseSchema
+>;
+export type AlimentacionImportedFormatoUploadResponse = z.infer<
+  typeof alimentacionImportedFormatoUploadResponseSchema
 >;
 export type AlimentacionTenantOption = z.infer<typeof alimentacionTenantOptionSchema>;
 export type AlimentacionAdultoOption = z.infer<typeof alimentacionAdultoOptionSchema>;

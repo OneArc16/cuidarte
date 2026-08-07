@@ -104,6 +104,7 @@ const alimentacionRecord: AlimentacionRecord = {
   auxilioTransporte: "no_entregado",
   createdAt: new Date("2026-04-24T12:00:00.000Z"),
   updatedAt: new Date("2026-04-24T12:00:00.000Z"),
+  importedFormato: null,
 };
 
 describe("AlimentacionService", () => {
@@ -421,11 +422,7 @@ describe("AlimentacionService", () => {
 
     await assert.rejects(
       () =>
-        service.prepareFormatoEntregaExport(
-          adultoMayorId,
-          { deliveryMonth: "2026-04" },
-          adminUser,
-        ),
+        service.prepareFormatoEntregaExport(adultoMayorId, { deliveryMonth: "2026-04" }, adminUser),
       { constructor: NotFoundException },
     );
   });
@@ -525,7 +522,7 @@ describe("AlimentacionService", () => {
             auxilioTransporte: "entregado",
           },
           medicoUser,
-      ),
+        ),
       { constructor: ForbiddenException },
     );
 
@@ -688,6 +685,12 @@ function createRepository(
     async findLatestFormatoEntregaEmission() {
       return null;
     },
+    async findImportedFormatoVersions() {
+      return [];
+    },
+    async findImportedFormatoVersionById() {
+      return null;
+    },
     async findExistingByAdultosAndDate() {
       return overrides.existingByAdultosAndDate ?? [];
     },
@@ -725,6 +728,7 @@ function createRepository(
     async createFormatoEntregaExportAudit(command) {
       formatoEntregaAuditCommands.push(command);
     },
+    async createImportedFormatoDownloadAudit() {},
     async createFormatoEntregaEmission(command) {
       return {
         id: "5e0c3f9e-bff4-4084-ab9e-0a59a2e2ee39",
@@ -745,6 +749,9 @@ function createRepository(
         issuedByUserId: command.issuedByUserId,
         issuedAt: new Date("2026-04-25T12:00:00.000Z"),
       };
+    },
+    async createImportedFormatoVersion() {
+      throw new Error("No implementado para estas pruebas.");
     },
   };
 }
