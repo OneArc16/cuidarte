@@ -22,6 +22,7 @@ COPY packages/contracts/package.json packages/contracts/package.json
 RUN pnpm install --frozen-lockfile --filter @cuidarte/api...
 
 COPY apps/api apps/api
+COPY apps/web/public/logos apps/web/public/logos
 COPY packages packages
 
 RUN pnpm --filter @cuidarte/contracts build \

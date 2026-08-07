@@ -1,3 +1,4 @@
+import "./polyfills/crypto-random-uuid";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
