@@ -17,6 +17,7 @@ import {
 } from "./alimentacion-formato-pdf-template";
 import { AlimentacionService } from "./alimentacion.service";
 import { type AlimentacionFormatoEntregaExportData } from "./alimentacion-formato-export.types";
+import playwrightEnv from "../../../common/playwright-env";
 
 export type ExportedAlimentacionFormatoEntregaPdf = {
   buffer: Buffer;
@@ -161,7 +162,10 @@ export class AlimentacionFormatoExportService {
     let browser: Browser | undefined;
 
     try {
-      browser = await chromium.launch({ headless: true });
+      browser = await chromium.launch({
+        headless: true,
+        env: playwrightEnv.createPlaywrightLaunchEnv(),
+      });
       const page = await browser.newPage();
       await page.setContent(
         buildFormatoEntregaPdfHtml({

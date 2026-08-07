@@ -8,6 +8,7 @@ import ExcelJS from "exceljs";
 import { chromium } from "playwright";
 
 import { AdultosMayoresService } from "./adultos-mayores.service";
+import playwrightEnv from "../../../common/playwright-env";
 
 export type ExportedAdultosMayoresFile = {
   buffer: Buffer;
@@ -81,7 +82,7 @@ export class AdultosMayoresExportService {
     adultosMayores: AdultoMayorListItem[],
     includeTenant: boolean,
   ): Promise<Buffer> {
-    const browser = await chromium.launch({ headless: true });
+    const browser = await chromium.launch({ headless: true, env: playwrightEnv.createPlaywrightLaunchEnv() });
 
     try {
       const page = await browser.newPage();

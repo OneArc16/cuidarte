@@ -10,6 +10,7 @@ import {
   buildActividadGrupalActaPdfHtml,
 } from "./actividad-grupal-acta-pdf-template";
 import { ActividadesGrupalesService } from "./actividades-grupales.service";
+import playwrightEnv from "../../../common/playwright-env";
 
 export type ExportedActividadGrupalActaPdf = {
   buffer: Buffer;
@@ -50,7 +51,7 @@ export class ActividadesGrupalesActaExportService {
     let browser: Browser | undefined;
 
     try {
-      browser = await chromium.launch({ headless: true });
+      browser = await chromium.launch({ headless: true, env: playwrightEnv.createPlaywrightLaunchEnv() });
       const page = await browser.newPage();
       await page.setContent(buildActividadGrupalActaPdfHtml({ detail, logoDataUrl }), {
         waitUntil: "load",
