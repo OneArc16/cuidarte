@@ -8,10 +8,14 @@
     "pnpm": ">=10.0.0"
   },
   "scripts": {
+    "postinstall": "pnpm --filter @cuidarte/contracts build",
     "dev": "turbo run dev",
     "dev:free-ports": "bash scripts/free-dev-ports.sh",
     "build": "turbo run build",
     "db:bootstrap": "pnpm --filter @cuidarte/api db:bootstrap",
+    "db:seed": "pnpm --filter @cuidarte/api db:seed",
+    "db:seed:login": "pnpm --filter @cuidarte/api db:seed:login",
+    "db:seed:cie10": "pnpm --filter @cuidarte/api db:seed:cie10",
     "db:reference-data": "pnpm --filter @cuidarte/api db:reference-data",
     "check:slice:auth": "bash scripts/check-slice-auth.sh",
     "dev:stop": "bash scripts/stop-dev.sh",
