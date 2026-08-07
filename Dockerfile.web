@@ -7,15 +7,18 @@ WORKDIR /app
 RUN npm install -g pnpm@10.10.0
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+
 COPY apps/web/package.json apps/web/package.json
 COPY apps/api/package.json apps/api/package.json
-COPY packages/config/package.json packages/config/package.json
-COPY packages/contracts/package.json packages/contracts/package.json
+
+# Estos paquetes deben existir completos antes de pnpm install
+# porque el postinstall compila @cuidarte/contracts.
+COPY packages/config packages/config
+COPY packages/contracts packages/contracts
 
 RUN pnpm install --frozen-lockfile --filter @cuidarte/web...
 
 COPY apps/web apps/web
-COPY packages packages
 
 ARG VITE_API_URL=/api
 ENV VITE_API_URL=${VITE_API_URL}
