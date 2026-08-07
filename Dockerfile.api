@@ -1,0 +1,52 @@
+# syntax=docker/dockerfile:1
+
+FROM node:24.15.0-bookworm-slim AS build
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g pnpm@10.10.0
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
+COPY packages/config/package.json packages/config/package.json
+COPY packages/contracts/package.json packages/contracts/package.json
+
+RUN pnpm install --frozen-lockfile --filter @cuidarte/api...
+
+COPY apps/api apps/api
+COPY packages packages
+
+RUN pnpm --filter @cuidarte/contracts build \
+    && pnpm --filter @cuidarte/api build
+
+
+FROM node:24.15.0-bookworm-slim AS runtime
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+
+RUN npm install -g pnpm@10.10.0
+
+COPY --from=build /app /app
+
+RUN pnpm --filter @cuidarte/api exec playwright install --with-deps chromium \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /root/.cache
+
+USER node
+
+EXPOSE 3001
+
+WORKDIR /app/apps/api
+
+CMD ["node", "dist/main.js"]
