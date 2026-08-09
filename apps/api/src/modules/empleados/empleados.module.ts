@@ -9,10 +9,11 @@ import { EMPLEADOS_REPOSITORY } from "./domain/empleados.repository";
 import { DrizzleEmpleadosRepository } from "./infrastructure/drizzle-empleados.repository";
 import { LocalEmpleadosSignatureFilesStorage } from "./infrastructure/local-empleados-signature-files.storage";
 import { EmpleadosController } from "./presentation/empleados.controller";
+import { TenantActiveSignerController } from "./presentation/tenant-active-signer.controller";
 
 @Module({
   imports: [AuthModule, DatabaseModule],
-  controllers: [EmpleadosController],
+  controllers: [EmpleadosController, TenantActiveSignerController],
   providers: [
     EmpleadosService,
     EmpleadosSignatureService,

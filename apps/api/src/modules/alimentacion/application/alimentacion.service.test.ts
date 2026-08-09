@@ -680,6 +680,7 @@ function createRepository(
           almuerzo: record.almuerzo,
           refrigerio2: record.refrigerio2,
           auxilioTransporte: record.auxilioTransporte,
+          updatedAt: record.updatedAt,
         }));
     },
     async findLatestFormatoEntregaEmission() {

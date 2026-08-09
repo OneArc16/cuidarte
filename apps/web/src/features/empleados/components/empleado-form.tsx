@@ -8,7 +8,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Power } from "lucide-react";
 import { type FieldErrors, type Resolver, useForm } from "react-hook-form";
-import { useEffect } from "react";
+import { type ReactNode, useEffect } from "react";
 
 import {
   type EmpleadoFormValues,
@@ -19,6 +19,7 @@ import {
   toUpdateEmpleadoRequest,
 } from "../schemas/empleado-form.schema";
 import { formatEmpleadoRole, getAssignableEmpleadoRoles } from "../lib/empleados-formatters";
+import { EmpleadoDirectorSignerToggle } from "./empleado-director-signature-panel";
 import { EmpleadoFieldGroup } from "./empleado-field-group";
 
 type EmpleadoFormProps =
@@ -33,18 +34,23 @@ type EmpleadoFormProps =
       onCancel: () => void;
       onSubmit: (values: CreateEmpleadoRequest) => void;
     }
-  | {
+    | {
       mode: "edit";
       currentUserRole: AuthUser["role"];
       detail: EmpleadoDetail;
       error: string | null;
       isPending: boolean;
+      footerAction?: ReactNode;
       onCancel: () => void;
       onSubmit: (values: UpdateEmpleadoRequest) => void;
     };
 
 export function EmpleadoForm(props: EmpleadoFormProps) {
   const detail = props.mode === "edit" ? props.detail : null;
+  const editFooterAction =
+    props.mode === "edit"
+      ? props.footerAction ?? <EmpleadoDirectorSignerToggle detail={props.detail} />
+      : null;
   const form = useForm<EmpleadoFormValues>({
     resolver: zodResolver(empleadoFormSchema) as Resolver<EmpleadoFormValues>,
     defaultValues:
@@ -271,26 +277,30 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
       ) : null}
 
       <div className="empleado-form-footer">
-        <button
-          className="empleado-status-toggle"
-          type="button"
-          aria-pressed={isActive}
-          onClick={() =>
-            setValue("isActive", !isActive, {
-              shouldDirty: true,
-              shouldTouch: true,
-              shouldValidate: true,
-            })
-          }
-        >
-          <span className="empleado-status-toggle__icon" aria-hidden="true">
-            <Power />
-          </span>
-          <span>
-            <strong>{isActive ? "Usuario activo" : "Usuario inactivo"}</strong>
-            <small>{isActive ? "Inactivar usuario" : "Activar usuario"}</small>
-          </span>
-        </button>
+        <div className="empleado-form-status-actions">
+          <button
+            className="empleado-status-toggle"
+            type="button"
+            aria-pressed={isActive}
+            onClick={() =>
+              setValue("isActive", !isActive, {
+                shouldDirty: true,
+                shouldTouch: true,
+                shouldValidate: true,
+              })
+            }
+          >
+            <span className="empleado-status-toggle__icon" aria-hidden="true">
+              <Power />
+            </span>
+            <span>
+              <strong>{isActive ? "Usuario activo" : "Usuario inactivo"}</strong>
+              <small>{isActive ? "Inactivar usuario" : "Activar usuario"}</small>
+            </span>
+          </button>
+
+          {editFooterAction}
+        </div>
 
         <div className="empleado-form-actions">
           <button className="outline-action" type="button" onClick={props.onCancel}>

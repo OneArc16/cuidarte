@@ -208,7 +208,7 @@ describe("App actividades flow", () => {
     );
     await user.click(screen.getByRole("button", { name: "Guardar diligenciamiento" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Diligenciamiento guardado.");
+    expect(await screen.findByText("Diligenciamiento guardado.")).toBeInTheDocument();
     expect(saveRequestCount).toBe(1);
     expect(receivedContentType).toContain("multipart/form-data");
   });
@@ -264,6 +264,7 @@ describe("App actividades flow", () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe("/creacion-actividades");
     });
+    expect(await screen.findByText("Actividad creada.")).toBeInTheDocument();
     expect(await screen.findByText("Actividad creada desde test")).toBeInTheDocument();
     expect(createPayload).toMatchObject({
       tenantId: null,

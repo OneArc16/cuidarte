@@ -66,6 +66,7 @@ const records: EmpleadoRecord[] = [
     isActive: true,
     isTenantOwner: false,
     latestSignature: null,
+    tenantActiveSigner: null,
     currentDirectorSignatureAssignment: null,
     directorSignatureAssignmentHistory: [],
     createdAt: new Date("2026-04-21T12:00:00.000Z"),
@@ -87,6 +88,7 @@ const records: EmpleadoRecord[] = [
     isActive: true,
     isTenantOwner: false,
     latestSignature: null,
+    tenantActiveSigner: null,
     currentDirectorSignatureAssignment: null,
     directorSignatureAssignmentHistory: [],
     createdAt: new Date("2026-04-21T12:00:00.000Z"),
@@ -281,6 +283,48 @@ describe("EmpleadosService", () => {
       { constructor: BadRequestException, message: /inactivar tu propia cuenta/i },
     );
   });
+
+  it("prevents changing the role or state of the current active signer", async () => {
+    const activeDirector = records[0];
+
+    assert.ok(activeDirector);
+
+    const repository = createRepository({
+      currentRecord: {
+        ...activeDirector,
+        role: "director",
+        tenantActiveSigner: {
+          tenantId,
+          employeeId: activeDirector.id,
+          signatureVersionId: "dc8e2c42-8f96-4f19-b204-adf90e139bf4",
+          activatedByUserId: adminUser.id,
+          activatedAt: new Date("2026-08-09T12:00:00.000Z"),
+          updatedAt: new Date("2026-08-09T12:00:00.000Z"),
+        },
+      },
+    });
+    const service = new EmpleadosService(repository);
+
+    await assert.rejects(
+      () =>
+        service.updateEmpleado(
+          activeDirector.id,
+          {
+            firstName: activeDirector.firstName ?? "Laura",
+            middleName: activeDirector.middleName,
+            firstSurname: activeDirector.firstSurname ?? "Perez",
+            secondSurname: activeDirector.secondSurname,
+            email: activeDirector.email,
+            documentNumber: activeDirector.documentNumber ?? "2020202020",
+            phone: activeDirector.phone,
+            role: "admin",
+            isActive: true,
+          },
+          adminUser,
+        ),
+      { constructor: BadRequestException, message: /firmante activo/i },
+    );
+  });
 });
 
 function createCommand() {
@@ -341,6 +385,12 @@ function createRepository(overrides: {
     async findSignatureVersionById() {
       return null;
     },
+    async findTenantActiveSignerByTenantId() {
+      return null;
+    },
+    async resolveTenantActiveDirectorSignatureByTenantId() {
+      return null;
+    },
     async findCurrentDirectorSignatureAssignmentByEmployeeId() {
       return null;
     },
@@ -348,9 +398,6 @@ function createRepository(overrides: {
       return null;
     },
     async findDirectorSignatureAssignmentHistoryByTenantId() {
-      return [];
-    },
-    async resolveDirectorSignatureForDate() {
       return [];
     },
     async create(command, audit) {
@@ -421,7 +468,7 @@ function createRepository(overrides: {
     async createSignatureVersion() {
       throw new Error("No implementado para esta prueba.");
     },
-    async assignDirectorSignature() {
+    async setTenantActiveSigner() {
       throw new Error("No implementado para esta prueba.");
     },
   } satisfies EmpleadosRepository & {

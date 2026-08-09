@@ -1,18 +1,19 @@
 import { Injectable } from "@nestjs/common";
-import { and, asc, desc, eq, gte, ilike, isNull, lte, ne, or, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNull, ne, or, type SQL } from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
 import {
   auditLogs,
   employeeSignatureVersions,
+  tenantActiveSigners,
   tenantDirectorSignatureAssignments,
   tenants,
   users,
 } from "../../../database/schema";
 import {
-  type AssignDirectorSignatureCommand,
   type CreateEmpleadoRecordCommand,
   type CreateEmpleadoSignatureVersionCommand,
+  type ClearTenantActiveSignerCommand,
   type EmpleadoAuditCommand,
   type EmpleadoCommandRecord,
   type EmpleadoRecord,
@@ -20,13 +21,14 @@ import {
   type EmpleadoTenantOptionRecord,
   type DirectorSignatureAssignmentRecord,
   type DirectorSignatureAssignmentHistoryRecord,
-  type DirectorSignatureDateResolutionRecord,
   type FindEmpleadoByDocumentQuery,
   type FindEmpleadoByEmailQuery,
   type FindEmpleadoByIdQuery,
   type FindEmpleadoSignatureVersionByIdQuery,
   type FindEmpleadosQuery,
-  type ResolveDirectorSignatureForDateQuery,
+  type SetTenantActiveSignerCommand,
+  type TenantActiveSignerRecord,
+  type TenantActiveSignerResolutionRecord,
   type UpdateEmpleadoRecordCommand,
 } from "../domain/empleado.types";
 import { type EmpleadosRepository } from "../domain/empleados.repository";
@@ -79,10 +81,12 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
 
     const [
       latestSignature,
+      tenantActiveSigner,
       currentDirectorSignatureAssignment,
       directorSignatureAssignmentHistory,
     ] = await Promise.all([
       this.findLatestSignatureVersionByEmployeeId(row.id),
+      row.tenantId === null ? Promise.resolve(null) : this.findTenantActiveSignerByTenantId(row.tenantId),
       this.findCurrentDirectorSignatureAssignmentByEmployeeId(row.id),
       row.tenantId === null || row.role !== "director"
         ? Promise.resolve([])
@@ -91,6 +95,7 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
 
     return this.toRecord(row, {
       latestSignature,
+      tenantActiveSigner,
       currentDirectorSignatureAssignment,
       directorSignatureAssignmentHistory,
     });
@@ -197,6 +202,86 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
     return row === undefined ? null : row;
   }
 
+  async findTenantActiveSignerByTenantId(
+    tenantId: string,
+  ): Promise<TenantActiveSignerRecord | null> {
+    const [row] = await this.database.db
+      .select({
+        tenantId: tenantActiveSigners.tenantId,
+        employeeId: tenantActiveSigners.employeeId,
+        signatureVersionId: tenantActiveSigners.signatureVersionId,
+        activatedByUserId: tenantActiveSigners.activatedByUserId,
+        activatedAt: tenantActiveSigners.activatedAt,
+        updatedAt: tenantActiveSigners.updatedAt,
+      })
+      .from(tenantActiveSigners)
+      .where(eq(tenantActiveSigners.tenantId, tenantId))
+      .limit(1);
+
+    return row === undefined ? null : row;
+  }
+
+  async resolveTenantActiveDirectorSignatureByTenantId(
+    tenantId: string,
+  ): Promise<TenantActiveSignerResolutionRecord | null> {
+    const [row] = await this.database.db
+      .select({
+        tenantId: tenantActiveSigners.tenantId,
+        employeeId: tenantActiveSigners.employeeId,
+        signatureVersionId: tenantActiveSigners.signatureVersionId,
+        activatedByUserId: tenantActiveSigners.activatedByUserId,
+        activatedAt: tenantActiveSigners.activatedAt,
+        updatedAt: tenantActiveSigners.updatedAt,
+        employeeFullName: users.fullName,
+        employeeRole: users.role,
+        signatureId: employeeSignatureVersions.id,
+        signatureEmployeeId: employeeSignatureVersions.employeeId,
+        signatureTenantId: employeeSignatureVersions.tenantId,
+        signatureOriginalName: employeeSignatureVersions.originalName,
+        signatureMimeType: employeeSignatureVersions.mimeType,
+        signatureSizeBytes: employeeSignatureVersions.sizeBytes,
+        signatureChecksum: employeeSignatureVersions.checksum,
+        signatureRelativePath: employeeSignatureVersions.relativePath,
+        signatureCreatedAt: employeeSignatureVersions.createdAt,
+      })
+      .from(tenantActiveSigners)
+      .innerJoin(users, eq(users.id, tenantActiveSigners.employeeId))
+      .innerJoin(
+        employeeSignatureVersions,
+        eq(employeeSignatureVersions.id, tenantActiveSigners.signatureVersionId),
+      )
+      .where(eq(tenantActiveSigners.tenantId, tenantId))
+      .limit(1);
+
+    if (row === undefined) {
+      return null;
+    }
+
+    return {
+      activeSigner: {
+        tenantId: row.tenantId,
+        employeeId: row.employeeId,
+        signatureVersionId: row.signatureVersionId,
+        activatedByUserId: row.activatedByUserId,
+        activatedAt: row.activatedAt,
+        updatedAt: row.updatedAt,
+      },
+      employeeFullName: row.employeeFullName,
+      employeeRole: row.employeeRole,
+      signature: {
+        id: row.signatureId,
+        employeeId: row.signatureEmployeeId,
+        tenantId: row.signatureTenantId,
+        originalName: row.signatureOriginalName,
+        mimeType: row.signatureMimeType,
+        sizeBytes: row.signatureSizeBytes,
+        checksum: row.signatureChecksum,
+        relativePath: row.signatureRelativePath,
+        createdAt: row.signatureCreatedAt,
+      },
+    };
+  }
+
   async findCurrentDirectorSignatureAssignmentByEmployeeId(
     employeeId: string,
   ): Promise<DirectorSignatureAssignmentRecord | null> {
@@ -276,77 +361,6 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
         desc(tenantDirectorSignatureAssignments.effectiveFrom),
         desc(tenantDirectorSignatureAssignments.createdAt),
       );
-  }
-
-  async resolveDirectorSignatureForDate(
-    query: ResolveDirectorSignatureForDateQuery,
-  ): Promise<DirectorSignatureDateResolutionRecord[]> {
-    const rows = await this.database.db
-      .select({
-        assignmentId: tenantDirectorSignatureAssignments.id,
-        assignmentTenantId: tenantDirectorSignatureAssignments.tenantId,
-        assignmentEmployeeId: tenantDirectorSignatureAssignments.employeeId,
-        assignmentSignatureVersionId: tenantDirectorSignatureAssignments.signatureVersionId,
-        assignmentEffectiveFrom: tenantDirectorSignatureAssignments.effectiveFrom,
-        assignmentEffectiveTo: tenantDirectorSignatureAssignments.effectiveTo,
-        assignmentCreatedAt: tenantDirectorSignatureAssignments.createdAt,
-        employeeFullName: users.fullName,
-        employeeRole: users.role,
-        signatureId: employeeSignatureVersions.id,
-        signatureEmployeeId: employeeSignatureVersions.employeeId,
-        signatureTenantId: employeeSignatureVersions.tenantId,
-        signatureOriginalName: employeeSignatureVersions.originalName,
-        signatureMimeType: employeeSignatureVersions.mimeType,
-        signatureSizeBytes: employeeSignatureVersions.sizeBytes,
-        signatureChecksum: employeeSignatureVersions.checksum,
-        signatureRelativePath: employeeSignatureVersions.relativePath,
-        signatureCreatedAt: employeeSignatureVersions.createdAt,
-      })
-      .from(tenantDirectorSignatureAssignments)
-      .innerJoin(users, eq(users.id, tenantDirectorSignatureAssignments.employeeId))
-      .innerJoin(
-        employeeSignatureVersions,
-        eq(employeeSignatureVersions.id, tenantDirectorSignatureAssignments.signatureVersionId),
-      )
-      .where(
-        and(
-          eq(tenantDirectorSignatureAssignments.tenantId, query.tenantId),
-          lte(tenantDirectorSignatureAssignments.effectiveFrom, query.effectiveDate),
-          or(
-            isNull(tenantDirectorSignatureAssignments.effectiveTo),
-            gte(tenantDirectorSignatureAssignments.effectiveTo, query.effectiveDate),
-          )!,
-        ),
-      )
-      .orderBy(
-        desc(tenantDirectorSignatureAssignments.effectiveFrom),
-        desc(tenantDirectorSignatureAssignments.createdAt),
-      );
-
-    return rows.map((row) => ({
-      assignment: {
-        id: row.assignmentId,
-        tenantId: row.assignmentTenantId,
-        employeeId: row.assignmentEmployeeId,
-        signatureVersionId: row.assignmentSignatureVersionId,
-        effectiveFrom: row.assignmentEffectiveFrom,
-        effectiveTo: row.assignmentEffectiveTo,
-        createdAt: row.assignmentCreatedAt,
-      },
-      employeeFullName: row.employeeFullName,
-      employeeRole: row.employeeRole,
-      signature: {
-        id: row.signatureId,
-        employeeId: row.signatureEmployeeId,
-        tenantId: row.signatureTenantId,
-        originalName: row.signatureOriginalName,
-        mimeType: row.signatureMimeType,
-        sizeBytes: row.signatureSizeBytes,
-        checksum: row.signatureChecksum,
-        relativePath: row.signatureRelativePath,
-        createdAt: row.signatureCreatedAt,
-      },
-    }));
   }
 
   async create(
@@ -460,67 +474,82 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
     return signature;
   }
 
-  async assignDirectorSignature(
-    command: AssignDirectorSignatureCommand,
-    auditEntries: EmpleadoAuditCommand[],
-  ): Promise<DirectorSignatureAssignmentRecord> {
-    const createdId = await this.database.db.transaction(async (tx) => {
-      const [currentActiveAssignment] = await tx
-        .select({
-          id: tenantDirectorSignatureAssignments.id,
-        })
-        .from(tenantDirectorSignatureAssignments)
-        .where(
-          and(
-            eq(tenantDirectorSignatureAssignments.tenantId, command.tenantId),
-            isNull(tenantDirectorSignatureAssignments.effectiveTo),
-          ),
-        )
-        .orderBy(
-          desc(tenantDirectorSignatureAssignments.effectiveFrom),
-          desc(tenantDirectorSignatureAssignments.createdAt),
-        )
-        .limit(1);
+  async setTenantActiveSigner(
+    command: SetTenantActiveSignerCommand,
+    audit: EmpleadoAuditCommand,
+  ): Promise<TenantActiveSignerRecord> {
+    const activeSigner = await this.database.db.transaction(async (tx) => {
+      const now = new Date();
+      const values = {
+        tenantId: command.tenantId,
+        employeeId: command.employeeId,
+        signatureVersionId: command.signatureVersionId,
+        activatedByUserId: command.activatedByUserId,
+        activatedAt: now,
+        updatedAt: now,
+      } satisfies typeof tenantActiveSigners.$inferInsert;
 
-      if (currentActiveAssignment !== undefined) {
-        await tx
-          .update(tenantDirectorSignatureAssignments)
-          .set({
-            effectiveTo: resolvePreviousDate(command.effectiveFrom),
-          })
-          .where(eq(tenantDirectorSignatureAssignments.id, currentActiveAssignment.id));
+      const [savedRow] = await tx
+        .insert(tenantActiveSigners)
+        .values(values)
+        .onConflictDoUpdate({
+          target: tenantActiveSigners.tenantId,
+          set: {
+            employeeId: values.employeeId,
+            signatureVersionId: values.signatureVersionId,
+            activatedByUserId: values.activatedByUserId,
+            activatedAt: values.activatedAt,
+            updatedAt: values.updatedAt,
+          },
+        })
+        .returning({
+          tenantId: tenantActiveSigners.tenantId,
+          employeeId: tenantActiveSigners.employeeId,
+          signatureVersionId: tenantActiveSigners.signatureVersionId,
+          activatedByUserId: tenantActiveSigners.activatedByUserId,
+          activatedAt: tenantActiveSigners.activatedAt,
+          updatedAt: tenantActiveSigners.updatedAt,
+        });
+
+      if (savedRow === undefined) {
+        throw new Error("No fue posible guardar el firmante activo del centro.");
       }
 
-      const [created] = await tx
-        .insert(tenantDirectorSignatureAssignments)
-        .values({
-          tenantId: command.tenantId,
-          employeeId: command.employeeId,
-          signatureVersionId: command.signatureVersionId,
-          effectiveFrom: command.effectiveFrom,
-          createdByUserId: command.createdByUserId,
-          createdAt: new Date(),
-        })
-        .returning({ id: tenantDirectorSignatureAssignments.id });
+      await tx.insert(auditLogs).values(this.toAuditInsert(audit, command.employeeId));
 
-      if (created === undefined) {
-        throw new Error("No fue posible guardar la vigencia de la firma del director.");
-      }
-
-      await tx.insert(auditLogs).values(
-        auditEntries.map((audit) => this.toAuditInsert(audit, command.employeeId)),
-      );
-
-      return created.id;
+      return savedRow;
     });
 
-    const assignment = await this.getDirectorSignatureAssignmentById(createdId);
+    return activeSigner;
+  }
 
-    if (assignment === null) {
-      throw new Error("No fue posible consultar la vigencia de firma guardada.");
-    }
+  async clearTenantActiveSigner(
+    command: ClearTenantActiveSignerCommand,
+    audit: EmpleadoAuditCommand,
+  ): Promise<TenantActiveSignerRecord | null> {
+    const activeSigner = await this.database.db.transaction(async (tx) => {
+      const [deletedRow] = await tx
+        .delete(tenantActiveSigners)
+        .where(eq(tenantActiveSigners.tenantId, command.tenantId))
+        .returning({
+          tenantId: tenantActiveSigners.tenantId,
+          employeeId: tenantActiveSigners.employeeId,
+          signatureVersionId: tenantActiveSigners.signatureVersionId,
+          activatedByUserId: tenantActiveSigners.activatedByUserId,
+          activatedAt: tenantActiveSigners.activatedAt,
+          updatedAt: tenantActiveSigners.updatedAt,
+        });
 
-    return assignment;
+      if (deletedRow === undefined) {
+        return null;
+      }
+
+      await tx.insert(auditLogs).values(this.toAuditInsert(audit, deletedRow.employeeId));
+
+      return deletedRow;
+    });
+
+    return activeSigner;
   }
 
   private buildWhere(query: FindEmpleadosQuery): SQL | undefined {
@@ -625,10 +654,12 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
 
     const [
       latestSignature,
+      tenantActiveSigner,
       currentDirectorSignatureAssignment,
       directorSignatureAssignmentHistory,
     ] = await Promise.all([
       this.findLatestSignatureVersionByEmployeeId(id),
+      row.tenantId === null ? Promise.resolve(null) : this.findTenantActiveSignerByTenantId(row.tenantId),
       this.findCurrentDirectorSignatureAssignmentByEmployeeId(id),
       row.tenantId === null || row.role !== "director"
         ? Promise.resolve([])
@@ -637,6 +668,7 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
 
     return this.toRecord(row, {
       latestSignature,
+      tenantActiveSigner,
       currentDirectorSignatureAssignment,
       directorSignatureAssignmentHistory,
     });
@@ -688,6 +720,7 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
     row: EmpleadoSelectionRow,
     relations?: {
       latestSignature?: EmpleadoSignatureVersionRecord | null;
+      tenantActiveSigner?: TenantActiveSignerRecord | null;
       currentDirectorSignatureAssignment?: DirectorSignatureAssignmentRecord | null;
       directorSignatureAssignmentHistory?: DirectorSignatureAssignmentHistoryRecord[];
     },
@@ -695,6 +728,7 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
     return {
       ...row,
       latestSignature: relations?.latestSignature ?? null,
+      tenantActiveSigner: relations?.tenantActiveSigner ?? null,
       currentDirectorSignatureAssignment:
         relations?.currentDirectorSignatureAssignment ?? null,
       directorSignatureAssignmentHistory:
@@ -705,13 +739,6 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
 
 function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, (character) => `\\${character}`);
-}
-
-function resolvePreviousDate(dateValue: string): string {
-  const currentDate = new Date(`${dateValue}T00:00:00.000Z`);
-  currentDate.setUTCDate(currentDate.getUTCDate() - 1);
-
-  return currentDate.toISOString().slice(0, 10);
 }
 
 function joinFullName(command: {

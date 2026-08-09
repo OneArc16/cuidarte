@@ -1,12 +1,13 @@
 import { type AlimentacionImportedFormatoVersion, type AuthUser } from "@cuidarte/contracts";
 import { Plus } from "lucide-react";
 import { type ChangeEvent, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
 import {
-  downloadAlimentacionImportedFormatoVersion,
-  exportAlimentacionFormatoEntregaPdf,
+  buildAlimentacionFormatoEntregaPdfUrl,
+  buildAlimentacionImportedFormatoVersionDownloadUrl,
 } from "../api/alimentacion-api";
 import { AlimentacionImportedPdfDialog } from "../components/alimentacion-imported-pdf-dialog";
 import { AlimentacionImportedPdfVersionsDialog } from "../components/alimentacion-imported-pdf-versions-dialog";
@@ -16,7 +17,6 @@ import {
   REGISTRO_ALIMENTACION_NEW_PATH,
   buildAlimentacionEditPath,
 } from "../lib/alimentacion-paths";
-import { downloadBlob } from "../lib/download-file";
 import { canManageAlimentacion } from "../lib/alimentacion-permissions";
 import {
   getCurrentMonthInputValue,
@@ -61,7 +61,6 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
   const [exportingAdultoMayorId, setExportingAdultoMayorId] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
-  const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [importTarget, setImportTarget] = useState<ImportTarget | null>(null);
   const [importDialog, setImportDialog] = useState<ImportDialogState | null>(null);
   const [historyTarget, setHistoryTarget] = useState<ImportedFormatoHistoryTarget | null>(null);
@@ -103,17 +102,13 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
     setExportError(null);
 
     try {
-      const blob = await exportAlimentacionFormatoEntregaPdf({
+      const pdfUrl = buildAlimentacionFormatoEntregaPdfUrl({
         adultoMayorId: params.adultoMayorId,
         deliveryMonth: effectiveDeliveryMonth,
       });
-
-      downloadBlob(
-        blob,
-        buildFormatoEntregaFilename(params.documentNumber, effectiveDeliveryMonth),
-      );
+      window.open(pdfUrl, "_blank", "noopener,noreferrer");
     } catch (error: unknown) {
-      setExportError(resolveAlimentacionApiError(error) ?? "No fue posible completar la descarga.");
+      setExportError(resolveAlimentacionApiError(error) ?? "No fue posible abrir el PDF.");
     } finally {
       setExportingAdultoMayorId(null);
     }
@@ -127,7 +122,6 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
 
     importMutation.reset();
     setImportError(null);
-    setImportSuccess(null);
     setImportTarget(params);
     importFileInputRef.current?.click();
   }
@@ -183,7 +177,7 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
       },
       {
         onSuccess: ({ version }) => {
-          setImportSuccess(
+          toast.success(
             `PDF importado correctamente como versión ${version.version} para ${importDialog.fullName}.`,
           );
           setImportDialog(null);
@@ -208,17 +202,20 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
     originalName: string;
   }) {
     setDownloadingImportedVersionId(params.versionId);
-    setImportError(null);
 
     try {
-      const blob = await downloadAlimentacionImportedFormatoVersion({
+      const pdfUrl = buildAlimentacionImportedFormatoVersionDownloadUrl({
         adultoMayorId: params.adultoMayorId,
         versionId: params.versionId,
       });
 
-      downloadBlob(blob, params.originalName);
+      window.open(
+        pdfUrl,
+        "_blank",
+        "noopener,noreferrer",
+      );
     } catch (error: unknown) {
-      setImportError(
+      toast.error(
         resolveAlimentacionApiError(error) ?? "No fue posible descargar el PDF importado.",
       );
     } finally {
@@ -271,12 +268,6 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
       {importError !== null && importDialog === null ? (
         <p className="form-error" role="alert">
           {importError}
-        </p>
-      ) : null}
-
-      {importSuccess !== null ? (
-        <p className="success-banner" role="status">
-          {importSuccess}
         </p>
       ) : null}
 
@@ -354,12 +345,6 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
       ) : null}
     </section>
   );
-}
-
-function buildFormatoEntregaFilename(documentNumber: string, deliveryMonth: string): string {
-  const sanitizedDocument = documentNumber.replace(/[^a-zA-Z0-9._-]/g, "-");
-
-  return `formato-entrega-${sanitizedDocument}-${deliveryMonth}.pdf`;
 }
 
 function isPdfFile(file: File): boolean {

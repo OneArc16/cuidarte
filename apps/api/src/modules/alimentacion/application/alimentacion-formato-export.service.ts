@@ -2,7 +2,13 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { type AlimentacionFormatoEntregaExportQuery, type AuthUser } from "@cuidarte/contracts";
-import { Inject, Injectable, InternalServerErrorException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+} from "@nestjs/common";
 import { chromium, type Browser } from "playwright";
 
 import { EmpleadosSignatureService } from "../../empleados/application/empleados-signature.service";
@@ -25,11 +31,21 @@ export type ExportedAlimentacionFormatoEntregaPdf = {
   filename: string;
 };
 
+type ResolvedDirectorSignature = Awaited<
+  ReturnType<EmpleadosSignatureService["resolveTenantActiveDirectorSignature"]>
+>;
+type ResolvedTenantLogoVersion = Awaited<ReturnType<TenantBrandingService["resolveActiveLogo"]>>;
+type CurrentFormatoDependencies = {
+  directorSignature: ResolvedDirectorSignature;
+  tenantLogoVersion: ResolvedTenantLogoVersion;
+};
+
 const INSTITUTIONAL_LOGO_RELATIVE_PATH = path.join(
   "public",
   "logos",
   "gobernacion-magdalena.png",
 );
+const VISIT_BASED_FORMAT_ROLLOUT_AT = new Date("2026-08-09T05:00:00.000Z");
 
 let cachedInstitutionalLogoDataUrl: string | null | undefined;
 
@@ -48,41 +64,43 @@ export class AlimentacionFormatoExportService {
     query: AlimentacionFormatoEntregaExportQuery,
     actor: AuthUser,
   ): Promise<ExportedAlimentacionFormatoEntregaPdf> {
-    const existingEmission = await this.alimentacionService.findLatestFormatoEntregaEmission(
-      adultoMayorId,
-      query,
-      actor,
-    );
-
-    if (existingEmission !== null) {
-      const storedFile = await this.readStoredEmission(existingEmission);
-
-      await this.alimentacionService.registerFormatoEntregaExportAudit(
-        {
-          tenantId: existingEmission.tenantId,
-          adultoMayorId: existingEmission.adultoMayorId,
-          deliveryMonth: existingEmission.deliveryMonth,
-        },
-        actor,
-      );
-
-      return storedFile;
-    }
-
+    const generatedAt = new Date();
     const exportData = await this.alimentacionService.prepareFormatoEntregaExport(
       adultoMayorId,
       query,
       actor,
     );
-    const generatedAt = new Date();
-    const signatureEffectiveDate = resolveBogotaDateValue(generatedAt);
-    const [directorSignature, tenantLogoVersion] = await Promise.all([
-      this.empleadosSignatureService.resolveDirectorSignatureForDate(
-        exportData.tenantId,
-        signatureEffectiveDate,
-      ),
-      this.tenantBrandingService.resolveActiveLogo(exportData.tenantId),
-    ]);
+    const existingEmission = await this.alimentacionService.findLatestFormatoEntregaEmission(
+      adultoMayorId,
+      query,
+      actor,
+    );
+    const currentDependenciesForReuse =
+      existingEmission === null
+        ? null
+        : await this.tryResolveCurrentFormatoDependencies(exportData.tenantId);
+
+    if (
+      existingEmission !== null &&
+      this.shouldReuseExistingEmission(existingEmission, exportData, currentDependenciesForReuse)
+    ) {
+      const storedFile = await this.readStoredEmission(existingEmission);
+
+      if (storedFile !== null) {
+        await this.alimentacionService.registerFormatoEntregaExportAudit(
+          {
+            tenantId: existingEmission.tenantId,
+            adultoMayorId: existingEmission.adultoMayorId,
+            deliveryMonth: existingEmission.deliveryMonth,
+          },
+          actor,
+        );
+
+        return storedFile;
+      }
+    }
+    const { directorSignature, tenantLogoVersion } =
+      currentDependenciesForReuse ?? (await this.resolveCurrentFormatoDependencies(exportData.tenantId));
     const [institutionalLogoDataUrl, directorSignatureDataUrl, tenantLogoFile] = await Promise.all([
       this.getInstitutionalLogoDataUrl(),
       this.getDirectorSignatureDataUrl(directorSignature.signature),
@@ -118,7 +136,7 @@ export class AlimentacionFormatoExportService {
         tenantId: exportData.tenantId,
         adultoMayorId: exportData.adultoMayorId,
         deliveryMonth: exportData.deliveryMonth,
-        signerEmployeeIdSnapshot: directorSignature.assignment.employeeId,
+        signerEmployeeIdSnapshot: directorSignature.activeSigner.employeeId,
         signerNameSnapshot: directorSignature.employeeFullName,
         signerRoleSnapshot: directorSignature.employeeRole,
         signatureVersionIdSnapshot: directorSignature.signature.id,
@@ -156,7 +174,7 @@ export class AlimentacionFormatoExportService {
     data: AlimentacionFormatoEntregaExportData,
     institutionalLogoDataUrl: string | null,
     tenantLogoDataUrl: string,
-    directorSignatureDataUrl: string,
+    directorSignatureDataUrl: string | null,
     generatedAt: Date,
   ): Promise<Buffer> {
     let browser: Browser | undefined;
@@ -207,7 +225,7 @@ export class AlimentacionFormatoExportService {
   private async readStoredEmission(emission: {
     pdfRelativePath: string;
     filename: string;
-  }): Promise<ExportedAlimentacionFormatoEntregaPdf> {
+  }): Promise<ExportedAlimentacionFormatoEntregaPdf | null> {
     try {
       const file = await this.formatoFilesStorage.readFile(
         emission.pdfRelativePath,
@@ -221,10 +239,13 @@ export class AlimentacionFormatoExportService {
         filename: file.filename,
       };
     } catch (error) {
-      throw new InternalServerErrorException(
-        "No fue posible recuperar el formato historico de alimentacion.",
-        { cause: error },
-      );
+      if (isMissingFileError(error)) {
+        return null;
+      }
+
+      throw new InternalServerErrorException("No fue posible recuperar el formato historico de alimentacion.", {
+        cause: error,
+      });
     }
   }
 
@@ -232,10 +253,66 @@ export class AlimentacionFormatoExportService {
     relativePath: string;
     originalName: string;
     mimeType: string;
-  }): Promise<string> {
-    const file = await this.empleadosSignatureService.readSignatureFile(signature);
+  }): Promise<string | null> {
+    try {
+      const file = await this.empleadosSignatureService.readSignatureFile(signature);
 
-    return `data:${file.contentType};base64,${file.buffer.toString("base64")}`;
+      return `data:${normalizeInlineImageContentType(file.contentType)};base64,${file.buffer.toString("base64")}`;
+    } catch (error) {
+      if (isMissingFileError(error)) {
+        return null;
+      }
+
+      throw error;
+    }
+  }
+
+  private shouldReuseExistingEmission(
+    existingEmission: {
+      issuedAt: Date;
+      signerEmployeeIdSnapshot: string;
+      signatureVersionIdSnapshot: string;
+      tenantLogoVersionIdSnapshot: string | null;
+      sourceRecordCount: number;
+      sourceDateFrom: string | null;
+      sourceDateTo: string | null;
+    },
+    exportData: AlimentacionFormatoEntregaExportData,
+    currentDependencies: CurrentFormatoDependencies | null,
+  ): boolean {
+    if (existingEmission.issuedAt < VISIT_BASED_FORMAT_ROLLOUT_AT) {
+      return false;
+    }
+
+    if (
+      currentDependencies !== null &&
+      (existingEmission.signerEmployeeIdSnapshot !== currentDependencies.directorSignature.activeSigner.employeeId ||
+        existingEmission.signatureVersionIdSnapshot !== currentDependencies.directorSignature.signature.id ||
+        existingEmission.tenantLogoVersionIdSnapshot !== currentDependencies.tenantLogoVersion.id)
+    ) {
+      return false;
+    }
+
+    if (
+      currentDependencies !== null &&
+      (currentDependencies.directorSignature.activeSigner.activatedAt > existingEmission.issuedAt ||
+        currentDependencies.directorSignature.signature.createdAt > existingEmission.issuedAt ||
+        currentDependencies.tenantLogoVersion.createdAt > existingEmission.issuedAt)
+    ) {
+      return false;
+    }
+
+    const latestRecordUpdatedAt = getLatestRecordUpdatedAt(exportData);
+
+    if (latestRecordUpdatedAt !== null && latestRecordUpdatedAt > existingEmission.issuedAt) {
+      return false;
+    }
+
+    return (
+      existingEmission.sourceRecordCount === exportData.records.length &&
+      existingEmission.sourceDateFrom === (exportData.records[0]?.deliveryDate ?? null) &&
+      existingEmission.sourceDateTo === (exportData.records.at(-1)?.deliveryDate ?? null)
+    );
   }
 
   private async getInstitutionalLogoDataUrl(): Promise<string | null> {
@@ -258,6 +335,34 @@ export class AlimentacionFormatoExportService {
       return;
     }
   }
+
+  private async resolveCurrentFormatoDependencies(
+    tenantId: string,
+  ): Promise<CurrentFormatoDependencies> {
+    const [directorSignature, tenantLogoVersion] = await Promise.all([
+      this.empleadosSignatureService.resolveTenantActiveDirectorSignature(tenantId),
+      this.tenantBrandingService.resolveActiveLogo(tenantId),
+    ]);
+
+    return {
+      directorSignature,
+      tenantLogoVersion,
+    };
+  }
+
+  private async tryResolveCurrentFormatoDependencies(
+    tenantId: string,
+  ): Promise<CurrentFormatoDependencies | null> {
+    try {
+      return await this.resolveCurrentFormatoDependencies(tenantId);
+    } catch (error) {
+      if (error instanceof BadRequestException || error instanceof ConflictException) {
+        return null;
+      }
+
+      throw error;
+    }
+  }
 }
 
 async function readLogoFile(): Promise<Buffer | null> {
@@ -277,20 +382,35 @@ async function readLogoFile(): Promise<Buffer | null> {
   return null;
 }
 
-function resolveBogotaDateValue(value: Date): string {
-  const dateParts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Bogota",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(value);
-  const year = dateParts.find((part) => part.type === "year")?.value;
-  const month = dateParts.find((part) => part.type === "month")?.value;
-  const day = dateParts.find((part) => part.type === "day")?.value;
+function isMissingFileError(error: unknown): error is NodeJS.ErrnoException {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    error.code === "ENOENT"
+  );
+}
 
-  if (year === undefined || month === undefined || day === undefined) {
-    throw new Error("No fue posible resolver la fecha de emision.");
+function getLatestRecordUpdatedAt(
+  exportData: AlimentacionFormatoEntregaExportData,
+): Date | null {
+  let latestTimestamp: number | null = null;
+
+  for (const record of exportData.records) {
+    const recordTimestamp = record.updatedAt.getTime();
+
+    if (Number.isNaN(recordTimestamp)) {
+      continue;
+    }
+
+    if (latestTimestamp === null || recordTimestamp > latestTimestamp) {
+      latestTimestamp = recordTimestamp;
+    }
   }
 
-  return `${year}-${month}-${day}`;
+  return latestTimestamp === null ? null : new Date(latestTimestamp);
+}
+
+function normalizeInlineImageContentType(contentType: string): string {
+  return contentType === "image/jpg" ? "image/jpeg" : contentType;
 }

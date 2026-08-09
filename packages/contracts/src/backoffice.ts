@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { tenantActiveSignerSchema } from "./empleados.js";
+
 export const tenantDocumentTypeSchema = z.enum(["nit", "cc", "ce"]);
 export const tenantStatusFilterSchema = z.enum(["all", "active", "inactive"]);
 
@@ -90,6 +92,7 @@ export const backofficeTenantListItemSchema = z.object({
 export const backofficeTenantDetailSchema = z.object({
   tenant: backofficeTenantSchema,
   owner: backofficeTenantOwnerSchema,
+  activeSigner: tenantActiveSignerSchema.nullable(),
   logo: tenantLogoMetadataSchema.nullable(),
 });
 

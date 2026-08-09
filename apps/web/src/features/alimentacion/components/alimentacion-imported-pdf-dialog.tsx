@@ -59,7 +59,7 @@ export function AlimentacionImportedPdfDialog({
             <h2 id="alimentacion-import-dialog-title">Confirmar importacion</h2>
           </div>
           <button
-            className="alimentacion-row-action"
+            className="alimentacion-row-action alimentacion-import-dialog__close-button"
             type="button"
             aria-label="Cerrar importacion"
             title="Cerrar"
@@ -109,10 +109,20 @@ export function AlimentacionImportedPdfDialog({
         ) : null}
 
         <footer className="alimentacion-import-dialog__actions">
-          <button className="secondary-action" type="button" disabled={isPending} onClick={onClose}>
+          <button
+            className="secondary-action alimentacion-import-dialog__action-button alimentacion-import-dialog__action-button--cancel"
+            type="button"
+            disabled={isPending}
+            onClick={onClose}
+          >
             Cancelar
           </button>
-          <button className="primary-action" type="button" disabled={isPending} onClick={onConfirm}>
+          <button
+            className="primary-action alimentacion-import-dialog__action-button alimentacion-import-dialog__action-button--confirm"
+            type="button"
+            disabled={isPending}
+            onClick={onConfirm}
+          >
             {isPending ? (
               <>
                 <LoaderCircle aria-hidden="true" className="alimentacion-spin" />

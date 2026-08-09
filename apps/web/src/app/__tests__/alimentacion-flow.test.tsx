@@ -145,6 +145,7 @@ describe("App alimentacion flow", () => {
 
     let receivedAdultoMayorId: string | null = null;
     let receivedDeliveryMonth: string | null = null;
+    const openSpy = vi.spyOn(window, "open").mockReturnValue({} as Window);
     server.use(
       mockAuthMe(authUserFixture),
       mockAlimentacionListForTests(),
@@ -175,6 +176,11 @@ describe("App alimentacion flow", () => {
       expect(receivedAdultoMayorId).toBe(alimentacionFixture.adultoMayorId);
     });
     expect(receivedDeliveryMonth).toBe("2026-04");
+    expect(openSpy).toHaveBeenCalledWith(
+      "/api/registro-alimentacion/adultos-mayores/4f3e6b3b-e94a-4791-9b94-10fdbec70eb3/formato-entrega/pdf?deliveryMonth=2026-04",
+      "_blank",
+      "noopener,noreferrer",
+    );
   });
 
   it("imports a PDF after showing the beneficiary, month and file details", async () => {
@@ -244,6 +250,68 @@ describe("App alimentacion flow", () => {
         `PDF importado correctamente como versión 1 para ${alimentacionFixture.fullName}.`,
       ),
     ).toBeInTheDocument();
+  });
+
+  it("downloads the imported PDF from the row action", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-04-24T12:00:00.000Z"));
+
+    let requestedAdultoMayorId: string | null = null;
+    let requestedVersionId: string | null = null;
+    const openSpy = vi.spyOn(window, "open").mockReturnValue({} as Window);
+    server.use(
+      mockAuthMe(authUserFixture),
+      http.get(ALIMENTACION_LIST_ENDPOINT, () =>
+        HttpResponse.json({
+          registros: [
+            {
+              ...alimentacionFixture,
+              importedFormato: {
+                id: "6d0e0f91-d9f9-4cb7-bb08-08af2d5ac1f9",
+                version: 1,
+                originalName: "formato-importado.pdf",
+                mimeType: "application/pdf",
+                sizeBytes: 16,
+                importedByUserId: authUserFixture.id,
+                importedByUserFullName: authUserFixture.fullName,
+                importedAt: "2026-04-24T12:00:00.000Z",
+              },
+            },
+          ],
+        }),
+      ),
+      http.get(
+        "http://localhost:3001/api/registro-alimentacion/adultos-mayores/:adultoMayorId/formato-entrega/imported-pdfs/:versionId/download",
+        ({ params }) => {
+          requestedAdultoMayorId = params.adultoMayorId as string;
+          requestedVersionId = params.versionId as string;
+
+          return new HttpResponse(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
+            headers: {
+              "Content-Type": "application/pdf",
+            },
+          });
+        },
+      ),
+    );
+    const user = userEvent.setup();
+    renderAppAtPath("/registro-alimentacion");
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /Descargar PDF importado v1 de Alfonso Gomez Prieto/i,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(requestedAdultoMayorId).toBe(alimentacionFixture.adultoMayorId);
+      expect(requestedVersionId).toBe("6d0e0f91-d9f9-4cb7-bb08-08af2d5ac1f9");
+      expect(openSpy).toHaveBeenCalledWith(
+        "/api/registro-alimentacion/adultos-mayores/4f3e6b3b-e94a-4791-9b94-10fdbec70eb3/formato-entrega/imported-pdfs/6d0e0f91-d9f9-4cb7-bb08-08af2d5ac1f9/download",
+        "_blank",
+        "noopener,noreferrer",
+      );
+    });
   });
 
   it("rejects a non-PDF before opening the import confirmation", async () => {

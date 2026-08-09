@@ -54,6 +54,22 @@ export type EmpleadoSignatureVersionRecord = {
   createdAt: Date;
 };
 
+export type TenantActiveSignerRecord = {
+  tenantId: string;
+  employeeId: string;
+  signatureVersionId: string;
+  activatedByUserId: string;
+  activatedAt: Date;
+  updatedAt: Date;
+};
+
+export type TenantActiveSignerResolutionRecord = {
+  activeSigner: TenantActiveSignerRecord;
+  employeeFullName: string;
+  employeeRole: UserRole;
+  signature: EmpleadoSignatureVersionRecord;
+};
+
 export type DirectorSignatureAssignmentRecord = {
   id: string;
   tenantId: string;
@@ -101,6 +117,8 @@ export type EmpleadoAuditCommand = {
     | "empleados.deactivated"
     | "empleados.password_reset"
     | "empleados.signature_uploaded"
+    | "empleados.active_signer_updated"
+    | "empleados.active_signer_cleared"
     | "empleados.director_signature_assigned"
     | "empleados.director_signature_assignment_closed";
   targetTenantId: string | null;
@@ -132,6 +150,18 @@ export type AssignDirectorSignatureCommand = {
   createdByUserId: string;
 };
 
+export type SetTenantActiveSignerCommand = {
+  tenantId: string;
+  employeeId: string;
+  signatureVersionId: string;
+  activatedByUserId: string;
+};
+
+export type ClearTenantActiveSignerCommand = {
+  tenantId: string;
+  deactivatedByUserId: string;
+};
+
 export type ResolveDirectorSignatureForDateQuery = {
   tenantId: string;
   effectiveDate: string;
@@ -160,6 +190,7 @@ export type EmpleadoRecord = {
   isActive: boolean;
   isTenantOwner: boolean;
   latestSignature: EmpleadoSignatureVersionRecord | null;
+  tenantActiveSigner: TenantActiveSignerRecord | null;
   currentDirectorSignatureAssignment: DirectorSignatureAssignmentRecord | null;
   directorSignatureAssignmentHistory: DirectorSignatureAssignmentHistoryRecord[];
   createdAt: Date;

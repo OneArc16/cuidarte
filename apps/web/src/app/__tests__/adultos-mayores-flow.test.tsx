@@ -231,6 +231,10 @@ describe("App adultos mayores flow", () => {
     server.use(mockAuthMe(authUserFixture));
     let excelSearch: string | null = null;
     let pdfSearch: string | null = null;
+    const createObjectUrlSpy = vi.spyOn(URL, "createObjectURL").mockReturnValue(
+      "blob:adultos-mayores",
+    );
+    const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
 
     server.use(
       http.get("http://localhost:3001/api/adultos-mayores/export/excel", ({ request }) => {
@@ -272,6 +276,8 @@ describe("App adultos mayores flow", () => {
     await waitFor(() => {
       expect(pdfSearch).toBe("Rosa");
     });
+    expect(createObjectUrlSpy).toHaveBeenCalledTimes(1);
+    expect(openSpy).toHaveBeenCalledWith("blob:adultos-mayores", "_blank", "noopener,noreferrer");
 
     await user.click(screen.getByRole("button", { name: "Imprimir listado" }));
     expect(print).toHaveBeenCalledTimes(1);

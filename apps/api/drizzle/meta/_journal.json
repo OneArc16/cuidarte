@@ -169,6 +169,13 @@
       "when": 1786214400000,
       "tag": "0023_health_regime_text_labels",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1786295552217,
+      "tag": "0024_tenant_active_signers",
+      "breakpoints": true
     }
   ]
 }

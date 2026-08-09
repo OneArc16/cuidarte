@@ -40,7 +40,7 @@ type TenantOwnerSelection = {
 };
 
 type AuditEntry = typeof auditLogs.$inferInsert;
-type BackofficeTenantCoreDetail = Omit<BackofficeTenantDetail, "logo">;
+type BackofficeTenantCoreDetail = Omit<BackofficeTenantDetail, "logo" | "activeSigner">;
 
 @Injectable()
 export class BackofficeService {

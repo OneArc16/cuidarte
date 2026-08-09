@@ -1,10 +1,8 @@
 import {
-  type AssignDirectorSignatureCommand,
   type CreateEmpleadoRecordCommand,
   type CreateEmpleadoSignatureVersionCommand,
   type DirectorSignatureAssignmentRecord,
   type DirectorSignatureAssignmentHistoryRecord,
-  type DirectorSignatureDateResolutionRecord,
   type EmpleadoAuditCommand,
   type EmpleadoRecord,
   type EmpleadoSignatureVersionRecord,
@@ -14,7 +12,10 @@ import {
   type FindEmpleadoByEmailQuery,
   type FindEmpleadoByIdQuery,
   type FindEmpleadosQuery,
-  type ResolveDirectorSignatureForDateQuery,
+  type ClearTenantActiveSignerCommand,
+  type SetTenantActiveSignerCommand,
+  type TenantActiveSignerRecord,
+  type TenantActiveSignerResolutionRecord,
   type UpdateEmpleadoRecordCommand,
 } from "./empleado.types";
 
@@ -32,6 +33,10 @@ export type EmpleadosRepository = {
   findSignatureVersionById(
     query: FindEmpleadoSignatureVersionByIdQuery,
   ): Promise<EmpleadoSignatureVersionRecord | null>;
+  findTenantActiveSignerByTenantId(tenantId: string): Promise<TenantActiveSignerRecord | null>;
+  resolveTenantActiveDirectorSignatureByTenantId(
+    tenantId: string,
+  ): Promise<TenantActiveSignerResolutionRecord | null>;
   findCurrentDirectorSignatureAssignmentByEmployeeId(
     employeeId: string,
   ): Promise<DirectorSignatureAssignmentRecord | null>;
@@ -41,9 +46,6 @@ export type EmpleadosRepository = {
   findDirectorSignatureAssignmentHistoryByTenantId(
     tenantId: string,
   ): Promise<DirectorSignatureAssignmentHistoryRecord[]>;
-  resolveDirectorSignatureForDate(
-    query: ResolveDirectorSignatureForDateQuery,
-  ): Promise<DirectorSignatureDateResolutionRecord[]>;
   create(command: CreateEmpleadoRecordCommand, audit: EmpleadoAuditCommand): Promise<EmpleadoRecord>;
   update(
     command: UpdateEmpleadoRecordCommand,
@@ -53,8 +55,12 @@ export type EmpleadosRepository = {
     command: CreateEmpleadoSignatureVersionCommand,
     audit: EmpleadoAuditCommand,
   ): Promise<EmpleadoSignatureVersionRecord>;
-  assignDirectorSignature(
-    command: AssignDirectorSignatureCommand,
-    auditEntries: EmpleadoAuditCommand[],
-  ): Promise<DirectorSignatureAssignmentRecord>;
+  setTenantActiveSigner(
+    command: SetTenantActiveSignerCommand,
+    audit: EmpleadoAuditCommand,
+  ): Promise<TenantActiveSignerRecord>;
+  clearTenantActiveSigner(
+    command: ClearTenantActiveSignerCommand,
+    audit: EmpleadoAuditCommand,
+  ): Promise<TenantActiveSignerRecord | null>;
 };

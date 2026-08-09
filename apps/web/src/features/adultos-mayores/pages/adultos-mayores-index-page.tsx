@@ -20,6 +20,7 @@ import { downloadBlob } from "../lib/download-file";
 import { resolveAdultosMayoresApiError } from "../lib/adultos-mayores-formatters";
 import { ADULTOS_MAYORES_NEW_PATH, buildAdultoMayorEditPath } from "../lib/adultos-mayores-paths";
 import { useAdultosMayoresQuery } from "../model/adultos-mayores-queries";
+import { openBlobInNewTab } from "@/shared/lib/open-blob-in-new-tab";
 
 type AdultosMayoresIndexPageProps = {
   navigate: Navigate;
@@ -58,7 +59,11 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
           ? await exportAdultosMayoresExcel(search)
           : await exportAdultosMayoresPdf(search);
 
-      downloadBlob(blob, target === "excel" ? "adultos-mayores.xlsx" : "adultos-mayores.pdf");
+      if (target === "excel") {
+        downloadBlob(blob, "adultos-mayores.xlsx");
+      } else {
+        openBlobInNewTab(blob);
+      }
     } catch (error: unknown) {
       setExportError(resolveAdultosMayoresApiError(error));
     } finally {

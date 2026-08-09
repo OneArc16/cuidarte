@@ -176,64 +176,124 @@ describe("App empleados flow", () => {
     expect(updatePayload).not.toHaveProperty("password");
   });
 
-  it("shows the signature assignment history for a director", async () => {
+  it("shows the active signer state and lets a director deactivate their signature", async () => {
     const directorDetail = {
       ...empleadoFixture,
       role: "director" as const,
-      latestSignature: null,
-      currentDirectorSignatureAssignment: {
-        id: "8f41c6e2-6c19-42c4-821d-5e0eb5bd784f",
+      latestSignature: {
+        id: "dc8e2c42-8f96-4f19-b204-adf90e139bf4",
+        originalName: "firma-vigente.jpeg",
+        mimeType: "image/jpeg",
+        sizeBytes: 2048,
+        createdAt: "2026-07-22T19:20:34.531Z",
+      },
+      tenantActiveSigner: {
         tenantId: empleadoFixture.tenantId,
         employeeId: empleadoFixture.id,
         signatureVersionId: "dc8e2c42-8f96-4f19-b204-adf90e139bf4",
-        effectiveFrom: "2026-07-22",
-        effectiveTo: null,
+        activatedByUserId: authUserFixture.id,
+        activatedAt: "2026-07-22T19:20:34.531Z",
+        updatedAt: "2026-07-22T19:20:34.531Z",
       },
-      directorSignatureAssignmentHistory: [
-        {
-          id: "8f41c6e2-6c19-42c4-821d-5e0eb5bd784f",
-          tenantId: empleadoFixture.tenantId,
-          employeeId: empleadoFixture.id,
-          employeeFullName: empleadoFixture.fullName,
-          signatureVersionId: "dc8e2c42-8f96-4f19-b204-adf90e139bf4",
-          signatureOriginalName: "firma-vigente.jpeg",
-          effectiveFrom: "2026-07-22",
-          effectiveTo: null,
-          createdAt: "2026-07-22T19:20:34.531Z",
-        },
-        {
-          id: "49cf7bc9-f5e3-4ea1-a210-1500ff969434",
-          tenantId: empleadoFixture.tenantId,
-          employeeId: empleadoFixture.id,
-          employeeFullName: empleadoFixture.fullName,
-          signatureVersionId: "ab906f9d-0e7f-473a-8630-23b877aa6048",
-          signatureOriginalName: "firma-anterior.jpg",
-          effectiveFrom: "2026-06-20",
-          effectiveTo: "2026-07-21",
-          createdAt: "2026-06-20T23:55:42.848Z",
-        },
-      ],
     };
+    let currentActiveSigner = directorDetail.tenantActiveSigner;
+    let clearSignerCalled = false;
     server.use(
       mockAuthMe(authUserFixture),
       http.get("http://localhost:3001/api/empleados/:empleadoId", () =>
-        HttpResponse.json(directorDetail),
+        HttpResponse.json({
+          ...directorDetail,
+          tenantActiveSigner: currentActiveSigner,
+        }),
       ),
-    );
-    const user = userEvent.setup();
+      http.get("http://localhost:3001/api/empleados/:empleadoId/signature/file", () =>
+        new HttpResponse(new Blob(["signature-preview"], { type: "image/jpeg" }), {
+          headers: { "Content-Type": "image/jpeg" },
+        }),
+      ),
+      http.delete("http://localhost:3001/api/tenants/:tenantId/active-signer", async () => {
+        clearSignerCalled = true;
+        currentActiveSigner = null;
 
+        return HttpResponse.json({
+          activeSigner: null,
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
     renderAppAtPath(`/gestion-empleados/${empleadoFixture.id}/edit`);
 
-    const historyTitle = await screen.findByText("Historial de vigencias");
-    const history = historyTitle.closest("details");
+    expect(await screen.findByText("Firmante activo del centro")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Desactivar firmante" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Desactivar firmante" }));
+    await waitFor(() => expect(clearSignerCalled).toBe(true));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Activar firmante" })).toBeInTheDocument(),
+    );
+    expect(screen.getByText("firma-vigente.jpeg")).toBeInTheDocument();
+  });
 
-    expect(history).not.toBeNull();
-    await user.click(historyTitle);
+  it("lets a director activate their latest signature when the center has no firmante activo", async () => {
+    const directorDetail = {
+      ...empleadoFixture,
+      role: "director" as const,
+      latestSignature: {
+        id: "dc8e2c42-8f96-4f19-b204-adf90e139bf4",
+        originalName: "firma-vigente.jpeg",
+        mimeType: "image/jpeg",
+        sizeBytes: 2048,
+        createdAt: "2026-07-22T19:20:34.531Z",
+      },
+      tenantActiveSigner: null,
+    };
+    let currentActiveSigner = directorDetail.tenantActiveSigner;
+    let activeSignerPayload: unknown = null;
+    server.use(
+      mockAuthMe(authUserFixture),
+      http.get("http://localhost:3001/api/empleados/:empleadoId", () =>
+        HttpResponse.json({
+          ...directorDetail,
+          tenantActiveSigner: currentActiveSigner,
+        }),
+      ),
+      http.get("http://localhost:3001/api/empleados/:empleadoId/signature/file", () =>
+        new HttpResponse(new Blob(["signature-preview"], { type: "image/jpeg" }), {
+          headers: { "Content-Type": "image/jpeg" },
+        }),
+      ),
+      http.put("http://localhost:3001/api/tenants/:tenantId/active-signer", async ({ request }) => {
+        activeSignerPayload = await request.json();
+        currentActiveSigner = {
+          tenantId: empleadoFixture.tenantId,
+          employeeId: empleadoFixture.id,
+          signatureVersionId: "dc8e2c42-8f96-4f19-b204-adf90e139bf4",
+          activatedByUserId: authUserFixture.id,
+          activatedAt: "2026-08-09T12:00:00.000Z",
+          updatedAt: "2026-08-09T12:00:00.000Z",
+        };
 
-    expect(within(history as HTMLElement).getByText("firma-vigente.jpeg")).toBeVisible();
-    expect(within(history as HTMLElement).getByText("firma-anterior.jpg")).toBeVisible();
-    expect(within(history as HTMLElement).getByText("Vigente")).toBeVisible();
-    expect(within(history as HTMLElement).getByText("Finalizada")).toBeVisible();
+        return HttpResponse.json({
+          activeSigner: currentActiveSigner,
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderAppAtPath(`/gestion-empleados/${empleadoFixture.id}/edit`);
+
+    expect(await screen.findByText("Firmante activo del centro")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Activar firmante" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Activar firmante" }));
+    await waitFor(() =>
+      expect(activeSignerPayload).toEqual({
+        employeeId: empleadoFixture.id,
+        signatureVersionId: "dc8e2c42-8f96-4f19-b204-adf90e139bf4",
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Desactivar firmante" })).toBeInTheDocument(),
+    );
   });
 
   it("keeps auditor users in Gestion de empleados with read-only actions", async () => {

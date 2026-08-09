@@ -119,13 +119,18 @@ export function exportAlimentacionFormatoEntregaPdf(params: {
   adultoMayorId: string;
   deliveryMonth: string;
 }): Promise<Blob> {
+  return fetchBlob(buildAlimentacionFormatoEntregaPdfUrl(params));
+}
+
+export function buildAlimentacionFormatoEntregaPdfUrl(params: {
+  adultoMayorId: string;
+  deliveryMonth: string;
+}): string {
   const searchParams = new URLSearchParams({
     deliveryMonth: params.deliveryMonth,
   });
 
-  return fetchBlob(
-    `${getApiBaseUrl()}/registro-alimentacion/adultos-mayores/${params.adultoMayorId}/formato-entrega/pdf?${searchParams.toString()}`,
-  );
+  return `${getApiBaseUrl()}/registro-alimentacion/adultos-mayores/${params.adultoMayorId}/formato-entrega/pdf?${searchParams.toString()}`;
 }
 
 export function importAlimentacionFormatoEntregaPdf(params: {
@@ -167,6 +172,13 @@ export function downloadAlimentacionImportedFormatoVersion(params: {
   return fetchBlob(
     `${getApiBaseUrl()}/registro-alimentacion/adultos-mayores/${params.adultoMayorId}/formato-entrega/imported-pdfs/${params.versionId}/download`,
   );
+}
+
+export function buildAlimentacionImportedFormatoVersionDownloadUrl(params: {
+  adultoMayorId: string;
+  versionId: string;
+}): string {
+  return `${getApiBaseUrl()}/registro-alimentacion/adultos-mayores/${params.adultoMayorId}/formato-entrega/imported-pdfs/${params.versionId}/download`;
 }
 
 function buildAlimentacionUrl(params: ListAlimentacionParams): string {

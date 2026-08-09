@@ -147,7 +147,7 @@ describe("AlimentacionController", () => {
     assert.equal(result.adultoMayor.fullName, "Rosa Elena Martinez Rojas");
   });
 
-  it("exports formato entrega pdf as attachment", async () => {
+  it("exports formato entrega pdf inline", async () => {
     let receivedAdultoMayorId: string | null = null;
     let receivedActorId: string | null = null;
     let receivedQuery: { deliveryMonth: string } | null = null;
@@ -197,7 +197,7 @@ describe("AlimentacionController", () => {
     assert.equal(headers["Content-Type"], "application/pdf");
     assert.equal(
       headers["Content-Disposition"],
-      'attachment; filename="formato-entrega-1020304050-2026-04.pdf"',
+      'inline; filename="formato-entrega-1020304050-2026-04.pdf"',
     );
     assert.equal(Buffer.isBuffer(sentPayload), true);
     assert.equal((sentPayload as Buffer).toString("utf8"), "pdf");

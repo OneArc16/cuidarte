@@ -78,6 +78,15 @@ export const empleadoSignatureSchema = z.object({
   createdAt: z.string().min(1),
 });
 
+export const tenantActiveSignerSchema = z.object({
+  tenantId: z.uuid(),
+  employeeId: z.uuid(),
+  signatureVersionId: z.uuid(),
+  activatedByUserId: z.uuid(),
+  activatedAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+});
+
 export const empleadoDirectorSignatureAssignmentSchema = z.object({
   id: z.uuid(),
   tenantId: z.uuid(),
@@ -100,6 +109,7 @@ export const empleadoDetailSchema = empleadoListItemSchema.extend({
   firstSurname: z.string().min(1).max(80),
   secondSurname: z.string().max(80).nullable(),
   latestSignature: empleadoSignatureSchema.nullable().optional().default(null),
+  tenantActiveSigner: tenantActiveSignerSchema.nullable().optional().default(null),
   currentDirectorSignatureAssignment: empleadoDirectorSignatureAssignmentSchema
     .nullable()
     .optional()
@@ -131,9 +141,13 @@ export const updateEmpleadoRequestSchema = empleadoCommandSchema.extend({
   password: optionalPasswordSchema,
 });
 
-export const assignEmpleadoDirectorSignatureRequestSchema = z.object({
-  effectiveFrom: dateSchema,
-  signatureVersionId: z.uuid().nullable().optional().default(null),
+export const setTenantActiveSignerRequestSchema = z.object({
+  employeeId: z.uuid(),
+  signatureVersionId: z.uuid(),
+});
+
+export const tenantActiveSignerResponseSchema = z.object({
+  activeSigner: tenantActiveSignerSchema.nullable(),
 });
 
 export const empleadoListResponseSchema = z.object({
@@ -150,6 +164,7 @@ export type EmpleadoListQuery = z.infer<typeof empleadoListQuerySchema>;
 export type EmpleadoTenantOption = z.infer<typeof empleadoTenantOptionSchema>;
 export type EmpleadoListItem = z.infer<typeof empleadoListItemSchema>;
 export type EmpleadoSignature = z.infer<typeof empleadoSignatureSchema>;
+export type TenantActiveSigner = z.infer<typeof tenantActiveSignerSchema>;
 export type EmpleadoDirectorSignatureAssignment = z.infer<
   typeof empleadoDirectorSignatureAssignmentSchema
 >;
@@ -159,9 +174,8 @@ export type EmpleadoDirectorSignatureAssignmentHistoryItem = z.infer<
 export type EmpleadoDetail = z.infer<typeof empleadoDetailSchema>;
 export type CreateEmpleadoRequest = z.infer<typeof createEmpleadoRequestSchema>;
 export type UpdateEmpleadoRequest = z.infer<typeof updateEmpleadoRequestSchema>;
-export type AssignEmpleadoDirectorSignatureRequest = z.infer<
-  typeof assignEmpleadoDirectorSignatureRequestSchema
->;
+export type SetTenantActiveSignerRequest = z.infer<typeof setTenantActiveSignerRequestSchema>;
+export type TenantActiveSignerResponse = z.infer<typeof tenantActiveSignerResponseSchema>;
 export type EmpleadoListResponse = z.infer<typeof empleadoListResponseSchema>;
 export type EmpleadoDetailResponse = z.infer<typeof empleadoDetailResponseSchema>;
 export type EmpleadoTenantOptionsResponse = z.infer<

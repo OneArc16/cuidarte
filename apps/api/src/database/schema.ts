@@ -361,6 +361,32 @@ export const tenantDirectorSignatureAssignments = pgTable(
   ],
 );
 
+export const tenantActiveSigners = pgTable(
+  "tenant_active_signers",
+  {
+    tenantId: uuid("tenant_id")
+      .primaryKey()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    signatureVersionId: uuid("signature_version_id")
+      .notNull()
+      .references(() => employeeSignatureVersions.id, { onDelete: "restrict" }),
+    activatedByUserId: uuid("activated_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    activatedAt: timestamp("activated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("tenant_active_signers_employee_idx").on(table.employeeId),
+    index("tenant_active_signers_signature_version_idx").on(table.signatureVersionId),
+    index("tenant_active_signers_activated_by_user_idx").on(table.activatedByUserId),
+    index("tenant_active_signers_activated_at_idx").on(table.activatedAt),
+  ],
+);
+
 export const adultosMayores = pgTable(
   "adultos_mayores",
   {

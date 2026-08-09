@@ -95,6 +95,7 @@ type AlimentacionFormatoEntregaRow = {
   almuerzo: AlimentacionRecord["almuerzo"];
   refrigerio2: AlimentacionRecord["refrigerio2"];
   auxilioTransporte: AlimentacionRecord["auxilioTransporte"];
+  updatedAt: Date;
 };
 
 type AlimentacionFormatoEmissionRow = {
@@ -304,6 +305,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         almuerzo: alimentacionRegistros.almuerzo,
         refrigerio2: alimentacionRegistros.refrigerio2,
         auxilioTransporte: alimentacionRegistros.auxilioTransporte,
+        updatedAt: alimentacionRegistros.updatedAt,
       })
       .from(alimentacionRegistros)
       .innerJoin(adultosMayores, eq(adultosMayores.id, alimentacionRegistros.adultoMayorId))
@@ -940,6 +942,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       almuerzo: row.almuerzo,
       refrigerio2: row.refrigerio2,
       auxilioTransporte: row.auxilioTransporte,
+      updatedAt: row.updatedAt,
     };
   }
 

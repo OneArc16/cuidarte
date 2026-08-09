@@ -1,6 +1,7 @@
 import { type AuthUser } from "@cuidarte/contracts";
 import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
@@ -67,6 +68,7 @@ export function ActividadGrupalCreatePage({ navigate, user }: ActividadGrupalCre
         onSubmit={(values) => {
           createMutation.mutate(values, {
             onSuccess: () => {
+              toast.success("Actividad creada.");
               navigate(CREACION_ACTIVIDADES_PATH);
             },
           });

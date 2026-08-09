@@ -1,6 +1,7 @@
 import { type TenantLogoMetadata } from "@cuidarte/contracts";
 import { ImagePlus, RefreshCw, ShieldAlert, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { resolveApiError } from "../lib/backoffice-formatters";
 import {
@@ -26,7 +27,6 @@ export function TenantBrandingPanel({ tenantId, tenantName, logo }: TenantBrandi
   const [selectedPreviewUrl, setSelectedPreviewUrl] = useState<string | null>(null);
   const [storedPreviewUrl, setStoredPreviewUrl] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
 
   useEffect(() => {
@@ -127,13 +127,12 @@ export function TenantBrandingPanel({ tenantId, tenantName, logo }: TenantBrandi
                 return;
               }
 
-              setStatusMessage(null);
               uploadMutation.mutate(selectedFile, {
                 onSuccess: () => {
                   setSelectedFile(null);
                   setValidationError(null);
                   setFileInputKey((current) => current + 1);
-                  setStatusMessage(
+                  toast.success(
                     logo === null
                       ? "Logo cargado correctamente."
                       : "Logo reemplazado correctamente.",
@@ -152,11 +151,10 @@ export function TenantBrandingPanel({ tenantId, tenantName, logo }: TenantBrandi
                 aria-describedby="tenant-logo-help tenant-logo-error"
                 aria-invalid={validationError !== null}
                 disabled={isBusy}
-                onChange={(event) => {
+              onChange={(event) => {
                   const file = event.target.files?.[0] ?? null;
                   const error = validateSelectedFile(file);
 
-                  setStatusMessage(null);
                   setValidationError(error);
                   setSelectedFile(error === null ? file : null);
                 }}
@@ -182,11 +180,6 @@ export function TenantBrandingPanel({ tenantId, tenantName, logo }: TenantBrandi
             {previewQuery.isError && logo !== null ? (
               <p className="form-error" role="alert">
                 No fue posible cargar la vista previa. Puedes intentar reemplazar el logo.
-              </p>
-            ) : null}
-            {statusMessage !== null ? (
-              <p className="tenant-branding-feedback" role="status">
-                {statusMessage}
               </p>
             ) : null}
 
@@ -224,13 +217,12 @@ export function TenantBrandingPanel({ tenantId, tenantName, logo }: TenantBrandi
                       return;
                     }
 
-                    setStatusMessage(null);
                     removeMutation.mutate(undefined, {
                       onSuccess: () => {
                         setSelectedFile(null);
                         setValidationError(null);
                         setFileInputKey((current) => current + 1);
-                        setStatusMessage("Logo retirado. Las emisiones históricas se conservaron.");
+                        toast.success("Logo retirado. Las emisiones históricas se conservaron.");
                       },
                     });
                   }}

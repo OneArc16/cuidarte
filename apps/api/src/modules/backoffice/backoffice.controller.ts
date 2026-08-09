@@ -24,6 +24,8 @@ import { type AuthenticatedRequest } from "../auth/authenticated-request";
 import { RequireRoles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
 import { SessionGuard } from "../auth/session.guard";
+import { EmpleadosSignatureService } from "../empleados/application/empleados-signature.service";
+import { toTenantActiveSignerResponse } from "../empleados/presentation/tenant-active-signer.presenter";
 import { BackofficeService } from "./backoffice.service";
 import { TenantBrandingService } from "../tenant-branding/application/tenant-branding.service";
 
@@ -37,6 +39,7 @@ export class BackofficeController {
   constructor(
     private readonly backofficeService: BackofficeService,
     private readonly tenantBrandingService: TenantBrandingService,
+    private readonly empleadosSignatureService: EmpleadosSignatureService,
   ) {}
 
   @Get("tenants")
@@ -54,12 +57,17 @@ export class BackofficeController {
   @ApiForbiddenResponse({ description: "El usuario no tiene rol SuperAdmin." })
   async getTenant(@Param("id") id: string, @Req() request: AuthenticatedRequest) {
     const tenantId = parseZodSchema(tenantIdParamSchema, id);
-    const [detail, logo] = await Promise.all([
+    const [detail, logo, activeSigner] = await Promise.all([
       this.backofficeService.getTenantDetail(tenantId),
       this.tenantBrandingService.getAdministrativeLogo(tenantId, request.currentUser),
+      this.empleadosSignatureService.findTenantActiveSignerByTenantId(tenantId),
     ]);
 
-    return backofficeTenantDetailResponseSchema.parse({ ...detail, logo });
+    return backofficeTenantDetailResponseSchema.parse({
+      ...detail,
+      logo,
+      activeSigner: toTenantActiveSignerResponse(activeSigner),
+    });
   }
 
   @Post("tenants")
@@ -70,7 +78,11 @@ export class BackofficeController {
     const command = parseZodSchema(createBackofficeTenantRequestSchema, body);
     const detail = await this.backofficeService.createTenant(command, request.currentUser);
 
-    return backofficeTenantDetailResponseSchema.parse({ ...detail, logo: null });
+    return backofficeTenantDetailResponseSchema.parse({
+      ...detail,
+      activeSigner: null,
+      logo: null,
+    });
   }
 
   @Patch("tenants/:id")
@@ -85,11 +97,15 @@ export class BackofficeController {
     const tenantId = parseZodSchema(tenantIdParamSchema, id);
     const command = parseZodSchema(updateBackofficeTenantRequestSchema, body);
     const detail = await this.backofficeService.updateTenant(tenantId, command, request.currentUser);
-    const logo = await this.tenantBrandingService.getAdministrativeLogo(
-      tenantId,
-      request.currentUser,
-    );
+    const [logo, activeSigner] = await Promise.all([
+      this.tenantBrandingService.getAdministrativeLogo(tenantId, request.currentUser),
+      this.empleadosSignatureService.findTenantActiveSignerByTenantId(tenantId),
+    ]);
 
-    return backofficeTenantDetailResponseSchema.parse({ ...detail, logo });
+    return backofficeTenantDetailResponseSchema.parse({
+      ...detail,
+      logo,
+      activeSigner: toTenantActiveSignerResponse(activeSigner),
+    });
   }
 }

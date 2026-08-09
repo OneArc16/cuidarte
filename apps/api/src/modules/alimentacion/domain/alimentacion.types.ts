@@ -144,6 +144,7 @@ export type AlimentacionFormatoEntregaRecord = {
   almuerzo: AlimentacionStatus;
   refrigerio2: AlimentacionStatus;
   auxilioTransporte: AlimentacionStatus;
+  updatedAt: Date;
 };
 
 export type AlimentacionFormatoEmissionRecord = {

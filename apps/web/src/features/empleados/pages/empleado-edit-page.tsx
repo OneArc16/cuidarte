@@ -1,6 +1,6 @@
 import { type AuthUser } from "@cuidarte/contracts";
 import { ChevronLeft } from "lucide-react";
-import { useState } from "react";
+import { toast } from "sonner";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
@@ -19,7 +19,6 @@ type EmpleadoEditPageProps = {
 export function EmpleadoEditPage({ empleadoId, navigate, user }: EmpleadoEditPageProps) {
   const empleadoQuery = useEmpleadoQuery(empleadoId);
   const updateMutation = useUpdateEmpleadoMutation(empleadoId);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   if (empleadoQuery.isLoading) {
     return (
@@ -64,12 +63,6 @@ export function EmpleadoEditPage({ empleadoId, navigate, user }: EmpleadoEditPag
         <span className="empleados-form-nav__context">{empleadoQuery.data.fullName}</span>
       </div>
 
-      {successMessage !== null ? (
-        <p className="success-banner" role="status">
-          {successMessage}
-        </p>
-      ) : null}
-
       <EmpleadoForm
         mode="edit"
         currentUserRole={user.role}
@@ -78,10 +71,9 @@ export function EmpleadoEditPage({ empleadoId, navigate, user }: EmpleadoEditPag
         error={resolveEmpleadosApiError(updateMutation.error)}
         onCancel={() => navigate(EMPLEADOS_PATH)}
         onSubmit={(values) => {
-          setSuccessMessage(null);
           updateMutation.mutate(values, {
             onSuccess: () => {
-              setSuccessMessage("Cambios guardados.");
+              toast.success("Cambios guardados.");
             },
           });
         }}

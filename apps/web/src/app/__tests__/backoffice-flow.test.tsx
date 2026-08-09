@@ -111,6 +111,7 @@ describe("App backoffice flow", () => {
             email: "propietario@centro-nuevo.test",
             fullName: "Propietario Centro Nuevo",
           },
+          activeSigner: null,
           logo: null,
         });
       }),
@@ -129,6 +130,7 @@ describe("App backoffice flow", () => {
               email: "propietario@centro-nuevo.test",
               fullName: "Propietario Centro Nuevo",
             },
+            activeSigner: null,
             logo: null,
           }),
       ),
@@ -198,6 +200,7 @@ describe("App backoffice flow", () => {
             name: "Centro Demo Editado",
           },
           owner: backofficeTenantDetailFixture.owner,
+          activeSigner: null,
           logo: null,
         });
       }),

@@ -156,7 +156,7 @@ export class AlimentacionController {
       request.currentUser,
     );
 
-    return sendFile(reply, file);
+    return sendFile(reply, file, "inline");
   }
 
   @Post("adultos-mayores/:adultoMayorId/formato-entrega/imported-pdfs")
@@ -281,11 +281,12 @@ export class AlimentacionController {
 function sendFile(
   reply: FastifyReply,
   file: { buffer: Buffer; contentType: string; filename: string },
+  disposition: "attachment" | "inline" = "attachment",
 ) {
   reply.header("Content-Type", file.contentType);
   reply.header(
     "Content-Disposition",
-    `attachment; filename="${toSafeAttachmentFilename(file.filename)}"`,
+    `${disposition}; filename="${toSafeAttachmentFilename(file.filename)}"`,
   );
 
   return reply.send(file.buffer);
