@@ -16,6 +16,10 @@ const currentUser: AuthUser = {
   passwordSetByAdmin: true,
 };
 
+const departmentId = "11111111-1111-1111-8111-111111111111";
+const municipalityId = "22222222-2222-2222-8222-222222222222";
+const epsId = "33333333-3333-4333-8333-333333333333";
+
 describe("AdultosMayoresController exports", () => {
   it("passes create commands and current user to the service", async () => {
     const service = createAdultosMayoresService();
@@ -132,8 +136,8 @@ function createCommandBody() {
     disability: null,
     populationGroup: "Persona mayor",
     address: "Calle 45 # 18-20",
-    department: "Cundinamarca",
-    municipality: "Bogota",
+    departmentId,
+    municipalityId,
     zone: "urban",
     country: "Colombia",
     phone: "3105550101",
@@ -146,7 +150,7 @@ function createCommandBody() {
     bloodType: "o_positive",
     sisben: "B2",
     healthRegime: "subsidized",
-    eps: "Salud Demo",
+    epsId,
     livesWithSomeone: true,
     companion: "Mariana Rojas",
     economicIncome: 450000,
@@ -179,6 +183,8 @@ function createDetail() {
     address: "Calle 45 # 18-20",
     department: "Cundinamarca",
     municipality: "Bogota",
+    departmentId,
+    municipalityId,
     zone: "urban",
     country: "Colombia",
     emergencyContactFullName: "Mariana Rojas",
@@ -188,6 +194,8 @@ function createDetail() {
     bloodType: "o_positive",
     sisben: "B2",
     healthRegime: "subsidized",
+    epsId,
+    epsName: "Salud Demo",
     eps: "Salud Demo",
     livesWithSomeone: true,
     companion: "Mariana Rojas",

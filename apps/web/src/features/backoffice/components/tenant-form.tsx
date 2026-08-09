@@ -7,15 +7,26 @@ import {
 } from "@cuidarte/contracts";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff } from "lucide-react";
-import { type Resolver, useForm } from "react-hook-form";
-import { useEffect, useId, useState } from "react";
+import { Controller, type Resolver, useForm, useWatch } from "react-hook-form";
+import { useEffect, useId, useRef, useState } from "react";
 
 import {
   type BackofficeTenantFormValues,
+  createBackofficeTenantFormSchema,
   createDefaultFormValues,
   toFormValues,
+  updateBackofficeTenantFormSchema,
 } from "../schemas/tenant-form.schema";
 import { FieldGroup } from "./field-group";
+import { SearchableCombobox } from "@/shared/components/searchable-combobox";
+import {
+  findLocationOptionByName,
+  getLocationOptionLabel,
+} from "../../ubicaciones/lib/location-options";
+import {
+  useDepartmentsQuery,
+  useMunicipalitiesQuery,
+} from "../../ubicaciones/model/ubicaciones-queries";
 
 type BackofficeTenantFormProps =
   | {
@@ -35,22 +46,106 @@ type BackofficeTenantFormProps =
 export function BackofficeTenantForm(props: BackofficeTenantFormProps) {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const passwordHintId = useId();
+  const detail = props.mode === "edit" ? props.detail : null;
   const schema =
     props.mode === "create"
-      ? createBackofficeTenantRequestSchema
-      : updateBackofficeTenantRequestSchema;
+      ? createBackofficeTenantFormSchema
+      : updateBackofficeTenantFormSchema;
   const form = useForm<BackofficeTenantFormValues>({
     resolver: zodResolver(schema) as Resolver<BackofficeTenantFormValues>,
     defaultValues: props.mode === "edit" ? toFormValues(props.detail) : createDefaultFormValues(),
     mode: "onBlur",
   });
   const { reset } = form;
+  const departmentId =
+    useWatch({
+      control: form.control,
+      name: "tenant.departmentId",
+    }) ?? "";
+  const municipalityId =
+    useWatch({
+      control: form.control,
+      name: "tenant.municipalityId",
+    }) ?? "";
+  const departmentsQuery = useDepartmentsQuery();
+  const municipalitiesQuery = useMunicipalitiesQuery(
+    departmentId,
+    departmentId.trim() !== "",
+  );
+  const departmentOptions = departmentsQuery.data?.departments ?? [];
+  const municipalityOptions = municipalitiesQuery.data?.municipalities ?? [];
+  const hasAppliedDepartmentFallback = useRef(false);
+  const hasAppliedMunicipalityFallback = useRef(false);
 
   useEffect(() => {
-    if (props.mode === "edit") {
-      reset(toFormValues(props.detail));
+    if (detail !== null) {
+      hasAppliedDepartmentFallback.current = false;
+      hasAppliedMunicipalityFallback.current = false;
+      reset(toFormValues(detail));
     }
-  }, [props, reset]);
+  }, [detail, reset]);
+
+  useEffect(() => {
+    if (
+      detail === null ||
+      departmentId.trim() !== "" ||
+      departmentsQuery.data === undefined ||
+      hasAppliedDepartmentFallback.current
+    ) {
+      return;
+    }
+
+    const fallbackDepartment = findLocationOptionByName(
+      departmentOptions,
+      detail.tenant.department,
+    );
+
+    if (fallbackDepartment === null) {
+      return;
+    }
+
+    hasAppliedDepartmentFallback.current = true;
+    form.setValue("tenant.departmentId", fallbackDepartment.id, {
+      shouldDirty: false,
+      shouldTouch: false,
+      shouldValidate: true,
+    });
+  }, [departmentId, departmentsQuery.data, departmentOptions, detail, form]);
+
+  useEffect(() => {
+    if (
+      detail === null ||
+      departmentId.trim() === "" ||
+      municipalityId.trim() !== "" ||
+      municipalitiesQuery.data === undefined ||
+      hasAppliedMunicipalityFallback.current
+    ) {
+      return;
+    }
+
+    const fallbackMunicipality = findLocationOptionByName(
+      municipalityOptions,
+      detail.tenant.city,
+    );
+
+    if (fallbackMunicipality === null) {
+      return;
+    }
+
+    hasAppliedMunicipalityFallback.current = true;
+    form.setValue("tenant.municipalityId", fallbackMunicipality.id, {
+      shouldDirty: false,
+      shouldTouch: false,
+      shouldValidate: true,
+    });
+  }, [
+    departmentId,
+    detail,
+    form,
+    municipalitiesQuery.data,
+    municipalityId,
+    municipalityOptions,
+  ]);
 
   return (
     <form
@@ -144,26 +239,73 @@ export function BackofficeTenantForm(props: BackofficeTenantFormProps) {
             />
           </FieldGroup>
 
-          <FieldGroup label="Ciudad" error={form.formState.errors.tenant?.city?.message}>
-            <input
-              type="text"
-              autoComplete="address-level2"
-              aria-invalid={form.formState.errors.tenant?.city === undefined ? "false" : "true"}
-              {...form.register("tenant.city")}
+          <FieldGroup
+            label="Departamento"
+            error={form.formState.errors.tenant?.departmentId?.message}
+          >
+            <Controller
+              control={form.control}
+              name="tenant.departmentId"
+              render={({ field }) => (
+                <SearchableCombobox
+                  ariaInvalid={form.formState.errors.tenant?.departmentId !== undefined}
+                  ariaLabel="Departamento"
+                  getOptionLabel={getLocationOptionLabel}
+                  isLoading={departmentsQuery.isLoading}
+                  onBlur={field.onBlur}
+                  onValueChange={(nextDepartmentId) => {
+                    const departmentChanged = nextDepartmentId !== field.value;
+
+                    field.onChange(nextDepartmentId);
+
+                    if (!departmentChanged) {
+                      return;
+                    }
+
+                    hasAppliedDepartmentFallback.current = true;
+                    form.setValue("tenant.municipalityId", "", {
+                      shouldDirty: true,
+                      shouldTouch: true,
+                      shouldValidate: true,
+                    });
+                    hasAppliedMunicipalityFallback.current = true;
+                  }}
+                  options={departmentOptions}
+                  value={field.value ?? ""}
+                />
+              )}
             />
           </FieldGroup>
 
           <FieldGroup
-            label="Departamento"
-            error={form.formState.errors.tenant?.department?.message}
+            label="Municipio"
+            error={form.formState.errors.tenant?.municipalityId?.message}
           >
-            <input
-              type="text"
-              autoComplete="address-level1"
-              aria-invalid={
-                form.formState.errors.tenant?.department === undefined ? "false" : "true"
-              }
-              {...form.register("tenant.department")}
+            <Controller
+              control={form.control}
+              name="tenant.municipalityId"
+              render={({ field }) => (
+                <SearchableCombobox
+                  ariaInvalid={form.formState.errors.tenant?.municipalityId !== undefined}
+                  ariaLabel="Municipio"
+                  disabled={departmentId.trim() === ""}
+                  getOptionLabel={getLocationOptionLabel}
+                  isLoading={municipalitiesQuery.isLoading}
+                  onBlur={field.onBlur}
+                  onValueChange={(nextMunicipalityId) => {
+                    if (nextMunicipalityId !== field.value) {
+                      hasAppliedMunicipalityFallback.current = true;
+                    }
+
+                    field.onChange(nextMunicipalityId);
+                  }}
+                  options={municipalityOptions}
+                  placeholder={
+                    departmentId.trim() === "" ? "Selecciona primero un departamento" : undefined
+                  }
+                  value={field.value ?? ""}
+                />
+              )}
             />
           </FieldGroup>
         </div>

@@ -5,6 +5,8 @@ import userEvent from "@testing-library/user-event";
 
 import {
   backofficeTenantDetailFixture,
+  departmentFixture,
+  municipalityFixture,
   superAdminUserFixture,
 } from "../../test/fixtures";
 import { server } from "../../test/test-server";
@@ -24,6 +26,8 @@ type BackofficeTenantPayload = {
     documentType?: string;
     documentNumber?: string;
     email?: string;
+    departmentId?: string;
+    municipalityId?: string;
   };
   owner: {
     fullName?: string;
@@ -144,8 +148,14 @@ describe("App backoffice flow", () => {
     await user.type(screen.getByLabelText("Correo del centro"), "contacto@centro-nuevo.test");
     await user.type(screen.getByLabelText("Teléfono"), "6015552233");
     await user.type(screen.getByLabelText("Dirección"), "Carrera 12 # 34-56");
-    await user.type(screen.getByLabelText("Ciudad"), "Medellin");
-    await user.type(screen.getByLabelText("Departamento"), "Antioquia");
+    expect(screen.getByLabelText("Municipio")).toBeDisabled();
+    await user.type(screen.getByLabelText("Departamento"), departmentFixture.name.slice(0, 3));
+    await user.click(await screen.findByRole("option", { name: departmentFixture.name }));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Municipio")).toBeEnabled();
+    });
+    await user.type(screen.getByLabelText("Municipio"), municipalityFixture.name.slice(0, 3));
+    await user.click(await screen.findByRole("option", { name: municipalityFixture.name }));
     await user.type(screen.getByLabelText("Nombre completo"), "Propietario Centro Nuevo");
     await user.type(screen.getByLabelText("Correo de acceso"), "propietario@centro-nuevo.test");
     await user.type(screen.getByLabelText("Contraseña inicial"), "Cuidarte123!");
@@ -162,6 +172,8 @@ describe("App backoffice flow", () => {
         documentType: "nit",
         documentNumber: "901222333",
         email: "contacto@centro-nuevo.test",
+        departmentId: backofficeTenantDetailFixture.tenant.departmentId,
+        municipalityId: backofficeTenantDetailFixture.tenant.municipalityId,
       },
       owner: {
         fullName: "Propietario Centro Nuevo",

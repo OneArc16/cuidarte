@@ -54,6 +54,8 @@ export const backofficeTenantSchema = z.object({
   email: z.email().nullable(),
   phone: z.string().nullable(),
   address: z.string().nullable(),
+  departmentId: z.uuid().nullable(),
+  municipalityId: z.uuid().nullable(),
   city: z.string().nullable(),
   department: z.string().nullable(),
   isActive: z.boolean(),
@@ -103,8 +105,8 @@ export const backofficeTenantCommandSchema = z.object({
   email: nullableEmailSchema,
   phone: nullableTextSchema(40),
   address: nullableTextSchema(220),
-  city: nullableTextSchema(100),
-  department: nullableTextSchema(100),
+  departmentId: z.uuid(),
+  municipalityId: z.uuid(),
   isActive: z.boolean(),
 });
 

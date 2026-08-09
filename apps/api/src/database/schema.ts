@@ -122,6 +122,64 @@ export const referenceDataVersions = pgTable(
   (table) => [check("reference_data_versions_row_count_positive", sql`${table.rowCount} > 0`)],
 );
 
+export const departments = pgTable(
+  "departments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    code: varchar("code", { length: 10 }).notNull(),
+    name: varchar("name", { length: 120 }).notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("departments_code_unique").on(table.code),
+    uniqueIndex("departments_name_unique").on(table.name),
+    index("departments_is_active_idx").on(table.isActive),
+  ],
+);
+
+export const municipalities = pgTable(
+  "municipalities",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    code: varchar("code", { length: 10 }).notNull(),
+    departmentId: uuid("department_id")
+      .notNull()
+      .references(() => departments.id, { onDelete: "restrict" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("municipalities_code_unique").on(table.code),
+    uniqueIndex("municipalities_department_name_unique").on(table.departmentId, table.name),
+    index("municipalities_department_id_idx").on(table.departmentId),
+    index("municipalities_is_active_idx").on(table.isActive),
+  ],
+);
+
+export const epsCatalog = pgTable(
+  "eps",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    code: varchar("code", { length: 40 }).notNull(),
+    nit: varchar("nit", { length: 20 }).notNull(),
+    name: varchar("name", { length: 160 }).notNull(),
+    nameNormalized: varchar("name_normalized", { length: 160 }).notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("eps_code_unique").on(table.code),
+    index("eps_nit_idx").on(table.nit),
+    uniqueIndex("eps_name_normalized_unique").on(table.nameNormalized),
+    index("eps_is_active_idx").on(table.isActive),
+  ],
+);
+
 export const tenants = pgTable(
   "tenants",
   {
@@ -132,6 +190,12 @@ export const tenants = pgTable(
     email: varchar("email", { length: 320 }),
     phone: varchar("phone", { length: 40 }),
     address: varchar("address", { length: 220 }),
+    departmentId: uuid("department_id").references(() => departments.id, {
+      onDelete: "restrict",
+    }),
+    municipalityId: uuid("municipality_id").references(() => municipalities.id, {
+      onDelete: "restrict",
+    }),
     city: varchar("city", { length: 100 }),
     department: varchar("department", { length: 100 }),
     isActive: boolean("is_active").notNull().default(true),
@@ -145,6 +209,8 @@ export const tenants = pgTable(
     uniqueIndex("tenants_email_unique")
       .on(table.email)
       .where(sql`${table.email} is not null`),
+    index("tenants_department_id_idx").on(table.departmentId),
+    index("tenants_municipality_id_idx").on(table.municipalityId),
   ],
 );
 
@@ -314,6 +380,10 @@ export const adultosMayores = pgTable(
     disability: varchar("disability", { length: 120 }),
     populationGroup: varchar("population_group", { length: 120 }),
     address: varchar("address", { length: 220 }).notNull(),
+    departmentId: uuid("department_id").references(() => departments.id, { onDelete: "restrict" }),
+    municipalityId: uuid("municipality_id").references(() => municipalities.id, {
+      onDelete: "restrict",
+    }),
     department: varchar("department", { length: 100 }).notNull(),
     municipality: varchar("municipality", { length: 100 }).notNull(),
     zone: varchar("zone", { length: 20 }).notNull(),
@@ -327,7 +397,8 @@ export const adultosMayores = pgTable(
     emergencyContactAddress: varchar("emergency_contact_address", { length: 220 }),
     bloodType: varchar("blood_type", { length: 20 }),
     sisben: varchar("sisben", { length: 40 }),
-    healthRegime: varchar("health_regime", { length: 40 }),
+    healthRegime: varchar("health_regime", { length: 120 }),
+    epsId: uuid("eps_id").references(() => epsCatalog.id, { onDelete: "restrict" }),
     eps: varchar("eps", { length: 160 }),
     livesWithSomeone: boolean("lives_with_someone").notNull().default(false),
     companion: varchar("companion", { length: 160 }),
@@ -344,7 +415,10 @@ export const adultosMayores = pgTable(
       table.documentType,
       table.documentNumber,
     ),
+    index("adultos_mayores_eps_id_idx").on(table.epsId),
     index("adultos_mayores_tenant_id_idx").on(table.tenantId),
+    index("adultos_mayores_department_id_idx").on(table.departmentId),
+    index("adultos_mayores_municipality_id_idx").on(table.municipalityId),
     index("adultos_mayores_names_idx").on(table.names),
     index("adultos_mayores_surnames_idx").on(table.surnames),
   ],

@@ -8,8 +8,10 @@ import { Cie10Module } from "./modules/cie10/cie10.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { BackofficeModule } from "./modules/backoffice/backoffice.module";
 import { EmpleadosModule } from "./modules/empleados/empleados.module";
+import { EpsModule } from "./modules/eps/eps.module";
 import { HealthModule } from "./modules/health/health.module";
 import { HomeModule } from "./modules/home/home.module";
+import { UbicacionesModule } from "./modules/ubicaciones/ubicaciones.module";
 
 @Module({
   imports: [
@@ -21,8 +23,10 @@ import { HomeModule } from "./modules/home/home.module";
     AuthModule,
     BackofficeModule,
     EmpleadosModule,
+    EpsModule,
     HealthModule,
     HomeModule,
+    UbicacionesModule,
   ],
 })
 export class AppModule {}

@@ -14,14 +14,7 @@ export const adultoMayorBloodTypeSchema = z.enum([
   "o_negative",
   "unknown",
 ]);
-export const adultoMayorHealthRegimeSchema = z.enum([
-  "contributory",
-  "subsidized",
-  "special",
-  "exception",
-  "uninsured",
-  "unknown",
-]);
+export const adultoMayorHealthRegimeSchema = z.string().max(120);
 
 const requiredTextSchema = (maxLength: number) => z.string().trim().min(1).max(maxLength);
 
@@ -142,6 +135,8 @@ export const adultoMayorDetailSchema = adultoMayorListItemSchema.extend({
   disability: z.string().max(120).nullable(),
   populationGroup: z.string().max(120).nullable(),
   address: z.string().min(1).max(220),
+  departmentId: z.uuid().nullable(),
+  municipalityId: z.uuid().nullable(),
   department: z.string().min(1).max(100),
   municipality: z.string().min(1).max(100),
   zone: adultoMayorZoneSchema,
@@ -154,7 +149,9 @@ export const adultoMayorDetailSchema = adultoMayorListItemSchema.extend({
   emergencyContactAddress: z.string().max(220).nullable(),
   bloodType: adultoMayorBloodTypeSchema.nullable(),
   sisben: z.string().max(40).nullable(),
-  healthRegime: adultoMayorHealthRegimeSchema.nullable(),
+  healthRegime: z.string().max(120).nullable(),
+  epsId: z.uuid().nullable(),
+  epsName: z.string().max(160).nullable(),
   eps: z.string().max(160).nullable(),
   livesWithSomeone: z.boolean(),
   companion: z.string().max(160).nullable(),
@@ -175,8 +172,8 @@ export const adultoMayorCommandSchema = z.object({
   disability: nullableTextSchema(120),
   populationGroup: nullableTextSchema(120),
   address: requiredTextSchema(220),
-  department: requiredTextSchema(100),
-  municipality: requiredTextSchema(100),
+  departmentId: z.uuid(),
+  municipalityId: z.uuid(),
   zone: adultoMayorZoneSchema,
   country: requiredTextSchema(80).default("Colombia"),
   phone: nullableTextSchema(40),
@@ -188,8 +185,8 @@ export const adultoMayorCommandSchema = z.object({
   emergencyContactAddress: nullableTextSchema(220),
   bloodType: adultoMayorBloodTypeSchema.nullable().optional().default(null),
   sisben: nullableTextSchema(40),
-  healthRegime: adultoMayorHealthRegimeSchema.nullable().optional().default(null),
-  eps: nullableTextSchema(160),
+  healthRegime: z.string().trim().max(120).nullable().optional().default(null),
+  epsId: z.uuid().nullable().optional().default(null),
   livesWithSomeone: z.boolean(),
   companion: nullableTextSchema(160),
   economicIncome: nullableIntegerSchema,

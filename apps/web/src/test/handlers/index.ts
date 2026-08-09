@@ -5,8 +5,10 @@ import { atencionesHandlers } from "./atenciones.handlers";
 import { backofficeHandlers } from "./backoffice.handlers";
 import { cie10Handlers } from "./cie10.handlers";
 import { empleadosHandlers } from "./empleados.handlers";
+import { epsHandlers } from "./eps.handlers";
 import { healthAuthHandlers } from "./health-auth.handlers";
 import { homeHandlers } from "./home.handlers";
+import { ubicacionesHandlers } from "./ubicaciones.handlers";
 
 export const defaultHandlers = [
   ...healthAuthHandlers,
@@ -16,6 +18,8 @@ export const defaultHandlers = [
   ...atencionesHandlers,
   ...cie10Handlers,
   ...empleadosHandlers,
+  ...epsHandlers,
   ...actividadesHandlers,
   ...alimentacionHandlers,
+  ...ubicacionesHandlers,
 ];

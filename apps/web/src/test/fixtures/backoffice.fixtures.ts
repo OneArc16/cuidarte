@@ -1,3 +1,5 @@
+import { departmentFixture, municipalityFixture } from "./ubicaciones.fixtures";
+
 export const backofficeTenantDetailFixture = {
   tenant: {
     id: "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054",
@@ -7,6 +9,8 @@ export const backofficeTenantDetailFixture = {
     email: "contacto@centro-demo.test",
     phone: "6015550101",
     address: "Calle 10 # 20-30",
+    departmentId: departmentFixture.id,
+    municipalityId: municipalityFixture.id,
     city: "Bogota",
     department: "Cundinamarca",
     isActive: true,

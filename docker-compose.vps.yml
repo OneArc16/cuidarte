@@ -45,9 +45,23 @@ services:
     volumes:
       - /var/lib/cuidarte/uploads:/data/uploads
     depends_on:
+      database-bootstrap:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+
+  database-bootstrap:
+    image: ${CUIDARTE_API_IMAGE:?Define CUIDARTE_API_IMAGE en .env.vps}
+    restart: "no"
+    env_file:
+      - ${CUIDARTE_ENV_FILE:-.env.vps}
+    environment:
+      NODE_ENV: production
+    command: ["pnpm", "db:bootstrap"]
+    depends_on:
+      postgres:
         condition: service_healthy
 
 volumes:

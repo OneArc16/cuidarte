@@ -1,5 +1,6 @@
 import { type AuthUser } from "@cuidarte/contracts";
 import { ChevronLeft } from "lucide-react";
+import { toast } from "sonner";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
@@ -55,6 +56,7 @@ export function AdultoMayorCreatePage({ navigate, user }: AdultoMayorCreatePageP
         onSubmit={(values) => {
           createMutation.mutate(values, {
             onSuccess: (detail) => {
+              toast.success("Adulto mayor creado.");
               navigate(buildAdultoMayorEditPath(detail.id));
             },
           });

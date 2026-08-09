@@ -54,6 +54,8 @@ export type AdultoMayorCommandRecord = {
   disability: string | null;
   populationGroup: string | null;
   address: string;
+  departmentId: string;
+  municipalityId: string;
   department: string;
   municipality: string;
   zone: AdultoMayorZone;
@@ -65,7 +67,7 @@ export type AdultoMayorCommandRecord = {
   bloodType: AdultoMayorBloodType | null;
   sisben: string | null;
   healthRegime: AdultoMayorHealthRegime | null;
-  eps: string | null;
+  epsId: string | null;
   livesWithSomeone: boolean;
   companion: string | null;
   economicIncome: number | null;
@@ -107,6 +109,8 @@ export type AdultoMayorRecord = {
   disability: string | null;
   populationGroup: string | null;
   address: string;
+  departmentId: string | null;
+  municipalityId: string | null;
   department: string;
   municipality: string;
   zone: AdultoMayorZone;
@@ -118,6 +122,8 @@ export type AdultoMayorRecord = {
   bloodType: AdultoMayorBloodType | null;
   sisben: string | null;
   healthRegime: AdultoMayorHealthRegime | null;
+  epsId: string | null;
+  epsName: string | null;
   eps: string | null;
   livesWithSomeone: boolean;
   companion: string | null;

@@ -2,6 +2,13 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import {
+  findHeaderIndex,
+  normalizeHeader,
+  normalizeText,
+  parseCsvRows,
+} from "./reference-data/csv";
+
 export const CIE10_REFERENCE_DATA = {
   dataset: "cie10_catalog",
   version: "1",
@@ -99,67 +106,6 @@ export function parseCie10Csv(csvContent: string): Cie10ReferenceRecord[] {
   return records;
 }
 
-function parseCsvRows(csvContent: string): string[][] {
-  const rows: string[][] = [];
-  let currentRow: string[] = [];
-  let currentCell = "";
-  let isInsideQuotes = false;
-
-  for (let index = 0; index < csvContent.length; index += 1) {
-    const character = csvContent[index];
-    const nextCharacter = csvContent[index + 1];
-
-    if (character === '"') {
-      if (isInsideQuotes && nextCharacter === '"') {
-        currentCell += '"';
-        index += 1;
-      } else {
-        isInsideQuotes = !isInsideQuotes;
-      }
-      continue;
-    }
-
-    if (character === "," && !isInsideQuotes) {
-      currentRow.push(currentCell);
-      currentCell = "";
-      continue;
-    }
-
-    if ((character === "\n" || character === "\r") && !isInsideQuotes) {
-      if (character === "\r" && nextCharacter === "\n") {
-        index += 1;
-      }
-
-      currentRow.push(currentCell);
-      rows.push(currentRow);
-      currentRow = [];
-      currentCell = "";
-      continue;
-    }
-
-    currentCell += character;
-  }
-
-  if (isInsideQuotes) {
-    throw new Error("El archivo CIE-10 contiene una comilla sin cerrar.");
-  }
-
-  if (currentCell !== "" || currentRow.length > 0) {
-    currentRow.push(currentCell);
-    rows.push(currentRow);
-  }
-
-  return rows;
-}
-
-function normalizeHeader(value: string): string {
-  return normalizeText(value).replaceAll(" ", "_");
-}
-
-function findHeaderIndex(headerRow: string[], candidates: string[]): number {
-  return headerRow.findIndex((column) => candidates.includes(column));
-}
-
 function normalizeCode(value: string): string {
   const compactCode = value.trim().toUpperCase().replaceAll(".", "");
 
@@ -176,12 +122,4 @@ function normalizeTitle(value: string): string {
 
 function isValidCie10Code(value: string): boolean {
   return /^[A-Z][0-9][0-9AB](\.[0-9A-Z]{1,2})?$/.test(value);
-}
-
-function normalizeText(value: string): string {
-  return value
-    .normalize("NFD")
-    .replaceAll(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .trim();
 }

@@ -20,6 +20,7 @@ import { and, asc, eq, ilike, ne, or, type SQL } from "drizzle-orm";
 
 import { DatabaseService } from "../../database/database.service";
 import { auditLogs, tenants, users } from "../../database/schema";
+import { UbicacionesService } from "../ubicaciones/application/ubicaciones.service";
 
 type TenantRow = typeof tenants.$inferSelect;
 type UserRow = typeof users.$inferSelect;
@@ -43,7 +44,10 @@ type BackofficeTenantCoreDetail = Omit<BackofficeTenantDetail, "logo">;
 
 @Injectable()
 export class BackofficeService {
-  constructor(private readonly database: DatabaseService) {}
+  constructor(
+    private readonly database: DatabaseService,
+    private readonly ubicacionesService: UbicacionesService,
+  ) {}
 
   async listTenants(query: { search: string | null; status: "all" | "active" | "inactive" }) {
     const rows = await this.database.db
@@ -67,6 +71,10 @@ export class BackofficeService {
     command: CreateBackofficeTenantRequest,
     actor: AuthUser,
   ): Promise<BackofficeTenantCoreDetail> {
+    const location = await this.ubicacionesService.resolveDepartmentMunicipalityPair(
+      command.tenant.departmentId,
+      command.tenant.municipalityId,
+    );
     await this.ensureTenantIsUnique(command.tenant);
     await this.ensureOwnerEmailIsUnique(command.owner);
 
@@ -77,6 +85,10 @@ export class BackofficeService {
           .insert(tenants)
           .values({
             ...command.tenant,
+            departmentId: location.department.id,
+            municipalityId: location.municipality.id,
+            department: location.department.name,
+            city: location.municipality.name,
             createdAt: now,
             updatedAt: now,
           })
@@ -136,6 +148,10 @@ export class BackofficeService {
     actor: AuthUser,
   ): Promise<BackofficeTenantCoreDetail> {
     const currentDetail = await this.findTenantDetailOrThrow(tenantId);
+    const location = await this.ubicacionesService.resolveDepartmentMunicipalityPair(
+      command.tenant.departmentId,
+      command.tenant.municipalityId,
+    );
 
     await this.ensureTenantIsUnique(command.tenant, tenantId);
     await this.ensureOwnerEmailIsUnique(command.owner, currentDetail.owner.id);
@@ -147,6 +163,10 @@ export class BackofficeService {
           .update(tenants)
           .set({
             ...command.tenant,
+            departmentId: location.department.id,
+            municipalityId: location.municipality.id,
+            department: location.department.name,
+            city: location.municipality.name,
             updatedAt: now,
           })
           .where(eq(tenants.id, tenantId))
@@ -421,6 +441,8 @@ export class BackofficeService {
       email: tenant.email,
       phone: tenant.phone,
       address: tenant.address,
+      departmentId: tenant.departmentId,
+      municipalityId: tenant.municipalityId,
       city: tenant.city,
       department: tenant.department,
       isActive: tenant.isActive,
@@ -478,6 +500,8 @@ export class BackofficeService {
       email: tenant.email,
       phone: tenant.phone,
       address: tenant.address,
+      departmentId: tenant.departmentId,
+      municipalityId: tenant.municipalityId,
       city: tenant.city,
       department: tenant.department,
       isActive: tenant.isActive,

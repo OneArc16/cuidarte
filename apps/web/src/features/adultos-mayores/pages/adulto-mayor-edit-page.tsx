@@ -1,5 +1,5 @@
 import { ChevronLeft } from "lucide-react";
-import { useState } from "react";
+import { toast } from "sonner";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
@@ -19,7 +19,6 @@ type AdultoMayorEditPageProps = {
 export function AdultoMayorEditPage({ adultoMayorId, navigate }: AdultoMayorEditPageProps) {
   const adultoMayorQuery = useAdultoMayorQuery(adultoMayorId);
   const updateMutation = useUpdateAdultoMayorMutation(adultoMayorId);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   if (adultoMayorQuery.isLoading) {
     return (
@@ -70,12 +69,6 @@ export function AdultoMayorEditPage({ adultoMayorId, navigate }: AdultoMayorEdit
         </span>
       </div>
 
-      {successMessage !== null ? (
-        <p className="success-banner" role="status">
-          {successMessage}
-        </p>
-      ) : null}
-
       <AdultoMayorForm
         mode="edit"
         detail={adultoMayorQuery.data}
@@ -83,10 +76,9 @@ export function AdultoMayorEditPage({ adultoMayorId, navigate }: AdultoMayorEdit
         error={resolveAdultosMayoresApiError(updateMutation.error)}
         onCancel={() => navigate(ADULTOS_MAYORES_PATH)}
         onSubmit={(values) => {
-          setSuccessMessage(null);
           updateMutation.mutate(values, {
             onSuccess: () => {
-              setSuccessMessage("Cambios guardados.");
+              toast.success("Cambios guardados.");
             },
           });
         }}

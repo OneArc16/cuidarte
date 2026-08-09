@@ -7,6 +7,9 @@ import {
   adultoMayorFixture,
   authUserFixture,
   superAdminUserFixture,
+  departmentFixture,
+  epsFixture,
+  municipalityFixture,
 } from "../../test/fixtures";
 import { server } from "../../test/test-server";
 import { renderAppAtPath, resetAppTestState } from "../../test/helpers/app-test.helpers";
@@ -20,6 +23,9 @@ type AdultoMayorMutationPayload = {
   firstSurname?: string;
   secondSurname?: string;
   country?: string;
+  departmentId?: string;
+  municipalityId?: string;
+  epsId?: string | null;
 };
 
 describe("App adultos mayores flow", () => {
@@ -114,8 +120,16 @@ describe("App adultos mayores flow", () => {
     await user.type(screen.getByLabelText("Fecha nacimiento"), "1949-02-18");
     await user.click(screen.getByRole("tab", { name: "Residencia" }));
     await user.type(screen.getByLabelText("Direccion"), "Calle 70 # 10-20");
-    await user.type(screen.getByLabelText("Departamento"), "Cundinamarca");
-    await user.type(screen.getByLabelText("Municipio"), "Bogota");
+    await user.type(screen.getByLabelText("Departamento"), departmentFixture.name.slice(0, 3));
+    await user.click(await screen.findByRole("option", { name: departmentFixture.name }));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Municipio")).toBeEnabled();
+    });
+    await user.type(screen.getByLabelText("Municipio"), municipalityFixture.name.slice(0, 3));
+    await user.click(await screen.findByRole("option", { name: municipalityFixture.name }));
+    await user.click(screen.getByRole("tab", { name: "Salud" }));
+    await user.type(screen.getByLabelText("EPS"), epsFixture.name.slice(0, 3));
+    await user.click(await screen.findByRole("option", { name: epsFixture.name }));
     await user.click(screen.getByRole("button", { name: "Guardar" }));
 
     await waitFor(() => {
@@ -131,6 +145,9 @@ describe("App adultos mayores flow", () => {
       firstSurname: "Lopez",
       secondSurname: "Cano",
       country: "Colombia",
+      departmentId: departmentFixture.id,
+      municipalityId: municipalityFixture.id,
+      epsId: epsFixture.id,
     });
   });
 
@@ -167,6 +184,36 @@ describe("App adultos mayores flow", () => {
       middleName: "Maria",
       firstSurname: "Martinez",
     });
+  });
+
+  it("allows clearing an existing department to start a new search", async () => {
+    server.use(mockAuthMe(authUserFixture));
+    const user = userEvent.setup();
+    renderAppAtPath(`/adultos-mayores/${adultoMayorFixture.id}/edit`);
+
+    await screen.findByLabelText("Primer nombre");
+    await user.click(screen.getByRole("tab", { name: "Residencia" }));
+
+    const departmentInput = screen.getByLabelText("Departamento");
+    await user.clear(departmentInput);
+
+    expect(departmentInput).toHaveValue("");
+    expect(screen.getByLabelText("Municipio")).toBeDisabled();
+  });
+
+  it("allows clearing an existing EPS to start a new search", async () => {
+    server.use(mockAuthMe(authUserFixture));
+    const user = userEvent.setup();
+    renderAppAtPath(`/adultos-mayores/${adultoMayorFixture.id}/edit`);
+
+    await screen.findByLabelText("Primer nombre");
+    await user.click(screen.getByRole("tab", { name: "Salud" }));
+
+    const epsInput = screen.getByLabelText("EPS");
+    await user.clear(epsInput);
+    await user.type(epsInput, epsFixture.name.slice(0, 3));
+
+    expect(await screen.findByRole("option", { name: epsFixture.name })).toBeInTheDocument();
   });
 
   it("shows the Centro column for SuperAdmin users in Adultos mayores", async () => {

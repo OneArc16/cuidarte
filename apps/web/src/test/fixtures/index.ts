@@ -6,4 +6,6 @@ export * from "./auth.fixtures";
 export * from "./backoffice.fixtures";
 export * from "./cie10.fixtures";
 export * from "./empleados.fixtures";
+export * from "./eps.fixtures";
 export * from "./home.fixtures";
+export * from "./ubicaciones.fixtures";

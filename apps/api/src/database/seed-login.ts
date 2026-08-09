@@ -1,10 +1,10 @@
 import { hash } from "argon2";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
 import { getEnv } from "../config/env";
-import { adultosMayores, tenants, users } from "./schema";
+import { adultosMayores, departments, municipalities, tenants, users } from "./schema";
 
 const seedPassword = process.env.SEED_PASSWORD ?? "Cuidarte123!";
 const demoTenantName = "Centro de Vida Demo";
@@ -20,6 +20,24 @@ export async function seedLogin(): Promise<void> {
 
   try {
     const passwordHash = await hash(seedPassword);
+    const [demoLocation] = await db
+      .select({
+        departmentId: departments.id,
+        departmentName: departments.name,
+        municipalityId: municipalities.id,
+        municipalityName: municipalities.name,
+      })
+      .from(departments)
+      .innerJoin(municipalities, eq(municipalities.departmentId, departments.id))
+      .where(and(eq(departments.code, "11"), eq(municipalities.code, "11001")))
+      .limit(1);
+
+    if (demoLocation === undefined) {
+      throw new Error(
+        "No se encontro la ubicacion demo en DIVIPOLA. Ejecuta primero pnpm db:bootstrap.",
+      );
+    }
+
     const [existingTenant] = await db
       .select()
       .from(tenants)
@@ -37,8 +55,10 @@ export async function seedLogin(): Promise<void> {
               email: demoTenantEmail,
               phone: "6015550101",
               address: "Calle 10 # 20-30",
-              city: "Bogota",
-              department: "Cundinamarca",
+              departmentId: demoLocation.departmentId,
+              municipalityId: demoLocation.municipalityId,
+              city: demoLocation.municipalityName,
+              department: demoLocation.departmentName,
               isActive: true,
             })
             .returning()
@@ -51,8 +71,10 @@ export async function seedLogin(): Promise<void> {
               email: demoTenantEmail,
               phone: "6015550101",
               address: "Calle 10 # 20-30",
-              city: "Bogota",
-              department: "Cundinamarca",
+              departmentId: demoLocation.departmentId,
+              municipalityId: demoLocation.municipalityId,
+              city: demoLocation.municipalityName,
+              department: demoLocation.departmentName,
               isActive: true,
               updatedAt: new Date(),
             })
@@ -254,6 +276,10 @@ export async function seedLogin(): Promise<void> {
         .values({
           tenantId: tenant.id,
           ...adultoMayor,
+          departmentId: demoLocation.departmentId,
+          municipalityId: demoLocation.municipalityId,
+          department: demoLocation.departmentName,
+          municipality: demoLocation.municipalityName,
         })
         .onConflictDoUpdate({
           target: [
@@ -272,8 +298,10 @@ export async function seedLogin(): Promise<void> {
             disability: adultoMayor.disability,
             populationGroup: adultoMayor.populationGroup,
             address: adultoMayor.address,
-            department: adultoMayor.department,
-            municipality: adultoMayor.municipality,
+            departmentId: demoLocation.departmentId,
+            municipalityId: demoLocation.municipalityId,
+            department: demoLocation.departmentName,
+            municipality: demoLocation.municipalityName,
             zone: adultoMayor.zone,
             country: adultoMayor.country,
             phone: adultoMayor.phone,
