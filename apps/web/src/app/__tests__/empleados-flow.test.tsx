@@ -26,6 +26,15 @@ type EmpleadoMutationPayload = {
   password?: string;
 };
 
+type TestTenantActiveSigner = {
+  tenantId: string;
+  employeeId: string;
+  signatureVersionId: string;
+  activatedByUserId: string;
+  activatedAt: string;
+  updatedAt: string;
+};
+
 describe("App empleados flow", () => {
   beforeEach(() => {
     resetAppTestState();
@@ -196,7 +205,7 @@ describe("App empleados flow", () => {
         updatedAt: "2026-07-22T19:20:34.531Z",
       },
     };
-    let currentActiveSigner = directorDetail.tenantActiveSigner;
+    let currentActiveSigner: TestTenantActiveSigner | null = directorDetail.tenantActiveSigner;
     let clearSignerCalled = false;
     server.use(
       mockAuthMe(authUserFixture),
@@ -247,7 +256,7 @@ describe("App empleados flow", () => {
       },
       tenantActiveSigner: null,
     };
-    let currentActiveSigner = directorDetail.tenantActiveSigner;
+    let currentActiveSigner: TestTenantActiveSigner | null = directorDetail.tenantActiveSigner;
     let activeSignerPayload: unknown = null;
     server.use(
       mockAuthMe(authUserFixture),
