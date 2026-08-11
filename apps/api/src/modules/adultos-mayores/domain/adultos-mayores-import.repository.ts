@@ -1,11 +1,10 @@
 import {
   type AdultoMayorImportBatchCreateCommand,
-  type AdultoMayorImportBatchDetailRowRecord,
+  type AdultoMayorImportCommitResult,
+  type AdultoMayorImportExistingAdultRecord,
   type AdultoMayorImportBatchRecord,
   type AdultoMayorImportBatchRowCreateCommand,
   type AdultoMayorImportCatalogMaps,
-  type AdultoMayorImportParsedWorkbook,
-  type AdultoMayorImportValidatedRow,
 } from "./adulto-mayor-import.types";
 
 export const ADULTOS_MAYORES_IMPORT_REPOSITORY = Symbol("ADULTOS_MAYORES_IMPORT_REPOSITORY");
@@ -17,7 +16,7 @@ export type AdultosMayoresImportRepository = {
   findExistingAdultsByTenantAndDocuments(params: {
     tenantId: string;
     documents: Array<{ documentType: string; documentNumber: string }>;
-  }): Promise<Array<{ id: string; documentType: string; documentNumber: string }>>;
+  }): Promise<AdultoMayorImportExistingAdultRecord[]>;
   createValidatedBatch(params: {
     batch: AdultoMayorImportBatchCreateCommand;
     rows: AdultoMayorImportBatchRowCreateCommand[];
@@ -27,26 +26,10 @@ export type AdultosMayoresImportRepository = {
     tenantId?: string;
     requestedByUserId?: string;
   }): Promise<AdultoMayorImportBatchRecord | null>;
-  findImportBatchRows(importId: string): Promise<AdultoMayorImportBatchDetailRowRecord[]>;
-  lockBatchForConfirmation(params: {
+  commitValidatedBatch(params: {
     importId: string;
-    requestedByUserId: string;
-  }): Promise<AdultoMayorImportBatchRecord | null>;
-  markImportAsCompleted(params: {
-    importId: string;
-    createdRows: number;
-    existingRows: number;
-    confirmedAt: Date;
-  }): Promise<void>;
-  markImportAsFailed(params: { importId: string; failureCode: string }): Promise<void>;
-  attachCreatedAdults(params: {
-    importId: string;
-    createdAdults: Array<{ documentType: string; documentNumber: string; adultoId: string }>;
-  }): Promise<void>;
-  attachExistingAdults(params: {
-    importId: string;
-    existingAdults: Array<{ documentType: string; documentNumber: string; adultoId: string }>;
-  }): Promise<void>;
+    actorUserId: string;
+  }): Promise<AdultoMayorImportCommitResult | null>;
   recordAudit(params: {
     actorUserId: string;
     action: string;
@@ -54,14 +37,4 @@ export type AdultosMayoresImportRepository = {
     summary: string;
     metadata: Record<string, unknown>;
   }): Promise<void>;
-  insertAdultosMayores(params: {
-    tenantId: string;
-    requestedByUserId: string;
-    rows: Array<{
-      documentType: string;
-      documentNumber: string;
-      normalizedPayload: Record<string, unknown>;
-    }>;
-  }): Promise<Array<{ id: string; documentType: string; documentNumber: string }>>;
-  listImportBatchIdsByChecksum(checksum: string): Promise<string[]>;
 };

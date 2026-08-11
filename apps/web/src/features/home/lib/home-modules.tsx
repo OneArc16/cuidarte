@@ -1,4 +1,5 @@
 import {
+  adultosMayoresImportAccessRoleValues,
   alimentacionAccessRoleValues,
   type AuthUser,
   type HomeDashboardShortcutModuleId,
@@ -57,7 +58,7 @@ export const HOME_MODULES = [
     label: "Importar adultos mayores",
     icon: Upload,
     path: ADULTOS_MAYORES_IMPORT_PATH,
-    roles: ["super_admin", "admin"],
+    roles: adultosMayoresImportAccessRoleValues,
     summaryLabel: "Importaciones completadas",
   },
   {

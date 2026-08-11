@@ -18,9 +18,14 @@ import ExcelJS from "exceljs";
 
 import { type AuthUser } from "@cuidarte/contracts";
 
-import { AdultosMayoresImportParser, AdultoMayorImportParseError } from "../domain/adultos-mayores-import-parser";
+import {
+  AdultosMayoresImportParser,
+  AdultoMayorImportParseError,
+} from "../domain/adultos-mayores-import-parser";
+import { AdultoMayorImportConcurrencyError } from "../domain/adulto-mayor-import.errors";
 import {
   canImportAdultosMayores,
+  isRequestedAdultoMayorImportTenantAllowed,
   resolveAdultoMayorImportTenantForValidate,
 } from "../domain/adulto-mayor-import.policy";
 import {
@@ -97,6 +102,7 @@ export class AdultosMayoresImportService {
         normalizedPayload: row.normalizedPayload,
         issues: row.issues,
         existingAdultoId: row.existingAdultoId,
+        existingAdultoUpdatedAt: row.existingAdultoUpdatedAt,
       })),
     });
 
@@ -113,6 +119,8 @@ export class AdultosMayoresImportService {
         readyRows: batch.summary.readyRows,
         invalidRows: batch.summary.invalidRows,
         existingRows: batch.summary.existingRows,
+        updateRows: batch.summary.updateRows,
+        unchangedRows: batch.summary.unchangedRows,
       },
     });
 
@@ -130,7 +138,10 @@ export class AdultosMayoresImportService {
     return this.toDetailResponse(batch);
   }
 
-  async confirmImport(importId: string, actor: AuthUser): Promise<AdultoMayorImportConfirmResponse> {
+  async confirmImport(
+    importId: string,
+    actor: AuthUser,
+  ): Promise<AdultoMayorImportConfirmResponse> {
     this.ensureCanImport(actor);
     const batch = await this.findVisibleImport(importId, actor);
 
@@ -143,13 +154,7 @@ export class AdultosMayoresImportService {
     }
 
     if (batch.status === "completed") {
-      return adultoMayorImportConfirmResponseSchema.parse({
-        importId: batch.id,
-        status: "completed",
-        createdRows: batch.summary.createdRows,
-        existingRows: batch.summary.existingRows,
-        completedAt: batch.confirmedAt ?? batch.updatedAt,
-      });
+      return this.toConfirmResponse(batch);
     }
 
     if (batch.status !== "ready") {
@@ -160,125 +165,46 @@ export class AdultosMayoresImportService {
       throw new ConflictException("El lote expiro. Valida nuevamente el archivo.");
     }
 
-    const lockedBatch = await this.importRepository.lockBatchForConfirmation({
-      importId,
-      requestedByUserId: actor.id,
-    });
+    let committed;
 
-    if (lockedBatch === null) {
+    try {
+      committed = await this.importRepository.commitValidatedBatch({
+        importId,
+        actorUserId: actor.id,
+      });
+    } catch (error) {
+      if (error instanceof AdultoMayorImportConcurrencyError) {
+        throw new ConflictException(
+          "Los datos cambiaron desde la validacion. Valida nuevamente el archivo antes de confirmar.",
+        );
+      }
+
+      throw error;
+    }
+
+    if (committed === null) {
       const currentBatch = await this.findVisibleImport(importId, actor);
 
       if (currentBatch?.status === "completed") {
-        return adultoMayorImportConfirmResponseSchema.parse({
-          importId: currentBatch.id,
-          status: "completed",
-          createdRows: currentBatch.summary.createdRows,
-          existingRows: currentBatch.summary.existingRows,
-          completedAt: currentBatch.confirmedAt ?? currentBatch.updatedAt,
-        });
+        return this.toConfirmResponse(currentBatch);
       }
 
       throw new ConflictException("El lote no se encuentra listo para confirmar.");
     }
 
-    const rows = await this.importRepository.findImportBatchRows(importId);
-    const readyRows = rows.filter((row) => row.status === "ready" && row.normalizedPayload !== null);
-    const existingRows = rows.filter((row) => row.status === "existing" || row.existingAdultoId !== null);
-    const readyDocuments = readyRows.map((row) => ({
-      documentType: row.normalizedPayload?.documentType ?? "",
-      documentNumber: row.normalizedPayload?.documentNumber ?? "",
-    }));
-    const concurrentExisting = await this.importRepository.findExistingAdultsByTenantAndDocuments({
-      tenantId: lockedBatch.tenant.id,
-      documents: readyDocuments,
-    });
-    const concurrentExistingKeys = new Set(
-      concurrentExisting.map((adulto) => `${adulto.documentType}::${adulto.documentNumber}`),
-    );
-    const rowsToInsert = readyRows.filter(
-      (row) =>
-        row.normalizedPayload !== null &&
-        !concurrentExistingKeys.has(
-          `${row.normalizedPayload.documentType}::${row.normalizedPayload.documentNumber}`,
-        ),
-    );
-    const skippedExisting = readyRows.filter(
-      (row) =>
-        row.normalizedPayload !== null &&
-        concurrentExistingKeys.has(
-          `${row.normalizedPayload.documentType}::${row.normalizedPayload.documentNumber}`,
-        ),
-    );
-
-    if (concurrentExisting.length > 0) {
-      await this.importRepository.attachExistingAdults({
-        importId,
-        existingAdults: concurrentExisting.map((adulto) => ({
-          documentType: adulto.documentType,
-          documentNumber: adulto.documentNumber,
-          adultoId: adulto.id,
-        })),
-      });
-    }
-
-    const insertedAdults = await this.importRepository.insertAdultosMayores({
-      tenantId: lockedBatch.tenant.id,
-      requestedByUserId: actor.id,
-      rows: rowsToInsert.map((row) => ({
-        documentType: row.normalizedPayload?.documentType ?? "",
-        documentNumber: row.normalizedPayload?.documentNumber ?? "",
-        normalizedPayload: row.normalizedPayload ?? {},
-      })),
-    });
-
-    if (insertedAdults.length > 0) {
-      await this.importRepository.attachCreatedAdults({
-        importId,
-        createdAdults: insertedAdults.map((adulto) => ({
-          documentType: adulto.documentType,
-          documentNumber: adulto.documentNumber,
-          adultoId: adulto.id,
-        })),
-      });
-    }
-
-    const createdRows = insertedAdults.length;
-    const finalExistingRows = existingRows.length + skippedExisting.length;
-    const confirmedAt = new Date();
-
-    await this.importRepository.markImportAsCompleted({
-      importId,
-      createdRows,
-      existingRows: finalExistingRows,
-      confirmedAt,
-    });
-
-    await this.importRepository.recordAudit({
-      actorUserId: actor.id,
-      action: "adultos-mayores.import.completed",
-      targetTenantId: lockedBatch.tenant.id,
-      summary: `Importacion completada para ${lockedBatch.tenant.name}`,
-      metadata: {
-        importId,
-        checksum: lockedBatch.fileChecksumSha256,
-        templateVersion: lockedBatch.templateVersion,
-        totalRows: lockedBatch.summary.totalRows,
-        createdRows,
-        existingRows: finalExistingRows,
-        invalidRows: lockedBatch.summary.invalidRows,
-      },
-    });
-
     return adultoMayorImportConfirmResponseSchema.parse({
       importId,
       status: "completed",
-      createdRows,
-      existingRows: finalExistingRows,
-      completedAt: confirmedAt.toISOString(),
+      createdRows: committed.createdRows,
+      updatedRows: committed.updatedRows,
+      unchangedRows: committed.unchangedRows,
+      existingRows: committed.existingRows,
+      completedAt: committed.completedAt.toISOString(),
     });
   }
 
   async downloadIssuesWorkbook(importId: string, actor: AuthUser) {
+    this.ensureCanImport(actor);
     const batch = await this.findVisibleImport(importId, actor);
 
     if (batch === null) {
@@ -359,19 +285,21 @@ export class AdultosMayoresImportService {
   private resolveTenantForValidate(actor: AuthUser, requestedTenantId: string | null): string {
     const tenantId = resolveAdultoMayorImportTenantForValidate(actor, requestedTenantId);
 
-    if (actor.role !== "super_admin" && requestedTenantId !== null) {
-      throw new ForbiddenException("No puedes enviar un centro distinto al de tu sesion.");
-    }
+    if (tenantId === null) {
+      if (actor.role === "super_admin") {
+        throw new BadRequestException(
+          "Selecciona el centro donde se importaran los adultos mayores.",
+        );
+      }
 
-    if (actor.role === "super_admin" && tenantId === null) {
-      throw new BadRequestException("Selecciona el centro donde se importaran los adultos mayores.");
-    }
-
-    if (actor.role !== "super_admin" && tenantId === null) {
       throw new ForbiddenException("Tu usuario no tiene un centro asociado.");
     }
 
-    return tenantId as string;
+    if (!isRequestedAdultoMayorImportTenantAllowed(actor, requestedTenantId)) {
+      throw new ForbiddenException("No puedes enviar un centro distinto al de tu sesion.");
+    }
+
+    return tenantId;
   }
 
   private async requireTenant(tenantId: string) {
@@ -386,7 +314,9 @@ export class AdultosMayoresImportService {
 
   private ensureCanImport(actor: Pick<AuthUser, "role">) {
     if (!canImportAdultosMayores(actor)) {
-      throw new ForbiddenException("Solo Admin y SuperAdmin pueden importar adultos mayores.");
+      throw new ForbiddenException(
+        "Solo Admin, Auditor y SuperAdmin pueden importar adultos mayores.",
+      );
     }
   }
 
@@ -418,6 +348,18 @@ export class AdultosMayoresImportService {
       failureCode: batch.failureCode,
       createdAt: batch.createdAt.toISOString(),
       updatedAt: batch.updatedAt.toISOString(),
+    });
+  }
+
+  private toConfirmResponse(batch: AdultoMayorImportBatchRecord): AdultoMayorImportConfirmResponse {
+    return adultoMayorImportConfirmResponseSchema.parse({
+      importId: batch.id,
+      status: "completed",
+      createdRows: batch.summary.createdRows,
+      updatedRows: batch.summary.updatedRows,
+      unchangedRows: batch.summary.unchangedRows,
+      existingRows: batch.summary.existingRows,
+      completedAt: (batch.confirmedAt ?? batch.updatedAt).toISOString(),
     });
   }
 

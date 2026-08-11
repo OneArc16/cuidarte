@@ -5,6 +5,10 @@ type AdultosMayoresImportSummaryProps = {
 };
 
 export function AdultosMayoresImportSummary({ detail }: AdultosMayoresImportSummaryProps) {
+  const isCompleted = detail.status === "completed";
+  const createdRows = isCompleted ? detail.summary.createdRows : detail.summary.readyRows;
+  const updatedRows = isCompleted ? detail.summary.updatedRows : detail.summary.updateRows;
+
   return (
     <section className="import-summary" aria-labelledby="import-summary-title">
       <div className="import-summary__header">
@@ -21,12 +25,16 @@ export function AdultosMayoresImportSummary({ detail }: AdultosMayoresImportSumm
           <strong>{detail.summary.totalRows}</strong>
         </article>
         <article>
-          <span>Listas para crear</span>
-          <strong>{detail.summary.readyRows}</strong>
+          <span>{isCompleted ? "Creadas" : "Listas para crear"}</span>
+          <strong>{createdRows}</strong>
         </article>
         <article>
-          <span>Ya existentes</span>
-          <strong>{detail.summary.existingRows}</strong>
+          <span>{isCompleted ? "Actualizadas" : "Listas para actualizar"}</span>
+          <strong>{updatedRows}</strong>
+        </article>
+        <article>
+          <span>Sin cambios</span>
+          <strong>{detail.summary.unchangedRows}</strong>
         </article>
         <article>
           <span>Con advertencias</span>
@@ -38,10 +46,18 @@ export function AdultosMayoresImportSummary({ detail }: AdultosMayoresImportSumm
         </article>
       </div>
 
-      <p className={detail.canConfirm ? "import-summary__status" : "import-summary__status import-summary__status--warning"}>
-        {detail.canConfirm
-          ? "El lote esta listo para confirmar."
-          : "Corrige los errores antes de confirmar la importacion."}
+      <p
+        className={
+          detail.canConfirm || isCompleted
+            ? "import-summary__status"
+            : "import-summary__status import-summary__status--warning"
+        }
+      >
+        {isCompleted
+          ? "La importacion se completo correctamente."
+          : detail.canConfirm
+            ? "El lote esta listo para confirmar."
+            : "Corrige los errores antes de confirmar la importacion."}
       </p>
     </section>
   );

@@ -1,7 +1,11 @@
-import { type AuthUser } from "@cuidarte/contracts";
+import { adultosMayoresImportAccessRoleValues, type AuthUser } from "@cuidarte/contracts";
+
+const ADULTOS_MAYORES_IMPORT_ACCESS_ROLES: ReadonlySet<AuthUser["role"]> = new Set(
+  adultosMayoresImportAccessRoleValues,
+);
 
 export function canImportAdultosMayores(user: Pick<AuthUser, "role">): boolean {
-  return user.role === "super_admin" || user.role === "admin";
+  return ADULTOS_MAYORES_IMPORT_ACCESS_ROLES.has(user.role);
 }
 
 export function resolveAdultoMayorImportTenantForValidate(
@@ -15,10 +19,11 @@ export function resolveAdultoMayorImportTenantForValidate(
   return user.tenantId;
 }
 
-export function resolveAdultoMayorImportTenantForConfirm(user: AuthUser, tenantId: string): string | null {
-  if (user.role === "super_admin") {
-    return tenantId;
-  }
-
-  return user.tenantId;
+export function isRequestedAdultoMayorImportTenantAllowed(
+  user: AuthUser,
+  requestedTenantId: string | null,
+): boolean {
+  return (
+    user.role === "super_admin" || requestedTenantId === null || requestedTenantId === user.tenantId
+  );
 }

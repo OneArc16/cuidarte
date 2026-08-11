@@ -48,6 +48,8 @@ export const adultoMayorImportStatus = pgEnum("adulto_mayor_import_status", [
 ]);
 export const adultoMayorImportRowStatus = pgEnum("adulto_mayor_import_row_status", [
   "ready",
+  "update_ready",
+  "unchanged",
   "invalid",
   "existing",
 ]);
@@ -486,6 +488,9 @@ export const adultoMayorImportBatches = pgTable(
     invalidRows: integer("invalid_rows").notNull().default(0),
     warningRows: integer("warning_rows").notNull().default(0),
     existingRows: integer("existing_rows").notNull().default(0),
+    updateRows: integer("update_rows").notNull().default(0),
+    updatedRows: integer("updated_rows").notNull().default(0),
+    unchangedRows: integer("unchanged_rows").notNull().default(0),
     createdRows: integer("created_rows").notNull().default(0),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
@@ -495,16 +500,31 @@ export const adultoMayorImportBatches = pgTable(
   },
   (table) => [
     index("adulto_mayor_import_batches_tenant_created_at_idx").on(table.tenantId, table.createdAt),
-    index("adulto_mayor_import_batches_requested_by_user_idx").on(table.requestedByUserId, table.createdAt),
+    index("adulto_mayor_import_batches_requested_by_user_idx").on(
+      table.requestedByUserId,
+      table.createdAt,
+    ),
     index("adulto_mayor_import_batches_status_expires_at_idx").on(table.status, table.expiresAt),
     index("adulto_mayor_import_batches_checksum_idx").on(table.fileChecksumSha256),
     check("adulto_mayor_import_batches_total_rows_non_negative", sql`${table.totalRows} >= 0`),
     check("adulto_mayor_import_batches_ready_rows_non_negative", sql`${table.readyRows} >= 0`),
     check("adulto_mayor_import_batches_invalid_rows_non_negative", sql`${table.invalidRows} >= 0`),
     check("adulto_mayor_import_batches_warning_rows_non_negative", sql`${table.warningRows} >= 0`),
-    check("adulto_mayor_import_batches_existing_rows_non_negative", sql`${table.existingRows} >= 0`),
+    check(
+      "adulto_mayor_import_batches_existing_rows_non_negative",
+      sql`${table.existingRows} >= 0`,
+    ),
+    check("adulto_mayor_import_batches_update_rows_non_negative", sql`${table.updateRows} >= 0`),
+    check("adulto_mayor_import_batches_updated_rows_non_negative", sql`${table.updatedRows} >= 0`),
+    check(
+      "adulto_mayor_import_batches_unchanged_rows_non_negative",
+      sql`${table.unchangedRows} >= 0`,
+    ),
     check("adulto_mayor_import_batches_created_rows_non_negative", sql`${table.createdRows} >= 0`),
-    check("adulto_mayor_import_batches_template_version_positive", sql`${table.templateVersion} > 0`),
+    check(
+      "adulto_mayor_import_batches_template_version_positive",
+      sql`${table.templateVersion} > 0`,
+    ),
   ],
 );
 
@@ -534,13 +554,17 @@ export const adultoMayorImportRows = pgTable(
     existingAdultoId: uuid("existing_adulto_id").references(() => adultosMayores.id, {
       onDelete: "restrict",
     }),
+    existingAdultoUpdatedAt: timestamp("existing_adulto_updated_at", { withTimezone: true }),
     createdAdultoId: uuid("created_adulto_id").references(() => adultosMayores.id, {
       onDelete: "restrict",
     }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("adulto_mayor_import_rows_batch_row_unique").on(table.importBatchId, table.rowNumber),
+    uniqueIndex("adulto_mayor_import_rows_batch_row_unique").on(
+      table.importBatchId,
+      table.rowNumber,
+    ),
     index("adulto_mayor_import_rows_batch_status_idx").on(table.importBatchId, table.status),
     index("adulto_mayor_import_rows_existing_adulto_idx").on(table.existingAdultoId),
     index("adulto_mayor_import_rows_created_adulto_idx").on(table.createdAdultoId),

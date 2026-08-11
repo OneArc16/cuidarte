@@ -14,9 +14,7 @@ import {
 } from "../model/adultos-mayores-import-queries";
 import { useAdultoMayorTenantOptionsQuery } from "../model/adultos-mayores-queries";
 import { canImportAdultosMayores } from "../lib/adultos-mayores-permissions";
-import {
-  AdultosMayoresImportConfirmation,
-} from "../components/adultos-mayores-import-confirmation";
+import { AdultosMayoresImportConfirmation } from "../components/adultos-mayores-import-confirmation";
 import { AdultosMayoresImportIssuesTable as IssuesTable } from "../components/adultos-mayores-import-issues-table";
 import { AdultosMayoresImportSummary as Summary } from "../components/adultos-mayores-import-summary";
 import { AdultosMayoresImportTarget as Target } from "../components/adultos-mayores-import-target";
@@ -32,7 +30,7 @@ type AdultosMayoresImportPageProps = {
 };
 
 export function AdultosMayoresImportPage({ navigate, user }: AdultosMayoresImportPageProps) {
-  const shouldLoadTenantOptions = user.role === "super_admin" || user.role === "admin";
+  const shouldLoadTenantOptions = user.role === "super_admin";
   const tenantOptionsQuery = useAdultoMayorTenantOptionsQuery(shouldLoadTenantOptions);
   const validateMutation = useValidateAdultoMayorImportMutation();
   const [activeImportId, setActiveImportId] = useState<string | null>(null);
@@ -104,15 +102,15 @@ export function AdultosMayoresImportPage({ navigate, user }: AdultosMayoresImpor
       return;
     }
 
-    const tenantId = canSelectTenant ? selectedTenantId.trim() || null : user.tenantId;
+    const requestedTenantId = canSelectTenant ? selectedTenantId.trim() || null : null;
 
-    if (canSelectTenant && tenantId === null) {
+    if (canSelectTenant && requestedTenantId === null) {
       setLocalError("Selecciona el centro donde se importaran los adultos mayores.");
       return;
     }
 
     validateMutation.mutate(
-      { file: selectedFile, tenantId },
+      { file: selectedFile, tenantId: requestedTenantId },
       {
         onSuccess: (detail) => {
           setActiveImportId(detail.importId);
@@ -133,8 +131,8 @@ export function AdultosMayoresImportPage({ navigate, user }: AdultosMayoresImpor
 
   const isBusy = validateMutation.isPending || confirmMutation.isPending || importQuery.isLoading;
   const selectedTenantName = canSelectTenant
-    ? tenantOptions.find((tenant) => tenant.id === selectedTenantId)?.name ?? ""
-    : tenantOptions.find((tenant) => tenant.id === user.tenantId)?.name ?? "Centro asociado";
+    ? (tenantOptions.find((tenant) => tenant.id === selectedTenantId)?.name ?? "")
+    : (tenantOptions.find((tenant) => tenant.id === user.tenantId)?.name ?? "Centro asociado");
 
   return (
     <section className="import-page" aria-labelledby="adultos-import-title">
@@ -186,7 +184,10 @@ export function AdultosMayoresImportPage({ navigate, user }: AdultosMayoresImpor
             <span className="import-step-card__index">2.</span>
             <div>
               <h2>Configuracion y archivo</h2>
-              <p>Selecciona el centro de destino, carga el Excel y valida el lote antes de confirmar.</p>
+              <p>
+                Carga el Excel y valida el lote. Los documentos existentes se actualizaran al
+                confirmar.
+              </p>
             </div>
           </div>
 
@@ -250,7 +251,9 @@ export function AdultosMayoresImportPage({ navigate, user }: AdultosMayoresImpor
         </>
       ) : null}
 
-      {validateMutation.isSuccess && activeDetail !== null ? (
+      {validateMutation.isSuccess &&
+      activeDetail !== null &&
+      activeDetail.status !== "completed" ? (
         <p className="import-success" role="status">
           {activeDetail.status === "ready"
             ? "Validacion completada. Puedes confirmar el lote."

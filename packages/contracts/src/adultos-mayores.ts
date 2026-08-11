@@ -103,8 +103,11 @@ const nullableSearchSchema = z
   })
   .pipe(z.string().max(120).nullable());
 
-export const adultosMayoresImportAccessRoleValues = ["super_admin", "admin"] as const satisfies
-  readonly UserRole[];
+export const adultosMayoresImportAccessRoleValues = [
+  "super_admin",
+  "admin",
+  "auditor",
+] as const satisfies readonly UserRole[];
 
 export const adultoMayorImportStatusValues = [
   "ready",
@@ -115,7 +118,13 @@ export const adultoMayorImportStatusValues = [
   "expired",
 ] as const;
 
-export const adultoMayorImportRowStatusValues = ["ready", "invalid", "existing"] as const;
+export const adultoMayorImportRowStatusValues = [
+  "ready",
+  "update_ready",
+  "unchanged",
+  "invalid",
+  "existing",
+] as const;
 
 export const adultoMayorImportIssueSeverityValues = ["error", "warning"] as const;
 
@@ -169,6 +178,9 @@ export const adultoMayorImportSummarySchema = z.object({
   invalidRows: z.number().int().min(0),
   warningRows: z.number().int().min(0),
   existingRows: z.number().int().min(0),
+  updateRows: z.number().int().min(0),
+  updatedRows: z.number().int().min(0),
+  unchangedRows: z.number().int().min(0),
   createdRows: z.number().int().min(0),
 });
 
@@ -208,6 +220,8 @@ export const adultoMayorImportConfirmResponseSchema = z.object({
   importId: z.uuid(),
   status: z.literal("completed"),
   createdRows: z.number().int().min(0),
+  updatedRows: z.number().int().min(0),
+  unchangedRows: z.number().int().min(0),
   existingRows: z.number().int().min(0),
   completedAt: z.string().min(1),
 });
@@ -358,11 +372,19 @@ export type AdultoMayorImportIssue = z.infer<typeof adultoMayorImportIssueSchema
 export type AdultoMayorImportSummary = z.infer<typeof adultoMayorImportSummarySchema>;
 export type AdultoMayorImportRow = z.infer<typeof adultoMayorImportRowSchema>;
 export type AdultoMayorImportDetail = z.infer<typeof adultoMayorImportDetailSchema>;
-export type AdultoMayorImportValidateResponse = z.infer<typeof adultoMayorImportValidateResponseSchema>;
-export type AdultoMayorImportConfirmResponse = z.infer<typeof adultoMayorImportConfirmResponseSchema>;
+export type AdultoMayorImportValidateResponse = z.infer<
+  typeof adultoMayorImportValidateResponseSchema
+>;
+export type AdultoMayorImportConfirmResponse = z.infer<
+  typeof adultoMayorImportConfirmResponseSchema
+>;
 export type AdultoMayorImportHistoryItem = z.infer<typeof adultoMayorImportHistoryItemSchema>;
-export type AdultoMayorImportHistoryResponse = z.infer<typeof adultoMayorImportHistoryResponseSchema>;
-export type AdultoMayorImportTemplateResponse = z.infer<typeof adultoMayorImportTemplateResponseSchema>;
+export type AdultoMayorImportHistoryResponse = z.infer<
+  typeof adultoMayorImportHistoryResponseSchema
+>;
+export type AdultoMayorImportTemplateResponse = z.infer<
+  typeof adultoMayorImportTemplateResponseSchema
+>;
 export type AdultoMayorImportTemplateQuery = z.infer<typeof adultoMayorImportTemplateQuerySchema>;
 export type AdultoMayorImportValidateQuery = z.infer<typeof adultoMayorImportValidateQuerySchema>;
 export type AdultoMayorListQuery = z.infer<typeof adultoMayorListQuerySchema>;

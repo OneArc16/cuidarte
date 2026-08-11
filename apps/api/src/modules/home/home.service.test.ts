@@ -49,12 +49,14 @@ describe("HomeService", () => {
       }),
       countEmpleados: async () => 42,
       countActiveTenants: async () => 12,
+      countCompletedImports: async () => 6,
     });
 
     const result = await service.getDashboard(superAdminUser);
 
     assert.deepEqual(result.shortcuts, [
       { moduleId: "adultos-mayores", total: 468 },
+      { moduleId: "importacion-adultos-mayores", total: 6 },
       { moduleId: "sesiones-grupales", total: 469 },
       { moduleId: "registro-alimentacion", total: 140 },
       { moduleId: "gestion-empleados", total: 42 },
@@ -100,6 +102,9 @@ describe("HomeService", () => {
       countActiveTenants: async () => {
         throw new Error("tenants should not be requested");
       },
+      countCompletedImports: async () => {
+        throw new Error("imports should not be requested");
+      },
     });
 
     const result = await service.getDashboard(medicoUser);
@@ -136,6 +141,7 @@ function stubService(
     }>;
     countEmpleados?: (scope: unknown) => Promise<number>;
     countActiveTenants?: () => Promise<number>;
+    countCompletedImports?: (scope: unknown) => Promise<number>;
   },
 ) {
   Object.assign(service as unknown as Record<string, unknown>, stubs);

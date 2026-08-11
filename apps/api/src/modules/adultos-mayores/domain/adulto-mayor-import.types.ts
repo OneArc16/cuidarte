@@ -55,7 +55,17 @@ export type AdultoMayorImportNormalizedRow = {
   emergencyContactRelationship: string | null;
   emergencyContactPhone: string | null;
   emergencyContactAddress: string | null;
-  bloodType: "a_positive" | "a_negative" | "b_positive" | "b_negative" | "ab_positive" | "ab_negative" | "o_positive" | "o_negative" | "unknown" | null;
+  bloodType:
+    | "a_positive"
+    | "a_negative"
+    | "b_positive"
+    | "b_negative"
+    | "ab_positive"
+    | "ab_negative"
+    | "o_positive"
+    | "o_negative"
+    | "unknown"
+    | null;
   sisben: string | null;
   healthRegime: string | null;
   epsId: string | null;
@@ -66,12 +76,23 @@ export type AdultoMayorImportNormalizedRow = {
   socialProgramBeneficiary: boolean;
 };
 
+export type AdultoMayorImportExistingAdultRecord = Omit<
+  AdultoMayorImportNormalizedRow,
+  "departmentId" | "municipalityId"
+> & {
+  id: string;
+  departmentId: string | null;
+  municipalityId: string | null;
+  updatedAt: Date;
+};
+
 export type AdultoMayorImportValidatedRow = {
   rowNumber: number;
-  status: "ready" | "invalid" | "existing";
+  status: "ready" | "update_ready" | "unchanged" | "invalid";
   normalizedPayload: AdultoMayorImportNormalizedRow | null;
   issues: AdultoMayorImportIssue[];
   existingAdultoId: string | null;
+  existingAdultoUpdatedAt: Date | null;
 };
 
 export type AdultoMayorImportBatchRecord = {
@@ -107,13 +128,23 @@ export type AdultoMayorImportBatchCreateCommand = {
 
 export type AdultoMayorImportBatchRowCreateCommand = {
   rowNumber: number;
-  status: "ready" | "invalid" | "existing";
+  status: "ready" | "update_ready" | "unchanged" | "invalid";
   normalizedPayload: AdultoMayorImportNormalizedRow | null;
   issues: AdultoMayorImportIssue[];
   existingAdultoId: string | null;
+  existingAdultoUpdatedAt: Date | null;
 };
 
 export type AdultoMayorImportBatchDetailRowRecord = AdultoMayorImportRow & {
   normalizedPayload: AdultoMayorImportNormalizedRow | null;
   issues: AdultoMayorImportIssue[];
+  existingAdultoUpdatedAt: Date | null;
+};
+
+export type AdultoMayorImportCommitResult = {
+  createdRows: number;
+  updatedRows: number;
+  unchangedRows: number;
+  existingRows: number;
+  completedAt: Date;
 };

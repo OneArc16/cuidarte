@@ -21,7 +21,9 @@ export class AdultosMayoresImportTemplateService {
     const parser = new AdultosMayoresImportParser();
     const headers = parser.getExpectedHeaders();
 
-    const dataSheet = workbook.addWorksheet("Adultos mayores", { views: [{ state: "frozen", ySplit: 1 }] });
+    const dataSheet = workbook.addWorksheet("Adultos mayores", {
+      views: [{ state: "frozen", ySplit: 1 }],
+    });
     const instructionsSheet = workbook.addWorksheet("Instrucciones");
     const catalogosSheet = workbook.addWorksheet("Catalogos");
     const ubicacionesSheet = workbook.addWorksheet("Ubicaciones");
@@ -103,10 +105,15 @@ export class AdultosMayoresImportTemplateService {
       ["1. Solo edita la hoja 'Adultos mayores'."],
       ["2. No cambies los encabezados ni el orden de las columnas."],
       ["3. Usa texto para documentos, codigos DIVIPOLA, telefonos y EPS."],
-      ["4. La importacion es create-only y omite duplicados existentes en el tenant."],
-      ["5. El archivo soportado es .xlsx y tiene un maximo de 1.000 filas de datos."],
-      ["6. Para tipo_sangre usa valores como O+, A-, AB+ o Desconocido."],
-      ["7. Para codigo_eps consulta la hoja 'EPS' y copia el codigo exacto de una EPS activa."],
+      [
+        "4. Si tipo_documento y numero_documento ya existen en el centro, la fila actualiza ese adulto mayor.",
+      ],
+      [
+        "5. En una actualizacion, las celdas opcionales vacias conservan el valor registrado actualmente.",
+      ],
+      ["6. El archivo soportado es .xlsx y tiene un maximo de 1.000 filas de datos."],
+      ["7. Para tipo_sangre usa valores como O+, A-, AB+ o Desconocido."],
+      ["8. Para codigo_eps consulta la hoja 'EPS' y copia el codigo exacto de una EPS activa."],
     ]);
     instructionsSheet.getColumn(1).width = 96;
 
@@ -118,7 +125,10 @@ export class AdultosMayoresImportTemplateService {
       ["vive_con_alguien", "Si, No"],
       ["beneficiario_programa_social", "Si, No"],
       ["tipo_sangre", "A+, A-, B+, B-, AB+, AB-, O+, O-, Desconocido"],
-      ["codigo_eps", "Usa un codigo existente de la hoja EPS. Ejemplo: codigo_eps de una EPS activa"],
+      [
+        "codigo_eps",
+        "Usa un codigo existente de la hoja EPS. Ejemplo: codigo_eps de una EPS activa",
+      ],
     ]);
     catalogosSheet.getColumn(1).width = 28;
     catalogosSheet.getColumn(2).width = 48;

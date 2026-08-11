@@ -20,6 +20,7 @@ import {
   ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
 import {
+  adultosMayoresImportAccessRoleValues,
   adultoMayorImportConfirmResponseSchema,
   adultoMayorImportDetailSchema,
   adultoMayorImportValidateQuerySchema,
@@ -33,7 +34,10 @@ import { type AuthenticatedRequest } from "../../auth/authenticated-request";
 import { RequireRoles } from "../../auth/roles.decorator";
 import { RolesGuard } from "../../auth/roles.guard";
 import { SessionGuard } from "../../auth/session.guard";
-import { AdultosMayoresImportService, type BufferedAdultoMayorImportUpload } from "../application/adultos-mayores-import.service";
+import {
+  AdultosMayoresImportService,
+  type BufferedAdultoMayorImportUpload,
+} from "../application/adultos-mayores-import.service";
 
 const importIdParamSchema = z.uuid();
 
@@ -45,7 +49,7 @@ type MultipartAuthenticatedRequest = AuthenticatedRequest & {
 @ApiTags("adultos-mayores-import")
 @Controller("adultos-mayores/imports")
 @UseGuards(SessionGuard, RolesGuard)
-@RequireRoles("super_admin", "admin")
+@RequireRoles(...adultosMayoresImportAccessRoleValues)
 export class AdultosMayoresImportController {
   constructor(private readonly importService: AdultosMayoresImportService) {}
 
@@ -66,10 +70,7 @@ export class AdultosMayoresImportController {
   @ApiBadRequestResponse({ description: "Solicitud invalida o plantilla no soportada." })
   @ApiForbiddenResponse({ description: "No tienes permisos o el centro no es valido." })
   @ApiUnauthorizedResponse({ description: "Sesion requerida." })
-  async validateImport(
-    @Query() query: unknown,
-    @Req() request: MultipartAuthenticatedRequest,
-  ) {
+  async validateImport(@Query() query: unknown, @Req() request: MultipartAuthenticatedRequest) {
     const parsedQuery = adultoMayorImportValidateQuerySchema.parse(query);
     const upload = await parseImportMultipartRequest(request);
     const response = await this.importService.validateImport(
@@ -167,7 +168,12 @@ async function toBufferedUpload(part: MultipartFile): Promise<BufferedAdultoMayo
       throw new BadRequestException("El archivo debe ser una plantilla Excel .xlsx de CuidarTe.");
     }
 
-    if (!["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/octet-stream"].includes(part.mimetype)) {
+    if (
+      ![
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/octet-stream",
+      ].includes(part.mimetype)
+    ) {
       throw new BadRequestException("El archivo debe ser una plantilla Excel .xlsx de CuidarTe.");
     }
 
@@ -186,12 +192,7 @@ async function toBufferedUpload(part: MultipartFile): Promise<BufferedAdultoMayo
   }
 }
 
-function sendFile(
-  reply: FastifyReply,
-  buffer: Buffer,
-  contentType: string,
-  filename: string,
-) {
+function sendFile(reply: FastifyReply, buffer: Buffer, contentType: string, filename: string) {
   reply.header("Content-Type", contentType);
   reply.header("Content-Disposition", `attachment; filename="${sanitizeFilename(filename)}"`);
   reply.header("Cache-Control", "private, no-store");
