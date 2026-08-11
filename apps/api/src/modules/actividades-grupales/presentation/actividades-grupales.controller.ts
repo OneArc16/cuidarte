@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -20,6 +21,7 @@ import {
   ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
 import {
+  actividadGrupalEditDetailSchema,
   actividadGrupalDiligenciamientoDetailSchema,
   actividadGrupalFormOptionsResponseSchema,
   actividadGrupalIntegranteOptionsQuerySchema,
@@ -29,7 +31,9 @@ import {
   actividadGrupalListResponseSchema,
   actividadGrupalTenantOptionsResponseSchema,
   createActividadGrupalRequestSchema,
+  deleteActividadGrupalResponseSchema,
   saveActividadGrupalDiligenciamientoSchema,
+  updateActividadGrupalRequestSchema,
 } from "@cuidarte/contracts";
 import { type FastifyReply } from "fastify";
 import { type Multipart, type MultipartFile } from "@fastify/multipart";
@@ -113,6 +117,61 @@ export class ActividadesGrupalesController {
     );
 
     return actividadGrupalListItemSchema.parse(detail);
+  }
+
+  @Get(":id")
+  @ApiOkResponse({ description: "Detalle editable de la actividad grupal." })
+  @ApiNotFoundResponse({ description: "Actividad no encontrada." })
+  @ApiForbiddenResponse({ description: "El usuario no puede editar esta actividad." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async getActividadGrupalForEdit(
+    @Param("id") id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const activityId = parseZodSchema(actividadIdParamSchema, id);
+    const detail = await this.actividadesGrupalesService.getActividadGrupalForEdit(
+      activityId,
+      request.currentUser,
+    );
+
+    return actividadGrupalEditDetailSchema.parse(detail);
+  }
+
+  @Put(":id")
+  @ApiOkResponse({ description: "Actividad grupal actualizada." })
+  @ApiBadRequestResponse({ description: "Solicitud invalida." })
+  @ApiNotFoundResponse({ description: "Actividad no encontrada." })
+  @ApiForbiddenResponse({ description: "El usuario no puede editar esta actividad." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async updateActividadGrupal(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const activityId = parseZodSchema(actividadIdParamSchema, id);
+    const command = parseZodSchema(updateActividadGrupalRequestSchema, body);
+    const detail = await this.actividadesGrupalesService.updateActividadGrupal(
+      activityId,
+      command,
+      request.currentUser,
+    );
+
+    return actividadGrupalListItemSchema.parse(detail);
+  }
+
+  @Delete(":id")
+  @ApiOkResponse({ description: "Actividad grupal eliminada." })
+  @ApiNotFoundResponse({ description: "Actividad no encontrada." })
+  @ApiForbiddenResponse({ description: "El usuario no puede eliminar esta actividad." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async deleteActividadGrupal(
+    @Param("id") id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const activityId = parseZodSchema(actividadIdParamSchema, id);
+    await this.actividadesGrupalesService.deleteActividadGrupal(activityId, request.currentUser);
+
+    return deleteActividadGrupalResponseSchema.parse({ success: true });
   }
 
   @Get(":id/diligenciamiento")

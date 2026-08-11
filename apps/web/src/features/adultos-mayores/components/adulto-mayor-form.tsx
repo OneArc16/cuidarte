@@ -92,7 +92,13 @@ const FORM_SECTIONS = [
   fields: readonly (keyof AdultoMayorFormValues)[];
 }>;
 
+const CREATE_DRAFT_STORAGE_KEY = "adulto-mayor-create-draft";
+
 type AdultoMayorFormSectionId = (typeof FORM_SECTIONS)[number]["id"];
+type AdultoMayorCreateDraft = {
+  activeSection: AdultoMayorFormSectionId;
+  values: AdultoMayorFormValues;
+};
 
 type AdultoMayorFormProps =
   | {
@@ -103,7 +109,7 @@ type AdultoMayorFormProps =
       shouldSelectTenant: boolean;
       tenantOptions: AdultoMayorTenantOption[];
       onCancel: () => void;
-      onSubmit: (values: CreateAdultoMayorRequest) => void;
+      onSubmit: (values: CreateAdultoMayorRequest) => Promise<void> | void;
     }
   | {
       mode: "edit";
@@ -111,7 +117,7 @@ type AdultoMayorFormProps =
       error: string | null;
       isPending: boolean;
       onCancel: () => void;
-      onSubmit: (values: UpdateAdultoMayorRequest) => void;
+      onSubmit: (values: UpdateAdultoMayorRequest) => Promise<void> | void;
     };
 
 export function AdultoMayorForm(props: AdultoMayorFormProps) {
@@ -128,6 +134,7 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
     mode: "onBlur",
   });
   const { reset, setError } = form;
+  const getValues = form.getValues;
   const departmentId = useWatch({
     control: form.control,
     name: "departmentId",
@@ -161,6 +168,8 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
   const hasAppliedEpsFallback = useRef(false);
   const hasAppliedMunicipalityFallback = useRef(false);
   const lastToastErrorRef = useRef<string | null>(null);
+  const activeSectionIndex = FORM_SECTIONS.findIndex((section) => section.id === activeSection);
+  const isLastSection = activeSectionIndex === FORM_SECTIONS.length - 1;
 
   useEffect(() => {
     if (detail !== null) {
@@ -184,6 +193,43 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
     lastToastErrorRef.current = props.error;
     toast.error(props.error, { id: "adulto-mayor-form-error" });
   }, [props.error]);
+
+  useEffect(() => {
+    if (props.mode !== "create") {
+      return;
+    }
+
+    const savedDraft = readCreateDraft();
+
+    if (savedDraft === null) {
+      return;
+    }
+
+    reset(savedDraft.values);
+    setActiveSection(savedDraft.activeSection);
+  }, [props.mode, reset]);
+
+  useEffect(() => {
+    if (props.mode !== "create") {
+      return;
+    }
+
+    writeCreateDraft({
+      activeSection,
+      values: getValues(),
+    });
+
+    const subscription = form.watch((values) => {
+      writeCreateDraft({
+        activeSection,
+        values: values as AdultoMayorFormValues,
+      });
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [activeSection, form, getValues, props.mode]);
 
   useEffect(() => {
     if (
@@ -271,28 +317,63 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
     setActiveSection(findFirstSectionWithError(errors));
   }
 
+  async function submitCurrentSection() {
+    const currentSection = FORM_SECTIONS[activeSectionIndex];
+
+    if (currentSection === undefined) {
+      return;
+    }
+
+    if (props.mode === "create" && activeSection === "personal" && shouldShowTenantSelect) {
+      const tenantId = getValues("tenantId").trim();
+
+      if (tenantId === "") {
+        setActiveSection("personal");
+        setError("tenantId", {
+          type: "manual",
+          message: "Selecciona un centro.",
+        });
+        return;
+      }
+    }
+
+    if (props.mode === "create" && !isLastSection) {
+      const isSectionValid = await form.trigger(
+        currentSection.fields as Array<keyof AdultoMayorFormValues>,
+        { shouldFocus: true },
+      );
+
+      if (!isSectionValid) {
+        return;
+      }
+
+      const nextSection = FORM_SECTIONS[activeSectionIndex + 1];
+
+      if (nextSection !== undefined) {
+        setActiveSection(nextSection.id);
+      }
+
+      return;
+    }
+
+    await form.handleSubmit(async (values) => {
+      if (props.mode === "create") {
+        await props.onSubmit(toCreateAdultoMayorRequest(values));
+        clearCreateDraft();
+        return;
+      }
+
+      await props.onSubmit(toUpdateAdultoMayorRequest(values));
+    }, handleInvalidSubmit)();
+  }
+
   return (
     <form
       className="adulto-form"
       noValidate
       onSubmit={(event) => {
-        void form.handleSubmit((values) => {
-          if (props.mode === "create") {
-            if (shouldShowTenantSelect && values.tenantId.trim() === "") {
-              setActiveSection("personal");
-              setError("tenantId", {
-                type: "manual",
-                message: "Selecciona un centro.",
-              });
-              return;
-            }
-
-            props.onSubmit(toCreateAdultoMayorRequest(values));
-            return;
-          }
-
-          props.onSubmit(toUpdateAdultoMayorRequest(values));
-        }, handleInvalidSubmit)(event);
+        event.preventDefault();
+        void submitCurrentSection();
       }}
     >
       <nav className="adulto-form-tabs" aria-label="Secciones del formulario" role="tablist">
@@ -767,11 +848,25 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
       </section>
 
       <div className="adulto-form-actions">
-        <button className="outline-action" type="button" onClick={props.onCancel}>
+        <button
+          className="outline-action"
+          type="button"
+          onClick={() => {
+            if (props.mode === "create") {
+              clearCreateDraft();
+            }
+
+            props.onCancel();
+          }}
+        >
           Volver
         </button>
         <button className="primary-action" disabled={props.isPending} type="submit">
-          {props.isPending ? "Guardando..." : "Guardar"}
+          {props.isPending
+            ? "Guardando..."
+            : props.mode === "create" && !isLastSection
+              ? "Guardar y continuar"
+              : "Guardar"}
         </button>
       </div>
     </form>
@@ -787,4 +882,54 @@ function findFirstSectionWithError(
   );
 
   return section?.id ?? "personal";
+}
+
+function readCreateDraft(): AdultoMayorCreateDraft | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const rawValue = window.localStorage.getItem(CREATE_DRAFT_STORAGE_KEY);
+
+  if (rawValue === null) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue) as Partial<AdultoMayorCreateDraft>;
+
+    if (parsed.activeSection === undefined || parsed.values === undefined) {
+      return null;
+    }
+
+    const activeSection = FORM_SECTIONS.some((section) => section.id === parsed.activeSection)
+      ? parsed.activeSection
+      : "personal";
+
+    return {
+      activeSection,
+      values: {
+        ...createDefaultAdultoMayorFormValues(),
+        ...parsed.values,
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeCreateDraft(draft: AdultoMayorCreateDraft): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(CREATE_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+}
+
+function clearCreateDraft(): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(CREATE_DRAFT_STORAGE_KEY);
 }

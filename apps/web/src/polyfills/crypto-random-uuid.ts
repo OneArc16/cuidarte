@@ -26,8 +26,10 @@ function generateUuidV4(): string {
   ].join("-");
 }
 
-if (typeof globalThis.crypto?.randomUUID !== "function") {
-  Object.defineProperty(globalThis.crypto, "randomUUID", {
+const cryptoApi = globalThis.crypto;
+
+if (cryptoApi !== undefined && typeof cryptoApi.randomUUID !== "function") {
+  Object.defineProperty(cryptoApi, "randomUUID", {
     configurable: true,
     value: generateUuidV4,
   });

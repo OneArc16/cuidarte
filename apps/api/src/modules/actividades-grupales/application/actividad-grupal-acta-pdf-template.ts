@@ -400,8 +400,14 @@ function formatActaDate(date: string): string {
   return `${day}/${month}/${year}`;
 }
 
-function formatActaNumber(value: number): string {
-  return String(value).padStart(4, "0");
+function formatActaNumber(value: string): string {
+  const normalizedValue = value.trim();
+
+  if (/^\d+$/.test(normalizedValue)) {
+    return normalizedValue.padStart(4, "0");
+  }
+
+  return normalizedValue.replace(/\s+/g, "-").replace(/[^A-Za-z0-9_-]/g, "-");
 }
 
 function formatActaTime(time: string): string {

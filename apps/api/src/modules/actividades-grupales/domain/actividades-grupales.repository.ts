@@ -3,13 +3,16 @@ import {
   type ActividadGrupalEmpleadoOptionRecord,
   type ActividadGrupalIntegranteOptionRecord,
   type ActividadGrupalRecord,
+  type ActividadGrupalSupportFileRecord,
   type ActividadGrupalTenantOptionRecord,
   type CreateActividadGrupalRecordCommand,
+  type DeleteActividadGrupalRecordCommand,
   type FindActividadesGrupalesQuery,
   type FindActividadGrupalByIdQuery,
   type SaveActividadGrupalDiligenciamientoRecordCommand,
   type SavedActividadGrupalDiligenciamientoRecord,
   type SearchActividadGrupalIntegrantesOptionsQuery,
+  type UpdateActividadGrupalRecordCommand,
 } from "./actividad-grupal.types";
 
 export const ACTIVIDADES_GRUPALES_REPOSITORY = Symbol("ACTIVIDADES_GRUPALES_REPOSITORY");
@@ -30,6 +33,8 @@ export type ActividadesGrupalesRepository = {
   ): Promise<ActividadGrupalIntegranteOptionRecord[]>;
   getNextActaNumber(tenantId: string): Promise<number>;
   create(command: CreateActividadGrupalRecordCommand): Promise<ActividadGrupalRecord>;
+  update(command: UpdateActividadGrupalRecordCommand): Promise<ActividadGrupalRecord>;
+  delete(command: DeleteActividadGrupalRecordCommand): Promise<ActividadGrupalSupportFileRecord[]>;
   saveDiligenciamiento(
     command: SaveActividadGrupalDiligenciamientoRecordCommand,
   ): Promise<SavedActividadGrupalDiligenciamientoRecord>;

@@ -212,22 +212,23 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 14px;
+  gap: 10px;
 }
 
 .adultos-back-action {
   width: fit-content;
-  min-height: 40px;
-  padding: 0 12px 0 10px;
+  min-height: 36px;
+  padding: 0 10px 0 8px;
   background: rgb(255 255 255 / 88%);
   box-shadow: 0 8px 18px rgb(8 80 65 / 7%);
 }
 
 .adultos-form-nav__context {
   color: var(--color-muted);
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   font-weight: 900;
   text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .adulto-form {
@@ -446,5 +447,434 @@
   .adultos-table {
     min-width: 0;
     font-size: 0.72rem;
+  }
+}
+
+.import-page {
+  display: grid;
+  gap: 14px;
+  padding-bottom: 40px;
+}
+
+.import-setup-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.82fr) minmax(360px, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.import-step-card,
+.import-hero,
+.import-target,
+.import-upload,
+.import-summary,
+.import-issues,
+.import-confirmation {
+  border: 1px solid rgb(8 80 65 / 10%);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 94%), rgb(248 252 250 / 92%)),
+    radial-gradient(circle at top right, rgb(29 158 117 / 8%), transparent 32%);
+  box-shadow: 0 16px 36px rgb(8 80 65 / 7%);
+}
+
+.import-step-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+}
+
+.import-step-card__header {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.import-step-card__index {
+  color: var(--color-deep);
+  font-size: 1.15rem;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.import-step-card h2 {
+  margin: 0;
+  color: var(--color-deep);
+  font-size: 0.96rem;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.import-step-card p {
+  margin: 6px 0 0;
+  color: var(--color-ink);
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
+
+.import-step-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.import-step-card__body {
+  display: grid;
+  gap: 12px;
+}
+
+.import-step-card .import-target,
+.import-step-card .import-upload {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.import-step-card .import-target {
+  gap: 8px;
+}
+
+.import-step-card .import-target select,
+.import-step-card .import-target strong {
+  min-height: 40px;
+}
+
+.import-step-card .import-upload {
+  gap: 8px;
+}
+
+.import-step-card .import-upload__zone {
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+.import-step-card .import-upload__hint {
+  max-width: none;
+  font-size: 0.88rem;
+}
+
+.import-step-card .form-error {
+  margin: 0;
+}
+
+.import-hero {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px;
+}
+
+.import-hero h2,
+.import-summary h2,
+.import-issues h2,
+.import-confirmation h2 {
+  margin: 4px 0 0;
+}
+
+.import-hero p {
+  max-width: 68ch;
+  color: var(--color-ink);
+}
+
+.import-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-content: start;
+}
+
+.import-actions,
+.import-confirmation__wrap {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.import-actions--compact {
+  padding-top: 0;
+}
+
+.import-primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 178px;
+  padding: 0 18px;
+  border: 1px solid rgb(8 80 65 / 22%);
+  border-radius: 12px;
+  box-shadow:
+    0 14px 28px rgb(29 158 117 / 22%),
+    inset 0 1px 0 rgb(255 255 255 / 18%);
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+}
+
+.import-primary-action:not(:disabled):hover {
+  box-shadow:
+    0 18px 34px rgb(29 158 117 / 28%),
+    inset 0 1px 0 rgb(255 255 255 / 18%);
+}
+
+.import-primary-action:focus-visible {
+  outline: 3px solid rgb(29 158 117 / 22%);
+  outline-offset: 2px;
+}
+
+.import-target {
+  display: grid;
+  gap: 4px;
+  padding: 18px 20px;
+}
+
+.import-target__label,
+.import-upload__title {
+  color: var(--color-deep);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.import-target select,
+.import-target strong {
+  min-height: 42px;
+}
+
+.import-target select {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: white;
+  padding: 0 10px;
+}
+
+.import-target--readonly strong {
+  display: inline-grid;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px dashed rgb(8 80 65 / 15%);
+  border-radius: 10px;
+}
+
+.import-upload {
+  display: grid;
+  gap: 10px;
+  padding: 18px 20px;
+}
+
+.import-upload__zone {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px dashed rgb(8 80 65 / 18%);
+  border-radius: 14px;
+  background: rgb(255 255 255 / 68%);
+  cursor: pointer;
+}
+
+.import-upload__copy {
+  display: grid;
+  gap: 2px;
+}
+
+.import-upload__zone input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.import-upload__hint {
+  color: var(--color-ink);
+}
+
+.import-upload__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: var(--color-deep);
+  color: white;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.import-upload__file {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  padding-inline: 2px;
+}
+
+.import-upload__file p {
+  margin: 2px 0 0;
+  color: var(--color-ink);
+  font-size: 0.84rem;
+}
+
+.import-summary,
+.import-issues,
+.import-confirmation {
+  padding: 20px;
+}
+
+.import-summary__header,
+.import-issues__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: end;
+}
+
+.import-summary__grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.import-summary__grid article {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgb(255 255 255 / 80%);
+  border: 1px solid rgb(8 80 65 / 8%);
+}
+
+.import-summary__grid span,
+.import-confirmation dt,
+.import-issues__header p {
+  color: var(--color-ink);
+}
+
+.import-summary__grid strong,
+.import-confirmation dd {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.25rem;
+}
+
+.import-summary__status {
+  margin-top: 16px;
+  color: #067647;
+  font-weight: 700;
+}
+
+.import-summary__status--warning {
+  color: #b54708;
+}
+
+.import-issues__table-wrap {
+  margin-top: 16px;
+  overflow: auto;
+  border: 1px solid rgb(8 80 65 / 10%);
+  border-radius: 14px;
+}
+
+.import-issues__table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+}
+
+.import-issues__table th,
+.import-issues__table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgb(8 80 65 / 8%);
+  text-align: left;
+  vertical-align: top;
+}
+
+.import-issues__table th {
+  background: rgb(226 244 238 / 56%);
+  color: var(--color-deep);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.import-issues__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.import-issues__badge--error {
+  background: rgb(254 228 226);
+  color: #b42318;
+}
+
+.import-issues__badge--warning {
+  background: rgb(255 250 235);
+  color: #b54708;
+}
+
+.import-confirmation {
+  display: grid;
+  gap: 14px;
+}
+
+.import-confirmation > .import-primary-action {
+  justify-self: end;
+}
+
+.import-confirmation__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.import-confirmation__grid div {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgb(255 255 255 / 80%);
+  border: 1px solid rgb(8 80 65 / 8%);
+}
+
+.import-context,
+.import-success {
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .import-setup-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .import-summary__grid,
+  .import-confirmation__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .import-summary__grid,
+  .import-confirmation__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .import-step-card__header {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .import-upload__zone {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .import-hero,
+  .import-summary__header,
+  .import-issues__header {
+    flex-direction: column;
+    align-items: start;
   }
 }

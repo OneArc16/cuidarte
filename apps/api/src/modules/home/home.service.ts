@@ -17,6 +17,7 @@ import { DatabaseService } from "../../database/database.service";
 import {
   actividadesGrupales,
   adultosMayores,
+  adultoMayorImportBatches,
   alimentacionRegistros,
   tenants,
   users,
@@ -60,8 +61,9 @@ export class HomeService {
     const actividadesScope = resolveActividadesGrupalesScope(actor);
     const alimentacionScope = resolveAlimentacionScope(actor);
     const empleadosScope = resolveEmpleadosScope(actor);
+    const importScope = resolveAdultosMayoresScope(actor);
 
-    const [adultosTotal, actividadesSummary, alimentacionSummary, empleadosTotal, tenantsTotal] =
+    const [adultosTotal, actividadesSummary, alimentacionSummary, empleadosTotal, tenantsTotal, importsTotal] =
       await Promise.all([
         adultosScope === null
           ? Promise.resolve<number | null>(null)
@@ -74,9 +76,12 @@ export class HomeService {
           : this.summarizeAlimentacion(alimentacionScope),
         empleadosScope === null ? Promise.resolve<number | null>(null) : this.countEmpleados(empleadosScope),
         actor.role === "super_admin" ? this.countActiveTenants() : Promise.resolve<number | null>(null),
+        importScope === null ? Promise.resolve<number | null>(null) : this.countCompletedImports(importScope),
       ]);
 
-    const shortcutTotals: Partial<Record<HomeDashboardShortcutModuleId, number>> = {};
+    const shortcutTotals: Partial<
+      Record<HomeDashboardShortcutModuleId | "importacion-adultos-mayores", number>
+    > = {};
     const indicatorTotals: Partial<Record<HomeDashboardIndicatorId, number>> = {};
 
     if (adultosTotal !== null) {
@@ -107,6 +112,10 @@ export class HomeService {
 
     if (tenantsTotal !== null) {
       shortcutTotals.backoffice = tenantsTotal;
+    }
+
+    if (importsTotal !== null) {
+      shortcutTotals["importacion-adultos-mayores"] = importsTotal;
     }
 
     return homeDashboardResponseSchema.parse({
@@ -142,6 +151,19 @@ export class HomeService {
       .where(eq(tenants.isActive, true));
 
     return row?.total ?? 0;
+  }
+
+  private async countCompletedImports(scope: TenantScope): Promise<number> {
+    try {
+      return await this.countScopedRows(
+        adultoMayorImportBatches,
+        adultoMayorImportBatches.tenantId,
+        scope,
+        eq(adultoMayorImportBatches.status, "completed"),
+      );
+    } catch {
+      return 0;
+    }
   }
 
   private async summarizeActividades(scope: TenantScope): Promise<ActivitySummary> {
@@ -203,16 +225,24 @@ export class HomeService {
   }
 
   private async countScopedRows(
-    table: typeof adultosMayores,
+    table: typeof adultosMayores | typeof adultoMayorImportBatches,
     tenantColumn: AnyPgColumn,
     scope: TenantScope,
+    extraCondition?: SQL,
   ): Promise<number> {
+    const scopeCondition = this.buildScopeCondition(scope, tenantColumn);
+    const where =
+      extraCondition === undefined
+        ? scopeCondition
+        : scopeCondition === undefined
+          ? extraCondition
+          : and(scopeCondition, extraCondition);
     const [row] = await this.database.db
       .select({
         total: sql<number>`count(*)::int`,
       })
       .from(table)
-      .where(this.buildScopeCondition(scope, tenantColumn));
+      .where(where);
 
     return row?.total ?? 0;
   }

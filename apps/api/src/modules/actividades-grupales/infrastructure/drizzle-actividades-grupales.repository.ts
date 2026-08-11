@@ -22,11 +22,13 @@ import {
   type ActividadGrupalSupportFileRecord,
   type ActividadGrupalTenantOptionRecord,
   type CreateActividadGrupalRecordCommand,
+  type DeleteActividadGrupalRecordCommand,
   type FindActividadesGrupalesQuery,
   type FindActividadGrupalByIdQuery,
   type SaveActividadGrupalDiligenciamientoRecordCommand,
   type SavedActividadGrupalDiligenciamientoRecord,
   type SearchActividadGrupalIntegrantesOptionsQuery,
+  type UpdateActividadGrupalRecordCommand,
 } from "../domain/actividad-grupal.types";
 import { type ActividadesGrupalesRepository } from "../domain/actividades-grupales.repository";
 
@@ -34,7 +36,8 @@ type ActividadGrupalSelectionRow = {
   id: string;
   tenantId: string;
   tenantName: string;
-  actaNumber: number;
+  createdByUserId: string;
+  actaNumber: string;
   activityName: string;
   activityType: ActividadGrupalRecord["activityType"];
   activityDate: string;
@@ -238,7 +241,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .insert(actividadesGrupales)
         .values({
           tenantId: command.tenantId,
-          actaNumber: counter.lastValue,
+          actaNumber: command.actaNumber.trim(),
           activityName: command.activityName,
           activityType: command.activityType,
           activityDate: command.activityDate,
@@ -266,9 +269,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         actorUserId: command.actorUserId,
         action: "actividades-grupales.created",
         targetTenantId: command.tenantId,
-        summary: `Actividad grupal creada #${counter.lastValue}: ${command.activityName}`,
+        summary: `Actividad grupal creada #${command.actaNumber.trim()}: ${command.activityName}`,
         metadata: {
-          actaNumber: counter.lastValue,
+          actaNumber: command.actaNumber.trim(),
+          suggestedActaNumber: counter.lastValue,
           activityType: command.activityType,
           organizer: command.organizer,
           involvedEmployeesCount: command.employeeIds.length,
@@ -290,6 +294,120 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         ...row,
         involvedEmployeesCount: command.employeeIds.length,
       };
+    });
+  }
+
+  async update(command: UpdateActividadGrupalRecordCommand): Promise<ActividadGrupalRecord> {
+    return await this.database.db.transaction(async (tx) => {
+      const now = new Date();
+
+      const [updated] = await tx
+        .update(actividadesGrupales)
+        .set({
+          actaNumber: command.actaNumber.trim(),
+          activityName: command.activityName,
+          activityType: command.activityType,
+          activityDate: command.activityDate,
+          startTime: command.startTime,
+          endTime: command.endTime,
+          organizer: command.organizer,
+          updatedAt: now,
+        })
+        .where(eq(actividadesGrupales.id, command.activityId))
+        .returning({ id: actividadesGrupales.id, tenantId: actividadesGrupales.tenantId });
+
+      if (updated === undefined) {
+        throw new Error("No fue posible actualizar la actividad grupal.");
+      }
+
+      await tx
+        .delete(actividadGrupalEmpleados)
+        .where(eq(actividadGrupalEmpleados.activityId, command.activityId));
+
+      await tx.insert(actividadGrupalEmpleados).values(
+        command.employeeIds.map((employeeId) => ({
+          activityId: command.activityId,
+          employeeId,
+        })),
+      );
+
+      await tx.insert(auditLogs).values({
+        actorUserId: command.actorUserId,
+        action: "actividades-grupales.updated",
+        targetTenantId: updated.tenantId,
+        summary: `Actividad grupal actualizada #${command.actaNumber.trim()}: ${command.activityName}`,
+        metadata: {
+          activityId: command.activityId,
+          actaNumber: command.actaNumber.trim(),
+          activityType: command.activityType,
+          organizer: command.organizer,
+          involvedEmployeesCount: command.employeeIds.length,
+        },
+      });
+
+      const [row] = await tx
+        .select(this.getActivitySelection())
+        .from(actividadesGrupales)
+        .innerJoin(tenants, eq(tenants.id, actividadesGrupales.tenantId))
+        .where(eq(actividadesGrupales.id, command.activityId))
+        .limit(1);
+
+      if (row === undefined) {
+        throw new Error("No fue posible consultar la actividad actualizada.");
+      }
+
+      return {
+        ...row,
+        involvedEmployeesCount: command.employeeIds.length,
+      };
+    });
+  }
+
+  async delete(command: DeleteActividadGrupalRecordCommand): Promise<ActividadGrupalSupportFileRecord[]> {
+    return await this.database.db.transaction(async (tx) => {
+      const supportFiles = await tx
+        .select({
+          id: actividadGrupalDiligenciamientoFiles.id,
+          activityId: actividadGrupalDiligenciamientoFiles.activityId,
+          kind: actividadGrupalDiligenciamientoFiles.kind,
+          originalName: actividadGrupalDiligenciamientoFiles.originalName,
+          mimeType: actividadGrupalDiligenciamientoFiles.mimeType,
+          sizeBytes: actividadGrupalDiligenciamientoFiles.sizeBytes,
+          relativePath: actividadGrupalDiligenciamientoFiles.relativePath,
+          createdAt: actividadGrupalDiligenciamientoFiles.createdAt,
+        })
+        .from(actividadGrupalDiligenciamientoFiles)
+        .where(eq(actividadGrupalDiligenciamientoFiles.activityId, command.activityId));
+
+      const [activity] = await tx
+        .select({
+          id: actividadesGrupales.id,
+          tenantId: actividadesGrupales.tenantId,
+          actaNumber: actividadesGrupales.actaNumber,
+          activityName: actividadesGrupales.activityName,
+        })
+        .from(actividadesGrupales)
+        .where(eq(actividadesGrupales.id, command.activityId))
+        .limit(1);
+
+      if (activity === undefined) {
+        throw new Error("No fue posible eliminar la actividad grupal.");
+      }
+
+      await tx.insert(auditLogs).values({
+        actorUserId: command.actorUserId,
+        action: "actividades-grupales.deleted",
+        targetTenantId: activity.tenantId,
+        summary: `Actividad grupal eliminada #${activity.actaNumber}: ${activity.activityName}`,
+        metadata: {
+          activityId: command.activityId,
+          actaNumber: activity.actaNumber,
+        },
+      });
+
+      await tx.delete(actividadesGrupales).where(eq(actividadesGrupales.id, command.activityId));
+
+      return supportFiles;
     });
   }
 
@@ -501,6 +619,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       id: actividadesGrupales.id,
       tenantId: actividadesGrupales.tenantId,
       tenantName: tenants.name,
+      createdByUserId: actividadesGrupales.createdByUserId,
       actaNumber: actividadesGrupales.actaNumber,
       activityName: actividadesGrupales.activityName,
       activityType: actividadesGrupales.activityType,

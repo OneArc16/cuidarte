@@ -38,6 +38,23 @@ export const adultoMayorDocumentType = pgEnum("adulto_mayor_document_type", [
   "other",
 ]);
 export const adultoMayorSex = pgEnum("adulto_mayor_sex", ["female", "male", "other"]);
+export const adultoMayorImportStatus = pgEnum("adulto_mayor_import_status", [
+  "ready",
+  "validated_with_errors",
+  "committing",
+  "completed",
+  "failed",
+  "expired",
+]);
+export const adultoMayorImportRowStatus = pgEnum("adulto_mayor_import_row_status", [
+  "ready",
+  "invalid",
+  "existing",
+]);
+export const adultoMayorImportIssueSeverity = pgEnum("adulto_mayor_import_issue_severity", [
+  "error",
+  "warning",
+]);
 export const actividadGrupalType = pgEnum("actividad_grupal_type", [
   "centro_vida",
   "actividad_campo",
@@ -450,6 +467,87 @@ export const adultosMayores = pgTable(
   ],
 );
 
+export const adultoMayorImportBatches = pgTable(
+  "adulto_mayor_import_batches",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    requestedByUserId: uuid("requested_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    originalFilename: varchar("original_filename", { length: 260 }).notNull(),
+    fileChecksumSha256: varchar("file_checksum_sha256", { length: 64 }).notNull(),
+    templateVersion: integer("template_version").notNull(),
+    status: adultoMayorImportStatus("status").notNull(),
+    totalRows: integer("total_rows").notNull().default(0),
+    readyRows: integer("ready_rows").notNull().default(0),
+    invalidRows: integer("invalid_rows").notNull().default(0),
+    warningRows: integer("warning_rows").notNull().default(0),
+    existingRows: integer("existing_rows").notNull().default(0),
+    createdRows: integer("created_rows").notNull().default(0),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    failureCode: varchar("failure_code", { length: 80 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("adulto_mayor_import_batches_tenant_created_at_idx").on(table.tenantId, table.createdAt),
+    index("adulto_mayor_import_batches_requested_by_user_idx").on(table.requestedByUserId, table.createdAt),
+    index("adulto_mayor_import_batches_status_expires_at_idx").on(table.status, table.expiresAt),
+    index("adulto_mayor_import_batches_checksum_idx").on(table.fileChecksumSha256),
+    check("adulto_mayor_import_batches_total_rows_non_negative", sql`${table.totalRows} >= 0`),
+    check("adulto_mayor_import_batches_ready_rows_non_negative", sql`${table.readyRows} >= 0`),
+    check("adulto_mayor_import_batches_invalid_rows_non_negative", sql`${table.invalidRows} >= 0`),
+    check("adulto_mayor_import_batches_warning_rows_non_negative", sql`${table.warningRows} >= 0`),
+    check("adulto_mayor_import_batches_existing_rows_non_negative", sql`${table.existingRows} >= 0`),
+    check("adulto_mayor_import_batches_created_rows_non_negative", sql`${table.createdRows} >= 0`),
+    check("adulto_mayor_import_batches_template_version_positive", sql`${table.templateVersion} > 0`),
+  ],
+);
+
+export const adultoMayorImportRows = pgTable(
+  "adulto_mayor_import_rows",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    importBatchId: uuid("import_batch_id")
+      .notNull()
+      .references(() => adultoMayorImportBatches.id, { onDelete: "cascade" }),
+    rowNumber: integer("row_number").notNull(),
+    status: adultoMayorImportRowStatus("status").notNull(),
+    normalizedPayload: jsonb("normalized_payload").$type<Record<string, unknown>>(),
+    issues: jsonb("issues")
+      .$type<
+        Array<{
+          rowNumber: number;
+          column: string;
+          code: string;
+          severity: "error" | "warning";
+          message: string;
+          receivedValue: string | null;
+        }>
+      >()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    existingAdultoId: uuid("existing_adulto_id").references(() => adultosMayores.id, {
+      onDelete: "restrict",
+    }),
+    createdAdultoId: uuid("created_adulto_id").references(() => adultosMayores.id, {
+      onDelete: "restrict",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("adulto_mayor_import_rows_batch_row_unique").on(table.importBatchId, table.rowNumber),
+    index("adulto_mayor_import_rows_batch_status_idx").on(table.importBatchId, table.status),
+    index("adulto_mayor_import_rows_existing_adulto_idx").on(table.existingAdultoId),
+    index("adulto_mayor_import_rows_created_adulto_idx").on(table.createdAdultoId),
+    check("adulto_mayor_import_rows_row_number_positive", sql`${table.rowNumber} > 0`),
+  ],
+);
+
 export const actividadGrupalActaCounters = pgTable(
   "actividad_grupal_acta_counters",
   {
@@ -469,7 +567,7 @@ export const actividadesGrupales = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenants.id, { onDelete: "restrict" }),
-    actaNumber: integer("acta_number").notNull(),
+    actaNumber: varchar("acta_number", { length: 40 }).notNull(),
     activityName: varchar("activity_name", { length: 160 }).notNull(),
     activityType: actividadGrupalType("activity_type").notNull(),
     activityDate: date("activity_date", { mode: "string" }).notNull(),

@@ -1,4 +1,5 @@
 import {
+  type UpdateActividadGrupalRequest,
   type ActividadGrupalType,
   type CreateActividadGrupalRequest,
   type SaveActividadGrupalDiligenciamiento,
@@ -14,6 +15,11 @@ type SaveActividadGrupalDiligenciamientoMutationRequest = {
   newPdf: File | null;
 };
 
+type UpdateActividadGrupalMutationRequest = {
+  activityId: string;
+  payload: UpdateActividadGrupalRequest;
+};
+
 export const actividadesGrupalesQueryKeys = {
   list: (params: {
     search: string;
@@ -26,6 +32,7 @@ export const actividadesGrupalesQueryKeys = {
   tenantOptions: () => ["actividades-grupales", "tenant-options"] as const,
   formOptions: (tenantId: string | null) =>
     ["actividades-grupales", "form-options", tenantId] as const,
+  editDetail: (activityId: string) => ["actividades-grupales", activityId, "edit"] as const,
 };
 
 export function useActividadesGrupalesQuery(params: {
@@ -72,6 +79,14 @@ export function useActividadGrupalDiligenciamientoQuery(activityId: string) {
   });
 }
 
+export function useActividadGrupalEditQuery(activityId: string) {
+  return useQuery({
+    queryKey: actividadesGrupalesQueryKeys.editDetail(activityId),
+    queryFn: () => actividadesGrupalesApi.getActividadGrupalForEdit(activityId),
+    retry: false,
+  });
+}
+
 export function useActividadGrupalIntegranteOptionsQuery(
   activityId: string,
   search: string,
@@ -93,6 +108,43 @@ export function useCreateActividadGrupalMutation() {
     mutationFn: (request: CreateActividadGrupalRequest) =>
       actividadesGrupalesApi.createActividadGrupal(request),
     onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] });
+    },
+  });
+}
+
+export function useUpdateActividadGrupalMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: UpdateActividadGrupalMutationRequest) =>
+      actividadesGrupalesApi.updateActividadGrupal(request.activityId, request.payload),
+    onSuccess: async (_, request) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] }),
+        queryClient.invalidateQueries({
+          queryKey: actividadesGrupalesQueryKeys.editDetail(request.activityId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: actividadesGrupalesQueryKeys.detail(request.activityId),
+        }),
+      ]);
+    },
+  });
+}
+
+export function useDeleteActividadGrupalMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (activityId: string) => actividadesGrupalesApi.deleteActividadGrupal(activityId),
+    onSuccess: async (_, activityId) => {
+      queryClient.removeQueries({
+        queryKey: actividadesGrupalesQueryKeys.editDetail(activityId),
+      });
+      queryClient.removeQueries({
+        queryKey: actividadesGrupalesQueryKeys.detail(activityId),
+      });
       await queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] });
     },
   });

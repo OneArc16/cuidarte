@@ -75,12 +75,9 @@ export function AdultoMayorEditPage({ adultoMayorId, navigate }: AdultoMayorEdit
         isPending={updateMutation.isPending}
         error={resolveAdultosMayoresApiError(updateMutation.error)}
         onCancel={() => navigate(ADULTOS_MAYORES_PATH)}
-        onSubmit={(values) => {
-          updateMutation.mutate(values, {
-            onSuccess: () => {
-              toast.success("Cambios guardados.");
-            },
-          });
+        onSubmit={async (values) => {
+          await updateMutation.mutateAsync(values);
+          toast.success("Cambios guardados.");
         }}
       />
     </section>

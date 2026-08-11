@@ -63,6 +63,7 @@ export type ActividadGrupalSupportFileRecord = {
 export type CreateActividadGrupalRecordCommand = {
   tenantId: string;
   actorUserId: string;
+  actaNumber: string;
   activityName: string;
   activityType: ActividadGrupalType;
   activityDate: string;
@@ -70,6 +71,24 @@ export type CreateActividadGrupalRecordCommand = {
   endTime: string;
   organizer: ActividadGrupalOrganizer;
   employeeIds: string[];
+};
+
+export type UpdateActividadGrupalRecordCommand = {
+  activityId: string;
+  actorUserId: string;
+  actaNumber: string;
+  activityName: string;
+  activityType: ActividadGrupalType;
+  activityDate: string;
+  startTime: string;
+  endTime: string;
+  organizer: ActividadGrupalOrganizer;
+  employeeIds: string[];
+};
+
+export type DeleteActividadGrupalRecordCommand = {
+  activityId: string;
+  actorUserId: string;
 };
 
 export type PersistActividadGrupalSupportFile = {
@@ -102,7 +121,8 @@ export type ActividadGrupalRecord = {
   id: string;
   tenantId: string;
   tenantName: string;
-  actaNumber: number;
+  createdByUserId: string;
+  actaNumber: string;
   activityName: string;
   activityType: ActividadGrupalType;
   activityDate: string;

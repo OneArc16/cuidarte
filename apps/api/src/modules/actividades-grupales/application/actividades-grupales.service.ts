@@ -1,4 +1,5 @@
 import {
+  type ActividadGrupalEditDetail,
   type ActividadGrupalDiligenciamientoDetail,
   type ActividadGrupalEmpleadoOption,
   type ActividadGrupalIntegranteOption,
@@ -8,9 +9,11 @@ import {
   type ActividadGrupalResponsibleDepartment,
   type ActividadGrupalSupportFile,
   type ActividadGrupalTenantOption,
+  type UpdateActividadGrupalRequest,
   type AuthUser,
   type CreateActividadGrupalRequest,
   type SaveActividadGrupalDiligenciamiento,
+  actividadGrupalEditDetailSchema,
   actividadGrupalDiligenciamientoDetailSchema,
   actividadGrupalEmpleadoOptionSchema,
   actividadGrupalIntegranteOptionSchema,
@@ -86,7 +89,7 @@ export class ActividadesGrupalesService {
       scope,
     });
 
-    return records.map((record) => this.toListItem(record));
+    return records.map((record) => this.toListItem(record, actor));
   }
 
   async listTenantOptions(actor: AuthUser): Promise<ActividadGrupalTenantOption[]> {
@@ -140,6 +143,7 @@ export class ActividadesGrupalesService {
     const record = await this.actividadesGrupalesRepository.create({
       tenantId,
       actorUserId: actor.id,
+      actaNumber: command.actaNumber,
       activityName: command.activityName,
       activityType: command.activityType,
       activityDate: command.activityDate,
@@ -149,7 +153,68 @@ export class ActividadesGrupalesService {
       employeeIds: command.employeeIds,
     });
 
-    return this.toListItem(record);
+    return this.toListItem(record, actor);
+  }
+
+  async getActividadGrupalForEdit(
+    activityId: string,
+    actor: AuthUser,
+  ): Promise<ActividadGrupalEditDetail> {
+    this.ensureCanManageActivities(actor);
+    const detail = await this.getEditableActivityOrThrow(activityId, actor);
+
+    return actividadGrupalEditDetailSchema.parse({
+      ...this.toListItem(detail.activity, actor),
+      employeeIds: detail.assignedProfessionals.map((professional) => professional.id),
+    });
+  }
+
+  async updateActividadGrupal(
+    activityId: string,
+    command: UpdateActividadGrupalRequest,
+    actor: AuthUser,
+  ): Promise<ActividadGrupalListItem> {
+    this.ensureCanManageActivities(actor);
+    const detail = await this.getEditableActivityOrThrow(activityId, actor);
+    const activeEmpleados = await this.actividadesGrupalesRepository.findActiveEmpleadoOptions(
+      detail.activity.tenantId,
+    );
+    const activeEmpleadoIds = new Set(activeEmpleados.map((empleado) => empleado.id));
+    const hasInvalidEmpleado = command.employeeIds.some(
+      (employeeId) => !activeEmpleadoIds.has(employeeId),
+    );
+
+    if (hasInvalidEmpleado) {
+      throw new BadRequestException(
+        "Selecciona empleados activos del centro para actualizar la actividad.",
+      );
+    }
+
+    const record = await this.actividadesGrupalesRepository.update({
+      activityId,
+      actorUserId: actor.id,
+      actaNumber: command.actaNumber,
+      activityName: command.activityName,
+      activityType: command.activityType,
+      activityDate: command.activityDate,
+      startTime: command.startTime,
+      endTime: command.endTime,
+      organizer: command.organizer,
+      employeeIds: command.employeeIds,
+    });
+
+    return this.toListItem(record, actor);
+  }
+
+  async deleteActividadGrupal(activityId: string, actor: AuthUser): Promise<void> {
+    this.ensureCanManageActivities(actor);
+    await this.getEditableActivityOrThrow(activityId, actor);
+    const removedFiles = await this.actividadesGrupalesRepository.delete({
+      activityId,
+      actorUserId: actor.id,
+    });
+
+    await this.deleteFilesBestEffort(removedFiles);
   }
 
   async getActividadGrupalDiligenciamiento(
@@ -158,7 +223,7 @@ export class ActividadesGrupalesService {
   ): Promise<ActividadGrupalDiligenciamientoDetail> {
     const detail = await this.getPermittedDiligenciamientoOrThrow(activityId, actor);
 
-    return this.toDiligenciamientoDetail(detail);
+    return this.toDiligenciamientoDetail(detail, actor);
   }
 
   async searchIntegranteOptions(
@@ -217,7 +282,7 @@ export class ActividadesGrupalesService {
 
       await this.deleteFilesBestEffort(saved.removedFiles);
 
-      return this.toDiligenciamientoDetail(saved.detail);
+      return this.toDiligenciamientoDetail(saved.detail, actor);
     } catch (error) {
       await this.deleteFilesBestEffort(
         storedFiles.map((file, index) => ({
@@ -277,6 +342,22 @@ export class ActividadesGrupalesService {
     return detail;
   }
 
+  private async getEditableActivityOrThrow(
+    activityId: string,
+    actor: AuthUser,
+  ): Promise<ActividadGrupalDiligenciamientoDetailRecord> {
+    const scope = this.resolveScopeOrThrow(actor);
+    const detail = await this.actividadesGrupalesRepository.findById({ activityId, scope });
+
+    if (detail === null) {
+      throw new NotFoundException("La actividad grupal no fue encontrada.");
+    }
+
+    this.assertCanEditActivity(detail.activity, actor);
+
+    return detail;
+  }
+
   private assertCanViewDiligenciamiento(
     detail: ActividadGrupalDiligenciamientoDetailRecord,
     actor: AuthUser,
@@ -300,6 +381,25 @@ export class ActividadesGrupalesService {
     if (!isAssignedProfessional) {
       throw new ForbiddenException("No tienes permisos para diligenciar esta sesion.");
     }
+  }
+
+  private assertCanEditActivity(activity: ActividadGrupalRecord, actor: AuthUser): void {
+    if (actor.role === "super_admin") {
+      return;
+    }
+
+    if (activity.createdByUserId === actor.id) {
+      return;
+    }
+
+    if (
+      (actor.role === "admin" || actor.role === "director") &&
+      actor.tenantId === activity.tenantId
+    ) {
+      return;
+    }
+
+    throw new ForbiddenException("No tienes permisos para editar o eliminar esta actividad.");
   }
 
   private ensureCanManageActivities(actor: Pick<AuthUser, "role">) {
@@ -458,7 +558,7 @@ export class ActividadesGrupalesService {
     return tenantId;
   }
 
-  private toListItem(record: ActividadGrupalRecord): ActividadGrupalListItem {
+  private toListItem(record: ActividadGrupalRecord, actor: AuthUser): ActividadGrupalListItem {
     return actividadGrupalListItemSchema.parse({
       id: record.id,
       tenantId: record.tenantId,
@@ -471,6 +571,8 @@ export class ActividadesGrupalesService {
       endTime: record.endTime,
       organizer: record.organizer,
       involvedEmployeesCount: record.involvedEmployeesCount,
+      canEdit: this.canEditActivity(record, actor),
+      canDelete: this.canEditActivity(record, actor),
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
     });
@@ -478,9 +580,10 @@ export class ActividadesGrupalesService {
 
   private toDiligenciamientoDetail(
     detail: ActividadGrupalDiligenciamientoDetailRecord,
+    actor: AuthUser,
   ): ActividadGrupalDiligenciamientoDetail {
     return actividadGrupalDiligenciamientoDetailSchema.parse({
-      ...this.toListItem(detail.activity),
+      ...this.toListItem(detail.activity, actor),
       assignedProfessionals: detail.assignedProfessionals.map((professional) =>
         actividadGrupalEmpleadoOptionSchema.parse(professional),
       ),
@@ -502,6 +605,21 @@ export class ActividadesGrupalesService {
           ? null
           : detail.diligenciamientoUpdatedAt.toISOString(),
     });
+  }
+
+  private canEditActivity(activity: ActividadGrupalRecord, actor: AuthUser): boolean {
+    if (actor.role === "super_admin") {
+      return true;
+    }
+
+    if (activity.createdByUserId === actor.id) {
+      return true;
+    }
+
+    return (
+      (actor.role === "admin" || actor.role === "director") &&
+      actor.tenantId === activity.tenantId
+    );
   }
 
   private toSupportFile(file: ActividadGrupalSupportFileRecord): ActividadGrupalSupportFile {

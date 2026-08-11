@@ -7,9 +7,13 @@ import {
   ADULTOS_MAYORES_NEW_PATH,
   ADULTOS_MAYORES_PATH,
   getAdultoMayorEditIdFromPath,
+  isAdultosMayoresImportPath,
   isAdultosMayoresPath,
 } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
-import { canManageAdultosMayores } from "@/features/adultos-mayores/lib/adultos-mayores-permissions";
+import {
+  canImportAdultosMayores,
+  canManageAdultosMayores,
+} from "@/features/adultos-mayores/lib/adultos-mayores-permissions";
 import {
   canManageAlimentacion,
   canOpenAlimentacion,
@@ -118,6 +122,16 @@ export function App() {
     }
 
     if (isAdultosMayoresPath(path)) {
+      if (isAdultosMayoresImportPath(path)) {
+        if (!canImportAdultosMayores(user)) {
+          navigate(HOME_PATH, { replace: true });
+          return;
+        }
+      } else if (user.role !== "super_admin" && user.tenantId === null) {
+        navigate(HOME_PATH, { replace: true });
+        return;
+      }
+
       const isAdultosWritePath =
         path === ADULTOS_MAYORES_NEW_PATH ||
         getAdultoMayorEditIdFromPath(path) !== null ||
@@ -148,7 +162,9 @@ export function App() {
         : isBackofficePath(path)
           ? "BackOffice | CuidarTe"
           : isAdultosMayoresPath(path)
-            ? "Adultos mayores | CuidarTe"
+            ? isAdultosMayoresImportPath(path)
+              ? "Importar adultos mayores | CuidarTe"
+              : "Adultos mayores | CuidarTe"
             : isAlimentacionPath(path)
               ? "Registro de alimentacion | CuidarTe"
               : isActividadesGrupalesPath(path)

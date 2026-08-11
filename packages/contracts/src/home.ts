@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const homeDashboardShortcutModuleIdValues = [
   "adultos-mayores",
+  "importacion-adultos-mayores",
   "sesiones-grupales",
   "registro-alimentacion",
   "gestion-empleados",

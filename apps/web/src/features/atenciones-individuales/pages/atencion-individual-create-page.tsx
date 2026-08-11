@@ -82,13 +82,11 @@ export function AtencionIndividualCreatePage({
             : resolveAtencionIndividualApiError(createMutation.error)
         }
         onCancel={() => navigate(historyPath)}
-        onSubmit={(values) => {
-          createMutation.mutate(values, {
-            onSuccess: (detail) => {
-              navigate(buildAtencionIndividualDetailPath(detail.adultoMayorId, detail.id), {
-                replace: true,
-              });
-            },
+        onSubmit={async (values) => {
+          const detail = await createMutation.mutateAsync(values);
+
+          navigate(buildAtencionIndividualDetailPath(detail.adultoMayorId, detail.id), {
+            replace: true,
           });
         }}
       />

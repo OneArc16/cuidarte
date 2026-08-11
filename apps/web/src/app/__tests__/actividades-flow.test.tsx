@@ -18,6 +18,7 @@ import { mockActividadDiligenciamiento } from "../../test/helpers/msw-domain.hel
 
 type ActividadCreatePayload = {
   tenantId: string | null;
+  actaNumber: string;
   activityName: string;
   activityType: string;
   activityDate: string;
@@ -31,7 +32,7 @@ type ActividadListItem = {
   id: string;
   tenantId: string;
   tenantName: string;
-  actaNumber: number;
+  actaNumber: string;
   activityName: string;
   activityType: string;
   activityDate: string;
@@ -39,6 +40,8 @@ type ActividadListItem = {
   endTime: string;
   organizer: string;
   involvedEmployeesCount: number;
+  canEdit: boolean;
+  canDelete: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -233,7 +236,7 @@ describe("App actividades flow", () => {
           {
             ...actividadGrupalFixture,
             id: "c6027793-39d5-4ff7-a531-65c0fd6ea24b",
-            actaNumber: 5,
+            actaNumber: "0005",
             activityName: "Actividad creada desde test",
             activityType: "salud_preventiva",
             activityDate: "2026-04-24",
@@ -268,6 +271,7 @@ describe("App actividades flow", () => {
     expect(await screen.findByText("Actividad creada desde test")).toBeInTheDocument();
     expect(createPayload).toMatchObject({
       tenantId: null,
+      actaNumber: "0005",
       activityName: "Actividad creada desde test",
       activityType: "salud_preventiva",
       activityDate: "2026-04-24",

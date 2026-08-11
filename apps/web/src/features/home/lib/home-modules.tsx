@@ -7,6 +7,7 @@ import {
   BriefcaseBusiness,
   CalendarPlus,
   Home,
+  Upload,
   type LucideIcon,
   UserRoundCog,
   UsersRound,
@@ -15,6 +16,7 @@ import {
 
 import { HOME_PATH } from "@/app/routes/paths";
 import { ADULTOS_MAYORES_PATH } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
+import { ADULTOS_MAYORES_IMPORT_PATH } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
 import { REGISTRO_ALIMENTACION_PATH } from "@/features/alimentacion/lib/alimentacion-paths";
 import { CREACION_ACTIVIDADES_PATH } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
 import { BACKOFFICE_PATH } from "@/features/backoffice/lib/backoffice-paths";
@@ -49,6 +51,14 @@ export const HOME_MODULES = [
     icon: UsersRound,
     path: ADULTOS_MAYORES_PATH,
     summaryLabel: "Adultos registrados",
+  },
+  {
+    id: "importacion-adultos-mayores",
+    label: "Importar adultos mayores",
+    icon: Upload,
+    path: ADULTOS_MAYORES_IMPORT_PATH,
+    roles: ["super_admin", "admin"],
+    summaryLabel: "Importaciones completadas",
   },
   {
     id: "sesiones-grupales",

@@ -28,7 +28,7 @@ describe("ActividadesGrupalesController", () => {
             id: "bd962778-117e-4275-aa07-1ea2f7a1d6f8",
             tenantId: currentUser.tenantId,
             tenantName: "Centro de Vida Demo",
-            actaNumber: 3,
+            actaNumber: "0003",
             activityName: "Encuentro de bienestar",
             activityType: "centro_vida",
             activityDate: "2026-04-22",
@@ -36,6 +36,8 @@ describe("ActividadesGrupalesController", () => {
             endTime: "10:00",
             organizer: "director",
             involvedEmployeesCount: 2,
+            canEdit: true,
+            canDelete: true,
             createdAt: "2026-04-22T12:00:00.000Z",
             updatedAt: "2026-04-22T12:00:00.000Z",
           },
@@ -70,7 +72,7 @@ describe("ActividadesGrupalesController", () => {
           id: "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
           tenantId: currentUser.tenantId,
           tenantName: "Centro de Vida Demo",
-          actaNumber: 4,
+          actaNumber: "0004",
           activityName: "Jornada psicomotriz",
           activityType: "fisioterapia",
           activityDate: "2026-04-23",
@@ -78,6 +80,8 @@ describe("ActividadesGrupalesController", () => {
           endTime: "10:00",
           organizer: "fisioterapeuta",
           involvedEmployeesCount: 2,
+          canEdit: true,
+          canDelete: true,
           createdAt: "2026-04-23T12:00:00.000Z",
           updatedAt: "2026-04-23T12:00:00.000Z",
         };
@@ -88,6 +92,7 @@ describe("ActividadesGrupalesController", () => {
     const result = await controller.createActividadGrupal(
       {
         tenantId: null,
+        actaNumber: "0004",
         activityName: "Jornada psicomotriz",
         activityType: "fisioterapia",
         activityDate: "2026-04-23",
@@ -103,7 +108,7 @@ describe("ActividadesGrupalesController", () => {
     );
 
     assert.equal(receivedTenantId, null);
-    assert.equal(result.actaNumber, 4);
+    assert.equal(result.actaNumber, "0004");
     assert.equal(result.involvedEmployeesCount, 2);
   });
 
@@ -119,7 +124,7 @@ describe("ActividadesGrupalesController", () => {
           id: "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
           tenantId: currentUser.tenantId,
           tenantName: "Centro de Vida Demo",
-          actaNumber: 4,
+          actaNumber: "0004",
           activityName: "Jornada psicomotriz",
           activityType: "fisioterapia",
           activityDate: "2026-04-23",
@@ -127,6 +132,8 @@ describe("ActividadesGrupalesController", () => {
           endTime: "10:00",
           organizer: "fisioterapeuta",
           involvedEmployeesCount: 2,
+          canEdit: true,
+          canDelete: true,
           assignedProfessionals: [
             {
               id: currentUser.id,

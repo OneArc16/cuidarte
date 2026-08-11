@@ -63,7 +63,8 @@ const records: ActividadGrupalRecord[] = [
     id: "bd962778-117e-4275-aa07-1ea2f7a1d6f8",
     tenantId,
     tenantName: "Centro de Vida Demo",
-    actaNumber: 3,
+    createdByUserId: medicoUserId,
+    actaNumber: "0003",
     activityName: "Encuentro de bienestar",
     activityType: "centro_vida",
     activityDate: "2026-04-22",
@@ -78,7 +79,8 @@ const records: ActividadGrupalRecord[] = [
     id: "79124572-44a5-45be-b5d6-7069cb4fca29",
     tenantId: otherTenantId,
     tenantName: "Centro Norte",
-    actaNumber: 5,
+    createdByUserId: directorUserId,
+    actaNumber: "0005",
     activityName: "Actividad externa",
     activityType: "actividad_campo",
     activityDate: "2026-04-21",
@@ -197,6 +199,7 @@ describe("ActividadesGrupalesService", () => {
     const result = await service.createActividadGrupal(
       {
         tenantId: null,
+        actaNumber: "0004",
         activityName: "Jornada psicomotriz",
         activityType: "fisioterapia",
         activityDate: "2026-04-23",
@@ -209,8 +212,9 @@ describe("ActividadesGrupalesService", () => {
     );
 
     assert.equal(result.tenantId, tenantId);
-    assert.equal(result.actaNumber, 4);
+    assert.equal(result.actaNumber, "0004");
     assert.equal(repository.created[0]?.tenantId, tenantId);
+    assert.equal(repository.created[0]?.actaNumber, "0004");
     assert.deepEqual(repository.created[0]?.employeeIds, [medicoUserId, enfermeriaUserId]);
   });
 
@@ -223,6 +227,7 @@ describe("ActividadesGrupalesService", () => {
         service.createActividadGrupal(
           {
             tenantId: null,
+            actaNumber: "0004-A",
             activityName: "Jornada nutricional",
             activityType: "nutricion",
             activityDate: "2026-04-23",
@@ -315,6 +320,7 @@ describe("ActividadesGrupalesService", () => {
         service.createActividadGrupal(
           {
             tenantId: null,
+            actaNumber: "ACTA-LECTURA-01",
             activityName: "Actividad en lectura",
             activityType: "centro_vida",
             activityDate: "2026-04-23",
@@ -353,11 +359,11 @@ describe("ActividadesGrupalesService", () => {
 });
 
 function createRepository(): ActividadesGrupalesRepository & {
-  created: { tenantId: string; employeeIds: string[] }[];
+  created: { tenantId: string; actaNumber: string; employeeIds: string[] }[];
   queries: FindActividadesGrupalesQuery[];
 } {
   const queries: FindActividadesGrupalesQuery[] = [];
-  const created: { tenantId: string; employeeIds: string[] }[] = [];
+  const created: { tenantId: string; actaNumber: string; employeeIds: string[] }[] = [];
   const employeesByTenant = new Map<string, ActividadGrupalEmpleadoOptionRecord[]>([
     [
       tenantId,
@@ -458,6 +464,7 @@ function createRepository(): ActividadesGrupalesRepository & {
     async create(command) {
       created.push({
         tenantId: command.tenantId,
+        actaNumber: command.actaNumber,
         employeeIds: command.employeeIds,
       });
 
@@ -465,7 +472,8 @@ function createRepository(): ActividadesGrupalesRepository & {
         id: "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
         tenantId: command.tenantId,
         tenantName: command.tenantId === tenantId ? "Centro de Vida Demo" : "Centro Norte",
-        actaNumber: 4,
+        createdByUserId: command.actorUserId,
+        actaNumber: command.actaNumber,
         activityName: command.activityName,
         activityType: command.activityType,
         activityDate: command.activityDate,
@@ -476,6 +484,35 @@ function createRepository(): ActividadesGrupalesRepository & {
         createdAt: new Date("2026-04-23T12:00:00.000Z"),
         updatedAt: new Date("2026-04-23T12:00:00.000Z"),
       };
+    },
+    async update(command) {
+      const record = records.find((item) => item.id === command.activityId);
+
+      if (record === undefined) {
+        throw new Error("Activity not found in test repository.");
+      }
+
+      return {
+        ...record,
+        actaNumber: command.actaNumber,
+        activityName: command.activityName,
+        activityType: command.activityType,
+        activityDate: command.activityDate,
+        startTime: command.startTime,
+        endTime: command.endTime,
+        organizer: command.organizer,
+        involvedEmployeesCount: command.employeeIds.length,
+        updatedAt: new Date("2026-04-23T12:00:00.000Z"),
+      };
+    },
+    async delete(command) {
+      const record = records.find((item) => item.id === command.activityId);
+
+      if (record === undefined) {
+        return [];
+      }
+
+      return [];
     },
     async saveDiligenciamiento(command) {
       const record = records.find((item) => item.id === command.activityId);

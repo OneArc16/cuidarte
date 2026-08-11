@@ -19,7 +19,9 @@ export function login(request: LoginRequest): Promise<AuthSession> {
 }
 
 export function getMe(): Promise<MeResponse> {
-  return fetchJson(`${getApiBaseUrl()}/auth/me`, meResponseSchema);
+  return fetchJson(`${getApiBaseUrl()}/auth/me`, meResponseSchema, {
+    timeoutMs: 4000,
+  });
 }
 
 export function logout(): Promise<LogoutResponse> {

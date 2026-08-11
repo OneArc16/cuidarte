@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { type UserRole } from "./auth.js";
+
 export const adultoMayorDocumentTypeSchema = z.enum(["cc", "ce", "passport", "other"]);
 export const adultoMayorSexSchema = z.enum(["female", "male", "other"]);
 export const adultoMayorZoneSchema = z.enum(["urban", "rural"]);
@@ -100,6 +102,129 @@ const nullableSearchSchema = z
     return trimmedValue === "" ? null : trimmedValue;
   })
   .pipe(z.string().max(120).nullable());
+
+export const adultosMayoresImportAccessRoleValues = ["super_admin", "admin"] as const satisfies
+  readonly UserRole[];
+
+export const adultoMayorImportStatusValues = [
+  "ready",
+  "validated_with_errors",
+  "committing",
+  "completed",
+  "failed",
+  "expired",
+] as const;
+
+export const adultoMayorImportRowStatusValues = ["ready", "invalid", "existing"] as const;
+
+export const adultoMayorImportIssueSeverityValues = ["error", "warning"] as const;
+
+export const adultoMayorImportIssueCodeValues = [
+  "required",
+  "invalid_format",
+  "invalid_enum",
+  "max_length",
+  "future_date",
+  "unknown_department",
+  "unknown_municipality",
+  "municipality_department_mismatch",
+  "unknown_eps",
+  "inactive_eps",
+  "duplicate_in_file",
+  "already_exists",
+  "under_expected_age",
+  "formula_not_allowed",
+] as const;
+
+export const adultoMayorImportTemplateQuerySchema = z.object({
+  tenantId: z.uuid().nullable().optional().default(null),
+});
+
+export const adultoMayorImportValidateQuerySchema = z.object({
+  tenantId: z.uuid().nullable().optional().default(null),
+});
+
+export const adultoMayorImportStatusSchema = z.enum(adultoMayorImportStatusValues);
+export const adultoMayorImportRowStatusSchema = z.enum(adultoMayorImportRowStatusValues);
+export const adultoMayorImportIssueSeveritySchema = z.enum(adultoMayorImportIssueSeverityValues);
+export const adultoMayorImportIssueCodeSchema = z.enum(adultoMayorImportIssueCodeValues);
+
+export const adultoMayorImportTenantSchema = z.object({
+  id: z.uuid(),
+  name: z.string().min(1),
+});
+
+export const adultoMayorImportIssueSchema = z.object({
+  rowNumber: z.number().int().positive(),
+  column: z.string().min(1).max(80),
+  code: adultoMayorImportIssueCodeSchema,
+  severity: adultoMayorImportIssueSeveritySchema,
+  message: z.string().min(1),
+  receivedValue: z.string().max(400).nullable(),
+});
+
+export const adultoMayorImportSummarySchema = z.object({
+  totalRows: z.number().int().min(0),
+  readyRows: z.number().int().min(0),
+  invalidRows: z.number().int().min(0),
+  warningRows: z.number().int().min(0),
+  existingRows: z.number().int().min(0),
+  createdRows: z.number().int().min(0),
+});
+
+export const adultoMayorImportRowSchema = z.object({
+  id: z.uuid(),
+  rowNumber: z.number().int().positive(),
+  status: adultoMayorImportRowStatusSchema,
+  normalizedPayload: z.record(z.string(), z.unknown()).nullable(),
+  issues: z.array(adultoMayorImportIssueSchema),
+  existingAdultoId: z.uuid().nullable(),
+  createdAdultoId: z.uuid().nullable(),
+  createdAt: z.string().min(1),
+});
+
+export const adultoMayorImportDetailSchema = z.object({
+  importId: z.uuid(),
+  status: adultoMayorImportStatusSchema,
+  tenant: adultoMayorImportTenantSchema,
+  requestedByUserId: z.uuid(),
+  originalFilename: z.string().min(1).max(260),
+  fileChecksumSha256: z.string().length(64),
+  templateVersion: z.number().int().positive(),
+  summary: adultoMayorImportSummarySchema,
+  issues: z.array(adultoMayorImportIssueSchema),
+  rows: z.array(adultoMayorImportRowSchema),
+  canConfirm: z.boolean(),
+  expiresAt: z.string().min(1),
+  confirmedAt: z.string().min(1).nullable(),
+  failureCode: z.string().max(80).nullable(),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+});
+
+export const adultoMayorImportValidateResponseSchema = adultoMayorImportDetailSchema;
+
+export const adultoMayorImportConfirmResponseSchema = z.object({
+  importId: z.uuid(),
+  status: z.literal("completed"),
+  createdRows: z.number().int().min(0),
+  existingRows: z.number().int().min(0),
+  completedAt: z.string().min(1),
+});
+
+export const adultoMayorImportHistoryItemSchema = z.object({
+  importId: z.uuid(),
+  status: adultoMayorImportStatusSchema,
+  tenant: adultoMayorImportTenantSchema,
+  requestedByUserId: z.uuid(),
+  originalFilename: z.string().min(1).max(260),
+  summary: adultoMayorImportSummarySchema,
+  canConfirm: z.boolean(),
+  expiresAt: z.string().min(1),
+  confirmedAt: z.string().min(1).nullable(),
+  createdAt: z.string().min(1),
+  updatedAt: z.string().min(1),
+});
 
 export const adultoMayorListQuerySchema = z.object({
   search: nullableSearchSchema.optional().default(null),
@@ -209,12 +334,37 @@ export const adultoMayorTenantOptionsResponseSchema = z.object({
   tenants: z.array(adultoMayorTenantOptionSchema),
 });
 
+export const adultoMayorImportTemplateResponseSchema = z.object({
+  filename: z.string().min(1).max(260),
+});
+
+export const adultoMayorImportHistoryResponseSchema = z.object({
+  imports: z.array(adultoMayorImportHistoryItemSchema),
+});
+
 export type AdultoMayorDocumentType = z.infer<typeof adultoMayorDocumentTypeSchema>;
 export type AdultoMayorSex = z.infer<typeof adultoMayorSexSchema>;
 export type AdultoMayorZone = z.infer<typeof adultoMayorZoneSchema>;
 export type AdultoMayorBloodType = z.infer<typeof adultoMayorBloodTypeSchema>;
 export type AdultoMayorHealthRegime = z.infer<typeof adultoMayorHealthRegimeSchema>;
 export type AdultoMayorTenantOption = z.infer<typeof adultoMayorTenantOptionSchema>;
+export type AdultosMayoresImportAccessRole = (typeof adultosMayoresImportAccessRoleValues)[number];
+export type AdultoMayorImportStatus = z.infer<typeof adultoMayorImportStatusSchema>;
+export type AdultoMayorImportRowStatus = z.infer<typeof adultoMayorImportRowStatusSchema>;
+export type AdultoMayorImportIssueSeverity = z.infer<typeof adultoMayorImportIssueSeveritySchema>;
+export type AdultoMayorImportIssueCode = z.infer<typeof adultoMayorImportIssueCodeSchema>;
+export type AdultoMayorImportTenant = z.infer<typeof adultoMayorImportTenantSchema>;
+export type AdultoMayorImportIssue = z.infer<typeof adultoMayorImportIssueSchema>;
+export type AdultoMayorImportSummary = z.infer<typeof adultoMayorImportSummarySchema>;
+export type AdultoMayorImportRow = z.infer<typeof adultoMayorImportRowSchema>;
+export type AdultoMayorImportDetail = z.infer<typeof adultoMayorImportDetailSchema>;
+export type AdultoMayorImportValidateResponse = z.infer<typeof adultoMayorImportValidateResponseSchema>;
+export type AdultoMayorImportConfirmResponse = z.infer<typeof adultoMayorImportConfirmResponseSchema>;
+export type AdultoMayorImportHistoryItem = z.infer<typeof adultoMayorImportHistoryItemSchema>;
+export type AdultoMayorImportHistoryResponse = z.infer<typeof adultoMayorImportHistoryResponseSchema>;
+export type AdultoMayorImportTemplateResponse = z.infer<typeof adultoMayorImportTemplateResponseSchema>;
+export type AdultoMayorImportTemplateQuery = z.infer<typeof adultoMayorImportTemplateQuerySchema>;
+export type AdultoMayorImportValidateQuery = z.infer<typeof adultoMayorImportValidateQuerySchema>;
 export type AdultoMayorListQuery = z.infer<typeof adultoMayorListQuerySchema>;
 export type AdultoMayorListItem = z.infer<typeof adultoMayorListItemSchema>;
 export type AdultoMayorDetail = z.infer<typeof adultoMayorDetailSchema>;

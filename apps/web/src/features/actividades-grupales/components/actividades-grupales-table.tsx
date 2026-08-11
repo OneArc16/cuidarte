@@ -1,5 +1,5 @@
 import { type ActividadGrupalListItem } from "@cuidarte/contracts";
-import { ClipboardPenLine, FileText } from "lucide-react";
+import { ClipboardPenLine, FileText, PencilLine, Trash2 } from "lucide-react";
 
 import {
   formatActividadGrupalOrganizer,
@@ -12,6 +12,8 @@ type ActividadesGrupalesTableProps = {
   actividadesGrupales: ActividadGrupalListItem[];
   canManageActividadesGrupales: boolean;
   isLoading: boolean;
+  onDelete: (actividad: ActividadGrupalListItem) => void;
+  onEdit: (actividad: ActividadGrupalListItem) => void;
   onOpenDiligenciamiento: (actividad: ActividadGrupalListItem) => void;
   onOpenActaPdf: (actividad: ActividadGrupalListItem) => void;
   showTenantColumn: boolean;
@@ -21,6 +23,8 @@ export function ActividadesGrupalesTable({
   actividadesGrupales,
   canManageActividadesGrupales,
   isLoading,
+  onDelete,
+  onEdit,
   onOpenDiligenciamiento,
   onOpenActaPdf,
   showTenantColumn,
@@ -91,11 +95,17 @@ export function ActividadesGrupalesTable({
                     <strong>{actividad.activityName}</strong>
                   )}
                 </td>
-                <td>{formatActividadGrupalType(actividad.activityType)}</td>
+                <td className="actividades-cell-type">
+                  {formatActividadGrupalType(actividad.activityType)}
+                </td>
                 <td>{actividad.activityDate}</td>
                 <td>{formatActivitySchedule(actividad.startTime, actividad.endTime)}</td>
-                <td>{formatActividadGrupalOrganizer(actividad.organizer)}</td>
-                {showTenantColumn ? <td>{actividad.tenantName}</td> : null}
+                <td className="actividades-cell-organizer">
+                  {formatActividadGrupalOrganizer(actividad.organizer)}
+                </td>
+                {showTenantColumn ? (
+                  <td className="actividades-cell-centro">{actividad.tenantName}</td>
+                ) : null}
                 <td>
                   <div className="actividades-row-actions">
                     {canManageActividadesGrupales ? (
@@ -109,6 +119,17 @@ export function ActividadesGrupalesTable({
                         <ClipboardPenLine aria-hidden="true" />
                       </button>
                     ) : null}
+                    {actividad.canEdit ? (
+                      <button
+                        className="actividades-row-action"
+                        type="button"
+                        aria-label={`Editar actividad ${actividad.activityName}`}
+                        title="Editar actividad"
+                        onClick={() => onEdit(actividad)}
+                      >
+                        <PencilLine aria-hidden="true" />
+                      </button>
+                    ) : null}
                     <button
                       className="actividades-row-action"
                       type="button"
@@ -118,6 +139,17 @@ export function ActividadesGrupalesTable({
                     >
                       <FileText aria-hidden="true" />
                     </button>
+                    {actividad.canDelete ? (
+                      <button
+                        className="actividades-row-action"
+                        type="button"
+                        aria-label={`Eliminar actividad ${actividad.activityName}`}
+                        title="Eliminar actividad"
+                        onClick={() => onDelete(actividad)}
+                      >
+                        <Trash2 aria-hidden="true" />
+                      </button>
+                    ) : null}
                   </div>
                 </td>
               </tr>

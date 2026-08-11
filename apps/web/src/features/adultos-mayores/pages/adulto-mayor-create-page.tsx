@@ -53,13 +53,11 @@ export function AdultoMayorCreatePage({ navigate, user }: AdultoMayorCreatePageP
         isPending={createMutation.isPending}
         error={mutationError ?? queryError}
         onCancel={() => navigate(ADULTOS_MAYORES_PATH)}
-        onSubmit={(values) => {
-          createMutation.mutate(values, {
-            onSuccess: (detail) => {
-              toast.success("Adulto mayor creado.");
-              navigate(buildAdultoMayorEditPath(detail.id));
-            },
-          });
+        onSubmit={async (values) => {
+          const detail = await createMutation.mutateAsync(values);
+
+          toast.success("Adulto mayor creado.");
+          navigate(buildAdultoMayorEditPath(detail.id));
         }}
       />
     </section>

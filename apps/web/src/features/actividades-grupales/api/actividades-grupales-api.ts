@@ -1,5 +1,7 @@
 import {
+  type ActividadGrupalEditDetail,
   type ActividadGrupalDiligenciamientoDetail,
+  type DeleteActividadGrupalResponse,
   type ActividadGrupalFormOptionsResponse,
   type ActividadGrupalIntegranteOptionsResponse,
   type ActividadGrupalListResponse,
@@ -7,12 +9,15 @@ import {
   type ActividadGrupalType,
   type CreateActividadGrupalRequest,
   type SaveActividadGrupalDiligenciamiento,
+  type UpdateActividadGrupalRequest,
+  actividadGrupalEditDetailSchema,
   actividadGrupalDiligenciamientoDetailSchema,
   actividadGrupalFormOptionsResponseSchema,
   actividadGrupalIntegranteOptionsResponseSchema,
   actividadGrupalListItemSchema,
   actividadGrupalListResponseSchema,
   actividadGrupalTenantOptionsResponseSchema,
+  deleteActividadGrupalResponseSchema,
 } from "@cuidarte/contracts";
 
 import { getApiBaseUrl } from "@/shared/api/api-config";
@@ -59,6 +64,39 @@ export function createActividadGrupal(request: CreateActividadGrupalRequest) {
     method: "POST",
     body: request,
   });
+}
+
+export function getActividadGrupalForEdit(activityId: string): Promise<ActividadGrupalEditDetail> {
+  return fetchJson(
+    `${getApiBaseUrl()}/actividades-grupales/${activityId}`,
+    actividadGrupalEditDetailSchema,
+  );
+}
+
+export function updateActividadGrupal(
+  activityId: string,
+  request: UpdateActividadGrupalRequest,
+) {
+  return fetchJson(
+    `${getApiBaseUrl()}/actividades-grupales/${activityId}`,
+    actividadGrupalListItemSchema,
+    {
+      method: "PUT",
+      body: request,
+    },
+  );
+}
+
+export function deleteActividadGrupal(
+  activityId: string,
+): Promise<DeleteActividadGrupalResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/actividades-grupales/${activityId}`,
+    deleteActividadGrupalResponseSchema,
+    {
+      method: "DELETE",
+    },
+  );
 }
 
 export function getActividadGrupalDiligenciamiento(

@@ -2,7 +2,10 @@ import { type AuthUser } from "@cuidarte/contracts";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { AdultosMayoresPage } from "@/features/adultos-mayores/pages/adultos-mayores-page";
-import { isAdultosMayoresPath } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
+import {
+  isAdultosMayoresImportPath,
+  isAdultosMayoresPath,
+} from "@/features/adultos-mayores/lib/adultos-mayores-paths";
 import { AlimentacionPage } from "@/features/alimentacion/pages/alimentacion-page";
 import { isAlimentacionPath } from "@/features/alimentacion/lib/alimentacion-paths";
 import { ActividadesGrupalesPage } from "@/features/actividades-grupales/pages/actividades-grupales-page";
@@ -31,6 +34,8 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
 
   const activeModuleId = isBackofficePath(path)
     ? "backoffice"
+    : isAdultosMayoresImportPath(path)
+      ? "importacion-adultos-mayores"
     : isAdultosMayoresPath(path)
       ? "adultos-mayores"
       : isAlimentacionPath(path)

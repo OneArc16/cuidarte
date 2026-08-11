@@ -9,6 +9,9 @@ import { ActividadGrupalForm } from "../components/actividad-grupal-form";
 import { CREACION_ACTIVIDADES_PATH } from "../lib/actividades-grupales-paths";
 import { resolveActividadesGrupalesApiError } from "../lib/actividades-grupales-formatters";
 import {
+  toCreateActividadGrupalRequest,
+} from "../schemas/actividad-grupal-form.schema";
+import {
   useActividadGrupalFormOptionsQuery,
   useActividadGrupalTenantOptionsQuery,
   useCreateActividadGrupalMutation,
@@ -49,6 +52,7 @@ export function ActividadGrupalCreatePage({ navigate, user }: ActividadGrupalCre
       </div>
 
       <ActividadGrupalForm
+        mode="create"
         error={
           resolveActividadesGrupalesApiError(createMutation.error) ??
           (shouldSelectTenant
@@ -66,7 +70,7 @@ export function ActividadGrupalCreatePage({ navigate, user }: ActividadGrupalCre
         onCancel={() => navigate(CREACION_ACTIVIDADES_PATH)}
         onTenantChange={setSelectedTenantId}
         onSubmit={(values) => {
-          createMutation.mutate(values, {
+          createMutation.mutate(toCreateActividadGrupalRequest(values), {
             onSuccess: () => {
               toast.success("Actividad creada.");
               navigate(CREACION_ACTIVIDADES_PATH);

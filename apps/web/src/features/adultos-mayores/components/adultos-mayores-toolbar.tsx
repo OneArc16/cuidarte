@@ -1,19 +1,23 @@
-import { FileSpreadsheet, FileText, Printer, Search } from "lucide-react";
+import { FileSpreadsheet, FileText, Printer, Search, Upload } from "lucide-react";
 
 type AdultosMayoresToolbarProps = {
+  canImportAdultosMayores: boolean;
   search: string;
   isExporting: boolean;
   onSearchChange: (search: string) => void;
+  onImportAdultosMayores: () => void;
   onExportExcel: () => void;
   onExportPdf: () => void;
   onPrint: () => void;
 };
 
 export function AdultosMayoresToolbar({
+  canImportAdultosMayores,
   isExporting,
   onExportExcel,
   onExportPdf,
   onPrint,
+  onImportAdultosMayores,
   onSearchChange,
   search,
 }: AdultosMayoresToolbarProps) {
@@ -32,6 +36,17 @@ export function AdultosMayoresToolbar({
       </label>
 
       <div className="adultos-export-actions" aria-label="Exportaciones">
+        {canImportAdultosMayores ? (
+          <button
+            className="adultos-export-action"
+            type="button"
+            aria-label="Importar adultos mayores"
+            title="Importar adultos mayores"
+            onClick={onImportAdultosMayores}
+          >
+            <Upload aria-hidden="true" />
+          </button>
+        ) : null}
         <button
           className="adultos-export-action"
           type="button"

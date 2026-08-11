@@ -66,7 +66,8 @@
 }
 
 .actividades-table-wrap {
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid rgb(8 80 65 / 11%);
   border-radius: 8px;
   background: rgb(255 255 255 / 90%);
@@ -75,23 +76,23 @@
 
 .actividades-table {
   width: 100%;
-  min-width: 980px;
+  min-width: 880px;
   border-collapse: collapse;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   line-height: 1.35;
   table-layout: fixed;
 }
 
 .actividades-table--without-tenant .actividades-col-acta {
-  width: 6.5%;
+  width: 7%;
 }
 
 .actividades-table--without-tenant .actividades-col-actividad {
-  width: 37%;
+  width: 34%;
 }
 
 .actividades-table--without-tenant .actividades-col-tipo {
-  width: 17%;
+  width: 16%;
 }
 
 .actividades-table--without-tenant .actividades-col-fecha {
@@ -103,23 +104,23 @@
 }
 
 .actividades-table--without-tenant .actividades-col-organizador {
-  width: 14%;
+  width: 15%;
 }
 
 .actividades-table--without-tenant .actividades-col-acciones {
-  width: 5.5%;
+  width: 8%;
 }
 
 .actividades-table--with-tenant .actividades-col-acta {
-  width: 6%;
+  width: 8%;
 }
 
 .actividades-table--with-tenant .actividades-col-actividad {
-  width: 29%;
+  width: 27.5%;
 }
 
 .actividades-table--with-tenant .actividades-col-tipo {
-  width: 14%;
+  width: 13%;
 }
 
 .actividades-table--with-tenant .actividades-col-fecha {
@@ -127,24 +128,24 @@
 }
 
 .actividades-table--with-tenant .actividades-col-horario {
-  width: 10%;
+  width: 8.5%;
 }
 
 .actividades-table--with-tenant .actividades-col-organizador {
-  width: 12%;
+  width: 10.5%;
 }
 
 .actividades-table--with-tenant .actividades-col-centro {
-  width: 14%;
+  width: 15.5%;
 }
 
 .actividades-table--with-tenant .actividades-col-acciones {
-  width: 6%;
+  width: 9.5%;
 }
 
 .actividades-table th,
 .actividades-table td {
-  padding: 10px 12px;
+  padding: 9px 10px;
   border-bottom: 1px solid rgb(8 80 65 / 10%);
   color: var(--color-ink);
   text-align: left;
@@ -177,6 +178,12 @@
 
 .actividades-cell-activity {
   min-width: 0;
+}
+
+.actividades-cell-type,
+.actividades-cell-organizer,
+.actividades-cell-centro {
+  overflow-wrap: anywhere;
 }
 
 .actividades-activity-trigger {
@@ -219,17 +226,20 @@
 
 .actividades-row-actions {
   display: inline-flex;
-  gap: 6px;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  gap: 4px;
+  white-space: nowrap;
 }
 
 .actividades-row-action {
   display: inline-grid;
-  width: 32px;
-  height: 32px;
-  min-height: 32px;
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
   place-items: center;
   border: 1px solid rgb(8 80 65 / 13%);
-  border-radius: 8px;
+  border-radius: 7px;
   background: white;
   color: var(--color-deep);
   cursor: pointer;
@@ -256,8 +266,8 @@
 }
 
 .actividades-row-action svg {
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
 }
 
 .actividades-floating-action {
@@ -292,6 +302,165 @@
 .actividades-floating-action svg {
   width: 26px;
   height: 26px;
+}
+
+.actividad-delete-dialog-backdrop {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background:
+    radial-gradient(circle at top, rgb(20 91 74 / 16%), transparent 42%),
+    rgb(3 33 40 / 54%);
+  backdrop-filter: blur(8px);
+}
+
+.actividad-delete-dialog {
+  display: grid;
+  width: min(100%, 520px);
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid rgb(214 236 229 / 95%);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 97%), rgb(247 252 249 / 94%)),
+    var(--color-surface);
+  box-shadow:
+    0 24px 58px rgb(0 30 38 / 24%),
+    0 4px 12px rgb(0 30 38 / 10%);
+}
+
+.actividad-delete-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.actividad-delete-dialog__header h2,
+.actividad-delete-dialog__header p {
+  margin: 0;
+}
+
+.actividad-delete-dialog__header h2 {
+  color: var(--color-deep);
+  font-size: 1.14rem;
+  line-height: 1.1;
+}
+
+.actividad-delete-dialog__eyebrow {
+  margin-bottom: 4px !important;
+  color: rgb(190 82 54);
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.actividad-delete-dialog__close-button {
+  background: rgb(248 250 249);
+}
+
+.actividad-delete-dialog__hero {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgb(219 100 67 / 16%);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgb(255 247 244 / 96%), rgb(255 241 237 / 88%)),
+    rgb(255 247 244);
+}
+
+.actividad-delete-dialog__icon {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgb(227 109 74), rgb(198 75 46));
+  color: white;
+  box-shadow: 0 16px 28px rgb(198 75 46 / 24%);
+}
+
+.actividad-delete-dialog__icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  transform: translateY(1px);
+}
+
+.actividad-delete-dialog__hero strong,
+.actividad-delete-dialog__hero span {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.actividad-delete-dialog__hero strong {
+  color: var(--color-deep);
+  font-size: 0.96rem;
+  font-weight: 850;
+}
+
+.actividad-delete-dialog__hero span {
+  margin-top: 4px;
+  color: var(--color-muted);
+  font-size: 0.79rem;
+  font-weight: 700;
+}
+
+.actividad-delete-dialog__message {
+  margin: 0;
+  padding: 12px 14px;
+  border-left: 3px solid rgb(212 105 61);
+  border-radius: 12px;
+  background: rgb(255 247 240);
+  color: rgb(112 60 23);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.actividad-delete-dialog__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.actividad-delete-dialog__action-button {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  font-weight: 850;
+  box-shadow: none;
+}
+
+.actividad-delete-dialog__action-button--danger {
+  background: linear-gradient(135deg, rgb(219 100 67), rgb(190 70 42));
+  box-shadow: 0 16px 26px rgb(190 70 42 / 18%);
+}
+
+.actividad-delete-dialog__action-button--danger:not(:disabled):hover,
+.actividad-delete-dialog__action-button--danger:not(:disabled):focus-visible {
+  background: linear-gradient(135deg, rgb(206 89 58), rgb(176 60 33));
+}
+
+.actividad-delete-dialog__action-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.actividad-delete-dialog__spinner {
+  animation: actividad-delete-dialog-spin 0.9s linear infinite;
 }
 
 .actividades-form-nav {
@@ -1020,6 +1189,31 @@
 }
 
 @media (max-width: 1320px) {
+  .actividades-table {
+    min-width: 820px;
+    font-size: 0.79rem;
+  }
+
+  .actividades-table th,
+  .actividades-table td {
+    padding: 8px 9px;
+  }
+
+  .actividades-row-actions {
+    gap: 4px;
+  }
+
+  .actividades-row-action {
+    width: 28px;
+    height: 28px;
+    min-height: 28px;
+  }
+
+  .actividades-row-action svg {
+    width: 15px;
+    height: 15px;
+  }
+
   .actividad-diligenciamiento-summary {
     grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
   }
@@ -1082,5 +1276,35 @@
 
   .actividad-diligenciamiento-photo-carousel__actions {
     justify-content: space-between;
+  }
+}
+
+@media (max-width: 640px) {
+  .actividad-delete-dialog-backdrop {
+    padding: 10px;
+  }
+
+  .actividad-delete-dialog {
+    width: 100%;
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .actividad-delete-dialog__actions {
+    grid-template-columns: 1fr;
+  }
+
+  .actividad-delete-dialog__action-button {
+    min-height: 44px;
+  }
+}
+
+@keyframes actividad-delete-dialog-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }
