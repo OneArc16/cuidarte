@@ -176,6 +176,20 @@
       "when": 1786295552217,
       "tag": "0024_tenant_active_signers",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1786422644379,
+      "tag": "0025_adulto_mayor_import_batches",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1786422644380,
+      "tag": "0026_actividad_grupal_acta_text",
+      "breakpoints": true
     }
   ]
 }
