@@ -338,8 +338,9 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
     }
 
     if (props.mode === "create" && !isLastSection) {
+      const sectionFields: Array<keyof AdultoMayorFormValues> = [...currentSection.fields];
       const isSectionValid = await form.trigger(
-        currentSection.fields as Array<keyof AdultoMayorFormValues>,
+        sectionFields,
         { shouldFocus: true },
       );
 

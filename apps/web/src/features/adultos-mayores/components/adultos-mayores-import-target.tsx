@@ -31,7 +31,7 @@ export function AdultosMayoresImportTarget({
     <label className="import-target">
       <span className="import-target__label">Centro de destino</span>
       <select
-        value={tenantId}
+        value={tenantId ?? ""}
         disabled={disabled}
         onChange={(event) => onTenantChange(event.target.value)}
       >

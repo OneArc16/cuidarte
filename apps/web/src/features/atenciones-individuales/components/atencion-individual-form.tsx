@@ -162,6 +162,7 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
   const isLastSection = activeSectionIndex === FORM_SECTIONS.length - 1;
   const createDraftStorageKey =
     props.mode === "create" ? buildCreateDraftStorageKey(props.adultoMayor.id) : null;
+  const formError = "error" in props ? props.error ?? null : null;
 
   useEffect(() => {
     if (detail !== null) {
@@ -190,12 +191,12 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
   }, [createDraftStorageKey, props.mode, reset]);
 
   useEffect(() => {
-    if (props.mode === "view" || props.error === null) {
+    if (formError === null) {
       return;
     }
 
-    toast.error(props.error);
-  }, [props.error, props.mode]);
+    toast.error(formError);
+  }, [formError]);
 
   useEffect(() => {
     if (props.mode !== "create" || createDraftStorageKey === null) {
@@ -244,8 +245,9 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
     }
 
     if (!isLastSection) {
+      const sectionFields: Array<keyof AtencionIndividualFormValues> = [...currentSection.fields];
       const isSectionValid = await form.trigger(
-        currentSection.fields as Array<keyof AtencionIndividualFormValues>,
+        sectionFields,
         { shouldFocus: true },
       );
 

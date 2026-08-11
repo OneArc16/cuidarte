@@ -12,7 +12,7 @@ export class AppErrorBoundary extends Component<
   AppErrorBoundaryProps,
   AppErrorBoundaryState
 > {
-  state: AppErrorBoundaryState = {
+  override state: AppErrorBoundaryState = {
     error: null,
   };
 
@@ -20,11 +20,11 @@ export class AppErrorBoundary extends Component<
     return { error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("AppErrorBoundary", error, errorInfo);
   }
 
-  render() {
+  override render() {
     if (this.state.error !== null) {
       return (
         <main className="auth-shell">
