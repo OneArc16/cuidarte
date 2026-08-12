@@ -106,7 +106,7 @@ const nullableSearchSchema = z
 export const adultosMayoresImportAccessRoleValues = [
   "super_admin",
   "admin",
-  "auditor",
+  "director",
 ] as const satisfies readonly UserRole[];
 
 export const adultoMayorImportStatusValues = [

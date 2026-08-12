@@ -315,7 +315,7 @@ export class AdultosMayoresImportService {
   private ensureCanImport(actor: Pick<AuthUser, "role">) {
     if (!canImportAdultosMayores(actor)) {
       throw new ForbiddenException(
-        "Solo Admin, Auditor y SuperAdmin pueden importar adultos mayores.",
+        "Solo Admin, Director y SuperAdmin pueden importar adultos mayores.",
       );
     }
   }

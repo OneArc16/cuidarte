@@ -9,10 +9,10 @@ describe("adultos mayores permissions", () => {
     expect(canManageAdultosMayores({ role: "director" })).toBe(true);
   });
 
-  it("allows auditors to import without granting other write actions", () => {
+  it("allows directors to import and blocks auditors", () => {
     expect(canImportAdultosMayores({ role: "super_admin" })).toBe(true);
     expect(canImportAdultosMayores({ role: "admin" })).toBe(true);
-    expect(canImportAdultosMayores({ role: "auditor" })).toBe(true);
-    expect(canImportAdultosMayores({ role: "director" })).toBe(false);
+    expect(canImportAdultosMayores({ role: "director" })).toBe(true);
+    expect(canImportAdultosMayores({ role: "auditor" })).toBe(false);
   });
 });

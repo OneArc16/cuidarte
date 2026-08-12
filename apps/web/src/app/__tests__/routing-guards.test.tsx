@@ -4,6 +4,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import {
   auditorUserFixture,
   authUserFixture,
+  directorUserFixture,
   empleadoFixture,
   medicoUserFixture,
 } from "../../test/fixtures";
@@ -106,8 +107,18 @@ describe("App routing guards", () => {
     });
   });
 
-  it("allows auditor users to open the adultos mayores import route", async () => {
+  it("redirects auditor users away from the adultos mayores import route", async () => {
     server.use(mockAuthMe(auditorUserFixture));
+
+    renderAppAtPath("/adultos-mayores/importar");
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/home");
+    });
+  });
+
+  it("allows director users to open the adultos mayores import route", async () => {
+    server.use(mockAuthMe(directorUserFixture));
 
     renderAppAtPath("/adultos-mayores/importar");
 

@@ -13,15 +13,15 @@ const tenantId = "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054";
 const otherTenantId = "1488c239-6cb1-4125-988a-734cd39d13d3";
 
 describe("adulto mayor import policy", () => {
-  it("permite importar a superadmin, admin y auditor", () => {
+  it("permite importar a superadmin, admin y director", () => {
     assert.equal(canImportAdultosMayores(createActor("super_admin", null)), true);
     assert.equal(canImportAdultosMayores(createActor("admin")), true);
-    assert.equal(canImportAdultosMayores(createActor("auditor")), true);
-    assert.equal(canImportAdultosMayores(createActor("director")), false);
+    assert.equal(canImportAdultosMayores(createActor("director")), true);
+    assert.equal(canImportAdultosMayores(createActor("auditor")), false);
   });
 
-  it("mantiene a admin y auditor dentro del centro de su sesion", () => {
-    for (const role of ["admin", "auditor"] as const) {
+  it("mantiene a admin y director dentro del centro de su sesion", () => {
+    for (const role of ["admin", "director"] as const) {
       const actor = createActor(role);
 
       assert.equal(resolveAdultoMayorImportTenantForValidate(actor, null), tenantId);
