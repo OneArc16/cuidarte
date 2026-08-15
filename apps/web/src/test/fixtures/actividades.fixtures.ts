@@ -20,6 +20,16 @@ export const actividadGrupalFixture = {
   updatedAt: "2026-04-23T12:00:00.000Z",
 } as const;
 
+export const actividadGrupalTrashFixture = {
+  ...actividadGrupalFixture,
+  deletedAt: "2026-04-25T09:15:00.000Z",
+  deletedByUserId: empleadoFixture.id,
+  deletedByUserFullName: empleadoFixture.fullName,
+  canEdit: false,
+  canDelete: false,
+  canRestore: true,
+} as const;
+
 export const actividadGrupalFormOptionsFixture = {
   nextActaNumber: 4,
   empleados: [empleadoFixture],

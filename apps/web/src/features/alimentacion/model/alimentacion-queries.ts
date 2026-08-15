@@ -109,6 +109,41 @@ export function useUpdateAlimentacionRecordMutation(recordId: string) {
   });
 }
 
+export function useDeleteAlimentacionRecordMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (recordId: string) => alimentacionApi.deleteAlimentacionRecord(recordId),
+    onSuccess: async (_response, recordId: string) => {
+      queryClient.setQueriesData({ queryKey: ["alimentacion"] }, (current) => {
+        if (
+          current !== null &&
+          typeof current === "object" &&
+          "registros" in current &&
+          Array.isArray(current.registros)
+        ) {
+          return {
+            ...current,
+            registros: current.registros.filter(
+              (registro: { id?: string }) => registro.id !== recordId,
+            ),
+          };
+        }
+
+        return current;
+      });
+      queryClient.removeQueries({
+        queryKey: alimentacionQueryKeys.detail(recordId),
+      });
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["alimentacion"] }),
+        queryClient.invalidateQueries({ queryKey: ["home"] }),
+      ]);
+    },
+  });
+}
+
 export function useAlimentacionImportedFormatoVersionsQuery(
   adultoMayorId: string | null,
   deliveryMonth: string | null,

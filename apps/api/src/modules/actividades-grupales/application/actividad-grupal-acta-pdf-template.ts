@@ -5,6 +5,26 @@ import {
   type UserRole,
 } from "@cuidarte/contracts";
 
+import { type PreparedActividadGrupalActaPhotoAsset } from "./actividad-grupal-acta-photo-assets";
+
+type ActividadGrupalActaPdfDetail = Pick<
+  ActividadGrupalDiligenciamientoDetail,
+  | "actaNumber"
+  | "activityDate"
+  | "activityName"
+  | "activityType"
+  | "assignedProfessionals"
+  | "conclusion"
+  | "development"
+  | "integrantes"
+  | "objectives"
+  | "organizer"
+  | "responsibleDepartment"
+  | "startTime"
+  | "endTime"
+  | "tenantName"
+>;
+
 const EMPTY_FIELD_LABEL = "Pendiente de diligenciar.";
 const EMPTY_ATTENDEES_LABEL = "Sin asistentes registrados.";
 const EMPTY_PROFESSIONALS_LABEL = "Sin profesionales registrados.";
@@ -52,13 +72,15 @@ type ActaTableRow = {
 };
 
 type BuildActividadGrupalActaPdfHtmlOptions = {
-  detail: ActividadGrupalDiligenciamientoDetail;
+  detail: ActividadGrupalActaPdfDetail;
   logoDataUrl: string | null;
+  photoAssets: PreparedActividadGrupalActaPhotoAsset[];
 };
 
 export function buildActividadGrupalActaPdfHtml({
   detail,
   logoDataUrl,
+  photoAssets,
 }: BuildActividadGrupalActaPdfHtmlOptions): string {
   const actaDate = formatActaDate(detail.activityDate);
   const responsibleDepartment =
@@ -264,6 +286,43 @@ export function buildActividadGrupalActaPdfHtml({
       .acta-document__people-table td:nth-child(3) {
         width: 38mm;
       }
+
+      .acta-document__section--photo-evidence {
+        break-before: page;
+        page-break-before: always;
+      }
+
+      .acta-document__photo-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 4mm;
+      }
+
+      .acta-document__photo-card {
+        margin: 0;
+        padding: 4mm;
+        border: 1px solid #111;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .acta-document__photo-image {
+        display: block;
+        width: 100%;
+        height: 52mm;
+        border: 1px solid #555;
+        background: #f8f8f8;
+        object-fit: contain;
+      }
+
+      .acta-document__photo-caption {
+        margin-top: 2.5mm;
+        color: #000;
+        font-size: 6.4pt;
+        font-weight: 600;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+      }
     </style>
   </head>
   <body>
@@ -332,6 +391,8 @@ export function buildActividadGrupalActaPdfHtml({
         attendeeRows,
         EMPTY_ATTENDEES_LABEL,
       )}
+
+      ${renderPhotoEvidenceSection(photoAssets)}
     </article>
   </body>
 </html>`;
@@ -388,6 +449,30 @@ function renderPeopleSection(
       <tbody>${bodyRows}</tbody>
     </table>
   </section>`;
+}
+
+function renderPhotoEvidenceSection(photoAssets: PreparedActividadGrupalActaPhotoAsset[]): string {
+  if (photoAssets.length === 0) {
+    return "";
+  }
+
+  return `<section class="acta-document__section acta-document__section--photo-evidence">
+    <h2 class="acta-document__section-title">EVIDENCIA FOTOGRAFICA</h2>
+    <div class="acta-document__photo-grid" aria-label="Evidencia fotografica">
+      ${photoAssets.map((photo) => renderPhotoCard(photo)).join("")}
+    </div>
+  </section>`;
+}
+
+function renderPhotoCard(photo: PreparedActividadGrupalActaPhotoAsset): string {
+  return `<figure class="acta-document__photo-card">
+    <img
+      class="acta-document__photo-image"
+      src="${escapeHtml(photo.dataUrl)}"
+      alt="Fotografia adjunta: ${escapeHtml(photo.originalName)}"
+    />
+    <figcaption class="acta-document__photo-caption">${escapeHtml(photo.originalName)}</figcaption>
+  </figure>`;
 }
 
 function formatActaDate(date: string): string {

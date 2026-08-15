@@ -83,6 +83,13 @@ export function formatActivitySchedule(startTime: string, endTime: string): stri
   return `${startTime} - ${endTime}`;
 }
 
+export function formatActividadGrupalTrashTimestamp(value: string): string {
+  return new Intl.DateTimeFormat("es-CO", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
 export function formatActividadGrupalFileSize(sizeBytes: number): string {
   if (sizeBytes >= 1024 * 1024) {
     return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;

@@ -27,6 +27,7 @@ import {
 
 import {
   canAccessAlimentacion,
+  canDeleteAlimentacion,
   canManageAlimentacion,
   resolveAlimentacionScope,
   resolveAlimentacionTenantForCreate,
@@ -64,7 +65,7 @@ export class AlimentacionService {
       scope,
     });
 
-    return records.map((record) => this.toListItem(record));
+    return records.map((record) => this.toListItem(record, actor));
   }
 
   async listTenantOptions(actor: AuthUser): Promise<AlimentacionTenantOption[]> {
@@ -177,7 +178,7 @@ export class AlimentacionService {
       throw new NotFoundException("Registro de alimentacion no encontrado.");
     }
 
-    return this.toDetail(record);
+    return this.toDetail(record, actor);
   }
 
   async updateRegistro(
@@ -218,10 +219,24 @@ export class AlimentacionService {
         auxilioTransporte: command.auxilioTransporte,
       });
 
-      return this.toDetail(updatedRecord);
+      return this.toDetail(updatedRecord, actor);
     } catch (error: unknown) {
       this.throwConflictForUniqueViolation(error);
       throw error;
+    }
+  }
+
+  async deleteRegistro(id: string, actor: AuthUser): Promise<void> {
+    this.ensureCanDelete(actor);
+    const scope = this.resolveScopeOrThrow(actor);
+    const deletedRecord = await this.alimentacionRepository.delete({
+      id,
+      actorUserId: actor.id,
+      scope,
+    });
+
+    if (deletedRecord === null) {
+      throw new NotFoundException("Registro de alimentacion no encontrado.");
     }
   }
 
@@ -339,6 +354,14 @@ export class AlimentacionService {
     }
   }
 
+  private ensureCanDelete(actor: Pick<AuthUser, "role">) {
+    if (!canDeleteAlimentacion(actor)) {
+      throw new ForbiddenException(
+        "No tienes permisos para eliminar registros de alimentacion.",
+      );
+    }
+  }
+
   private resolveListTenantId(scope: AlimentacionScope, requestedTenantId: string | null) {
     if (scope.type === "all") {
       return requestedTenantId;
@@ -397,7 +420,7 @@ export class AlimentacionService {
     return tenantId;
   }
 
-  private toListItem(record: AlimentacionRecord): AlimentacionListItem {
+  private toListItem(record: AlimentacionRecord, actor: Pick<AuthUser, "role">): AlimentacionListItem {
     return alimentacionListItemSchema.parse({
       id: record.id,
       tenantId: record.tenantId,
@@ -413,6 +436,7 @@ export class AlimentacionService {
       auxilioTransporte: record.auxilioTransporte,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
+      canDelete: canDeleteAlimentacion(actor),
       importedFormato:
         record.importedFormato === null
           ? null
@@ -429,8 +453,8 @@ export class AlimentacionService {
     });
   }
 
-  private toDetail(record: AlimentacionRecord): AlimentacionDetail {
-    return alimentacionDetailSchema.parse(this.toListItem(record));
+  private toDetail(record: AlimentacionRecord, actor: Pick<AuthUser, "role">): AlimentacionDetail {
+    return alimentacionDetailSchema.parse(this.toListItem(record, actor));
   }
 
   private throwConflictForUniqueViolation(error: unknown): never | void {

@@ -230,6 +230,19 @@ export const actividadGrupalListResponseSchema = z.object({
   actividadesGrupales: z.array(actividadGrupalListItemSchema),
 });
 
+export const actividadGrupalTrashListItemSchema = actividadGrupalListItemSchema.extend({
+  deletedAt: z.string().min(1),
+  deletedByUserId: z.uuid(),
+  deletedByUserFullName: z.string().min(1).max(180),
+  canRestore: z.boolean(),
+});
+
+export const actividadGrupalTrashListQuerySchema = actividadGrupalListQuerySchema;
+
+export const actividadGrupalTrashListResponseSchema = z.object({
+  actividadesGrupales: z.array(actividadGrupalTrashListItemSchema),
+});
+
 export const actividadGrupalFormOptionsResponseSchema = z.object({
   nextActaNumber: z.number().int().min(1),
   empleados: z.array(actividadGrupalEmpleadoOptionSchema),
@@ -247,6 +260,10 @@ export const deleteActividadGrupalResponseSchema = z.object({
   success: z.literal(true),
 });
 
+export const restoreActividadGrupalResponseSchema = z.object({
+  success: z.literal(true),
+});
+
 export type ActividadGrupalType = z.infer<typeof actividadGrupalTypeSchema>;
 export type ActividadGrupalOrganizer = z.infer<typeof actividadGrupalOrganizerSchema>;
 export type ActividadGrupalResponsibleDepartment = z.infer<
@@ -258,6 +275,9 @@ export type ActividadGrupalTenantOption = z.infer<typeof actividadGrupalTenantOp
 export type ActividadGrupalEmpleadoOption = z.infer<typeof actividadGrupalEmpleadoOptionSchema>;
 export type ActividadGrupalIntegranteOption = z.infer<typeof actividadGrupalIntegranteOptionSchema>;
 export type ActividadGrupalSupportFile = z.infer<typeof actividadGrupalSupportFileSchema>;
+export type ActividadGrupalTrashListItem = z.infer<typeof actividadGrupalTrashListItemSchema>;
+export type ActividadGrupalTrashListResponse = z.infer<typeof actividadGrupalTrashListResponseSchema>;
+export type RestoreActividadGrupalResponse = z.infer<typeof restoreActividadGrupalResponseSchema>;
 export type ActividadGrupalListItem = z.infer<typeof actividadGrupalListItemSchema>;
 export type CreateActividadGrupalRequest = z.infer<typeof createActividadGrupalRequestSchema>;
 export type UpdateActividadGrupalRequest = z.infer<typeof updateActividadGrupalRequestSchema>;

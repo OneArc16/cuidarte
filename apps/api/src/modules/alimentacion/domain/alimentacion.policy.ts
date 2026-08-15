@@ -21,6 +21,10 @@ export function canManageAlimentacion(user: Pick<AuthUser, "role">): boolean {
   return ALIMENTACION_EDITOR_ROLES.has(user.role);
 }
 
+export function canDeleteAlimentacion(user: Pick<AuthUser, "role">): boolean {
+  return ALIMENTACION_EDITOR_ROLES.has(user.role);
+}
+
 export function resolveAlimentacionScope(user: AuthUser): AlimentacionScope | null {
   if (!canAccessAlimentacion(user)) {
     return null;

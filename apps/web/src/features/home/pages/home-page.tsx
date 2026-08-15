@@ -16,8 +16,10 @@ import { EmpleadosPage } from "@/features/empleados/pages/empleados-page";
 import { isEmpleadosPath } from "@/features/empleados/lib/empleados-paths";
 
 import { HomeDashboard } from "../components/home-dashboard";
+import { HomeDirectAccess } from "../components/home-direct-access";
 import { HomeDesktopSidebar } from "../components/home-desktop-sidebar";
 import { HomeMobileNavigation } from "../components/home-mobile-navigation";
+import { canViewHomeDashboard } from "../lib/home-dashboard-permissions";
 import { useMediaQuery } from "../hooks/use-media-query";
 
 const MOBILE_HOME_QUERY = "(max-width: 800px)";
@@ -31,20 +33,21 @@ type HomePageProps = {
 
 export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProps) {
   const isMobileViewport = useMediaQuery(MOBILE_HOME_QUERY);
+  const canViewDashboard = canViewHomeDashboard(user);
 
   const activeModuleId = isBackofficePath(path)
     ? "backoffice"
     : isAdultosMayoresImportPath(path)
       ? "importacion-adultos-mayores"
-    : isAdultosMayoresPath(path)
-      ? "adultos-mayores"
-      : isAlimentacionPath(path)
-        ? "registro-alimentacion"
-        : isActividadesGrupalesPath(path)
-          ? "sesiones-grupales"
-          : isEmpleadosPath(path)
-            ? "gestion-empleados"
-            : "inicio";
+      : isAdultosMayoresPath(path)
+        ? "adultos-mayores"
+        : isAlimentacionPath(path)
+          ? "registro-alimentacion"
+          : isActividadesGrupalesPath(path)
+            ? "sesiones-grupales"
+            : isEmpleadosPath(path)
+              ? "gestion-empleados"
+              : "inicio";
 
   return (
     <main className="home-shell">
@@ -83,8 +86,10 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
           <ActividadesGrupalesPage path={path} navigate={navigate} user={user} />
         ) : isEmpleadosPath(path) ? (
           <EmpleadosPage path={path} navigate={navigate} user={user} />
-        ) : (
+        ) : canViewDashboard ? (
           <HomeDashboard navigate={navigate} user={user} />
+        ) : (
+          <HomeDirectAccess navigate={navigate} user={user} />
         )}
       </section>
 

@@ -10,6 +10,7 @@ import {
   useSetTenantActiveSignerMutation,
 } from "../../empleados/model/empleados-queries";
 import * as empleadosApi from "../../empleados/api/empleados-api";
+import { resolveTenantActiveSignerAction } from "../../empleados/lib/empleados-active-signer";
 
 type TenantActiveSignerPanelProps = {
   tenant: BackofficeTenantDetail["tenant"];
@@ -70,7 +71,9 @@ export function TenantActiveSignerPanel({ tenant, activeSigner }: TenantActiveSi
           <p className="eyebrow">Firmante activo</p>
           <h2 id="tenant-active-signer-title">Directores del centro</h2>
         </div>
-        <span className={`tenant-branding-status${activeSigner === null ? " tenant-branding-status--pending" : ""}`}>
+        <span
+          className={`tenant-branding-status${activeSigner === null ? " tenant-branding-status--pending" : ""}`}
+        >
           {activeSigner === null ? "Sin firmante" : "Firmante activo"}
         </span>
       </div>
@@ -99,11 +102,22 @@ export function TenantActiveSignerPanel({ tenant, activeSigner }: TenantActiveSi
                 const detailQuery = directorDetailsQueries[index];
                 const directorDetail = detailQuery?.data;
                 const signature = directorDetail?.latestSignature ?? null;
-                const isCurrentActive = activeSigner?.employeeId === director.id;
+                const signerAction = resolveTenantActiveSignerAction({
+                  activeSigner,
+                  employeeId: director.id,
+                  latestSignatureId: signature?.id ?? null,
+                });
+                const isCurrentActive = signerAction === "deactivate" || signerAction === "update";
                 const canActivate = signature !== null && !activateSignerMutation.isPending;
-                const canToggle = !activateSignerMutation.isPending && !clearSignerMutation.isPending;
+                const canToggle =
+                  !activateSignerMutation.isPending && !clearSignerMutation.isPending;
                 const detailError = detailQuery?.error;
-                const actionLabel = isCurrentActive ? "Desactivar firmante" : "Activar firmante";
+                const actionLabel =
+                  signerAction === "deactivate"
+                    ? "Desactivar firmante"
+                    : signerAction === "update"
+                      ? "Actualizar firma activa"
+                      : "Activar firmante";
 
                 return (
                   <article className="tenant-active-signer-card" key={director.id}>
@@ -144,9 +158,13 @@ export function TenantActiveSignerPanel({ tenant, activeSigner }: TenantActiveSi
                     <button
                       className="outline-action"
                       type="button"
-                      disabled={!canToggle || (!isCurrentActive && !canActivate)}
+                      disabled={
+                        !canToggle ||
+                        signerAction === "unavailable" ||
+                        ((signerAction === "activate" || signerAction === "update") && !canActivate)
+                      }
                       onClick={() => {
-                        if (isCurrentActive) {
+                        if (signerAction === "deactivate") {
                           const confirmed = window.confirm(
                             `¿Deseas desactivar a ${director.fullName} como firmante del centro?`,
                           );
@@ -169,7 +187,9 @@ export function TenantActiveSignerPanel({ tenant, activeSigner }: TenantActiveSi
                         }
 
                         const confirmed = window.confirm(
-                          `¿Deseas activar a ${director.fullName} como firmante del centro?`,
+                          signerAction === "update"
+                            ? `¿Deseas actualizar la firma activa de ${director.fullName}?`
+                            : `¿Deseas activar a ${director.fullName} como firmante del centro?`,
                         );
 
                         if (!confirmed) {

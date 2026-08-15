@@ -51,7 +51,7 @@ export function ActividadGrupalDeleteDialog({
         <header className="actividad-delete-dialog__header">
           <div>
             <p className="actividad-delete-dialog__eyebrow">Accion sensible</p>
-            <h2 id="actividad-delete-dialog-title">Eliminar actividad</h2>
+            <h2 id="actividad-delete-dialog-title">Enviar a la papelera</h2>
           </div>
           <button
             className="actividades-row-action actividad-delete-dialog__close-button"
@@ -76,8 +76,8 @@ export function ActividadGrupalDeleteDialog({
         </div>
 
         <p className="actividad-delete-dialog__message">
-          Vas a eliminar esta actividad y su configuracion asociada. Esta accion no se puede
-          deshacer.
+          Vas a enviar esta acta a la papelera. La configuracion y los archivos se conservaran
+          para una futura restauracion.
         </p>
 
         {errorMessage !== null ? (
@@ -109,7 +109,7 @@ export function ActividadGrupalDeleteDialog({
             ) : (
               <>
                 <Trash2 aria-hidden="true" />
-                Eliminar actividad
+                Enviar a la papelera
               </>
             )}
           </button>

@@ -27,6 +27,8 @@ export type FindActividadGrupalByIdQuery = {
   scope: ActividadesGrupalesScope;
 };
 
+export type FindActividadesGrupalesTrashQuery = FindActividadesGrupalesQuery;
+
 export type SearchActividadGrupalIntegrantesOptionsQuery = {
   tenantId: string;
   search: string | null;
@@ -91,6 +93,11 @@ export type DeleteActividadGrupalRecordCommand = {
   actorUserId: string;
 };
 
+export type RestoreActividadGrupalRecordCommand = {
+  activityId: string;
+  actorUserId: string;
+};
+
 export type PersistActividadGrupalSupportFile = {
   kind: ActividadGrupalSupportFileKind;
   originalName: string;
@@ -132,6 +139,12 @@ export type ActividadGrupalRecord = {
   involvedEmployeesCount: number;
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type ActividadGrupalTrashRecord = ActividadGrupalRecord & {
+  deletedAt: Date;
+  deletedByUserId: string;
+  deletedByUserFullName: string;
 };
 
 export type ActividadGrupalDiligenciamientoDetailRecord = {

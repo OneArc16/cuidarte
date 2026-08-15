@@ -417,6 +417,9 @@ function createRepository(): ActividadesGrupalesRepository & {
         return matchesTenant && matchesActivityType && matchesSearch;
       });
     },
+    async findTrashMany() {
+      return [];
+    },
     async findTenantOptions() {
       return [
         { id: tenantId, name: "Centro de Vida Demo" },
@@ -438,6 +441,9 @@ function createRepository(): ActividadesGrupalesRepository & {
       }
 
       return toDiligenciamientoDetail(record, employeesByTenant, integrantesByTenant);
+    },
+    async findTrashById() {
+      return null;
     },
     async searchIntegranteOptions({ tenantId: requestedTenantId, search }) {
       const integrantes = integrantesByTenant.get(requestedTenantId) ?? [];
@@ -509,10 +515,13 @@ function createRepository(): ActividadesGrupalesRepository & {
       const record = records.find((item) => item.id === command.activityId);
 
       if (record === undefined) {
-        return [];
+        return;
       }
 
-      return [];
+      return;
+    },
+    async restore() {
+      return true;
     },
     async saveDiligenciamiento(command) {
       const record = records.find((item) => item.id === command.activityId);

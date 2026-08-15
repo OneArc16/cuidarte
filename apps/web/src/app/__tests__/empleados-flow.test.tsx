@@ -3,11 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import {
-  auditorUserFixture,
-  authUserFixture,
-  empleadoFixture,
-} from "../../test/fixtures";
+import { auditorUserFixture, authUserFixture, empleadoFixture } from "../../test/fixtures";
 import { server } from "../../test/test-server";
 import { renderAppAtPath, resetAppTestState } from "../../test/helpers/app-test.helpers";
 import { mockAuthMe } from "../../test/helpers/msw-auth.helpers";
@@ -215,10 +211,12 @@ describe("App empleados flow", () => {
           tenantActiveSigner: currentActiveSigner,
         }),
       ),
-      http.get("http://localhost:3001/api/empleados/:empleadoId/signature/file", () =>
-        new HttpResponse(new Blob(["signature-preview"], { type: "image/jpeg" }), {
-          headers: { "Content-Type": "image/jpeg" },
-        }),
+      http.get(
+        "http://localhost:3001/api/empleados/:empleadoId/signature/file",
+        () =>
+          new HttpResponse(new Blob(["signature-preview"], { type: "image/jpeg" }), {
+            headers: { "Content-Type": "image/jpeg" },
+          }),
       ),
       http.delete("http://localhost:3001/api/tenants/:tenantId/active-signer", async () => {
         clearSignerCalled = true;
@@ -266,10 +264,12 @@ describe("App empleados flow", () => {
           tenantActiveSigner: currentActiveSigner,
         }),
       ),
-      http.get("http://localhost:3001/api/empleados/:empleadoId/signature/file", () =>
-        new HttpResponse(new Blob(["signature-preview"], { type: "image/jpeg" }), {
-          headers: { "Content-Type": "image/jpeg" },
-        }),
+      http.get(
+        "http://localhost:3001/api/empleados/:empleadoId/signature/file",
+        () =>
+          new HttpResponse(new Blob(["signature-preview"], { type: "image/jpeg" }), {
+            headers: { "Content-Type": "image/jpeg" },
+          }),
       ),
       http.put("http://localhost:3001/api/tenants/:tenantId/active-signer", async ({ request }) => {
         activeSignerPayload = await request.json();
@@ -305,17 +305,97 @@ describe("App empleados flow", () => {
     );
   });
 
+  it("lets the active director replace a missing or outdated signature version", async () => {
+    const latestSignatureId = "dc8e2c42-8f96-4f19-b204-adf90e139bf4";
+    const directorDetail = {
+      ...empleadoFixture,
+      role: "director" as const,
+      latestSignature: {
+        id: latestSignatureId,
+        originalName: "firma-nueva.jpeg",
+        mimeType: "image/jpeg",
+        sizeBytes: 2048,
+        createdAt: "2026-08-15T20:11:46.582Z",
+      },
+      tenantActiveSigner: {
+        tenantId: empleadoFixture.tenantId,
+        employeeId: empleadoFixture.id,
+        signatureVersionId: "7cf28395-e93e-420f-b7e0-92314361a02b",
+        activatedByUserId: authUserFixture.id,
+        activatedAt: "2026-08-09T12:00:00.000Z",
+        updatedAt: "2026-08-09T12:00:00.000Z",
+      },
+    };
+    let currentActiveSigner: TestTenantActiveSigner = directorDetail.tenantActiveSigner;
+    let activeSignerPayload: unknown = null;
+    server.use(
+      mockAuthMe(authUserFixture),
+      http.get("http://localhost:3001/api/empleados/:empleadoId", () =>
+        HttpResponse.json({
+          ...directorDetail,
+          tenantActiveSigner: currentActiveSigner,
+        }),
+      ),
+      http.get(
+        "http://localhost:3001/api/empleados/:empleadoId/signature/file",
+        () =>
+          new HttpResponse(new Blob(["signature-preview"], { type: "image/jpeg" }), {
+            headers: { "Content-Type": "image/jpeg" },
+          }),
+      ),
+      http.put("http://localhost:3001/api/tenants/:tenantId/active-signer", async ({ request }) => {
+        activeSignerPayload = await request.json();
+        currentActiveSigner = {
+          ...currentActiveSigner,
+          signatureVersionId: latestSignatureId,
+          updatedAt: "2026-08-15T21:30:00.000Z",
+        };
+
+        return HttpResponse.json({ activeSigner: currentActiveSigner });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderAppAtPath(`/gestion-empleados/${empleadoFixture.id}/edit`);
+
+    const updateSignatureButton = await screen.findByRole("button", {
+      name: "Actualizar firma activa",
+    });
+    expect(updateSignatureButton).toBeEnabled();
+    await user.click(updateSignatureButton);
+
+    await waitFor(() =>
+      expect(activeSignerPayload).toEqual({
+        employeeId: empleadoFixture.id,
+        signatureVersionId: latestSignatureId,
+      }),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Desactivar firmante" })).toBeInTheDocument(),
+    );
+  });
+
   it("keeps auditor users in Gestion de empleados with read-only actions", async () => {
     server.use(mockAuthMe(auditorUserFixture));
     renderAppAtPath("/gestion-empleados");
 
-    expect(await screen.findByRole("heading", { name: "Gestion de empleados" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Gestion de empleados" }),
+    ).toBeInTheDocument();
     const navigation = await screen.findByRole("navigation", { name: "Modulos principales" });
 
-    expect(within(navigation).getByRole("button", { name: "Gestión de empleados" })).toBeInTheDocument();
-    expect(within(navigation).queryByRole("button", { name: "BackOffice" })).not.toBeInTheDocument();
+    expect(
+      within(navigation).getByRole("button", { name: "Gestión de empleados" }),
+    ).toBeInTheDocument();
+    expect(
+      within(navigation).queryByRole("button", { name: "BackOffice" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Crear usuario" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: `Ver ${empleadoFixture.fullName}` })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: `Editar ${empleadoFixture.fullName}` })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: `Ver ${empleadoFixture.fullName}` }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: `Editar ${empleadoFixture.fullName}` }),
+    ).not.toBeInTheDocument();
   });
 });

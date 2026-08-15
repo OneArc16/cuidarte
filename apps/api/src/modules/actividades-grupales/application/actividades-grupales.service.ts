@@ -31,6 +31,8 @@ import {
 
 import {
   resolveActividadGrupalTenantForCreate,
+  canManageActividadesGrupales,
+  canTrashActividadGrupal,
   resolveActividadesGrupalesScope,
 } from "../domain/actividad-grupal.policy";
 import {
@@ -65,6 +67,11 @@ type DownloadActividadGrupalSupportFile = {
   contentType: string;
   filename: string;
   disposition: "inline" | "attachment";
+};
+
+export type ActividadGrupalActaExportData = {
+  detail: ActividadGrupalDiligenciamientoDetail;
+  photoFiles: ActividadGrupalSupportFileRecord[];
 };
 
 @Injectable()
@@ -206,17 +213,6 @@ export class ActividadesGrupalesService {
     return this.toListItem(record, actor);
   }
 
-  async deleteActividadGrupal(activityId: string, actor: AuthUser): Promise<void> {
-    this.ensureCanManageActivities(actor);
-    await this.getEditableActivityOrThrow(activityId, actor);
-    const removedFiles = await this.actividadesGrupalesRepository.delete({
-      activityId,
-      actorUserId: actor.id,
-    });
-
-    await this.deleteFilesBestEffort(removedFiles);
-  }
-
   async getActividadGrupalDiligenciamiento(
     activityId: string,
     actor: AuthUser,
@@ -224,6 +220,18 @@ export class ActividadesGrupalesService {
     const detail = await this.getPermittedDiligenciamientoOrThrow(activityId, actor);
 
     return this.toDiligenciamientoDetail(detail, actor);
+  }
+
+  async getActividadGrupalActaExportData(
+    activityId: string,
+    actor: AuthUser,
+  ): Promise<ActividadGrupalActaExportData> {
+    const record = await this.getPermittedDiligenciamientoOrThrow(activityId, actor);
+
+    return {
+      detail: this.toDiligenciamientoDetail(record, actor),
+      photoFiles: record.photoFiles,
+    };
   }
 
   async searchIntegranteOptions(
@@ -384,26 +392,13 @@ export class ActividadesGrupalesService {
   }
 
   private assertCanEditActivity(activity: ActividadGrupalRecord, actor: AuthUser): void {
-    if (actor.role === "super_admin") {
-      return;
+    if (!canTrashActividadGrupal(activity, actor)) {
+      throw new ForbiddenException("No tienes permisos para editar o eliminar esta actividad.");
     }
-
-    if (activity.createdByUserId === actor.id) {
-      return;
-    }
-
-    if (
-      (actor.role === "admin" || actor.role === "director") &&
-      actor.tenantId === activity.tenantId
-    ) {
-      return;
-    }
-
-    throw new ForbiddenException("No tienes permisos para editar o eliminar esta actividad.");
   }
 
   private ensureCanManageActivities(actor: Pick<AuthUser, "role">) {
-    if (actor.role === "auditor") {
+    if (!canManageActividadesGrupales(actor)) {
       throw new ForbiddenException("No tienes permisos para crear o diligenciar actividades.");
     }
   }
@@ -617,8 +612,7 @@ export class ActividadesGrupalesService {
     }
 
     return (
-      (actor.role === "admin" || actor.role === "director") &&
-      actor.tenantId === activity.tenantId
+      (actor.role === "admin" || actor.role === "director") && actor.tenantId === activity.tenantId
     );
   }
 

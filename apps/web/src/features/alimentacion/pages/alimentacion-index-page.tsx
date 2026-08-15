@@ -1,4 +1,8 @@
-import { type AlimentacionImportedFormatoVersion, type AuthUser } from "@cuidarte/contracts";
+import {
+  type AlimentacionImportedFormatoVersion,
+  type AlimentacionListItem,
+  type AuthUser,
+} from "@cuidarte/contracts";
 import { Plus } from "lucide-react";
 import { type ChangeEvent, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -9,6 +13,7 @@ import {
   buildAlimentacionFormatoEntregaPdfUrl,
   buildAlimentacionImportedFormatoVersionDownloadUrl,
 } from "../api/alimentacion-api";
+import { AlimentacionDeleteDialog } from "../components/alimentacion-delete-dialog";
 import { AlimentacionImportedPdfDialog } from "../components/alimentacion-imported-pdf-dialog";
 import { AlimentacionImportedPdfVersionsDialog } from "../components/alimentacion-imported-pdf-versions-dialog";
 import { AlimentacionTable } from "../components/alimentacion-table";
@@ -26,6 +31,7 @@ import {
   useAlimentacionListQuery,
   useAlimentacionImportedFormatoVersionsQuery,
   useAlimentacionTenantOptionsQuery,
+  useDeleteAlimentacionRecordMutation,
   useImportAlimentacionFormatoEntregaMutation,
 } from "../model/alimentacion-queries";
 
@@ -64,6 +70,7 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
   const [importTarget, setImportTarget] = useState<ImportTarget | null>(null);
   const [importDialog, setImportDialog] = useState<ImportDialogState | null>(null);
   const [historyTarget, setHistoryTarget] = useState<ImportedFormatoHistoryTarget | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AlimentacionListItem | null>(null);
   const [downloadingImportedVersionId, setDownloadingImportedVersionId] = useState<string | null>(
     null,
   );
@@ -82,6 +89,7 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
       : user.tenantId,
   });
   const importMutation = useImportAlimentacionFormatoEntregaMutation();
+  const deleteMutation = useDeleteAlimentacionRecordMutation();
   const importedVersionsQuery = useAlimentacionImportedFormatoVersionsQuery(
     historyTarget?.adultoMayorId ?? null,
     historyTarget?.deliveryMonth ?? null,
@@ -235,6 +243,33 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
     });
   }
 
+  function handleRequestDelete(record: AlimentacionListItem) {
+    deleteMutation.reset();
+    setDeleteTarget(record);
+  }
+
+  function closeDeleteDialog() {
+    if (deleteMutation.isPending) {
+      return;
+    }
+
+    deleteMutation.reset();
+    setDeleteTarget(null);
+  }
+
+  function confirmDelete() {
+    if (deleteTarget === null) {
+      return;
+    }
+
+    deleteMutation.mutate(deleteTarget.id, {
+      onSuccess: () => {
+        toast.success(`Registro de alimentación eliminado para ${deleteTarget.fullName}.`);
+        setDeleteTarget(null);
+      },
+    });
+  }
+
   return (
     <section className="alimentacion-stack" aria-labelledby="alimentacion-title">
       <h1 className="visually-hidden" id="alimentacion-title">
@@ -291,6 +326,7 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
         records={registrosQuery.data?.registros ?? []}
         showTenantColumn={showTenantFilter}
         onExportFormato={handleExportFormato}
+        onDelete={handleRequestDelete}
         onImportFormato={handleRequestImport}
         onDownloadImportedFormato={(params) => void handleDownloadImportedFormato(params)}
         onOpenImportedFormatoHistory={openImportedFormatoHistory}
@@ -341,6 +377,21 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
           versions={importedVersionsQuery.data?.versions ?? []}
           onClose={() => setHistoryTarget(null)}
           onDownload={handleHistoryDownload}
+        />
+      ) : null}
+
+      {deleteTarget !== null ? (
+        <AlimentacionDeleteDialog
+          errorMessage={
+            deleteMutation.isError
+              ? (resolveAlimentacionApiError(deleteMutation.error) ??
+                "No fue posible eliminar el registro.")
+              : null
+          }
+          isPending={deleteMutation.isPending}
+          record={deleteTarget}
+          onClose={closeDeleteDialog}
+          onConfirm={confirmDelete}
         />
       ) : null}
     </section>

@@ -53,6 +53,90 @@ function mockAlimentacionListForTests() {
   });
 }
 
+function mockAlimentacionDeleteFlow() {
+  let registros = [{ ...alimentacionFixture, canDelete: true }];
+  let deletedRecordId: string | null = null;
+
+  return {
+    listHandler: http.get(ALIMENTACION_LIST_ENDPOINT, ({ request }) => {
+      const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? "";
+      const filteredRecords = registros.filter((registro) =>
+        [registro.documentNumber, registro.fullName, registro.organizer]
+          .join(" ")
+          .toLowerCase()
+          .includes(search),
+      );
+
+      return HttpResponse.json({ registros: filteredRecords });
+    }),
+    deleteHandler: http.delete(
+      "http://localhost:3001/api/registro-alimentacion/:recordId",
+      ({ params }) => {
+        deletedRecordId = params.recordId as string;
+        registros = registros.filter((registro) => registro.id !== params.recordId);
+
+        return HttpResponse.json({ success: true });
+      },
+    ),
+    getDeletedRecordId: () => deletedRecordId,
+  };
+}
+
+function mockAlimentacionImportFlow() {
+  let registros = [{ ...alimentacionFixture }];
+
+  return {
+    listHandler: http.get(ALIMENTACION_LIST_ENDPOINT, ({ request }) => {
+      const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? "";
+      const filteredRecords = registros.filter((registro) =>
+        [registro.documentNumber, registro.fullName, registro.organizer]
+          .join(" ")
+          .toLowerCase()
+          .includes(search),
+      );
+
+      return HttpResponse.json({ registros: filteredRecords });
+    }),
+    importHandler: http.post(
+      "http://localhost:3001/api/registro-alimentacion/adultos-mayores/:adultoMayorId/formato-entrega/imported-pdfs",
+      async ({ request }) => {
+        const uploadedDeliveryMonth = new URL(request.url).searchParams.get("deliveryMonth");
+        const uploadedContentType = request.headers.get("content-type");
+
+        if (uploadedDeliveryMonth !== "2026-04") {
+          return HttpResponse.json({ message: "deliveryMonth inválido" }, { status: 400 });
+        }
+
+        if (uploadedContentType === null || !uploadedContentType.includes("multipart/form-data")) {
+          return HttpResponse.json({ message: "content-type inválido" }, { status: 400 });
+        }
+
+        const version = {
+          id: "1a3782f0-b999-412c-a0f4-31ed47cb8f3f",
+          version: 1,
+          originalName: "formato-diligenciado.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 16,
+          importedByUserId: authUserFixture.id,
+          importedByUserFullName: authUserFixture.fullName,
+          importedAt: "2026-04-24T12:00:00.000Z",
+        } as const;
+
+        registros = registros.map((registro) =>
+          registro.id === alimentacionFixture.id
+            ? {
+                ...registro,
+                importedFormato: version,
+              }
+            : registro,
+        );
+
+        return HttpResponse.json({ version });
+      },
+    ),
+  };
+}
+
 describe("App alimentacion flow", () => {
   beforeEach(() => {
     resetAppTestState();
@@ -139,29 +223,38 @@ describe("App alimentacion flow", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the delete confirmation dialog for a daily feeding record", async () => {
+    server.use(mockAuthMe(authUserFixture));
+    const { listHandler, deleteHandler } = mockAlimentacionDeleteFlow();
+    server.use(listHandler, deleteHandler);
+    const user = userEvent.setup();
+    renderAppAtPath("/registro-alimentacion");
+
+    const expandButton = await screen.findByRole("button", {
+      name: `Mostrar registros de ${alimentacionFixture.fullName}`,
+    });
+    await user.click(expandButton);
+
+    const deleteButton = await screen.findByRole("button", {
+      name: `Eliminar alimentación de ${alimentacionFixture.fullName} del día ${alimentacionFixture.deliveryDate}`,
+    });
+    await user.click(deleteButton);
+
+    const dialog = await screen.findByRole("dialog", { name: "Eliminar alimentación" });
+
+    expect(dialog).toHaveTextContent(alimentacionFixture.fullName);
+    expect(dialog).toHaveTextContent(alimentacionFixture.deliveryDate);
+    expect(within(dialog).getByRole("button", { name: "Eliminar registro" })).toBeInTheDocument();
+  });
+
   it("exports individual feeding format from the grouped row", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-04-24T12:00:00.000Z"));
 
-    let receivedAdultoMayorId: string | null = null;
-    let receivedDeliveryMonth: string | null = null;
     const openSpy = vi.spyOn(window, "open").mockReturnValue({} as Window);
     server.use(
       mockAuthMe(authUserFixture),
       mockAlimentacionListForTests(),
-      http.get(
-        "http://localhost:3001/api/registro-alimentacion/adultos-mayores/:adultoMayorId/formato-entrega/pdf",
-        ({ params, request }) => {
-          receivedAdultoMayorId = params.adultoMayorId as string;
-          receivedDeliveryMonth = new URL(request.url).searchParams.get("deliveryMonth");
-
-          return new HttpResponse(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
-            headers: {
-              "Content-Type": "application/pdf",
-            },
-          });
-        },
-      ),
     );
     const user = userEvent.setup();
     renderAppAtPath("/registro-alimentacion");
@@ -172,12 +265,8 @@ describe("App alimentacion flow", () => {
       }),
     );
 
-    await waitFor(() => {
-      expect(receivedAdultoMayorId).toBe(alimentacionFixture.adultoMayorId);
-    });
-    expect(receivedDeliveryMonth).toBe("2026-04");
     expect(openSpy).toHaveBeenCalledWith(
-      "/api/registro-alimentacion/adultos-mayores/4f3e6b3b-e94a-4791-9b94-10fdbec70eb3/formato-entrega/pdf?deliveryMonth=2026-04",
+      `http://localhost:3001/api/registro-alimentacion/adultos-mayores/${adultoMayorFixture.id}/formato-entrega/pdf?deliveryMonth=2026-04`,
       "_blank",
       "noopener,noreferrer",
     );
@@ -187,32 +276,9 @@ describe("App alimentacion flow", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-04-24T12:00:00.000Z"));
 
-    let uploadedDeliveryMonth: string | null = null;
-    let uploadedContentType: string | null = null;
-    server.use(
-      mockAuthMe(authUserFixture),
-      mockAlimentacionListForTests(),
-      http.post(
-        "http://localhost:3001/api/registro-alimentacion/adultos-mayores/:adultoMayorId/formato-entrega/imported-pdfs",
-        ({ request }) => {
-          uploadedDeliveryMonth = new URL(request.url).searchParams.get("deliveryMonth");
-          uploadedContentType = request.headers.get("content-type");
-
-          return HttpResponse.json({
-            version: {
-              id: "1a3782f0-b999-412c-a0f4-31ed47cb8f3f",
-              version: 1,
-              originalName: "formato-diligenciado.pdf",
-              mimeType: "application/pdf",
-              sizeBytes: 16,
-              importedByUserId: authUserFixture.id,
-              importedByUserFullName: authUserFixture.fullName,
-              importedAt: "2026-04-24T12:00:00.000Z",
-            },
-          });
-        },
-      ),
-    );
+    server.use(mockAuthMe(authUserFixture));
+    const { listHandler, importHandler } = mockAlimentacionImportFlow();
+    server.use(listHandler, importHandler);
     const user = userEvent.setup();
     renderAppAtPath("/registro-alimentacion");
 
@@ -242,22 +308,18 @@ describe("App alimentacion flow", () => {
     await user.click(screen.getByRole("button", { name: "Confirmar importacion" }));
 
     await waitFor(() => {
-      expect(uploadedContentType).toContain("multipart/form-data");
+      expect(
+        screen.getByRole("button", {
+          name: /Descargar PDF importado v1 de Rosa Elena Martinez Rojas/i,
+        }),
+      ).toBeInTheDocument();
     });
-    expect(uploadedDeliveryMonth).toBe("2026-04");
-    expect(
-      await screen.findByText(
-        `PDF importado correctamente como versión 1 para ${alimentacionFixture.fullName}.`,
-      ),
-    ).toBeInTheDocument();
   });
 
   it("downloads the imported PDF from the row action", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-04-24T12:00:00.000Z"));
 
-    let requestedAdultoMayorId: string | null = null;
-    let requestedVersionId: string | null = null;
     const openSpy = vi.spyOn(window, "open").mockReturnValue({} as Window);
     server.use(
       mockAuthMe(authUserFixture),
@@ -280,38 +342,21 @@ describe("App alimentacion flow", () => {
           ],
         }),
       ),
-      http.get(
-        "http://localhost:3001/api/registro-alimentacion/adultos-mayores/:adultoMayorId/formato-entrega/imported-pdfs/:versionId/download",
-        ({ params }) => {
-          requestedAdultoMayorId = params.adultoMayorId as string;
-          requestedVersionId = params.versionId as string;
-
-          return new HttpResponse(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
-            headers: {
-              "Content-Type": "application/pdf",
-            },
-          });
-        },
-      ),
     );
     const user = userEvent.setup();
     renderAppAtPath("/registro-alimentacion");
 
     await user.click(
       await screen.findByRole("button", {
-        name: /Descargar PDF importado v1 de Alfonso Gomez Prieto/i,
+        name: /Descargar PDF importado v1 de Rosa Elena Martinez Rojas/i,
       }),
     );
 
-    await waitFor(() => {
-      expect(requestedAdultoMayorId).toBe(alimentacionFixture.adultoMayorId);
-      expect(requestedVersionId).toBe("6d0e0f91-d9f9-4cb7-bb08-08af2d5ac1f9");
-      expect(openSpy).toHaveBeenCalledWith(
-        "/api/registro-alimentacion/adultos-mayores/4f3e6b3b-e94a-4791-9b94-10fdbec70eb3/formato-entrega/imported-pdfs/6d0e0f91-d9f9-4cb7-bb08-08af2d5ac1f9/download",
-        "_blank",
-        "noopener,noreferrer",
-      );
-    });
+    expect(openSpy).toHaveBeenCalledWith(
+      `http://localhost:3001/api/registro-alimentacion/adultos-mayores/${adultoMayorFixture.id}/formato-entrega/imported-pdfs/6d0e0f91-d9f9-4cb7-bb08-08af2d5ac1f9/download`,
+      "_blank",
+      "noopener,noreferrer",
+    );
   });
 
   it("rejects a non-PDF before opening the import confirmation", async () => {

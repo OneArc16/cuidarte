@@ -9,8 +9,8 @@ import {
   homeDashboardResponseSchema,
   homeDashboardShortcutModuleIdValues,
 } from "@cuidarte/contracts";
-import { Injectable } from "@nestjs/common";
-import { and, eq, sql, type SQL } from "drizzle-orm";
+import { ForbiddenException, Injectable } from "@nestjs/common";
+import { and, eq, isNull, sql, type SQL } from "drizzle-orm";
 import { type AnyPgColumn } from "drizzle-orm/pg-core";
 
 import { DatabaseService } from "../../database/database.service";
@@ -26,6 +26,7 @@ import { resolveActividadesGrupalesScope } from "../actividades-grupales/domain/
 import { resolveAdultosMayoresScope } from "../adultos-mayores/domain/adulto-mayor.policy";
 import { resolveAlimentacionScope } from "../alimentacion/domain/alimentacion.policy";
 import { resolveEmpleadosScope } from "../empleados/domain/empleado.policy";
+import { canViewHomeDashboard } from "./home.policy";
 
 type TenantScope = { type: "all" } | { type: "tenant"; tenantId: string };
 
@@ -57,6 +58,10 @@ export class HomeService {
   constructor(private readonly database: DatabaseService) {}
 
   async getDashboard(actor: AuthUser): Promise<HomeDashboardResponse> {
+    if (!canViewHomeDashboard(actor)) {
+      throw new ForbiddenException("No tienes permisos para acceder a este recurso.");
+    }
+
     const adultosScope = resolveAdultosMayoresScope(actor);
     const actividadesScope = resolveActividadesGrupalesScope(actor);
     const alimentacionScope = resolveAlimentacionScope(actor);
@@ -168,21 +173,27 @@ export class HomeService {
 
   private async summarizeActividades(scope: TenantScope): Promise<ActivitySummary> {
     const scopeCondition = this.buildScopeCondition(scope, actividadesGrupales.tenantId);
+    const activeCondition =
+      scopeCondition === undefined
+        ? isNull(actividadesGrupales.deletedAt)
+        : and(scopeCondition, isNull(actividadesGrupales.deletedAt));
+    const totalQuery = this.database.db
+      .select({
+        total: sql<number>`count(*)::int`,
+      })
+      .from(actividadesGrupales);
+    const groupedQuery = this.database.db
+      .select({
+        activityType: actividadesGrupales.activityType,
+        total: sql<number>`count(*)::int`,
+      })
+      .from(actividadesGrupales)
+      .groupBy(actividadesGrupales.activityType);
     const [totalRow, groupedRows] = await Promise.all([
-      this.database.db
-        .select({
-          total: sql<number>`count(*)::int`,
-        })
-        .from(actividadesGrupales)
-        .where(scopeCondition),
-      this.database.db
-        .select({
-          activityType: actividadesGrupales.activityType,
-          total: sql<number>`count(*)::int`,
-        })
-        .from(actividadesGrupales)
-        .where(scopeCondition)
-        .groupBy(actividadesGrupales.activityType),
+      activeCondition === undefined ? totalQuery : totalQuery.where(activeCondition),
+      activeCondition === undefined
+        ? groupedQuery
+        : groupedQuery.where(activeCondition),
     ]);
 
     const byIndicatorId: Partial<Record<HomeDashboardIndicatorId, number>> = {};
@@ -205,7 +216,7 @@ export class HomeService {
 
   private async summarizeAlimentacion(scope: TenantScope): Promise<AlimentacionSummary> {
     const scopeCondition = this.buildScopeCondition(scope, alimentacionRegistros.tenantId);
-    const [row] = await this.database.db
+    const query = this.database.db
       .select({
         recordsTotal: sql<number>`count(*)::int`,
         deliveredRationsTotal: sql<number>`coalesce(sum(
@@ -215,8 +226,8 @@ export class HomeService {
           (case when ${alimentacionRegistros.auxilioTransporte} = 'entregado' then 1 else 0 end)
         ), 0)::int`,
       })
-      .from(alimentacionRegistros)
-      .where(scopeCondition);
+      .from(alimentacionRegistros);
+    const [row] = await (scopeCondition === undefined ? query : query.where(scopeCondition));
 
     return {
       recordsTotal: row?.recordsTotal ?? 0,
@@ -237,12 +248,12 @@ export class HomeService {
         : scopeCondition === undefined
           ? extraCondition
           : and(scopeCondition, extraCondition);
-    const [row] = await this.database.db
+    const query = this.database.db
       .select({
         total: sql<number>`count(*)::int`,
       })
-      .from(table)
-      .where(where);
+      .from(table);
+    const [row] = await (where === undefined ? query : query.where(where));
 
     return row?.total ?? 0;
   }

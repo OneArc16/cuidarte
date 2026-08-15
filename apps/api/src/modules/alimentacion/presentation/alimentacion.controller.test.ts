@@ -108,6 +108,27 @@ describe("AlimentacionController", () => {
     assert.equal(result.createdCount, 1);
   });
 
+  it("passes delete requests to the service", async () => {
+    let receivedId: string | null = null;
+    let receivedActorId: string | null = null;
+    const service = {
+      deleteRegistro: async (id: string, actor: AuthUser) => {
+        receivedId = id;
+        receivedActorId = actor.id;
+      },
+    };
+    const controller = new AlimentacionController(service as never, {} as never, {} as never);
+
+    const result = await controller.deleteRegistro(
+      "1a3782f0-b999-412c-a0f4-31ed47cb8f3f",
+      { currentUser } as never,
+    );
+
+    assert.equal(receivedId, "1a3782f0-b999-412c-a0f4-31ed47cb8f3f");
+    assert.equal(receivedActorId, currentUser.id);
+    assert.deepEqual(result, { success: true });
+  });
+
   it("passes adult lookup requests to the service", async () => {
     let receivedAdultoMayorId: string | null = null;
     let receivedDeliveryDate: string | null = null;

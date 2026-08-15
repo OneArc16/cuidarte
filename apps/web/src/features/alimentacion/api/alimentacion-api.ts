@@ -8,6 +8,7 @@ import {
   type AlimentacionTenantOptionsResponse,
   type CreateAlimentacionBatchRequest,
   type CreateAlimentacionBatchResponse,
+  type DeleteAlimentacionResponse,
   type UpdateAlimentacionRequest,
   alimentacionAdultoOptionsResponseSchema,
   alimentacionDetailSchema,
@@ -17,6 +18,7 @@ import {
   alimentacionLookupByAdultoMayorResponseSchema,
   alimentacionTenantOptionsResponseSchema,
   createAlimentacionBatchResponseSchema,
+  deleteAlimentacionResponseSchema,
 } from "@cuidarte/contracts";
 
 import { getApiBaseUrl } from "@/shared/api/api-config";
@@ -111,6 +113,16 @@ export function updateAlimentacionRecord(
     {
       method: "PATCH",
       body: request,
+    },
+  );
+}
+
+export function deleteAlimentacionRecord(recordId: string): Promise<DeleteAlimentacionResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/registro-alimentacion/${recordId}`,
+    deleteAlimentacionResponseSchema,
+    {
+      method: "DELETE",
     },
   );
 }

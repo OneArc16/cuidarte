@@ -5,6 +5,7 @@ import {
   actividadGrupalFixture,
   actividadGrupalFormOptionsFixture,
   actividadGrupalIntegranteFixture,
+  actividadGrupalTrashFixture,
   adultoMayorFixture,
   backofficeTenantDetailFixture,
 } from "../fixtures";
@@ -31,6 +32,27 @@ export const actividadesHandlers = [
 
     return HttpResponse.json({ actividadesGrupales: actividades });
   }),
+  http.get("http://localhost:3001/api/actividades-grupales/papelera", ({ request }) => {
+    const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? null;
+    const activityType = new URL(request.url).searchParams.get("activityType");
+    const actividades = [actividadGrupalTrashFixture].filter((actividad) => {
+      const matchesSearch =
+        search === null ||
+        [
+          String(actividad.actaNumber),
+          actividad.activityName,
+          actividad.activityType,
+          actividad.organizer,
+          actividad.deletedByUserFullName,
+        ].some((value) => value.toLowerCase().includes(search));
+      const matchesActivityType =
+        activityType === null || activityType === "" || actividad.activityType === activityType;
+
+      return matchesSearch && matchesActivityType;
+    });
+
+    return HttpResponse.json({ actividadesGrupales: actividades });
+  }),
   http.get("http://localhost:3001/api/actividades-grupales/tenant-options", () =>
     HttpResponse.json({ tenants: [backofficeTenantDetailFixture.tenant] }),
   ),
@@ -39,6 +61,9 @@ export const actividadesHandlers = [
   ),
   http.post("http://localhost:3001/api/actividades-grupales", () =>
     HttpResponse.json(actividadGrupalFixture),
+  ),
+  http.post("http://localhost:3001/api/actividades-grupales/:activityId/restaurar", () =>
+    HttpResponse.json({ success: true }),
   ),
   http.get("http://localhost:3001/api/actividades-grupales/:activityId/diligenciamiento", () =>
     HttpResponse.json(actividadGrupalDiligenciamientoFixture),

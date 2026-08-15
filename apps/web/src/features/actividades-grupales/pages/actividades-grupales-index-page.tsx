@@ -11,9 +11,13 @@ import { ActividadesGrupalesToolbar } from "../components/actividades-grupales-t
 import {
   buildActividadGrupalEditPath,
   buildActividadGrupalDiligenciamientoPath,
+  CREACION_ACTIVIDADES_TRASH_PATH,
   CREACION_ACTIVIDADES_NEW_PATH,
 } from "../lib/actividades-grupales-paths";
-import { canManageActividadesGrupales } from "../lib/actividades-grupales-permissions";
+import {
+  canManageActividadesGrupales,
+  canViewActividadesGrupalesTrash,
+} from "../lib/actividades-grupales-permissions";
 import { resolveActividadesGrupalesApiError } from "../lib/actividades-grupales-formatters";
 import { openActividadGrupalActaPdf } from "../lib/open-actividad-grupal-acta-pdf";
 import {
@@ -39,6 +43,7 @@ export function ActividadesGrupalesIndexPage({
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const showTenantFilter = user.role === "super_admin";
   const canManageActivities = canManageActividadesGrupales(user);
+  const canViewTrash = canViewActividadesGrupalesTrash(user);
   const tenantOptionsQuery = useActividadGrupalTenantOptionsQuery(showTenantFilter);
   const deleteMutation = useDeleteActividadGrupalMutation();
   const actividadesQuery = useActividadesGrupalesQuery({
@@ -56,6 +61,19 @@ export function ActividadesGrupalesIndexPage({
       <h1 className="visually-hidden" id="actividades-title">
         Sesiones grupales
       </h1>
+
+      <div className="actividades-form-nav">
+        {canViewTrash ? (
+          <button
+            className="outline-action actividades-back-action"
+            type="button"
+            onClick={() => navigate(CREACION_ACTIVIDADES_TRASH_PATH)}
+          >
+            <span>Ver papelera</span>
+          </button>
+        ) : null}
+        <span className="actividades-form-nav__context">Listado activo</span>
+      </div>
 
       <ActividadesGrupalesToolbar
         search={search}
@@ -107,7 +125,7 @@ export function ActividadesGrupalesIndexPage({
               onSuccess: () => {
                 deleteMutation.reset();
                 setActivityPendingDelete(null);
-                toast.success("Actividad eliminada.");
+                toast.success("Acta enviada a la papelera.");
               },
             });
           }}

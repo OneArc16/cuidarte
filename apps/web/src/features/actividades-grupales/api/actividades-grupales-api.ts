@@ -5,10 +5,12 @@ import {
   type ActividadGrupalFormOptionsResponse,
   type ActividadGrupalIntegranteOptionsResponse,
   type ActividadGrupalListResponse,
+  type ActividadGrupalTrashListResponse,
   type ActividadGrupalTenantOptionsResponse,
   type ActividadGrupalType,
   type CreateActividadGrupalRequest,
   type SaveActividadGrupalDiligenciamiento,
+  type RestoreActividadGrupalResponse,
   type UpdateActividadGrupalRequest,
   actividadGrupalEditDetailSchema,
   actividadGrupalDiligenciamientoDetailSchema,
@@ -16,8 +18,10 @@ import {
   actividadGrupalIntegranteOptionsResponseSchema,
   actividadGrupalListItemSchema,
   actividadGrupalListResponseSchema,
+  actividadGrupalTrashListResponseSchema,
   actividadGrupalTenantOptionsResponseSchema,
   deleteActividadGrupalResponseSchema,
+  restoreActividadGrupalResponseSchema,
 } from "@cuidarte/contracts";
 
 import { getApiBaseUrl } from "@/shared/api/api-config";
@@ -29,6 +33,8 @@ type ListActividadesGrupalesParams = {
   tenantId: string | null;
 };
 
+type TrashActividadesGrupalesParams = ListActividadesGrupalesParams;
+
 type SaveActividadGrupalDiligenciamientoRequest = {
   payload: SaveActividadGrupalDiligenciamiento;
   newPhotos: File[];
@@ -39,6 +45,15 @@ export function listActividadesGrupales(
   params: ListActividadesGrupalesParams,
 ): Promise<ActividadGrupalListResponse> {
   return fetchJson(buildActividadesGrupalesUrl(params), actividadGrupalListResponseSchema);
+}
+
+export function listActividadesGrupalesTrash(
+  params: TrashActividadesGrupalesParams,
+): Promise<ActividadGrupalTrashListResponse> {
+  return fetchJson(
+    buildActividadesGrupalesTrashUrl(params),
+    actividadGrupalTrashListResponseSchema,
+  );
 }
 
 export function listActividadGrupalTenantOptions(): Promise<ActividadGrupalTenantOptionsResponse> {
@@ -95,6 +110,16 @@ export function deleteActividadGrupal(
     deleteActividadGrupalResponseSchema,
     {
       method: "DELETE",
+    },
+  );
+}
+
+export function restoreActividadGrupal(activityId: string): Promise<RestoreActividadGrupalResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/actividades-grupales/${activityId}/restaurar`,
+    restoreActividadGrupalResponseSchema,
+    {
+      method: "POST",
     },
   );
 }
@@ -187,4 +212,24 @@ function buildActividadesGrupalesUrl(params: ListActividadesGrupalesParams): str
   const queryString = searchParams.toString();
 
   return `${getApiBaseUrl()}/actividades-grupales${queryString === "" ? "" : `?${queryString}`}`;
+}
+
+function buildActividadesGrupalesTrashUrl(params: TrashActividadesGrupalesParams): string {
+  const searchParams = new URLSearchParams();
+
+  if (params.search.trim() !== "") {
+    searchParams.set("search", params.search.trim());
+  }
+
+  if (params.activityType !== null) {
+    searchParams.set("activityType", params.activityType);
+  }
+
+  if (params.tenantId !== null) {
+    searchParams.set("tenantId", params.tenantId);
+  }
+
+  const queryString = searchParams.toString();
+
+  return `${getApiBaseUrl()}/actividades-grupales/papelera${queryString === "" ? "" : `?${queryString}`}`;
 }

@@ -8,11 +8,13 @@ import {
   CREACION_ACTIVIDADES_PATH,
   getActividadGrupalEditIdFromPath,
   getActividadGrupalDiligenciamientoIdFromPath,
+  CREACION_ACTIVIDADES_TRASH_PATH,
 } from "../lib/actividades-grupales-paths";
 import { ActividadGrupalCreatePage } from "./actividad-grupal-create-page";
 import { ActividadGrupalDiligenciamientoPage } from "./actividad-grupal-diligenciamiento-page";
 import { ActividadGrupalEditPage } from "./actividad-grupal-edit-page";
 import { ActividadesGrupalesIndexPage } from "./actividades-grupales-index-page";
+import { ActividadesGrupalesTrashPage } from "./actividades-grupales-trash-page";
 
 type ActividadesGrupalesPageProps = {
   navigate: Navigate;
@@ -23,6 +25,10 @@ type ActividadesGrupalesPageProps = {
 export function ActividadesGrupalesPage({ navigate, path, user }: ActividadesGrupalesPageProps) {
   if (path === CREACION_ACTIVIDADES_PATH) {
     return <ActividadesGrupalesIndexPage navigate={navigate} user={user} />;
+  }
+
+  if (path === CREACION_ACTIVIDADES_TRASH_PATH) {
+    return <ActividadesGrupalesTrashPage navigate={navigate} user={user} />;
   }
 
   if (path === CREACION_ACTIVIDADES_NEW_PATH) {

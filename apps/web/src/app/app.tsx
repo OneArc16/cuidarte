@@ -25,11 +25,15 @@ import {
   REGISTRO_ALIMENTACION_NEW_PATH,
   REGISTRO_ALIMENTACION_PATH,
 } from "@/features/alimentacion/lib/alimentacion-paths";
-import { canManageActividadesGrupales } from "@/features/actividades-grupales/lib/actividades-grupales-permissions";
+import {
+  canManageActividadesGrupales,
+  canViewActividadesGrupalesTrash,
+} from "@/features/actividades-grupales/lib/actividades-grupales-permissions";
 import {
   CREACION_ACTIVIDADES_NEW_PATH,
   CREACION_ACTIVIDADES_PATH,
   getActividadGrupalDiligenciamientoIdFromPath,
+  isActividadesGrupalesTrashPath,
   isActividadesGrupalesPath,
 } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
 import { LoginPage } from "@/features/auth/pages/login-page";
@@ -74,6 +78,11 @@ export function App() {
     }
 
     if (isActividadesGrupalesPath(path) && user.role !== "super_admin" && user.tenantId === null) {
+      navigate(HOME_PATH, { replace: true });
+      return;
+    }
+
+    if (isActividadesGrupalesTrashPath(path) && !canViewActividadesGrupalesTrash(user)) {
       navigate(HOME_PATH, { replace: true });
       return;
     }
@@ -167,7 +176,9 @@ export function App() {
               : "Adultos mayores | CuidarTe"
             : isAlimentacionPath(path)
               ? "Registro de alimentacion | CuidarTe"
-              : isActividadesGrupalesPath(path)
+              : isActividadesGrupalesTrashPath(path)
+                ? "Papelera de actas | CuidarTe"
+                : isActividadesGrupalesPath(path)
                 ? "Sesiones grupales | CuidarTe"
                 : isEmpleadosPath(path)
                   ? "Gestion de empleados | CuidarTe"

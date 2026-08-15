@@ -577,12 +577,17 @@ export const actividadesGrupales = pgTable(
     createdByUserId: uuid("created_by_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedByUserId: uuid("deleted_by_user_id").references(() => users.id, {
+      onDelete: "restrict",
+    }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("actividades_grupales_tenant_acta_unique").on(table.tenantId, table.actaNumber),
     index("actividades_grupales_tenant_date_idx").on(table.tenantId, table.activityDate),
+    index("actividades_grupales_tenant_deleted_at_idx").on(table.tenantId, table.deletedAt),
     index("actividades_grupales_created_by_user_idx").on(table.createdByUserId),
   ],
 );

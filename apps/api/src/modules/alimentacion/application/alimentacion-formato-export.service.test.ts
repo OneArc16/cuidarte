@@ -101,6 +101,88 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
     assert.equal(exportWasPrepared, true);
   });
 
+  it("does not reuse an emission when the active signature file is missing", async () => {
+    let storedEmissionWasRead = false;
+    const service = new AlimentacionFormatoExportService(
+      {
+        async prepareFormatoEntregaExport() {
+          return {
+            tenantId,
+            tenantName: "Centro Demo",
+            tenantCity: "Bogota",
+            tenantDepartment: "Cundinamarca",
+            adultoMayorId,
+            documentNumber: "1020304050",
+            fullName: "Rosa Martinez",
+            deliveryMonth: "2026-07",
+            records: [
+              {
+                deliveryDate: "2026-07-03",
+                organizer: "nutricionista",
+                refrigerio1: "entregado",
+                almuerzo: "entregado",
+                refrigerio2: "entregado",
+                auxilioTransporte: "entregado",
+                updatedAt: new Date("2026-08-09T11:00:00.000Z"),
+              },
+            ],
+          };
+        },
+        async findLatestFormatoEntregaEmission() {
+          return {
+            tenantId,
+            adultoMayorId,
+            deliveryMonth: "2026-07",
+            issuedAt: new Date("2026-08-09T12:00:00.000Z"),
+            pdfRelativePath: `${tenantId}/historic.pdf`,
+            filename: "historic.pdf",
+            signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
+            signatureVersionIdSnapshot: "7cf28395-e93e-420f-b7e0-92314361a02b",
+            tenantLogoVersionIdSnapshot: logoVersionId,
+            sourceRecordCount: 1,
+            sourceDateFrom: "2026-07-03",
+            sourceDateTo: "2026-07-03",
+          };
+        },
+      } as never,
+      {
+        ...directorSignatureService(),
+        async readSignatureFile() {
+          throw Object.assign(new Error("missing signature"), { code: "ENOENT" });
+        },
+      } as never,
+      {
+        async resolveActiveLogo() {
+          return {
+            id: logoVersionId,
+            tenantId,
+            relativePath: `${tenantId}/branding/logos/version.png`,
+          };
+        },
+      } as never,
+      {
+        async readFile() {
+          storedEmissionWasRead = true;
+
+          return {
+            buffer: Buffer.from("historic-pdf"),
+            contentType: "application/pdf",
+            filename: "historic.pdf",
+          };
+        },
+      } as never,
+    );
+
+    await assert.rejects(
+      () => service.exportPdf(adultoMayorId, { deliveryMonth: "2026-07" }, actor),
+      {
+        name: "ConflictException",
+        message: /firma activa no esta disponible/i,
+      },
+    );
+    assert.equal(storedEmissionWasRead, false);
+  });
+
   it("blocks a new emission with 409 before storing or rendering a PDF", async () => {
     let storedPdfCount = 0;
     const service = new AlimentacionFormatoExportService(
@@ -171,7 +253,10 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
     await service.exportPdf(adultoMayorId, { deliveryMonth: "2026-07" }, actor);
 
     assert.equal(createdEmissions[0]?.tenantLogoVersionIdSnapshot, logoVersionId);
-    assert.equal(createdEmissions[0]?.signerEmployeeIdSnapshot, "2b93919b-182e-49a9-a61c-85f55428061b");
+    assert.equal(
+      createdEmissions[0]?.signerEmployeeIdSnapshot,
+      "2b93919b-182e-49a9-a61c-85f55428061b",
+    );
     assert.ok(createdEmissions[0]?.issuedAt instanceof Date);
     assert.equal(resolvedSignerRequested, true);
   });
@@ -407,8 +492,9 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
     assert.equal(savedPdfCount, 1);
   });
 
-  it("renders the PDF without director signature when the signature file is missing", async () => {
-    let capturedDirectorSignatureDataUrl: string | null | undefined;
+  it("rejects a new emission when the active signature file is missing", async () => {
+    let renderWasCalled = false;
+    let storedPdfCount = 0;
     const service = new AlimentacionFormatoExportService(
       alimentacionServiceForNewEmission() as never,
       {
@@ -455,18 +541,15 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
       } as never,
       {
         async saveFile(_scope: unknown, file: { filename: string }) {
+          storedPdfCount += 1;
+
           return { filename: file.filename, relativePath: `${tenantId}/new.pdf` };
         },
       } as never,
     );
     Object.assign(service, {
-      async renderPdf(
-        _data: unknown,
-        _institutionalLogoDataUrl: string | null,
-        _tenantLogoDataUrl: string,
-        directorSignatureDataUrl: string | null,
-      ) {
-        capturedDirectorSignatureDataUrl = directorSignatureDataUrl;
+      async renderPdf() {
+        renderWasCalled = true;
 
         return Buffer.from("new-pdf");
       },
@@ -475,10 +558,15 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
       },
     });
 
-    const result = await service.exportPdf(adultoMayorId, { deliveryMonth: "2026-07" }, actor);
-
-    assert.deepEqual(result.buffer, Buffer.from("new-pdf"));
-    assert.equal(capturedDirectorSignatureDataUrl, null);
+    await assert.rejects(
+      () => service.exportPdf(adultoMayorId, { deliveryMonth: "2026-07" }, actor),
+      {
+        name: "ConflictException",
+        message: /firma activa no esta disponible/i,
+      },
+    );
+    assert.equal(renderWasCalled, false);
+    assert.equal(storedPdfCount, 0);
   });
 });
 

@@ -40,11 +40,7 @@ type CurrentFormatoDependencies = {
   tenantLogoVersion: ResolvedTenantLogoVersion;
 };
 
-const INSTITUTIONAL_LOGO_RELATIVE_PATH = path.join(
-  "public",
-  "logos",
-  "gobernacion-magdalena.png",
-);
+const INSTITUTIONAL_LOGO_RELATIVE_PATH = path.join("public", "logos", "gobernacion-magdalena.png");
 const VISIT_BASED_FORMAT_ROLLOUT_AT = new Date("2026-08-09T05:00:00.000Z");
 
 let cachedInstitutionalLogoDataUrl: string | null | undefined;
@@ -82,8 +78,12 @@ export class AlimentacionFormatoExportService {
 
     if (
       existingEmission !== null &&
+      currentDependenciesForReuse !== null &&
       this.shouldReuseExistingEmission(existingEmission, exportData, currentDependenciesForReuse)
     ) {
+      await this.getDirectorSignatureDataUrl(
+        currentDependenciesForReuse.directorSignature.signature,
+      );
       const storedFile = await this.readStoredEmission(existingEmission);
 
       if (storedFile !== null) {
@@ -100,7 +100,8 @@ export class AlimentacionFormatoExportService {
       }
     }
     const { directorSignature, tenantLogoVersion } =
-      currentDependenciesForReuse ?? (await this.resolveCurrentFormatoDependencies(exportData.tenantId));
+      currentDependenciesForReuse ??
+      (await this.resolveCurrentFormatoDependencies(exportData.tenantId));
     const [institutionalLogoDataUrl, directorSignatureDataUrl, tenantLogoFile] = await Promise.all([
       this.getInstitutionalLogoDataUrl(),
       this.getDirectorSignatureDataUrl(directorSignature.signature),
@@ -213,10 +214,9 @@ export class AlimentacionFormatoExportService {
         }),
       );
     } catch (error) {
-      throw new InternalServerErrorException(
-        "No fue posible generar el formato de alimentacion.",
-        { cause: error },
-      );
+      throw new InternalServerErrorException("No fue posible generar el formato de alimentacion.", {
+        cause: error,
+      });
     } finally {
       await browser?.close();
     }
@@ -243,9 +243,12 @@ export class AlimentacionFormatoExportService {
         return null;
       }
 
-      throw new InternalServerErrorException("No fue posible recuperar el formato historico de alimentacion.", {
-        cause: error,
-      });
+      throw new InternalServerErrorException(
+        "No fue posible recuperar el formato historico de alimentacion.",
+        {
+          cause: error,
+        },
+      );
     }
   }
 
@@ -253,14 +256,17 @@ export class AlimentacionFormatoExportService {
     relativePath: string;
     originalName: string;
     mimeType: string;
-  }): Promise<string | null> {
+  }): Promise<string> {
     try {
       const file = await this.empleadosSignatureService.readSignatureFile(signature);
 
       return `data:${normalizeInlineImageContentType(file.contentType)};base64,${file.buffer.toString("base64")}`;
     } catch (error) {
       if (isMissingFileError(error)) {
-        return null;
+        throw new ConflictException(
+          "El archivo de la firma activa no esta disponible. Carga una nueva firma y actualiza el firmante activo antes de exportar.",
+          { cause: error },
+        );
       }
 
       throw error;
@@ -278,26 +284,26 @@ export class AlimentacionFormatoExportService {
       sourceDateTo: string | null;
     },
     exportData: AlimentacionFormatoEntregaExportData,
-    currentDependencies: CurrentFormatoDependencies | null,
+    currentDependencies: CurrentFormatoDependencies,
   ): boolean {
     if (existingEmission.issuedAt < VISIT_BASED_FORMAT_ROLLOUT_AT) {
       return false;
     }
 
     if (
-      currentDependencies !== null &&
-      (existingEmission.signerEmployeeIdSnapshot !== currentDependencies.directorSignature.activeSigner.employeeId ||
-        existingEmission.signatureVersionIdSnapshot !== currentDependencies.directorSignature.signature.id ||
-        existingEmission.tenantLogoVersionIdSnapshot !== currentDependencies.tenantLogoVersion.id)
+      existingEmission.signerEmployeeIdSnapshot !==
+        currentDependencies.directorSignature.activeSigner.employeeId ||
+      existingEmission.signatureVersionIdSnapshot !==
+        currentDependencies.directorSignature.signature.id ||
+      existingEmission.tenantLogoVersionIdSnapshot !== currentDependencies.tenantLogoVersion.id
     ) {
       return false;
     }
 
     if (
-      currentDependencies !== null &&
-      (currentDependencies.directorSignature.activeSigner.activatedAt > existingEmission.issuedAt ||
-        currentDependencies.directorSignature.signature.createdAt > existingEmission.issuedAt ||
-        currentDependencies.tenantLogoVersion.createdAt > existingEmission.issuedAt)
+      currentDependencies.directorSignature.activeSigner.activatedAt > existingEmission.issuedAt ||
+      currentDependencies.directorSignature.signature.createdAt > existingEmission.issuedAt ||
+      currentDependencies.tenantLogoVersion.createdAt > existingEmission.issuedAt
     ) {
       return false;
     }
@@ -383,17 +389,10 @@ async function readLogoFile(): Promise<Buffer | null> {
 }
 
 function isMissingFileError(error: unknown): error is NodeJS.ErrnoException {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    error.code === "ENOENT"
-  );
+  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
 }
 
-function getLatestRecordUpdatedAt(
-  exportData: AlimentacionFormatoEntregaExportData,
-): Date | null {
+function getLatestRecordUpdatedAt(exportData: AlimentacionFormatoEntregaExportData): Date | null {
   let latestTimestamp: number | null = null;
 
   for (const record of exportData.records) {

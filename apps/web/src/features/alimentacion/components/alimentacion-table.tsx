@@ -7,6 +7,7 @@ import {
   History,
   LoaderCircle,
   Pencil,
+  Trash2,
   Upload,
 } from "lucide-react";
 import { Fragment, useCallback, useMemo, useState } from "react";
@@ -38,6 +39,7 @@ type AlimentacionTableProps = {
     versionId: string;
     originalName: string;
   }) => void;
+  onDelete: (record: AlimentacionListItem) => void;
   onOpenImportedFormatoHistory: (params: { adultoMayorId: string; fullName: string }) => void;
   exportingAdultoMayorId: string | null;
   importingAdultoMayorId: string | null;
@@ -59,6 +61,7 @@ export function AlimentacionTable({
   onExportFormato,
   onImportFormato,
   onDownloadImportedFormato,
+  onDelete,
   onOpenImportedFormatoHistory,
   exportingAdultoMayorId,
   importingAdultoMayorId,
@@ -369,20 +372,31 @@ export function AlimentacionTable({
                             <td>{formatAlimentacionStatus(record.auxilioTransporte)}</td>
                             {showTenantColumn ? <td>{record.tenantName}</td> : null}
                             <td>
-                              {canManageAlimentacion ? (
-                                <button
-                                  className="alimentacion-row-action"
-                                  type="button"
-                                  aria-label={`Editar alimentación de ${record.fullName} del día ${record.deliveryDate}`}
+                            {canManageAlimentacion ? (
+                              <button
+                                className="alimentacion-row-action"
+                                type="button"
+                                aria-label={`Editar alimentación de ${record.fullName} del día ${record.deliveryDate}`}
                                   title="Editar registro"
                                   onClick={() => onOpenEdit(record.id)}
-                                >
-                                  <Pencil aria-hidden="true" />
-                                </button>
-                              ) : null}
-                            </td>
-                          </motion.tr>
-                        ))
+                              >
+                                <Pencil aria-hidden="true" />
+                              </button>
+                            ) : null}
+                            {record.canDelete ? (
+                              <button
+                                className="alimentacion-row-action alimentacion-row-action--danger"
+                                type="button"
+                                aria-label={`Eliminar alimentación de ${record.fullName} del día ${record.deliveryDate}`}
+                                title="Eliminar registro"
+                                onClick={() => onDelete(record)}
+                              >
+                                <Trash2 aria-hidden="true" />
+                              </button>
+                            ) : null}
+                          </td>
+                        </motion.tr>
+                      ))
                       : null}
                   </AnimatePresence>
                 </Fragment>

@@ -143,6 +143,86 @@
   width: 9.5%;
 }
 
+.actividades-trash-table {
+  min-width: 1080px;
+}
+
+.actividades-trash-table--without-tenant .actividades-trash-col-acta {
+  width: 7%;
+}
+
+.actividades-trash-table--without-tenant .actividades-trash-col-actividad {
+  width: 20%;
+}
+
+.actividades-trash-table--without-tenant .actividades-trash-col-tipo {
+  width: 10%;
+}
+
+.actividades-trash-table--without-tenant .actividades-trash-col-fecha {
+  width: 9%;
+}
+
+.actividades-trash-table--without-tenant .actividades-trash-col-horario {
+  width: 8%;
+}
+
+.actividades-trash-table--without-tenant .actividades-trash-col-organizador {
+  width: 11%;
+}
+
+.actividades-trash-table--without-tenant .actividades-trash-col-eliminada-por {
+  width: 14%;
+}
+
+.actividades-trash-table--without-tenant .actividades-trash-col-eliminada-el {
+  width: 13%;
+}
+
+.actividades-trash-table--without-tenant .actividades-trash-col-acciones {
+  width: 8%;
+}
+
+.actividades-trash-table--with-tenant .actividades-trash-col-acta {
+  width: 6%;
+}
+
+.actividades-trash-table--with-tenant .actividades-trash-col-actividad {
+  width: 17%;
+}
+
+.actividades-trash-table--with-tenant .actividades-trash-col-tipo {
+  width: 10%;
+}
+
+.actividades-trash-table--with-tenant .actividades-trash-col-fecha {
+  width: 8%;
+}
+
+.actividades-trash-table--with-tenant .actividades-trash-col-horario {
+  width: 8%;
+}
+
+.actividades-trash-table--with-tenant .actividades-trash-col-organizador {
+  width: 10%;
+}
+
+.actividades-trash-table--with-tenant .actividades-trash-col-centro {
+  width: 13%;
+}
+
+.actividades-trash-table--with-tenant .actividades-trash-col-eliminada-por {
+  width: 12%;
+}
+
+.actividades-trash-table--with-tenant .actividades-trash-col-eliminada-el {
+  width: 8%;
+}
+
+.actividades-trash-table--with-tenant .actividades-trash-col-acciones {
+  width: 8%;
+}
+
 .actividades-table th,
 .actividades-table td {
   padding: 9px 10px;

@@ -651,6 +651,210 @@
   height: 16px;
 }
 
+.alimentacion-delete-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background:
+    radial-gradient(circle at top, rgb(29 158 117 / 12%), transparent 42%),
+    rgb(3 33 40 / 64%);
+  backdrop-filter: blur(10px);
+}
+
+.alimentacion-delete-dialog {
+  width: min(100%, 36rem);
+  border: 1px solid #edc9c2;
+  border-radius: 1.5rem;
+  background: #ffffff;
+  color: var(--color-ink);
+  box-shadow:
+    0 28px 80px rgb(0 30 38 / 34%),
+    0 0 0 1px #ffffff inset;
+  padding: 1.35rem;
+}
+
+.alimentacion-delete-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.alimentacion-delete-dialog__header h2 {
+  margin: 0;
+  color: var(--color-deep);
+}
+
+.alimentacion-delete-dialog__header p {
+  margin: 0 0 0.35rem;
+}
+
+.alimentacion-delete-dialog__eyebrow {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #a73a2d;
+}
+
+.alimentacion-delete-dialog__close-button {
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
+  border-radius: 12px;
+  border: 1px solid #d6e4df;
+  background: #f5faf8;
+  color: var(--color-deep);
+}
+
+.alimentacion-delete-dialog__close-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.alimentacion-delete-dialog__hero {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1rem 1.05rem;
+  border-radius: 1.15rem;
+  background: #fff1ed;
+  border: 1px solid #efc7bd;
+  margin-bottom: 1rem;
+}
+
+.alimentacion-delete-dialog__icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.9rem;
+  background: #bf4933;
+  color: #ffffff;
+  flex: 0 0 auto;
+}
+
+.alimentacion-delete-dialog__icon svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.alimentacion-delete-dialog__hero strong,
+.alimentacion-delete-dialog__hero span {
+  display: block;
+}
+
+.alimentacion-delete-dialog__hero strong {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-deep);
+}
+
+.alimentacion-delete-dialog__hero span {
+  margin-top: 0.2rem;
+  color: #765d57;
+  font-size: 0.92rem;
+}
+
+.alimentacion-delete-dialog__message {
+  margin: 0 0 1rem;
+  line-height: 1.55;
+  color: var(--color-ink);
+}
+
+.alimentacion-delete-dialog__meta {
+  display: grid;
+  gap: 0.7rem;
+  margin: 0 0 1rem;
+}
+
+.alimentacion-delete-dialog__meta div {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.95rem;
+  background: #f3f8f6;
+  border: 1px solid #dce9e4;
+}
+
+.alimentacion-delete-dialog__meta dt {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #9b4438;
+}
+
+.alimentacion-delete-dialog__meta dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-deep);
+}
+
+.alimentacion-delete-dialog__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.7rem;
+  margin-top: 1.35rem;
+}
+
+.alimentacion-delete-dialog__action-button {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.alimentacion-delete-dialog__actions .secondary-action {
+  background: var(--color-deep);
+  color: #ffffff;
+}
+
+.alimentacion-delete-dialog__actions .secondary-action:not(:disabled):hover,
+.alimentacion-delete-dialog__actions .secondary-action:not(:disabled):focus-visible {
+  background: #063f34;
+  box-shadow: 0 12px 24px rgb(8 80 65 / 20%);
+}
+
+.alimentacion-delete-dialog__action-button--danger {
+  background: #b63f2f;
+  color: #ffffff;
+  border-color: #b63f2f;
+  box-shadow: 0 12px 24px rgb(182 63 47 / 22%);
+}
+
+.alimentacion-delete-dialog__action-button--danger:not(:disabled):hover,
+.alimentacion-delete-dialog__action-button--danger:not(:disabled):focus-visible {
+  background: #992f23;
+  box-shadow:
+    0 16px 30px rgb(153 47 35 / 26%),
+    0 0 0 3px rgb(182 63 47 / 16%);
+}
+
+.alimentacion-delete-dialog__action-button svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.alimentacion-delete-dialog__spinner {
+  animation: alimentacion-delete-dialog-spin 0.9s linear infinite;
+}
+
+@keyframes alimentacion-delete-dialog-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 640px) {
   .alimentacion-import-dialog-backdrop {
     padding: 10px;
@@ -688,6 +892,37 @@
   }
 
   .alimentacion-import-dialog__action-button {
+    min-height: 44px;
+  }
+
+  .alimentacion-delete-dialog-backdrop {
+    padding: 10px;
+  }
+
+  .alimentacion-delete-dialog {
+    width: 100%;
+    max-height: calc(100vh - 20px);
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .alimentacion-delete-dialog__header {
+    align-items: flex-start;
+  }
+
+  .alimentacion-delete-dialog__hero {
+    padding: 10px 12px;
+  }
+
+  .alimentacion-delete-dialog__meta {
+    grid-template-columns: 1fr;
+  }
+
+  .alimentacion-delete-dialog__actions {
+    grid-template-columns: 1fr;
+  }
+
+  .alimentacion-delete-dialog__action-button {
     min-height: 44px;
   }
 }

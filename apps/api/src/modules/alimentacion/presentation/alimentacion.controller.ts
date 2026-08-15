@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -28,6 +29,7 @@ import {
   alimentacionAdultoOptionsResponseSchema,
   alimentacionDetailSchema,
   alimentacionFormatoEntregaExportQuerySchema,
+  alimentacionEditorRoleValues,
   alimentacionImportedFormatoUploadResponseSchema,
   alimentacionImportedFormatoVersionsResponseSchema,
   alimentacionListQuerySchema,
@@ -35,6 +37,7 @@ import {
   alimentacionLookupByAdultoMayorQuerySchema,
   alimentacionLookupByAdultoMayorResponseSchema,
   alimentacionTenantOptionsResponseSchema,
+  deleteAlimentacionResponseSchema,
   createAlimentacionBatchRequestSchema,
   createAlimentacionBatchResponseSchema,
   updateAlimentacionRequestSchema,
@@ -45,6 +48,8 @@ import { z } from "zod";
 
 import { parseZodSchema } from "../../../common/parse-zod-schema";
 import { type AuthenticatedRequest } from "../../auth/authenticated-request";
+import { RequireRoles } from "../../auth/roles.decorator";
+import { RolesGuard } from "../../auth/roles.guard";
 import { SessionGuard } from "../../auth/session.guard";
 import { AlimentacionFormatoExportService } from "../application/alimentacion-formato-export.service";
 import { AlimentacionImportedFormatoService } from "../application/alimentacion-imported-formato.service";
@@ -275,6 +280,20 @@ export class AlimentacionController {
     const record = await this.alimentacionService.updateRegistro(id, command, request.currentUser);
 
     return alimentacionDetailSchema.parse(record);
+  }
+
+  @Delete(":id")
+  @UseGuards(RolesGuard)
+  @RequireRoles(...alimentacionEditorRoleValues)
+  @ApiOkResponse({ description: "Registro de alimentacion eliminado." })
+  @ApiNotFoundResponse({ description: "Registro no encontrado." })
+  @ApiForbiddenResponse({ description: "El usuario no puede eliminar el registro solicitado." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async deleteRegistro(@Param("id") idParam: string, @Req() request: AuthenticatedRequest) {
+    const id = parseZodSchema(recordIdParamSchema, idParam);
+    await this.alimentacionService.deleteRegistro(id, request.currentUser);
+
+    return deleteAlimentacionResponseSchema.parse({ success: true });
   }
 }
 

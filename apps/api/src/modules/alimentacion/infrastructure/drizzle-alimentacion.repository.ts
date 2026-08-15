@@ -37,6 +37,7 @@ import {
   type CreateAlimentacionFormatoEntregaExportAuditCommand,
   type CreateAlimentacionImportedFormatoDownloadAuditCommand,
   type CreateAlimentacionBatchRecordCommand,
+  type DeleteAlimentacionRecordCommand,
   type FindAlimentacionAdultoMayorByIdQuery,
   type FindLatestAlimentacionFormatoEmissionQuery,
   type FindAlimentacionFormatoEntregaByAdultoAndMonthQuery,
@@ -563,6 +564,40 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
     });
   }
 
+  async delete(command: DeleteAlimentacionRecordCommand): Promise<AlimentacionRecord | null> {
+    return await this.database.db.transaction(async (tx) => {
+      const [row] = await tx
+        .select(this.getRecordSelection())
+        .from(alimentacionRegistros)
+        .innerJoin(adultosMayores, eq(adultosMayores.id, alimentacionRegistros.adultoMayorId))
+        .innerJoin(tenants, eq(tenants.id, alimentacionRegistros.tenantId))
+        .where(this.buildScopedWhere(command.scope, [eq(alimentacionRegistros.id, command.id)]))
+        .limit(1);
+
+      if (row === undefined) {
+        return null;
+      }
+
+      const deletedRecord = this.toRecord(row);
+
+      await tx.insert(auditLogs).values({
+        actorUserId: command.actorUserId,
+        action: "alimentacion.deleted",
+        targetTenantId: deletedRecord.tenantId,
+        summary: `Registro de alimentacion eliminado: ${deletedRecord.fullName} (${deletedRecord.deliveryDate})`,
+        metadata: {
+          record: this.toAuditRecordSnapshot(deletedRecord),
+        },
+      });
+
+      await tx
+        .delete(alimentacionRegistros)
+        .where(eq(alimentacionRegistros.id, command.id));
+
+      return deletedRecord;
+    });
+  }
+
   async createFormatoEntregaExportAudit(
     command: CreateAlimentacionFormatoEntregaExportAuditCommand,
   ): Promise<void> {
@@ -867,6 +902,44 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
       importedFormato: null,
+    };
+  }
+
+  private toAuditRecordSnapshot(record: AlimentacionRecord) {
+    return {
+      id: record.id,
+      tenantId: record.tenantId,
+      tenantName: record.tenantName,
+      adultoMayorId: record.adultoMayorId,
+      documentNumber: record.documentNumber,
+      fullName: record.fullName,
+      deliveryDate: record.deliveryDate,
+      organizer: record.organizer,
+      refrigerio1: record.refrigerio1,
+      almuerzo: record.almuerzo,
+      refrigerio2: record.refrigerio2,
+      auxilioTransporte: record.auxilioTransporte,
+      createdAt: record.createdAt.toISOString(),
+      updatedAt: record.updatedAt.toISOString(),
+      importedFormato:
+        record.importedFormato === null
+          ? null
+          : {
+              id: record.importedFormato.id,
+              tenantId: record.importedFormato.tenantId,
+              adultoMayorId: record.importedFormato.adultoMayorId,
+              deliveryMonth: record.importedFormato.deliveryMonth,
+              version: record.importedFormato.version,
+              source: record.importedFormato.source,
+              originalName: record.importedFormato.originalName,
+              storedName: record.importedFormato.storedName,
+              pdfRelativePath: record.importedFormato.pdfRelativePath,
+              mimeType: record.importedFormato.mimeType,
+              sizeBytes: record.importedFormato.sizeBytes,
+              importedByUserId: record.importedFormato.importedByUserId,
+              importedByUserFullName: record.importedFormato.importedByUserFullName,
+              importedAt: record.importedFormato.importedAt.toISOString(),
+            },
     };
   }
 

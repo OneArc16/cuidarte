@@ -3,6 +3,7 @@ import { Power } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { resolveTenantActiveSignerAction } from "../lib/empleados-active-signer";
 import { resolveEmpleadosApiError } from "../lib/empleados-formatters";
 import {
   useClearTenantActiveSignerMutation,
@@ -27,13 +28,21 @@ export function EmpleadoDirectorSignerToggle({ detail }: EmpleadoDirectorSignerT
   const setSignerMutation = useSetTenantActiveSignerMutation(detail.tenantId ?? "");
   const clearSignerMutation = useClearTenantActiveSignerMutation(detail.tenantId ?? "");
 
-  const hasCurrentSignature = detail.latestSignature !== null;
-  const isActiveSigner = detail.tenantActiveSigner?.employeeId === detail.id;
-  const toggleButtonLabel = isActiveSigner ? "Desactivar firmante" : "Activar firmante";
+  const latestSignatureId = detail.latestSignature?.id ?? null;
+  const signerAction = resolveTenantActiveSignerAction({
+    activeSigner: detail.tenantActiveSigner,
+    employeeId: detail.id,
+    latestSignatureId,
+  });
+  const isActiveSigner = signerAction === "deactivate" || signerAction === "update";
+  const toggleButtonLabel =
+    signerAction === "deactivate"
+      ? "Desactivar firmante"
+      : signerAction === "update"
+        ? "Actualizar firma activa"
+        : "Activar firmante";
   const isToggleDisabled =
-    setSignerMutation.isPending ||
-    clearSignerMutation.isPending ||
-    (!isActiveSigner && !hasCurrentSignature);
+    setSignerMutation.isPending || clearSignerMutation.isPending || signerAction === "unavailable";
 
   return (
     <button
@@ -43,7 +52,7 @@ export function EmpleadoDirectorSignerToggle({ detail }: EmpleadoDirectorSignerT
       aria-label={toggleButtonLabel}
       disabled={isToggleDisabled}
       onClick={() => {
-        if (isActiveSigner) {
+        if (signerAction === "deactivate") {
           clearSignerMutation.mutate(undefined, {
             onSuccess: () => {
               toast.success("Firmante activo desactivado.");
@@ -76,20 +85,20 @@ export function EmpleadoDirectorSignerToggle({ detail }: EmpleadoDirectorSignerT
       <span>
         <strong>{isActiveSigner ? "Firmante activo" : "Firmante inactivo"}</strong>
         <small>
-          {isActiveSigner
+          {signerAction === "deactivate"
             ? "Desactivar firmante"
-            : hasCurrentSignature
-              ? "Activar firmante"
-              : "Cargar firma primero"}
+            : signerAction === "update"
+              ? "Actualizar firma activa"
+              : signerAction === "activate"
+                ? "Activar firmante"
+                : "Cargar firma primero"}
         </small>
       </span>
     </button>
   );
 }
 
-export function EmpleadoDirectorSignaturePanel({
-  detail,
-}: EmpleadoDirectorSignaturePanelProps) {
+export function EmpleadoDirectorSignaturePanel({ detail }: EmpleadoDirectorSignaturePanelProps) {
   const uploadMutation = useUploadEmpleadoSignatureMutation(detail.id);
   const signaturePreviewQuery = useEmpleadoSignaturePreviewQuery(
     detail.id,
@@ -145,7 +154,7 @@ export function EmpleadoDirectorSignaturePanel({
         <article className="empleado-signature-card empleado-signature-card--preview">
           <strong>Firma actual cargada</strong>
           <p>
-          {hasCurrentSignature
+            {hasCurrentSignature
               ? "La última firma cargada puede activarse para el centro."
               : "Este director aún no tiene una firma cargada."}
           </p>

@@ -119,6 +119,7 @@ describe("AlimentacionService", () => {
 
     assert.equal(result.length, 1);
     assert.equal(result[0]?.tenantId, tenantId);
+    assert.equal(result[0]?.canDelete, true);
     assert.deepEqual(repository.listQueries[0], {
       search: "Rosa",
       deliveryMonth: "2026-04",
@@ -137,6 +138,7 @@ describe("AlimentacionService", () => {
     );
 
     assert.equal(result.length, 1);
+    assert.equal(result[0]?.canDelete, false);
     assert.deepEqual(repository.listQueries[0], {
       search: null,
       deliveryMonth: "2026-04",
@@ -323,6 +325,21 @@ describe("AlimentacionService", () => {
     assert.equal(result.id, existingRecordId);
     assert.equal(result.organizer, "director");
     assert.equal(result.deliveryDate, "2026-04-25");
+  });
+
+  it("allows director users to delete feeding records in their tenant", async () => {
+    const repository = createRepository({
+      deletedRecord: alimentacionRecord,
+    });
+    const service = new AlimentacionService(repository);
+
+    await service.deleteRegistro(existingRecordId, directorUser);
+
+    assert.deepEqual(repository.deleteCommands[0], {
+      id: existingRecordId,
+      actorUserId: directorUser.id,
+      scope: { type: "tenant", tenantId },
+    });
   });
 
   it("rejects updates that collide with another record on the same date", async () => {
@@ -544,6 +561,19 @@ describe("AlimentacionService", () => {
     );
   });
 
+  it("forbids read-only and unsupported roles from deleting feeding records", async () => {
+    const repository = createRepository();
+    const service = new AlimentacionService(repository);
+
+    await assert.rejects(() => service.deleteRegistro(existingRecordId, medicoUser), {
+      constructor: ForbiddenException,
+    });
+
+    await assert.rejects(() => service.deleteRegistro(existingRecordId, auditorUser), {
+      constructor: ForbiddenException,
+    });
+  });
+
   it("forbids users without tenant from managing feeding records", async () => {
     const repository = createRepository();
     const service = new AlimentacionService(repository);
@@ -556,6 +586,10 @@ describe("AlimentacionService", () => {
         ),
       { constructor: ForbiddenException },
     );
+
+    await assert.rejects(() => service.deleteRegistro(existingRecordId, tenantlessDirectorUser), {
+      constructor: ForbiddenException,
+    });
   });
 });
 
@@ -566,12 +600,18 @@ function createRepository(
     records?: AlimentacionRecord[];
     adultoMayorById?: AlimentacionAdultoOptionRecord | null;
     formatoEntregaRecords?: AlimentacionRecord[];
+    deletedRecord?: AlimentacionRecord | null;
   } = {},
 ): AlimentacionRepository & {
   listQueries: FindAlimentacionRecordsQuery[];
   adultoOptionsQueries: SearchAlimentacionAdultosMayoresOptionsQuery[];
   formatoEntregaQueries: FindAlimentacionFormatoEntregaByAdultoAndMonthQuery[];
   formatoEntregaAuditCommands: CreateAlimentacionFormatoEntregaExportAuditCommand[];
+  deleteCommands: Array<{
+    id: string;
+    actorUserId: string;
+    scope: { type: "all" } | { type: "tenant"; tenantId: string };
+  }>;
   createdCommands: Array<{
     tenantId: string;
     actorUserId: string;
@@ -591,6 +631,11 @@ function createRepository(
   const adultoOptionsQueries: SearchAlimentacionAdultosMayoresOptionsQuery[] = [];
   const formatoEntregaQueries: FindAlimentacionFormatoEntregaByAdultoAndMonthQuery[] = [];
   const formatoEntregaAuditCommands: CreateAlimentacionFormatoEntregaExportAuditCommand[] = [];
+  const deleteCommands: Array<{
+    id: string;
+    actorUserId: string;
+    scope: { type: "all" } | { type: "tenant"; tenantId: string };
+  }> = [];
   const createdCommands: Array<{
     tenantId: string;
     actorUserId: string;
@@ -610,6 +655,7 @@ function createRepository(
     adultoOptionsQueries,
     formatoEntregaQueries,
     formatoEntregaAuditCommands,
+    deleteCommands,
     createdCommands,
     async findMany(query) {
       listQueries.push(query);
@@ -725,6 +771,11 @@ function createRepository(
         auxilioTransporte: command.auxilioTransporte,
         updatedAt: new Date("2026-04-25T12:00:00.000Z"),
       };
+    },
+    async delete(command) {
+      deleteCommands.push(command);
+
+      return overrides.deletedRecord ?? alimentacionRecord;
     },
     async createFormatoEntregaExportAudit(command) {
       formatoEntregaAuditCommands.push(command);

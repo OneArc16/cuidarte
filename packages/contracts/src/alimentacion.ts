@@ -148,6 +148,7 @@ export const alimentacionListItemSchema = z.object({
   auxilioTransporte: alimentacionStatusSchema,
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
+  canDelete: z.boolean().default(false),
   importedFormato: alimentacionImportedFormatoVersionSchema.nullable().optional().default(null),
 });
 
@@ -193,6 +194,10 @@ export const createAlimentacionBatchResponseSchema = z.object({
   createdCount: z.number().int().min(1),
 });
 
+export const deleteAlimentacionResponseSchema = z.object({
+  success: z.literal(true),
+});
+
 export const alimentacionLookupByAdultoMayorResponseSchema = z.object({
   adultoMayor: alimentacionAdultoOptionSchema,
   existingRecordId: z.uuid().nullable(),
@@ -231,6 +236,7 @@ export type AlimentacionAdultoOptionsResponse = z.infer<
   typeof alimentacionAdultoOptionsResponseSchema
 >;
 export type CreateAlimentacionBatchResponse = z.infer<typeof createAlimentacionBatchResponseSchema>;
+export type DeleteAlimentacionResponse = z.infer<typeof deleteAlimentacionResponseSchema>;
 export type AlimentacionLookupByAdultoMayorResponse = z.infer<
   typeof alimentacionLookupByAdultoMayorResponseSchema
 >;

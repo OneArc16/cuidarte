@@ -143,8 +143,8 @@ export function ActividadesGrupalesTable({
                       <button
                         className="actividades-row-action"
                         type="button"
-                        aria-label={`Eliminar actividad ${actividad.activityName}`}
-                        title="Eliminar actividad"
+                        aria-label={`Enviar a la papelera la actividad ${actividad.activityName}`}
+                        title="Enviar a la papelera"
                         onClick={() => onDelete(actividad)}
                       >
                         <Trash2 aria-hidden="true" />

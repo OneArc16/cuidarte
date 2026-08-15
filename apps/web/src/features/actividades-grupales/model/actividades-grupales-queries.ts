@@ -20,6 +20,16 @@ type UpdateActividadGrupalMutationRequest = {
   payload: UpdateActividadGrupalRequest;
 };
 
+type TrashActividadesGrupalesParams = {
+  search: string;
+  activityType: ActividadGrupalType | null;
+  tenantId: string | null;
+};
+
+type RestoreActividadGrupalMutationRequest = {
+  activityId: string;
+};
+
 export const actividadesGrupalesQueryKeys = {
   list: (params: {
     search: string;
@@ -33,6 +43,8 @@ export const actividadesGrupalesQueryKeys = {
   formOptions: (tenantId: string | null) =>
     ["actividades-grupales", "form-options", tenantId] as const,
   editDetail: (activityId: string) => ["actividades-grupales", activityId, "edit"] as const,
+  trashList: (params: TrashActividadesGrupalesParams) =>
+    ["actividades-grupales", "papelera", params] as const,
 };
 
 export function useActividadesGrupalesQuery(params: {
@@ -83,6 +95,18 @@ export function useActividadGrupalEditQuery(activityId: string) {
   return useQuery({
     queryKey: actividadesGrupalesQueryKeys.editDetail(activityId),
     queryFn: () => actividadesGrupalesApi.getActividadGrupalForEdit(activityId),
+    retry: false,
+  });
+}
+
+export function useActividadesGrupalesTrashQuery(
+  params: TrashActividadesGrupalesParams,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: actividadesGrupalesQueryKeys.trashList(params),
+    queryFn: () => actividadesGrupalesApi.listActividadesGrupalesTrash(params),
+    enabled,
     retry: false,
   });
 }
@@ -145,7 +169,30 @@ export function useDeleteActividadGrupalMutation() {
       queryClient.removeQueries({
         queryKey: actividadesGrupalesQueryKeys.detail(activityId),
       });
-      await queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] }),
+        queryClient.invalidateQueries({ queryKey: ["actividades-grupales", "papelera"] }),
+        queryClient.invalidateQueries({ queryKey: ["home"] }),
+      ]);
+    },
+  });
+}
+
+export function useRestoreActividadGrupalMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: RestoreActividadGrupalMutationRequest) =>
+      actividadesGrupalesApi.restoreActividadGrupal(request.activityId),
+    onSuccess: async (_, request) => {
+      queryClient.removeQueries({
+        queryKey: actividadesGrupalesQueryKeys.editDetail(request.activityId),
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] }),
+        queryClient.invalidateQueries({ queryKey: ["actividades-grupales", "papelera"] }),
+        queryClient.invalidateQueries({ queryKey: ["home"] }),
+      ]);
     },
   });
 }

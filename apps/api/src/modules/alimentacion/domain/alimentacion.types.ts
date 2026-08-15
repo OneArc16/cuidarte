@@ -238,3 +238,9 @@ export type UpdateAlimentacionRecordCommand = {
   refrigerio2: AlimentacionStatus;
   auxilioTransporte: AlimentacionStatus;
 };
+
+export type DeleteAlimentacionRecordCommand = {
+  id: string;
+  actorUserId: string;
+  scope: AlimentacionScope;
+};

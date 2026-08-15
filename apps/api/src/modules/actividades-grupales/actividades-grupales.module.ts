@@ -4,6 +4,7 @@ import { DatabaseModule } from "../../database/database.module";
 import { AuthModule } from "../auth/auth.module";
 import { ActividadesGrupalesActaExportService } from "./application/actividades-grupales-acta-export.service";
 import { ActividadesGrupalesService } from "./application/actividades-grupales.service";
+import { ActividadesGrupalesTrashService } from "./application/actividades-grupales-trash.service";
 import { ACTIVIDADES_GRUPALES_FILES_STORAGE } from "./domain/actividades-grupales-files.storage";
 import { ACTIVIDADES_GRUPALES_REPOSITORY } from "./domain/actividades-grupales.repository";
 import { DrizzleActividadesGrupalesRepository } from "./infrastructure/drizzle-actividades-grupales.repository";
@@ -16,6 +17,7 @@ import { ActividadesGrupalesController } from "./presentation/actividades-grupal
   providers: [
     ActividadesGrupalesActaExportService,
     ActividadesGrupalesService,
+    ActividadesGrupalesTrashService,
     {
       provide: ACTIVIDADES_GRUPALES_REPOSITORY,
       useClass: DrizzleActividadesGrupalesRepository,
