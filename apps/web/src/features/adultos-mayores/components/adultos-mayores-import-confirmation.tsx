@@ -28,8 +28,12 @@ export function AdultosMayoresImportConfirmation({
           <dd>{detail.summary.readyRows}</dd>
         </div>
         <div>
-          <dt>Omitidos</dt>
-          <dd>{detail.summary.existingRows}</dd>
+          <dt>Actualizaciones</dt>
+          <dd>{detail.summary.updateRows}</dd>
+        </div>
+        <div>
+          <dt>Sin cambios</dt>
+          <dd>{detail.summary.unchangedRows}</dd>
         </div>
       </dl>
 

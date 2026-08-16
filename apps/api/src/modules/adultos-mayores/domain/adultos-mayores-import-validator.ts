@@ -14,6 +14,7 @@ import {
 import { calculateAgeFromBirthDate } from "../application/age";
 import {
   type AdultoMayorImportCatalogMaps,
+  type AdultoMayorImportExistingRecord,
   type AdultoMayorImportNormalizedRow,
   type AdultoMayorImportRowInput,
   type AdultoMayorImportValidatedRow,
@@ -68,6 +69,27 @@ const COLUMN_BY_PATH: Record<string, string> = {
   socialProgramBeneficiary: "beneficiario_programa_social",
 };
 
+const OPTIONAL_PRESERVED_FIELDS = {
+  middleName: "segundo_nombre",
+  secondSurname: "segundo_apellido",
+  educationLevel: "nivel_academico",
+  disability: "discapacidad",
+  populationGroup: "grupo_poblacional",
+  country: "pais",
+  phone: "telefono",
+  phoneSecondary: "telefono_secundario",
+  email: "correo",
+  emergencyContactFullName: "contacto_emergencia_nombre",
+  emergencyContactRelationship: "contacto_emergencia_parentesco",
+  emergencyContactPhone: "contacto_emergencia_telefono",
+  emergencyContactAddress: "contacto_emergencia_direccion",
+  bloodType: "tipo_sangre",
+  sisben: "sisben",
+  healthRegime: "regimen_salud",
+  companion: "acompanante",
+  economicIncome: "ingreso_economico",
+} as const satisfies Partial<Record<keyof AdultoMayorImportNormalizedRow, string>>;
+
 const DOCUMENT_TYPE_MAP: Record<string, AdultoMayorImportNormalizedRow["documentType"]> = {
   cc: "cc",
   cedula: "cc",
@@ -120,22 +142,25 @@ export class AdultosMayoresImportValidator {
   validateRows(
     rows: AdultoMayorImportRowInput[],
     catalogs: AdultoMayorImportCatalogMaps,
-    existingAdults: Array<{ id: string; documentType: string; documentNumber: string }>,
+    existingAdults: AdultoMayorImportExistingRecord[],
   ): {
     rows: AdultoMayorImportValidatedRow[];
     issues: AdultoMayorImportIssue[];
     summary: {
       totalRows: number;
       readyRows: number;
+      updateRows: number;
       invalidRows: number;
       warningRows: number;
+      unchangedRows: number;
       existingRows: number;
       createdRows: number;
+      updatedRows: number;
     };
   } {
     const duplicateKeys = this.findDuplicateKeys(rows);
     const existingKeyMap = new Map(
-      existingAdults.map((adulto) => [this.buildKey(adulto.documentType, adulto.documentNumber), adulto.id]),
+      existingAdults.map((adulto) => [this.buildKey(adulto.documentType, adulto.documentNumber), adulto]),
     );
 
     const validatedRows = rows.map((row) =>
@@ -146,12 +171,17 @@ export class AdultosMayoresImportValidator {
     const summary = adultoMayorImportSummarySchema.parse({
       totalRows: validatedRows.length,
       readyRows: validatedRows.filter((row) => row.status === "ready").length,
+      updateRows: validatedRows.filter((row) => row.status === "update_ready").length,
       invalidRows: validatedRows.filter((row) => row.status === "invalid").length,
       warningRows: validatedRows.filter(
         (row) => row.status !== "invalid" && row.issues.some((issue) => issue.severity === "warning"),
       ).length,
-      existingRows: validatedRows.filter((row) => row.status === "existing").length,
+      unchangedRows: validatedRows.filter((row) => row.status === "unchanged").length,
+      existingRows: validatedRows.filter(
+        (row) => row.status === "update_ready" || row.status === "unchanged",
+      ).length,
       createdRows: 0,
+      updatedRows: 0,
     });
 
     return {
@@ -165,13 +195,13 @@ export class AdultosMayoresImportValidator {
     row: AdultoMayorImportRowInput,
     catalogs: AdultoMayorImportCatalogMaps,
     duplicateKeys: Set<string>,
-    existingKeyMap: Map<string, string>,
+    existingKeyMap: Map<string, AdultoMayorImportExistingRecord>,
   ): AdultoMayorImportValidatedRow {
     const issues: AdultoMayorImportIssue[] = [];
     const normalized = this.normalizeRow(row, catalogs, issues);
     const key = this.buildKey(normalized.documentType, normalized.documentNumber);
     const duplicateInFile = duplicateKeys.has(key);
-    const existingAdultoId = existingKeyMap.get(key) ?? null;
+    const existingAdult = existingKeyMap.get(key) ?? null;
 
     if (duplicateInFile) {
       issues.push(
@@ -179,17 +209,32 @@ export class AdultosMayoresImportValidator {
       );
     }
 
-    if (existingAdultoId !== null) {
+    const hasError = issues.some((issue) => issue.severity === "error");
+
+    if (existingAdult !== null) {
+      if (hasError) {
+        return {
+          rowNumber: row.rowNumber,
+          status: "invalid",
+          normalizedPayload: null,
+          issues,
+          existingAdultoId: existingAdult.id,
+          existingAdultoUpdatedAt: existingAdult.updatedAt,
+        };
+      }
+
+      const mergedPayload = this.mergeWithExistingOptionalValues(row, normalized, existingAdult);
+      const hasChanges = this.hasRelevantChanges(mergedPayload, existingAdult);
+
       return {
         rowNumber: row.rowNumber,
-        status: "existing",
-        normalizedPayload: normalized,
+        status: hasChanges ? "update_ready" : "unchanged",
+        normalizedPayload: mergedPayload,
         issues,
-        existingAdultoId,
+        existingAdultoId: existingAdult.id,
+        existingAdultoUpdatedAt: existingAdult.updatedAt,
       };
     }
-
-    const hasError = issues.some((issue) => issue.severity === "error");
 
     return {
       rowNumber: row.rowNumber,
@@ -197,7 +242,80 @@ export class AdultosMayoresImportValidator {
       normalizedPayload: hasError ? null : normalized,
       issues,
       existingAdultoId: null,
+      existingAdultoUpdatedAt: null,
     };
+  }
+
+  private mergeWithExistingOptionalValues(
+    row: AdultoMayorImportRowInput,
+    normalized: AdultoMayorImportNormalizedRow,
+    existingAdult: AdultoMayorImportExistingRecord,
+  ): AdultoMayorImportNormalizedRow {
+    const merged = { ...normalized };
+
+    for (const [field, column] of Object.entries(OPTIONAL_PRESERVED_FIELDS) as Array<
+      [keyof typeof OPTIONAL_PRESERVED_FIELDS, string]
+    >) {
+      if (this.isBlankCell(row.values[column])) {
+        merged[field] = existingAdult[field] as never;
+      }
+    }
+
+    if (this.isBlankCell(row.values.codigo_eps)) {
+      merged.epsId = existingAdult.epsId;
+      merged.eps = existingAdult.eps;
+    }
+
+    return merged;
+  }
+
+  private hasRelevantChanges(
+    candidate: AdultoMayorImportNormalizedRow,
+    existingAdult: AdultoMayorImportExistingRecord,
+  ): boolean {
+    return (
+      JSON.stringify(candidate) !==
+      JSON.stringify({
+        documentType: existingAdult.documentType,
+        documentNumber: existingAdult.documentNumber,
+        firstName: existingAdult.firstName,
+        middleName: existingAdult.middleName,
+        firstSurname: existingAdult.firstSurname,
+        secondSurname: existingAdult.secondSurname,
+        birthDate: existingAdult.birthDate,
+        sex: existingAdult.sex,
+        educationLevel: existingAdult.educationLevel,
+        disability: existingAdult.disability,
+        populationGroup: existingAdult.populationGroup,
+        address: existingAdult.address,
+        departmentId: existingAdult.departmentId,
+        municipalityId: existingAdult.municipalityId,
+        department: existingAdult.department,
+        municipality: existingAdult.municipality,
+        zone: existingAdult.zone,
+        country: existingAdult.country,
+        phone: existingAdult.phone,
+        phoneSecondary: existingAdult.phoneSecondary,
+        email: existingAdult.email,
+        emergencyContactFullName: existingAdult.emergencyContactFullName,
+        emergencyContactRelationship: existingAdult.emergencyContactRelationship,
+        emergencyContactPhone: existingAdult.emergencyContactPhone,
+        emergencyContactAddress: existingAdult.emergencyContactAddress,
+        bloodType: existingAdult.bloodType,
+        sisben: existingAdult.sisben,
+        healthRegime: existingAdult.healthRegime,
+        epsId: existingAdult.epsId,
+        eps: existingAdult.eps,
+        livesWithSomeone: existingAdult.livesWithSomeone,
+        companion: existingAdult.companion,
+        economicIncome: existingAdult.economicIncome,
+        socialProgramBeneficiary: existingAdult.socialProgramBeneficiary,
+      } satisfies AdultoMayorImportNormalizedRow)
+    );
+  }
+
+  private isBlankCell(value: string | null | undefined): boolean {
+    return value === null || value === undefined || value.trim() === "";
   }
 
   private normalizeRow(

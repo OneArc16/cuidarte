@@ -1,13 +1,17 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { type AuthUser } from "@cuidarte/contracts";
-import { Inject, Injectable, InternalServerErrorException } from "@nestjs/common";
+import {
+  type ActividadGrupalDiligenciamientoDetail,
+  type AuthUser,
+} from "@cuidarte/contracts";
+import { Inject, Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
 import { chromium, type Browser } from "playwright";
 
 import { ActividadesGrupalesService } from "./actividades-grupales.service";
 import { prepareActividadGrupalActaPhotoAssets } from "./actividad-grupal-acta-photo-assets";
 import {
+  type ActividadGrupalActaPdfDetail,
   buildActividadGrupalActaPdfFilename,
   buildActividadGrupalActaPdfHtml,
 } from "./actividad-grupal-acta-pdf-template";
@@ -15,6 +19,11 @@ import {
   ACTIVIDADES_GRUPALES_FILES_STORAGE,
   type ActividadesGrupalesFilesStorage,
 } from "../domain/actividades-grupales-files.storage";
+import { EmpleadosSignatureService } from "../../empleados/application/empleados-signature.service";
+import {
+  EMPLEADOS_REPOSITORY,
+  type EmpleadosRepository,
+} from "../../empleados/domain/empleados.repository";
 import playwrightEnv from "../../../common/playwright-env";
 
 export type ExportedActividadGrupalActaPdf = {
@@ -35,6 +44,9 @@ let cachedLogoDataUrl: string | null | undefined;
 export class ActividadesGrupalesActaExportService {
   constructor(
     private readonly actividadesGrupalesService: ActividadesGrupalesService,
+    @Inject(EMPLEADOS_REPOSITORY)
+    private readonly empleadosRepository: EmpleadosRepository,
+    private readonly empleadosSignatureService: EmpleadosSignatureService,
     @Inject(ACTIVIDADES_GRUPALES_FILES_STORAGE)
     private readonly filesStorage: ActividadesGrupalesFilesStorage,
   ) {}
@@ -42,22 +54,24 @@ export class ActividadesGrupalesActaExportService {
   async exportPdf(activityId: string, actor: AuthUser): Promise<ExportedActividadGrupalActaPdf> {
     const { detail, photoFiles } =
       await this.actividadesGrupalesService.getActividadGrupalActaExportData(activityId, actor);
-    const [logoDataUrl, photoAssets] = await Promise.all([
+    const [detailWithSignatures, logoDataUrl, photoAssets] = await Promise.all([
+      hydrateActividadGrupalActaPdfDetailWithSignatures(detail, {
+        empleadosRepository: this.empleadosRepository,
+        empleadosSignatureService: this.empleadosSignatureService,
+      }),
       this.getLogoDataUrl(),
       prepareActividadGrupalActaPhotoAssets(photoFiles, this.filesStorage),
     ]);
 
     return {
-      buffer: await this.renderPdf(detail, logoDataUrl, photoAssets),
+      buffer: await this.renderPdf(detailWithSignatures, logoDataUrl, photoAssets),
       contentType: "application/pdf",
-      filename: buildActividadGrupalActaPdfFilename(detail),
+      filename: buildActividadGrupalActaPdfFilename(detailWithSignatures),
     };
   }
 
   private async renderPdf(
-    detail: Awaited<
-      ReturnType<ActividadesGrupalesService["getActividadGrupalActaExportData"]>
-    >["detail"],
+    detail: ActividadGrupalActaPdfDetail,
     logoDataUrl: string | null,
     photoAssets: Awaited<ReturnType<typeof prepareActividadGrupalActaPhotoAssets>>,
   ): Promise<Buffer> {
@@ -108,6 +122,51 @@ export class ActividadesGrupalesActaExportService {
 
     return cachedLogoDataUrl;
   }
+}
+
+export async function hydrateActividadGrupalActaPdfDetailWithSignatures(
+  detail: ActividadGrupalDiligenciamientoDetail,
+  dependencies: {
+    empleadosRepository: Pick<EmpleadosRepository, "findLatestSignatureVersionByEmployeeId">;
+    empleadosSignatureService: Pick<EmpleadosSignatureService, "readSignatureFile">;
+  },
+): Promise<ActividadGrupalActaPdfDetail> {
+  const assignedProfessionals = await Promise.all(
+    detail.assignedProfessionals.map(async (professional) => {
+      const latestSignature =
+        await dependencies.empleadosRepository.findLatestSignatureVersionByEmployeeId(
+          professional.id,
+        );
+
+      if (latestSignature === null) {
+        return { ...professional, signatureDataUrl: null };
+      }
+
+      try {
+        const file = await dependencies.empleadosSignatureService.readSignatureFile({
+          relativePath: latestSignature.relativePath,
+          originalName: latestSignature.originalName,
+          mimeType: latestSignature.mimeType,
+        });
+
+        return {
+          ...professional,
+          signatureDataUrl: `data:${file.contentType};base64,${file.buffer.toString("base64")}`,
+        };
+      } catch (error) {
+        if (error instanceof NotFoundException) {
+          return { ...professional, signatureDataUrl: null };
+        }
+
+        throw error;
+      }
+    }),
+  );
+
+  return {
+    ...detail,
+    assignedProfessionals,
+  };
 }
 
 async function readLogoFile(): Promise<Buffer | null> {

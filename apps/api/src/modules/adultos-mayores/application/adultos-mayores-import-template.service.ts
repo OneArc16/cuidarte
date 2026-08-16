@@ -103,10 +103,12 @@ export class AdultosMayoresImportTemplateService {
       ["1. Solo edita la hoja 'Adultos mayores'."],
       ["2. No cambies los encabezados ni el orden de las columnas."],
       ["3. Usa texto para documentos, codigos DIVIPOLA, telefonos y EPS."],
-      ["4. La importacion es create-only y omite duplicados existentes en el tenant."],
+      ["4. La importacion crea nuevos registros y tambien actualiza adultos existentes del mismo centro."],
       ["5. El archivo soportado es .xlsx y tiene un maximo de 1.000 filas de datos."],
-      ["6. Para tipo_sangre usa valores como O+, A-, AB+ o Desconocido."],
-      ["7. Para codigo_eps consulta la hoja 'EPS' y copia el codigo exacto de una EPS activa."],
+      ["6. Si una celda opcional viene vacia y el adulto ya existe, se conserva el valor actual."],
+      ["7. Revalida el archivo si alguien modifico esos registros antes de confirmar el lote."],
+      ["8. Para tipo_sangre usa valores como O+, A-, AB+ o Desconocido."],
+      ["9. Para codigo_eps consulta la hoja 'EPS' y copia el codigo exacto de una EPS activa."],
     ]);
     instructionsSheet.getColumn(1).width = 96;
 

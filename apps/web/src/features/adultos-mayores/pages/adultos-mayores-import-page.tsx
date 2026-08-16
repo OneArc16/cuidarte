@@ -104,7 +104,7 @@ export function AdultosMayoresImportPage({ navigate, user }: AdultosMayoresImpor
       return;
     }
 
-    const tenantId = canSelectTenant ? selectedTenantId.trim() || null : user.tenantId;
+    const tenantId = canSelectTenant ? selectedTenantId.trim() || null : null;
 
     if (canSelectTenant && tenantId === null) {
       setLocalError("Selecciona el centro donde se importaran los adultos mayores.");

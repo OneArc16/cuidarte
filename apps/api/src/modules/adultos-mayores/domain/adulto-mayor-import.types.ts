@@ -66,12 +66,18 @@ export type AdultoMayorImportNormalizedRow = {
   socialProgramBeneficiary: boolean;
 };
 
+export type AdultoMayorImportExistingRecord = AdultoMayorImportNormalizedRow & {
+  id: string;
+  updatedAt: string;
+};
+
 export type AdultoMayorImportValidatedRow = {
   rowNumber: number;
-  status: "ready" | "invalid" | "existing";
+  status: "ready" | "update_ready" | "unchanged" | "invalid";
   normalizedPayload: AdultoMayorImportNormalizedRow | null;
   issues: AdultoMayorImportIssue[];
   existingAdultoId: string | null;
+  existingAdultoUpdatedAt: string | null;
 };
 
 export type AdultoMayorImportBatchRecord = {
@@ -107,13 +113,22 @@ export type AdultoMayorImportBatchCreateCommand = {
 
 export type AdultoMayorImportBatchRowCreateCommand = {
   rowNumber: number;
-  status: "ready" | "invalid" | "existing";
+  status: "ready" | "update_ready" | "unchanged" | "invalid";
   normalizedPayload: AdultoMayorImportNormalizedRow | null;
   issues: AdultoMayorImportIssue[];
   existingAdultoId: string | null;
+  existingAdultoUpdatedAt: string | null;
 };
 
 export type AdultoMayorImportBatchDetailRowRecord = AdultoMayorImportRow & {
   normalizedPayload: AdultoMayorImportNormalizedRow | null;
   issues: AdultoMayorImportIssue[];
+};
+
+export type AdultoMayorImportCommitResult = {
+  createdRows: number;
+  updatedRows: number;
+  unchangedRows: number;
+  existingRows: number;
+  confirmedAt: Date;
 };

@@ -14,14 +14,19 @@ import {
 } from "../../../database/schema";
 import {
   type AdultoMayorImportBatchCreateCommand,
+  type AdultoMayorImportCommitResult,
   type AdultoMayorImportBatchDetailRowRecord,
   type AdultoMayorImportBatchRecord,
   type AdultoMayorImportBatchRowCreateCommand,
   type AdultoMayorImportCatalogMaps,
+  type AdultoMayorImportExistingRecord,
   type AdultoMayorImportNormalizedRow,
   type AdultoMayorImportValidatedRow,
 } from "../domain/adulto-mayor-import.types";
-import { type AdultosMayoresImportRepository } from "../domain/adultos-mayores-import.repository";
+import {
+  AdultoMayorImportCommitConflictError,
+  type AdultosMayoresImportRepository,
+} from "../domain/adultos-mayores-import.repository";
 
 type DatabaseLike = DatabaseService["db"];
 
@@ -36,10 +41,13 @@ type ImportBatchRow = {
   status: AdultoMayorImportBatchRecord["status"];
   totalRows: number;
   readyRows: number;
+  updateRows: number;
   invalidRows: number;
   warningRows: number;
+  unchangedRows: number;
   existingRows: number;
   createdRows: number;
+  updatedRows: number;
   expiresAt: Date;
   confirmedAt: Date | null;
   failureCode: string | null;
@@ -124,7 +132,7 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
   async findExistingAdultsByTenantAndDocuments(params: {
     tenantId: string;
     documents: Array<{ documentType: string; documentNumber: string }>;
-  }): Promise<Array<{ id: string; documentType: string; documentNumber: string }>> {
+  }): Promise<AdultoMayorImportExistingRecord[]> {
     if (params.documents.length === 0) {
       return [];
     }
@@ -135,8 +143,43 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
         id: adultosMayores.id,
         documentType: adultosMayores.documentType,
         documentNumber: adultosMayores.documentNumber,
+        firstName: adultosMayores.firstName,
+        middleName: adultosMayores.middleName,
+        firstSurname: adultosMayores.firstSurname,
+        secondSurname: adultosMayores.secondSurname,
+        birthDate: adultosMayores.birthDate,
+        sex: adultosMayores.sex,
+        educationLevel: adultosMayores.educationLevel,
+        disability: adultosMayores.disability,
+        populationGroup: adultosMayores.populationGroup,
+        address: adultosMayores.address,
+        departmentId: adultosMayores.departmentId,
+        municipalityId: adultosMayores.municipalityId,
+        department: adultosMayores.department,
+        municipality: adultosMayores.municipality,
+        zone: adultosMayores.zone,
+        country: adultosMayores.country,
+        phone: adultosMayores.phone,
+        phoneSecondary: adultosMayores.phoneSecondary,
+        email: adultosMayores.email,
+        emergencyContactFullName: adultosMayores.emergencyContactFullName,
+        emergencyContactRelationship: adultosMayores.emergencyContactRelationship,
+        emergencyContactPhone: adultosMayores.emergencyContactPhone,
+        emergencyContactAddress: adultosMayores.emergencyContactAddress,
+        bloodType: adultosMayores.bloodType,
+        sisben: adultosMayores.sisben,
+        healthRegime: adultosMayores.healthRegime,
+        epsId: adultosMayores.epsId,
+        legacyEps: adultosMayores.eps,
+        epsName: epsCatalog.name,
+        livesWithSomeone: adultosMayores.livesWithSomeone,
+        companion: adultosMayores.companion,
+        economicIncome: adultosMayores.economicIncome,
+        socialProgramBeneficiary: adultosMayores.socialProgramBeneficiary,
+        updatedAt: adultosMayores.updatedAt,
       })
       .from(adultosMayores)
+      .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
       .where(
         and(
           eq(adultosMayores.tenantId, params.tenantId),
@@ -148,7 +191,46 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
       params.documents.map((document) => `${document.documentType}::${document.documentNumber}`),
     );
 
-    return rows.filter((row) => keySet.has(`${row.documentType}::${row.documentNumber}`));
+    return rows
+      .filter((row) => keySet.has(`${row.documentType}::${row.documentNumber}`))
+      .map((row): AdultoMayorImportExistingRecord => ({
+        id: row.id,
+        documentType: row.documentType,
+        documentNumber: row.documentNumber,
+        firstName: row.firstName,
+        middleName: row.middleName,
+        firstSurname: row.firstSurname,
+        secondSurname: row.secondSurname,
+        birthDate: row.birthDate,
+        sex: row.sex,
+        educationLevel: row.educationLevel,
+        disability: row.disability,
+        populationGroup: row.populationGroup,
+        address: row.address,
+        departmentId: row.departmentId ?? "",
+        municipalityId: row.municipalityId ?? "",
+        department: row.department,
+        municipality: row.municipality,
+        zone: row.zone as AdultoMayorImportNormalizedRow["zone"],
+        country: row.country,
+        phone: row.phone,
+        phoneSecondary: row.phoneSecondary,
+        email: row.email,
+        emergencyContactFullName: row.emergencyContactFullName,
+        emergencyContactRelationship: row.emergencyContactRelationship,
+        emergencyContactPhone: row.emergencyContactPhone,
+        emergencyContactAddress: row.emergencyContactAddress,
+        bloodType: row.bloodType as AdultoMayorImportNormalizedRow["bloodType"],
+        sisben: row.sisben,
+        healthRegime: row.healthRegime,
+        epsId: row.epsId,
+        eps: row.legacyEps ?? row.epsName ?? null,
+        livesWithSomeone: row.livesWithSomeone,
+        companion: row.companion,
+        economicIncome: row.economicIncome,
+        socialProgramBeneficiary: row.socialProgramBeneficiary,
+        updatedAt: row.updatedAt.toISOString(),
+      }));
   }
 
   async createValidatedBatch(params: {
@@ -167,10 +249,13 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
           status: params.batch.status,
           totalRows: params.batch.summary.totalRows,
           readyRows: params.batch.summary.readyRows,
+          updateRows: params.batch.summary.updateRows,
           invalidRows: params.batch.summary.invalidRows,
           warningRows: params.batch.summary.warningRows,
+          unchangedRows: params.batch.summary.unchangedRows,
           existingRows: params.batch.summary.existingRows,
           createdRows: params.batch.summary.createdRows,
+          updatedRows: params.batch.summary.updatedRows,
           expiresAt: params.batch.expiresAt,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -190,6 +275,8 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
             normalizedPayload: row.normalizedPayload,
             issues: row.issues,
             existingAdultoId: row.existingAdultoId,
+            existingAdultoUpdatedAt:
+              row.existingAdultoUpdatedAt === null ? null : new Date(row.existingAdultoUpdatedAt),
           })),
         );
       }
@@ -224,10 +311,13 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
           status: adultoMayorImportBatches.status,
           totalRows: adultoMayorImportBatches.totalRows,
           readyRows: adultoMayorImportBatches.readyRows,
+          updateRows: adultoMayorImportBatches.updateRows,
           invalidRows: adultoMayorImportBatches.invalidRows,
           warningRows: adultoMayorImportBatches.warningRows,
+          unchangedRows: adultoMayorImportBatches.unchangedRows,
           existingRows: adultoMayorImportBatches.existingRows,
           createdRows: adultoMayorImportBatches.createdRows,
+          updatedRows: adultoMayorImportBatches.updatedRows,
           expiresAt: adultoMayorImportBatches.expiresAt,
           confirmedAt: adultoMayorImportBatches.confirmedAt,
           failureCode: adultoMayorImportBatches.failureCode,
@@ -260,6 +350,7 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
         normalizedPayload: adultoMayorImportRows.normalizedPayload,
         issues: adultoMayorImportRows.issues,
         existingAdultoId: adultoMayorImportRows.existingAdultoId,
+        existingAdultoUpdatedAt: adultoMayorImportRows.existingAdultoUpdatedAt,
         createdAdultoId: adultoMayorImportRows.createdAdultoId,
         createdAt: adultoMayorImportRows.createdAt,
       })
@@ -274,6 +365,7 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
       normalizedPayload: (row.normalizedPayload as AdultoMayorImportNormalizedRow | null) ?? null,
       issues: (row.issues as AdultoMayorImportValidatedRow["issues"]) ?? [],
       existingAdultoId: row.existingAdultoId,
+      existingAdultoUpdatedAt: row.existingAdultoUpdatedAt?.toISOString() ?? null,
       createdAdultoId: row.createdAdultoId,
       createdAt: row.createdAt.toISOString(),
     }));
@@ -311,6 +403,8 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
   async markImportAsCompleted(params: {
     importId: string;
     createdRows: number;
+    updatedRows: number;
+    unchangedRows: number;
     existingRows: number;
     confirmedAt: Date;
   }): Promise<void> {
@@ -319,6 +413,8 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
       .set({
         status: "completed",
         createdRows: params.createdRows,
+        updatedRows: params.updatedRows,
+        unchangedRows: params.unchangedRows,
         existingRows: params.existingRows,
         confirmedAt: params.confirmedAt,
         updatedAt: params.confirmedAt,
@@ -335,6 +431,157 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
         updatedAt: new Date(),
       })
       .where(eq(adultoMayorImportBatches.id, params.importId));
+  }
+
+  async commitValidatedBatch(params: {
+    importId: string;
+    actorUserId: string;
+  }): Promise<AdultoMayorImportCommitResult> {
+    return await this.database.db.transaction(async (tx) => {
+      const batch = await this.findImportBatchById({ importId: params.importId }, tx);
+
+      if (batch === null) {
+        throw new Error("No fue posible recuperar el lote de importacion.");
+      }
+
+      const rows = await this.findImportBatchRows(params.importId, tx);
+      const readyRows = rows.filter((row) => row.status === "ready" && row.normalizedPayload !== null);
+      const updateRows = rows.filter(
+        (row) =>
+          row.status === "update_ready" &&
+          row.normalizedPayload !== null &&
+          row.existingAdultoId !== null &&
+          row.existingAdultoUpdatedAt !== null,
+      );
+      const unchangedRows = rows.filter(
+        (row) =>
+          row.status === "unchanged" &&
+          row.existingAdultoId !== null &&
+          row.existingAdultoUpdatedAt !== null,
+      );
+
+      await this.assertCreateRowsStillAvailable(tx, batch.tenant.id, readyRows);
+      await this.assertObservedVersionsUnchanged(tx, [...updateRows, ...unchangedRows]);
+
+      const confirmedAt = new Date();
+      const insertedAdults = await this.insertAdultosMayoresWithDb(tx, {
+        tenantId: batch.tenant.id,
+        requestedByUserId: params.actorUserId,
+        rows: readyRows.map((row) => ({
+          documentType: row.normalizedPayload?.documentType ?? "",
+          documentNumber: row.normalizedPayload?.documentNumber ?? "",
+          normalizedPayload: row.normalizedPayload ?? {},
+        })),
+      });
+
+      if (insertedAdults.length !== readyRows.length) {
+        throw new AdultoMayorImportCommitConflictError();
+      }
+
+      const createdAdultsByKey = new Map(
+        insertedAdults.map((adulto) => [this.buildDocumentKey(adulto.documentType, adulto.documentNumber), adulto.id]),
+      );
+
+      for (const row of readyRows) {
+        const documentKey = this.buildDocumentKey(
+          row.normalizedPayload?.documentType ?? "",
+          row.normalizedPayload?.documentNumber ?? "",
+        );
+        const createdAdultoId = createdAdultsByKey.get(documentKey);
+
+        if (createdAdultoId === undefined) {
+          throw new AdultoMayorImportCommitConflictError();
+        }
+
+        await tx
+          .update(adultoMayorImportRows)
+          .set({ createdAdultoId })
+          .where(eq(adultoMayorImportRows.id, row.id));
+      }
+
+      for (const row of updateRows) {
+        const [updatedAdult] = await tx
+          .update(adultosMayores)
+          .set({
+            ...this.buildAdultoMutableValues(row.normalizedPayload ?? {}),
+            updatedAt: confirmedAt,
+          })
+          .where(
+            and(
+              eq(adultosMayores.id, row.existingAdultoId ?? ""),
+              eq(adultosMayores.updatedAt, new Date(row.existingAdultoUpdatedAt ?? "")),
+            ),
+          )
+          .returning({ id: adultosMayores.id });
+
+        if (updatedAdult === undefined) {
+          throw new AdultoMayorImportCommitConflictError();
+        }
+      }
+
+      if (updateRows.length > 0) {
+        await tx.insert(auditLogs).values(
+          updateRows.map((row) => ({
+            actorUserId: params.actorUserId,
+            action: "adultos-mayores.updated" as const,
+            targetTenantId: batch.tenant.id,
+            summary: `Adulto mayor actualizado por importacion: ${this.buildAdultoSummary(
+              row.normalizedPayload ?? {},
+            )}`,
+            metadata: {
+              importId: batch.id,
+              source: "adultos-mayores.import",
+              adultoMayorId: row.existingAdultoId,
+              rowNumber: row.rowNumber,
+            },
+          })),
+        );
+      }
+
+      const createdRows = insertedAdults.length;
+      const updatedRows = updateRows.length;
+      const unchangedRowsCount = unchangedRows.length;
+      const existingRows = updatedRows + unchangedRowsCount;
+
+      await tx
+        .update(adultoMayorImportBatches)
+        .set({
+          status: "completed",
+          createdRows,
+          updatedRows,
+          unchangedRows: unchangedRowsCount,
+          existingRows,
+          confirmedAt,
+          updatedAt: confirmedAt,
+        })
+        .where(eq(adultoMayorImportBatches.id, params.importId));
+
+      await tx.insert(auditLogs).values({
+        actorUserId: params.actorUserId,
+        action: "adultos-mayores.import.completed",
+        targetTenantId: batch.tenant.id,
+        summary: `Importacion completada para ${batch.tenant.name}`,
+        metadata: {
+          importId: batch.id,
+          checksum: batch.fileChecksumSha256,
+          templateVersion: batch.templateVersion,
+          totalRows: batch.summary.totalRows,
+          createdRows,
+          updatedRows,
+          unchangedRows: unchangedRowsCount,
+          existingRows,
+          invalidRows: batch.summary.invalidRows,
+        },
+      });
+
+      return {
+        createdRows,
+        updatedRows,
+        unchangedRows: unchangedRowsCount,
+        existingRows,
+        confirmedAt,
+      };
+    });
   }
 
   async attachCreatedAdults(params: {
@@ -360,65 +607,7 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
       normalizedPayload: Record<string, unknown>;
     }>;
   }): Promise<Array<{ id: string; documentType: string; documentNumber: string }>> {
-    if (params.rows.length === 0) {
-      return [];
-    }
-
-    const inserted = await this.database.db
-      .insert(adultosMayores)
-      .values(
-        params.rows.map((row) => ({
-          tenantId: params.tenantId,
-          documentType: row.documentType as never,
-          documentNumber: row.documentNumber,
-          names: this.buildNames(row.normalizedPayload),
-          surnames: this.buildSurnames(row.normalizedPayload),
-          firstName: String(row.normalizedPayload.firstName),
-          middleName: this.toNullableString(row.normalizedPayload.middleName),
-          firstSurname: String(row.normalizedPayload.firstSurname),
-          secondSurname: this.toNullableString(row.normalizedPayload.secondSurname),
-          educationLevel: this.toNullableString(row.normalizedPayload.educationLevel),
-          disability: this.toNullableString(row.normalizedPayload.disability),
-          populationGroup: this.toNullableString(row.normalizedPayload.populationGroup),
-          address: String(row.normalizedPayload.address),
-          departmentId: String(row.normalizedPayload.departmentId),
-          municipalityId: String(row.normalizedPayload.municipalityId),
-          department: String(row.normalizedPayload.department),
-          municipality: String(row.normalizedPayload.municipality),
-          zone: row.normalizedPayload.zone as never,
-          country: String(row.normalizedPayload.country ?? "Colombia"),
-          phone: this.toNullableString(row.normalizedPayload.phone),
-          phoneSecondary: this.toNullableString(row.normalizedPayload.phoneSecondary),
-          email: this.toNullableString(row.normalizedPayload.email),
-          emergencyContactFullName: this.toNullableString(row.normalizedPayload.emergencyContactFullName),
-          emergencyContactRelationship: this.toNullableString(
-            row.normalizedPayload.emergencyContactRelationship,
-          ),
-          emergencyContactPhone: this.toNullableString(row.normalizedPayload.emergencyContactPhone),
-          emergencyContactAddress: this.toNullableString(row.normalizedPayload.emergencyContactAddress),
-          bloodType: this.toNullableString(row.normalizedPayload.bloodType),
-          sisben: this.toNullableString(row.normalizedPayload.sisben),
-          healthRegime: this.toNullableString(row.normalizedPayload.healthRegime),
-          epsId: this.toNullableString(row.normalizedPayload.epsId),
-          eps: this.toNullableString(row.normalizedPayload.eps),
-          livesWithSomeone: Boolean(row.normalizedPayload.livesWithSomeone),
-          companion: this.toNullableString(row.normalizedPayload.companion),
-          economicIncome: this.toNullableNumber(row.normalizedPayload.economicIncome),
-          socialProgramBeneficiary: Boolean(row.normalizedPayload.socialProgramBeneficiary),
-          birthDate: String(row.normalizedPayload.birthDate),
-          sex: row.normalizedPayload.sex as never,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })),
-      )
-      .onConflictDoNothing()
-      .returning({
-        id: adultosMayores.id,
-        documentType: adultosMayores.documentType,
-        documentNumber: adultosMayores.documentNumber,
-      });
-
-    return inserted;
+    return await this.insertAdultosMayoresWithDb(this.database.db, params);
   }
 
   async listImportBatchIdsByChecksum(checksum: string): Promise<string[]> {
@@ -504,10 +693,13 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
       summary: {
         totalRows: batchRow.totalRows,
         readyRows: batchRow.readyRows,
+        updateRows: batchRow.updateRows,
         invalidRows: batchRow.invalidRows,
         warningRows: batchRow.warningRows,
+        unchangedRows: batchRow.unchangedRows,
         existingRows: batchRow.existingRows,
         createdRows: batchRow.createdRows,
+        updatedRows: batchRow.updatedRows,
       },
       issues,
       rows,
@@ -522,6 +714,161 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
 
   private buildNames(payload: Record<string, unknown>): string {
     return [payload.firstName, payload.middleName].filter(Boolean).map(String).join(" ");
+  }
+
+  private async assertCreateRowsStillAvailable(
+    db: DatabaseLike,
+    tenantId: string,
+    rows: AdultoMayorImportBatchDetailRowRecord[],
+  ) {
+    if (rows.length === 0) {
+      return;
+    }
+
+    const documentNumbers = [...new Set(rows.map((row) => row.normalizedPayload?.documentNumber ?? ""))];
+    const foundRows = await db
+      .select({
+        documentType: adultosMayores.documentType,
+        documentNumber: adultosMayores.documentNumber,
+      })
+      .from(adultosMayores)
+      .where(
+        and(
+          eq(adultosMayores.tenantId, tenantId),
+          inArray(adultosMayores.documentNumber, documentNumbers),
+        ),
+      );
+
+    const expectedKeys = new Set(
+      rows.map((row) =>
+        this.buildDocumentKey(
+          row.normalizedPayload?.documentType ?? "",
+          row.normalizedPayload?.documentNumber ?? "",
+        ),
+      ),
+    );
+
+    if (foundRows.some((row) => expectedKeys.has(this.buildDocumentKey(row.documentType, row.documentNumber)))) {
+      throw new AdultoMayorImportCommitConflictError();
+    }
+  }
+
+  private async assertObservedVersionsUnchanged(
+    db: DatabaseLike,
+    rows: AdultoMayorImportBatchDetailRowRecord[],
+  ) {
+    if (rows.length === 0) {
+      return;
+    }
+
+    const existingIds = rows.flatMap((row) => (row.existingAdultoId === null ? [] : [row.existingAdultoId]));
+    const currentRows = await db
+      .select({
+        id: adultosMayores.id,
+        updatedAt: adultosMayores.updatedAt,
+      })
+      .from(adultosMayores)
+      .where(inArray(adultosMayores.id, existingIds));
+
+    const updatedAtById = new Map(currentRows.map((row) => [row.id, row.updatedAt.toISOString()]));
+
+    for (const row of rows) {
+      if (row.existingAdultoId === null || row.existingAdultoUpdatedAt === null) {
+        throw new AdultoMayorImportCommitConflictError();
+      }
+
+      const currentUpdatedAt = updatedAtById.get(row.existingAdultoId);
+
+      if (currentUpdatedAt !== row.existingAdultoUpdatedAt) {
+        throw new AdultoMayorImportCommitConflictError();
+      }
+    }
+  }
+
+  private async insertAdultosMayoresWithDb(
+    db: DatabaseLike,
+    params: {
+      tenantId: string;
+      requestedByUserId: string;
+      rows: Array<{
+        documentType: string;
+        documentNumber: string;
+        normalizedPayload: Record<string, unknown>;
+      }>;
+    },
+  ): Promise<Array<{ id: string; documentType: string; documentNumber: string }>> {
+    if (params.rows.length === 0) {
+      return [];
+    }
+
+    return await db
+      .insert(adultosMayores)
+      .values(
+        params.rows.map((row) => ({
+          tenantId: params.tenantId,
+          ...this.buildAdultoMutableValues(row.normalizedPayload),
+          documentType: row.documentType as never,
+          documentNumber: row.documentNumber,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })),
+      )
+      .onConflictDoNothing()
+      .returning({
+        id: adultosMayores.id,
+        documentType: adultosMayores.documentType,
+        documentNumber: adultosMayores.documentNumber,
+      });
+  }
+
+  private buildAdultoMutableValues(payload: Record<string, unknown>) {
+    return {
+      names: this.buildNames(payload),
+      surnames: this.buildSurnames(payload),
+      firstName: String(payload.firstName),
+      middleName: this.toNullableString(payload.middleName),
+      firstSurname: String(payload.firstSurname),
+      secondSurname: this.toNullableString(payload.secondSurname),
+      educationLevel: this.toNullableString(payload.educationLevel),
+      disability: this.toNullableString(payload.disability),
+      populationGroup: this.toNullableString(payload.populationGroup),
+      address: String(payload.address),
+      departmentId: String(payload.departmentId),
+      municipalityId: String(payload.municipalityId),
+      department: String(payload.department),
+      municipality: String(payload.municipality),
+      zone: payload.zone as never,
+      country: String(payload.country ?? "Colombia"),
+      phone: this.toNullableString(payload.phone),
+      phoneSecondary: this.toNullableString(payload.phoneSecondary),
+      email: this.toNullableString(payload.email),
+      emergencyContactFullName: this.toNullableString(payload.emergencyContactFullName),
+      emergencyContactRelationship: this.toNullableString(payload.emergencyContactRelationship),
+      emergencyContactPhone: this.toNullableString(payload.emergencyContactPhone),
+      emergencyContactAddress: this.toNullableString(payload.emergencyContactAddress),
+      bloodType: this.toNullableString(payload.bloodType),
+      sisben: this.toNullableString(payload.sisben),
+      healthRegime: this.toNullableString(payload.healthRegime),
+      epsId: this.toNullableString(payload.epsId),
+      eps: this.toNullableString(payload.eps),
+      livesWithSomeone: Boolean(payload.livesWithSomeone),
+      companion: this.toNullableString(payload.companion),
+      economicIncome: this.toNullableNumber(payload.economicIncome),
+      socialProgramBeneficiary: Boolean(payload.socialProgramBeneficiary),
+      birthDate: String(payload.birthDate),
+      sex: payload.sex as never,
+    };
+  }
+
+  private buildAdultoSummary(payload: Record<string, unknown>): string {
+    return [payload.firstName, payload.middleName, payload.firstSurname, payload.secondSurname]
+      .filter(Boolean)
+      .map(String)
+      .join(" ");
+  }
+
+  private buildDocumentKey(documentType: string, documentNumber: string): string {
+    return `${documentType}::${documentNumber}`;
   }
 
   private buildSurnames(payload: Record<string, unknown>): string {

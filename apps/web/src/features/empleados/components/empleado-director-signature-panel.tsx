@@ -99,6 +99,8 @@ export function EmpleadoDirectorSignerToggle({ detail }: EmpleadoDirectorSignerT
 }
 
 export function EmpleadoDirectorSignaturePanel({ detail }: EmpleadoDirectorSignaturePanelProps) {
+  const isDirectorWithTenant = detail.role === "director" && detail.tenantId !== null;
+
   const uploadMutation = useUploadEmpleadoSignatureMutation(detail.id);
   const signaturePreviewQuery = useEmpleadoSignaturePreviewQuery(
     detail.id,
@@ -134,7 +136,7 @@ export function EmpleadoDirectorSignaturePanel({ detail }: EmpleadoDirectorSigna
     }).format(new Date(detail.latestSignature.createdAt));
   }, [detail.latestSignature]);
 
-  if (detail.role !== "director" || detail.tenantId === null) {
+  if (detail.tenantId === null) {
     return null;
   }
 
@@ -145,8 +147,12 @@ export function EmpleadoDirectorSignaturePanel({ detail }: EmpleadoDirectorSigna
     >
       <div className="empleado-signature-panel__header">
         <div>
-          <p className="empleado-signature-panel__eyebrow">Firma del director</p>
-          <h2 id="empleado-director-signature-title">Firma y firmante activo</h2>
+          <p className="empleado-signature-panel__eyebrow">
+            {isDirectorWithTenant ? "Firma del director" : "Firma del usuario"}
+          </p>
+          <h2 id="empleado-director-signature-title">
+            {isDirectorWithTenant ? "Firma y firmante activo" : "Firma opcional"}
+          </h2>
         </div>
       </div>
 
@@ -155,8 +161,12 @@ export function EmpleadoDirectorSignaturePanel({ detail }: EmpleadoDirectorSigna
           <strong>Firma actual cargada</strong>
           <p>
             {hasCurrentSignature
-              ? "La última firma cargada puede activarse para el centro."
-              : "Este director aún no tiene una firma cargada."}
+              ? isDirectorWithTenant
+                ? "La ultima firma cargada puede activarse para el centro."
+                : "La firma queda disponible para los formatos o actas que la requieran."
+              : isDirectorWithTenant
+                ? "Este director aun no tiene una firma cargada."
+                : "Este usuario aun no tiene una firma cargada."}
           </p>
 
           {previewUrl !== null ? (
@@ -209,7 +219,12 @@ export function EmpleadoDirectorSignaturePanel({ detail }: EmpleadoDirectorSigna
         >
           <div className="empleado-signature-upload-copy">
             <strong>Cargar nueva firma</strong>
-            <p>PNG, JPG, JPEG, WEBP (máx 3 MB).</p>
+            <p>
+              PNG, JPG, JPEG, WEBP (max 3 MB).
+              {isDirectorWithTenant
+                ? " Si corresponde, luego podras activarla como firmante del centro."
+                : " Este paso es opcional."}
+            </p>
           </div>
 
           <div className="empleado-signature-upload-row">

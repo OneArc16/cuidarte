@@ -25,8 +25,12 @@ export function AdultosMayoresImportSummary({ detail }: AdultosMayoresImportSumm
           <strong>{detail.summary.readyRows}</strong>
         </article>
         <article>
-          <span>Ya existentes</span>
-          <strong>{detail.summary.existingRows}</strong>
+          <span>Listas para actualizar</span>
+          <strong>{detail.summary.updateRows}</strong>
+        </article>
+        <article>
+          <span>Sin cambios</span>
+          <strong>{detail.summary.unchangedRows}</strong>
         </article>
         <article>
           <span>Con advertencias</span>

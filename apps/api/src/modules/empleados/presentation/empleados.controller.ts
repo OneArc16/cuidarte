@@ -117,7 +117,7 @@ export class EmpleadosController {
   }
 
   @Post(":id/signature")
-  @ApiOkResponse({ description: "Firma del director cargada." })
+  @ApiOkResponse({ description: "Firma del usuario cargada." })
   @ApiConsumes("multipart/form-data")
   @ApiBadRequestResponse({ description: "Archivo de firma invalido." })
   @ApiNotFoundResponse({ description: "Usuario no encontrado." })
@@ -142,7 +142,7 @@ export class EmpleadosController {
   }
 
   @Get(":id/signature/file")
-  @ApiOkResponse({ description: "Archivo de firma del director." })
+  @ApiOkResponse({ description: "Archivo de firma del usuario." })
   @ApiProduces("image/png", "image/jpeg", "image/webp")
   @ApiNotFoundResponse({ description: "Usuario o firma no encontrados." })
   @ApiForbiddenResponse({ description: "El usuario no tiene permisos sobre esta firma." })

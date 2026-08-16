@@ -45,7 +45,7 @@ type MultipartAuthenticatedRequest = AuthenticatedRequest & {
 @ApiTags("adultos-mayores-import")
 @Controller("adultos-mayores/imports")
 @UseGuards(SessionGuard, RolesGuard)
-@RequireRoles("super_admin", "admin")
+@RequireRoles("super_admin", "admin", "director")
 export class AdultosMayoresImportController {
   constructor(private readonly importService: AdultosMayoresImportService) {}
 

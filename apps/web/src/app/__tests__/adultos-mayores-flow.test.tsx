@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import {
   adultoMayorFixture,
   authUserFixture,
+  directorUserFixture,
   superAdminUserFixture,
   departmentFixture,
   epsFixture,
@@ -281,5 +282,90 @@ describe("App adultos mayores flow", () => {
 
     await user.click(screen.getByRole("button", { name: "Imprimir listado" }));
     expect(print).toHaveBeenCalledTimes(1);
+  });
+
+  it("allows director users to open the import flow for their tenant", async () => {
+    server.use(mockAuthMe(directorUserFixture));
+    let requestedTenantId: string | null = "pending";
+    server.use(
+      http.post("http://localhost:3001/api/adultos-mayores/imports/validate", ({ request }) => {
+        requestedTenantId = new URL(request.url).searchParams.get("tenantId");
+
+        return HttpResponse.json({
+          importId: "c54699f4-7dfd-40c4-ae98-8b14d11be26a",
+          status: "ready",
+          tenant: {
+            id: directorUserFixture.tenantId,
+            name: "Centro Demo",
+          },
+          requestedByUserId: directorUserFixture.id,
+          originalFilename: "plantilla-importacion-adultos-mayores-v1.xlsx",
+          fileChecksumSha256: "a".repeat(64),
+          templateVersion: 1,
+          summary: {
+            totalRows: 1,
+            readyRows: 1,
+            updateRows: 0,
+            invalidRows: 0,
+            warningRows: 0,
+            unchangedRows: 0,
+            existingRows: 0,
+            createdRows: 0,
+            updatedRows: 0,
+          },
+          issues: [],
+          rows: [],
+          canConfirm: true,
+          expiresAt: "2026-08-16T18:00:00.000Z",
+          confirmedAt: null,
+          failureCode: null,
+          createdAt: "2026-08-16T17:00:00.000Z",
+          updatedAt: "2026-08-16T17:00:00.000Z",
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    const { container } = renderAppAtPath("/adultos-mayores");
+
+    expect(
+      await screen.findByRole("heading", { name: "Listado de adultos mayores" }),
+    ).toBeInTheDocument();
+    const toolbar = screen.getByRole("region", { name: "Herramientas del listado" });
+
+    expect(
+      within(toolbar).getByRole("button", { name: "Importar adultos mayores" }),
+    ).toBeInTheDocument();
+
+    await user.click(within(toolbar).getByRole("button", { name: "Importar adultos mayores" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/adultos-mayores/importar");
+    });
+    expect(
+      await screen.findByRole("heading", { name: "Importar adultos mayores" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Centro")).not.toBeInTheDocument();
+
+    const fileInput = container.querySelector('input[type="file"]');
+
+    if (!(fileInput instanceof HTMLInputElement)) {
+      throw new Error("Expected import file input to be present");
+    }
+
+    const file = new File(
+      ["plantilla"],
+      "plantilla-importacion-adultos-mayores-v1.xlsx",
+      {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+    );
+
+    await user.upload(fileInput, file);
+    expect(screen.getByRole("button", { name: "Validar archivo" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Validar archivo" }));
+
+    await waitFor(() => {
+      expect(requestedTenantId).toBeNull();
+    });
   });
 });

@@ -28,15 +28,13 @@ export function HomeDirectAccess({ navigate, user }: HomeDirectAccessProps) {
         Panel de acceso
       </h1>
 
-      <section className="home-dashboard-section" aria-labelledby="home-access-title">
-        <div className="home-dashboard-section__header">
-          <div>
-            <span className="eyebrow">Accesos</span>
-            <h2 id="home-access-title">Accesos directos</h2>
-          </div>
+      <section className="home-direct-access" aria-labelledby="home-access-title">
+        <div className="home-direct-access__hero">
+          <span className="eyebrow">Accesos</span>
+          <h2 id="home-access-title">Accesos directos</h2>
         </div>
 
-        <div className="home-shortcuts-grid">
+        <div className="home-direct-access__grid">
           {visibleShortcutModules.map((module) => (
             <HomeAccessShortcutCard
               key={module.id}

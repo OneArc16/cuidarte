@@ -41,6 +41,14 @@ const auditorUser: AuthUser = {
   role: "auditor",
 };
 
+const directorUser: AuthUser = {
+  ...adminUser,
+  id: "33333333-3333-4333-8333-333333333333",
+  email: "director@centro-demo.test",
+  fullName: "Director Centro Demo",
+  role: "director",
+};
+
 const medicoUser: AuthUser = {
   ...adminUser,
   id: "eaebfa34-4ef2-4b10-b8a5-1db6d494a2a2",
@@ -137,7 +145,20 @@ describe("EmpleadosService", () => {
     });
   });
 
-  it("forbids professional roles from managing employees", async () => {
+  it("allows director users to list tenant employees", async () => {
+    const repository = createRepository();
+    const service = new EmpleadosService(repository);
+
+    const result = await service.listEmpleados({ search: null }, directorUser);
+
+    assert.equal(result.length, 1);
+    assert.deepEqual(repository.queries[0], {
+      search: null,
+      scope: { type: "tenant", tenantId },
+    });
+  });
+
+  it("forbids unsupported professional roles from managing employees", async () => {
     const repository = createRepository();
     const service = new EmpleadosService(repository);
 
@@ -188,12 +209,36 @@ describe("EmpleadosService", () => {
     assert.equal(repository.created[0]?.role, "admin");
   });
 
+  it("creates tenant employees in the director tenant", async () => {
+    const repository = createRepository();
+    const service = new EmpleadosService(repository);
+
+    const result = await service.createEmpleado(
+      { ...createCommand(), tenantId: otherTenantId, role: "medico" },
+      directorUser,
+    );
+
+    assert.equal(result.tenantId, tenantId);
+    assert.equal(repository.created[0]?.tenantId, tenantId);
+    assert.equal(repository.created[0]?.role, "medico");
+  });
+
   it("prevents admins from assigning SuperAdmin", async () => {
     const repository = createRepository();
     const service = new EmpleadosService(repository);
 
     await assert.rejects(
       () => service.createEmpleado({ ...createCommand(), role: "super_admin" }, adminUser),
+      { constructor: ForbiddenException },
+    );
+  });
+
+  it("prevents directors from assigning admin users", async () => {
+    const repository = createRepository();
+    const service = new EmpleadosService(repository);
+
+    await assert.rejects(
+      () => service.createEmpleado({ ...createCommand(), role: "admin" }, directorUser),
       { constructor: ForbiddenException },
     );
   });
@@ -224,6 +269,30 @@ describe("EmpleadosService", () => {
     assert.equal(repository.auditEntries[0]?.length, 3);
     assert.equal(repository.auditEntries[0]?.[1]?.action, "empleados.deactivated");
     assert.equal(repository.auditEntries[0]?.[2]?.action, "empleados.password_reset");
+  });
+
+  it("allows directors to update employees from their own tenant", async () => {
+    const repository = createRepository();
+    const service = new EmpleadosService(repository);
+
+    const result = await service.updateEmpleado(
+      records[0]?.id ?? "",
+      {
+        firstName: "Laura",
+        middleName: "Natalia",
+        firstSurname: "Perez",
+        secondSurname: "Ruiz",
+        email: "laura.perez@centro-demo.test",
+        documentNumber: "1010101010",
+        phone: "3001234567",
+        role: "medico",
+        isActive: true,
+      },
+      directorUser,
+    );
+
+    assert.equal(result.phone, "3001234567");
+    assert.equal(repository.updates[0]?.role, "medico");
   });
 
   it("raises conflict when a document already exists in the same tenant", async () => {

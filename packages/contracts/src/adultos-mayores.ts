@@ -103,7 +103,7 @@ const nullableSearchSchema = z
   })
   .pipe(z.string().max(120).nullable());
 
-export const adultosMayoresImportAccessRoleValues = ["super_admin", "admin"] as const satisfies
+export const adultosMayoresImportAccessRoleValues = ["super_admin", "admin", "director"] as const satisfies
   readonly UserRole[];
 
 export const adultoMayorImportStatusValues = [
@@ -115,7 +115,12 @@ export const adultoMayorImportStatusValues = [
   "expired",
 ] as const;
 
-export const adultoMayorImportRowStatusValues = ["ready", "invalid", "existing"] as const;
+export const adultoMayorImportRowStatusValues = [
+  "ready",
+  "update_ready",
+  "unchanged",
+  "invalid",
+] as const;
 
 export const adultoMayorImportIssueSeverityValues = ["error", "warning"] as const;
 
@@ -166,10 +171,13 @@ export const adultoMayorImportIssueSchema = z.object({
 export const adultoMayorImportSummarySchema = z.object({
   totalRows: z.number().int().min(0),
   readyRows: z.number().int().min(0),
+  updateRows: z.number().int().min(0),
   invalidRows: z.number().int().min(0),
   warningRows: z.number().int().min(0),
+  unchangedRows: z.number().int().min(0),
   existingRows: z.number().int().min(0),
   createdRows: z.number().int().min(0),
+  updatedRows: z.number().int().min(0),
 });
 
 export const adultoMayorImportRowSchema = z.object({
@@ -179,6 +187,7 @@ export const adultoMayorImportRowSchema = z.object({
   normalizedPayload: z.record(z.string(), z.unknown()).nullable(),
   issues: z.array(adultoMayorImportIssueSchema),
   existingAdultoId: z.uuid().nullable(),
+  existingAdultoUpdatedAt: z.string().min(1).nullable(),
   createdAdultoId: z.uuid().nullable(),
   createdAt: z.string().min(1),
 });
@@ -208,6 +217,8 @@ export const adultoMayorImportConfirmResponseSchema = z.object({
   importId: z.uuid(),
   status: z.literal("completed"),
   createdRows: z.number().int().min(0),
+  updatedRows: z.number().int().min(0),
+  unchangedRows: z.number().int().min(0),
   existingRows: z.number().int().min(0),
   completedAt: z.string().min(1),
 });

@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { type AuthUser } from "@cuidarte/contracts";
+import { NotFoundException } from "@nestjs/common";
 
+import { EmpleadoSignatureStoredFileNotFoundError } from "../domain/empleados-signature-files.storage";
 import {
   type EmpleadoRecord,
   type EmpleadoSignatureVersionRecord,
@@ -35,6 +37,63 @@ const signature: EmpleadoSignatureVersionRecord = {
 };
 
 describe("EmpleadosSignatureService", () => {
+  it("uploads an optional signature for a tenant employee", async () => {
+    let savedScope: unknown;
+    let createdCommand: unknown;
+    let createdAudit: unknown;
+    const service = new EmpleadosSignatureService(
+      {
+        async findById() {
+          return employeeRecord("medico");
+        },
+        async createSignatureVersion(command: unknown, audit: unknown) {
+          createdCommand = command;
+          createdAudit = audit;
+          return signature;
+        },
+      } as never,
+      {
+        async saveFile(scope: unknown) {
+          savedScope = scope;
+          return {
+            originalName: "firma.jpeg",
+            mimeType: "image/jpeg",
+            sizeBytes: 2048,
+            relativePath: `${tenantId}/${employeeId}/firma.jpeg`,
+          };
+        },
+      } as never,
+    );
+
+    const result = await service.uploadSignature(
+      employeeId,
+      {
+        originalName: "firma.jpeg",
+        mimeType: "image/jpeg",
+        sizeBytes: 2048,
+        buffer: Buffer.from("firma"),
+      },
+      actor,
+    );
+
+    assert.equal(result.id, signature.id);
+    assert.deepEqual(savedScope, {
+      tenantId,
+      employeeId,
+    });
+    assert.deepEqual(createdCommand, {
+      employeeId,
+      tenantId,
+      originalName: "firma.jpeg",
+      mimeType: "image/jpeg",
+      sizeBytes: 2048,
+      checksum: "c3b73a718e2971292c9101fb1b3ea3445754c49261c8ecf513427d84a47bf03c",
+      relativePath: `${tenantId}/${employeeId}/firma.jpeg`,
+      uploadedByUserId: actor.id,
+    });
+    assert.equal((createdAudit as { action?: string } | undefined)?.action, "empleados.signature_uploaded");
+  });
+
   it("activates the selected director signature for the tenant", async () => {
     let receivedCommand: unknown;
     let receivedAudit: unknown;
@@ -147,22 +206,44 @@ describe("EmpleadosSignatureService", () => {
     assert.equal(result.signature.id, signature.id);
     assert.equal(result.activeSigner.employeeId, employeeId);
   });
+
+  it("maps a missing stored signature file to not found", async () => {
+    const service = new EmpleadosSignatureService(
+      {
+        async findById() {
+          return employeeRecord("medico");
+        },
+      } as never,
+      {
+        async readFile() {
+          throw new EmpleadoSignatureStoredFileNotFoundError();
+        },
+      } as never,
+    );
+
+    await assert.rejects(
+      service.downloadLatestSignatureFile(employeeId, actor),
+      (error: unknown) =>
+        error instanceof NotFoundException &&
+        error.message === "No fue posible encontrar el archivo de firma cargado.",
+    );
+  });
 });
 
-function directorRecord(): EmpleadoRecord {
+function employeeRecord(role: EmpleadoRecord["role"]): EmpleadoRecord {
   return {
     id: employeeId,
     tenantId,
     tenantName: "Centro Demo",
-    email: "director@centro-demo.test",
-    fullName: "Director Centro Demo",
-    firstName: "Director",
+    email: `${role}@centro-demo.test`,
+    fullName: role === "director" ? "Director Centro Demo" : "Laura Perez",
+    firstName: role === "director" ? "Director" : "Laura",
     middleName: null,
-    firstSurname: "Centro",
-    secondSurname: "Demo",
+    firstSurname: role === "director" ? "Centro" : "Perez",
+    secondSurname: role === "director" ? "Demo" : null,
     documentNumber: "1000000000",
     phone: null,
-    role: "director",
+    role,
     isActive: true,
     isTenantOwner: false,
     latestSignature: signature,
@@ -172,4 +253,8 @@ function directorRecord(): EmpleadoRecord {
     createdAt: new Date("2026-06-20T12:00:00.000Z"),
     updatedAt: new Date("2026-07-22T19:20:34.531Z"),
   };
+}
+
+function directorRecord(): EmpleadoRecord {
+  return employeeRecord("director");
 }

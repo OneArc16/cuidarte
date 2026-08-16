@@ -1,14 +1,22 @@
 import {
   type AdultoMayorImportBatchCreateCommand,
+  type AdultoMayorImportCommitResult,
   type AdultoMayorImportBatchDetailRowRecord,
   type AdultoMayorImportBatchRecord,
   type AdultoMayorImportBatchRowCreateCommand,
   type AdultoMayorImportCatalogMaps,
+  type AdultoMayorImportExistingRecord,
   type AdultoMayorImportParsedWorkbook,
-  type AdultoMayorImportValidatedRow,
 } from "./adulto-mayor-import.types";
 
 export const ADULTOS_MAYORES_IMPORT_REPOSITORY = Symbol("ADULTOS_MAYORES_IMPORT_REPOSITORY");
+
+export class AdultoMayorImportCommitConflictError extends Error {
+  constructor(message = "El lote cambio desde la validacion y debe volver a revisarse.") {
+    super(message);
+    this.name = "AdultoMayorImportCommitConflictError";
+  }
+}
 
 export type AdultosMayoresImportRepository = {
   loadCatalogMaps(): Promise<AdultoMayorImportCatalogMaps>;
@@ -17,7 +25,7 @@ export type AdultosMayoresImportRepository = {
   findExistingAdultsByTenantAndDocuments(params: {
     tenantId: string;
     documents: Array<{ documentType: string; documentNumber: string }>;
-  }): Promise<Array<{ id: string; documentType: string; documentNumber: string }>>;
+  }): Promise<AdultoMayorImportExistingRecord[]>;
   createValidatedBatch(params: {
     batch: AdultoMayorImportBatchCreateCommand;
     rows: AdultoMayorImportBatchRowCreateCommand[];
@@ -35,10 +43,13 @@ export type AdultosMayoresImportRepository = {
   markImportAsCompleted(params: {
     importId: string;
     createdRows: number;
+    updatedRows: number;
+    unchangedRows: number;
     existingRows: number;
     confirmedAt: Date;
   }): Promise<void>;
   markImportAsFailed(params: { importId: string; failureCode: string }): Promise<void>;
+  commitValidatedBatch(params: { importId: string; actorUserId: string }): Promise<AdultoMayorImportCommitResult>;
   attachCreatedAdults(params: {
     importId: string;
     createdAdults: Array<{ documentType: string; documentNumber: string; adultoId: string }>;

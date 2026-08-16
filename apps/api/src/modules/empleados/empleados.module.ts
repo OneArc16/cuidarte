@@ -26,6 +26,6 @@ import { TenantActiveSignerController } from "./presentation/tenant-active-signe
       useClass: LocalEmpleadosSignatureFilesStorage,
     },
   ],
-  exports: [EmpleadosService, EmpleadosSignatureService],
+  exports: [EmpleadosService, EmpleadosSignatureService, EMPLEADOS_REPOSITORY],
 })
 export class EmpleadosModule {}

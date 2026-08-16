@@ -3,7 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { auditorUserFixture, authUserFixture, empleadoFixture } from "../../test/fixtures";
+import {
+  auditorUserFixture,
+  authUserFixture,
+  directorUserFixture,
+  empleadoFixture,
+} from "../../test/fixtures";
 import { server } from "../../test/test-server";
 import { renderAppAtPath, resetAppTestState } from "../../test/helpers/app-test.helpers";
 import { mockAuthMe } from "../../test/helpers/msw-auth.helpers";
@@ -142,6 +147,63 @@ describe("App empleados flow", () => {
     });
   });
 
+  it("lets director users create and edit users only within their tenant", async () => {
+    server.use(mockAuthMe(directorUserFixture));
+    let createPayload: EmpleadoMutationPayload | null = null;
+    server.use(
+      http.post("http://localhost:3001/api/empleados", async ({ request }) => {
+        createPayload = (await request.json()) as EmpleadoMutationPayload;
+
+        return HttpResponse.json({
+          ...empleadoFixture,
+          id: "c54699f4-7dfd-40c4-ae98-8b14d11be26a",
+          fullName: "Paola Ruiz Gomez",
+          firstName: "Paola",
+          middleName: null,
+          firstSurname: "Ruiz",
+          secondSurname: "Gomez",
+          email: "paola.ruiz@centro-demo.test",
+          role: "medico",
+          isActive: true,
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    renderAppAtPath("/gestion-empleados");
+
+    expect(await screen.findByRole("button", { name: "Crear usuario" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: `Editar ${empleadoFixture.fullName}` }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Crear usuario" }));
+    await screen.findByRole("heading", { name: "Nuevo usuario" });
+
+    expect(screen.queryByLabelText("Centro")).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Admin" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "SuperAdmin" })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Primer nombre"), "Paola");
+    await user.type(screen.getByLabelText("Primer apellido"), "Ruiz");
+    await user.type(screen.getByLabelText("Segundo apellido"), "Gomez");
+    await user.type(screen.getByLabelText("Correo electronico"), "paola.ruiz@centro-demo.test");
+    await user.type(screen.getByLabelText("Numero de documento"), "3030303030");
+    await user.selectOptions(screen.getByLabelText("Tipo de usuario"), "medico");
+    await user.type(screen.getByLabelText("Contrasena"), "Cuidarte123!");
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        `/gestion-empleados/c54699f4-7dfd-40c4-ae98-8b14d11be26a/edit`,
+      );
+    });
+    expect(createPayload).toMatchObject({
+      tenantId: null,
+      role: "medico",
+      email: "paola.ruiz@centro-demo.test",
+    });
+  });
+
   it("edits an employee without sending a password when it is left blank", async () => {
     server.use(mockAuthMe(authUserFixture));
     let updatePayload: EmpleadoMutationPayload | null = null;
@@ -179,6 +241,17 @@ describe("App empleados flow", () => {
       isActive: false,
     });
     expect(updatePayload).not.toHaveProperty("password");
+  });
+
+  it("shows the optional signature panel for tenant employees that are not directors", async () => {
+    server.use(mockAuthMe(authUserFixture));
+    renderAppAtPath(`/gestion-empleados/${empleadoFixture.id}/edit`);
+
+    expect(await screen.findByRole("heading", { name: "Firma opcional" })).toBeInTheDocument();
+    expect(screen.getByText(/Este paso es opcional\./i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Activar firmante" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Seleccionar archivo")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Subir" })).toBeDisabled();
   });
 
   it("shows the active signer state and lets a director deactivate their signature", async () => {

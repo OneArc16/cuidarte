@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { type ActividadGrupalDiligenciamientoDetail } from "@cuidarte/contracts";
-
 import {
+  type ActividadGrupalActaPdfDetail,
   buildActividadGrupalActaPdfHtml,
   buildActividadGrupalActaPdfFilename,
 } from "./actividad-grupal-acta-pdf-template";
@@ -53,11 +52,33 @@ describe("actividad-grupal-acta-pdf-template", () => {
       "acta-sesion-grupal-10-20-30.pdf",
     );
   });
+
+  it("renders assigned professional signatures inside the signature column", () => {
+    const html = buildActividadGrupalActaPdfHtml({
+      detail: createDetail({
+        responsibleDepartment: "direccion",
+        assignedProfessionals: [
+          {
+            id: "profesional-1",
+            fullName: "Ana Milena",
+            role: "director",
+            signatureDataUrl: "data:image/png;base64,ZmlybWE=",
+          },
+        ],
+      }),
+      logoDataUrl: null,
+      photoAssets: [],
+    });
+
+    assert.match(html, /alt="Firma de Ana Milena"/);
+    assert.match(html, /src="data:image\/png;base64,ZmlybWE="/);
+    assert.match(html, /acta-document__people-table--professionals/);
+  });
 });
 
 function createDetail(
-  overrides: Partial<ActividadGrupalDiligenciamientoDetail> = {},
-): ActividadGrupalDiligenciamientoDetail {
+  overrides: Partial<ActividadGrupalActaPdfDetail> = {},
+): ActividadGrupalActaPdfDetail {
   return {
     id: "f3e7f0dc-7d48-4b1e-bcf4-d2bde9cfd111",
     tenantId: "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054",

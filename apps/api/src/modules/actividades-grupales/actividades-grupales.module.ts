@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 
 import { DatabaseModule } from "../../database/database.module";
 import { AuthModule } from "../auth/auth.module";
+import { EmpleadosModule } from "../empleados/empleados.module";
 import { ActividadesGrupalesActaExportService } from "./application/actividades-grupales-acta-export.service";
 import { ActividadesGrupalesService } from "./application/actividades-grupales.service";
 import { ActividadesGrupalesTrashService } from "./application/actividades-grupales-trash.service";
@@ -12,7 +13,7 @@ import { LocalActividadesGrupalesFilesStorage } from "./infrastructure/local-act
 import { ActividadesGrupalesController } from "./presentation/actividades-grupales.controller";
 
 @Module({
-  imports: [AuthModule, DatabaseModule],
+  imports: [AuthModule, DatabaseModule, EmpleadosModule],
   controllers: [ActividadesGrupalesController],
   providers: [
     ActividadesGrupalesActaExportService,

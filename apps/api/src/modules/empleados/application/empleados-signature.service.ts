@@ -24,6 +24,7 @@ import {
 } from "../domain/empleado.types";
 import {
   EMPLEADOS_SIGNATURE_FILES_STORAGE,
+  EmpleadoSignatureStoredFileNotFoundError,
   type EmpleadosSignatureFilesStorage,
 } from "../domain/empleados-signature-files.storage";
 import {
@@ -56,7 +57,7 @@ export class EmpleadosSignatureService {
     this.ensureCanManage(actor);
 
     const empleado = await this.getScopedEmpleadoOrThrow(empleadoId, actor);
-    const tenantId = this.assertDirectorEmpleado(empleado);
+    const tenantId = this.assertSignatureEligibleEmpleado(empleado);
 
     this.validateUpload(file);
 
@@ -80,9 +81,10 @@ export class EmpleadosSignatureService {
         actorUserId: actor.id,
         action: "empleados.signature_uploaded",
         targetTenantId: tenantId,
-        summary: `Firma cargada para director: ${empleado.fullName}`,
+        summary: `Firma cargada para usuario: ${empleado.fullName}`,
         metadata: {
           employeeId: empleado.id,
+          employeeRole: empleado.role,
           originalName: storedFile.originalName,
           mimeType: storedFile.mimeType,
           sizeBytes: storedFile.sizeBytes,
@@ -99,7 +101,7 @@ export class EmpleadosSignatureService {
     this.ensureCanManage(actor);
 
     const empleado = await this.getScopedEmpleadoOrThrow(command.employeeId, actor);
-    const scopedTenantId = this.assertDirectorEmpleado(empleado);
+    const scopedTenantId = this.assertDirectorSignerEmpleado(empleado);
 
     if (scopedTenantId !== tenantId) {
       throw new BadRequestException("El director seleccionado no pertenece a ese centro.");
@@ -175,14 +177,22 @@ export class EmpleadosSignatureService {
     const empleado = await this.getScopedEmpleadoOrThrow(empleadoId, actor);
 
     if (empleado.latestSignature === null) {
-      throw new NotFoundException("El director no tiene una firma cargada.");
+      throw new NotFoundException("El usuario no tiene una firma cargada.");
     }
 
-    return await this.signatureFilesStorage.readFile(
-      empleado.latestSignature.relativePath,
-      empleado.latestSignature.originalName,
-      empleado.latestSignature.mimeType,
-    );
+    try {
+      return await this.signatureFilesStorage.readFile(
+        empleado.latestSignature.relativePath,
+        empleado.latestSignature.originalName,
+        empleado.latestSignature.mimeType,
+      );
+    } catch (error) {
+      if (error instanceof EmpleadoSignatureStoredFileNotFoundError) {
+        throw new NotFoundException("No fue posible encontrar el archivo de firma cargado.");
+      }
+
+      throw error;
+    }
   }
 
   async findTenantActiveSignerByTenantId(
@@ -209,11 +219,19 @@ export class EmpleadosSignatureService {
     originalName: string;
     mimeType: string;
   }) {
-    return await this.signatureFilesStorage.readFile(
-      signature.relativePath,
-      signature.originalName,
-      signature.mimeType,
-    );
+    try {
+      return await this.signatureFilesStorage.readFile(
+        signature.relativePath,
+        signature.originalName,
+        signature.mimeType,
+      );
+    } catch (error) {
+      if (error instanceof EmpleadoSignatureStoredFileNotFoundError) {
+        throw new NotFoundException("No fue posible encontrar el archivo de firma cargado.");
+      }
+
+      throw error;
+    }
   }
 
   private async getScopedEmpleadoOrThrow(empleadoId: string, actor: AuthUser) {
@@ -250,16 +268,22 @@ export class EmpleadosSignatureService {
     }
   }
 
-  private assertDirectorEmpleado(empleado: EmpleadoRecord): string {
+  private assertSignatureEligibleEmpleado(empleado: EmpleadoRecord): string {
     if (empleado.tenantId === null) {
-      throw new BadRequestException("Solo los directores de centro pueden tener firma configurada.");
-    }
-
-    if (empleado.role !== "director") {
-      throw new BadRequestException("Solo puedes cargar firma para usuarios con rol Director.");
+      throw new BadRequestException("Solo los usuarios de centro pueden tener firma configurada.");
     }
 
     return empleado.tenantId;
+  }
+
+  private assertDirectorSignerEmpleado(empleado: EmpleadoRecord): string {
+    const tenantId = this.assertSignatureEligibleEmpleado(empleado);
+
+    if (empleado.role !== "director") {
+      throw new BadRequestException("Solo los usuarios con rol Director pueden ser firmantes activos.");
+    }
+
+    return tenantId;
   }
 
   private validateUpload(file: BufferedEmpleadoSignatureUpload) {

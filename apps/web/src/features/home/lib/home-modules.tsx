@@ -31,11 +31,13 @@ export type HomeModule = {
   path: string;
   roles?: readonly AuthUser["role"][];
   summaryLabel?: string;
+  directAccessDescription?: string;
 };
 
 export type ShortcutHomeModule = HomeModule & {
   id: HomeDashboardShortcutModuleId;
   summaryLabel: string;
+  directAccessDescription: string;
 };
 
 export const HOME_MODULES = [
@@ -51,14 +53,16 @@ export const HOME_MODULES = [
     icon: UsersRound,
     path: ADULTOS_MAYORES_PATH,
     summaryLabel: "Adultos registrados",
+    directAccessDescription: "Gestion y seguimiento",
   },
   {
     id: "importacion-adultos-mayores",
     label: "Importar adultos mayores",
     icon: Upload,
     path: ADULTOS_MAYORES_IMPORT_PATH,
-    roles: ["super_admin", "admin"],
+    roles: ["super_admin", "admin", "director"],
     summaryLabel: "Importaciones completadas",
+    directAccessDescription: "Carga masiva",
   },
   {
     id: "sesiones-grupales",
@@ -66,6 +70,7 @@ export const HOME_MODULES = [
     icon: CalendarPlus,
     path: CREACION_ACTIVIDADES_PATH,
     summaryLabel: "Sesiones registradas",
+    directAccessDescription: "Planeacion y actas",
   },
   {
     id: "registro-alimentacion",
@@ -74,14 +79,16 @@ export const HOME_MODULES = [
     path: REGISTRO_ALIMENTACION_PATH,
     roles: alimentacionAccessRoleValues,
     summaryLabel: "Registros cargados",
+    directAccessDescription: "Registro diario",
   },
   {
     id: "gestion-empleados",
     label: "Gestión de empleados",
     icon: UserRoundCog,
     path: EMPLEADOS_PATH,
-    roles: ["super_admin", "admin", "auditor"],
+    roles: ["super_admin", "admin", "auditor", "director"],
     summaryLabel: "Usuarios activos",
+    directAccessDescription: "Equipo y perfiles",
   },
   {
     id: "backoffice",
@@ -90,6 +97,7 @@ export const HOME_MODULES = [
     path: BACKOFFICE_PATH,
     roles: ["super_admin"],
     summaryLabel: "Centros activos",
+    directAccessDescription: "Configuracion central",
   },
 ] satisfies readonly HomeModule[];
 

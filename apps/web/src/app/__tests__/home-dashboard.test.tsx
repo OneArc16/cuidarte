@@ -49,15 +49,9 @@ describe("App home dashboard", () => {
       expect(
         within(shortcutsRegion).getByRole("button", { name: "Registro de alimentación" }),
       ).toHaveTextContent("140");
-      if (userFixture.role === "director") {
-        expect(
-          within(shortcutsRegion).queryByRole("button", { name: "Gestión de empleados" }),
-        ).not.toBeInTheDocument();
-      } else {
-        expect(
-          within(shortcutsRegion).getByRole("button", { name: "Gestión de empleados" }),
-        ).toHaveTextContent("42");
-      }
+      expect(
+        within(shortcutsRegion).getByRole("button", { name: "Gestión de empleados" }),
+      ).toHaveTextContent("42");
       if (userFixture.role === "super_admin") {
         expect(
           within(shortcutsRegion).getByRole("button", { name: "BackOffice" }),
@@ -137,8 +131,11 @@ describe("App home dashboard", () => {
     expect(screen.getByRole("navigation", { name: "Modulos principales" })).toBeInTheDocument();
     expect(workspace.querySelector(".home-access-shortcut-card")).toBeInTheDocument();
     expect(workspace.querySelector(".home-shortcut-card__total")).not.toBeInTheDocument();
-    expect(workspace.querySelector(".home-access-shortcut-card__note")).toHaveTextContent(
-      "Acceso directo",
+    expect(workspace).toHaveTextContent("Accesos directos");
+    expect(workspace.querySelector(".home-direct-access__grid")).toBeInTheDocument();
+    expect(workspace.querySelector(".home-access-shortcut-card__description")).toHaveTextContent(
+      "Gestion y seguimiento",
     );
+    expect(workspace.querySelector(".home-access-shortcut-card__arrow")).toBeInTheDocument();
   });
 });

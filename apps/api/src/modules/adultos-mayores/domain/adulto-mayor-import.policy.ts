@@ -1,7 +1,7 @@
 import { type AuthUser } from "@cuidarte/contracts";
 
 export function canImportAdultosMayores(user: Pick<AuthUser, "role">): boolean {
-  return user.role === "super_admin" || user.role === "admin";
+  return user.role === "super_admin" || user.role === "admin" || user.role === "director";
 }
 
 export function resolveAdultoMayorImportTenantForValidate(

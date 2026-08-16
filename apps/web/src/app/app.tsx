@@ -46,7 +46,11 @@ import {
   getEmpleadoEditIdFromPath,
   isEmpleadosPath,
 } from "@/features/empleados/lib/empleados-paths";
-import { canManageEmpleados, canOpenEmpleados } from "@/features/empleados/lib/empleados-permissions";
+import {
+  canCreateEmpleados,
+  canEditEmpleados,
+  canOpenEmpleados,
+} from "@/features/empleados/lib/empleados-permissions";
 import { getAtencionIndividualCreateAdultoIdFromPath } from "@/features/atenciones-individuales/lib/atenciones-individuales-paths";
 
 export function App() {
@@ -121,10 +125,15 @@ export function App() {
     }
 
     if (isEmpleadosPath(path)) {
-      const isEmpleadosWritePath =
-        path === EMPLEADOS_NEW_PATH || getEmpleadoEditIdFromPath(path) !== null;
+      const isEmpleadoCreatePath = path === EMPLEADOS_NEW_PATH;
+      const isEmpleadoEditPath = getEmpleadoEditIdFromPath(path) !== null;
 
-      if (!canManageEmpleados(user) && isEmpleadosWritePath) {
+      if (isEmpleadoCreatePath && !canCreateEmpleados(user)) {
+        navigate(EMPLEADOS_PATH, { replace: true });
+        return;
+      }
+
+      if (isEmpleadoEditPath && !canEditEmpleados(user)) {
         navigate(EMPLEADOS_PATH, { replace: true });
         return;
       }

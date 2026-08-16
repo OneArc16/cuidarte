@@ -21,6 +21,7 @@ import {
 } from "@nestjs/common";
 
 import {
+  canCreateEmpleados,
   canAssignEmpleadoRole,
   canManageEmpleados,
   resolveEmpleadoTenantForCreate,
@@ -74,7 +75,7 @@ export class EmpleadosService {
     command: CreateEmpleadoRequest,
     actor: AuthUser,
   ): Promise<EmpleadoDetail> {
-    this.ensureCanManage(actor);
+    this.ensureCanCreate(actor);
     this.ensureCanAssignRole(actor, command.role);
 
     const tenantId = resolveEmpleadoTenantForCreate(actor, command.role, command.tenantId);
@@ -208,6 +209,12 @@ export class EmpleadosService {
   private ensureCanManage(actor: AuthUser) {
     if (!canManageEmpleados(actor)) {
       throw new ForbiddenException("No tienes permisos para gestionar empleados.");
+    }
+  }
+
+  private ensureCanCreate(actor: AuthUser) {
+    if (!canCreateEmpleados(actor)) {
+      throw new ForbiddenException("No tienes permisos para crear usuarios.");
     }
   }
 

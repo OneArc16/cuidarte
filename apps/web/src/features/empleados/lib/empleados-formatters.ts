@@ -23,9 +23,15 @@ export function formatEmpleadoRole(role: UserRole): string {
 export function getAssignableEmpleadoRoles(currentUserRole: UserRole): UserRole[] {
   const roles = [...userRoleValues];
 
-  return currentUserRole === "super_admin"
-    ? roles
-    : roles.filter((role) => role !== "super_admin");
+  if (currentUserRole === "super_admin") {
+    return roles;
+  }
+
+  if (currentUserRole === "director") {
+    return roles.filter((role) => role !== "super_admin" && role !== "admin");
+  }
+
+  return roles.filter((role) => role !== "super_admin");
 }
 
 export function formatEmpleadoDocument(documentNumber: string | null): string {

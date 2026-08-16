@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 
 import { getEnv } from "../../../config/env";
 import {
+  EmpleadoSignatureStoredFileNotFoundError,
   type EmpleadosSignatureFilesStorage,
   type ReadStoredEmpleadoSignatureFile,
   type StoredEmpleadoSignatureUpload,
@@ -12,13 +13,12 @@ import {
 import { type BufferedEmpleadoSignatureUpload } from "../domain/empleado.types";
 
 const LEGACY_SIGNATURES_DIRECTORY = "/tmp/cuidarte/empleados-signatures";
+const API_ROOT_DIR = path.resolve(__dirname, "../../../..");
 
 @Injectable()
 export class LocalEmpleadosSignatureFilesStorage implements EmpleadosSignatureFilesStorage {
-  private readonly baseDir = path.resolve(getEnv().EMPLEADOS_SIGNATURES_DIR);
-  private readonly readBaseDirs = Array.from(
-    new Set([this.baseDir, path.resolve(LEGACY_SIGNATURES_DIRECTORY)]),
-  );
+  private readonly baseDir = resolvePrimaryBaseDir(getEnv().EMPLEADOS_SIGNATURES_DIR);
+  private readonly readBaseDirs = resolveReadBaseDirs(getEnv().EMPLEADOS_SIGNATURES_DIR);
 
   async saveFile(
     employee: { tenantId: string; employeeId: string },
@@ -70,7 +70,11 @@ export class LocalEmpleadosSignatureFilesStorage implements EmpleadosSignatureFi
       }
     }
 
-    throw missingFileError ?? new Error("No fue posible leer la firma almacenada.");
+    if (missingFileError !== null) {
+      throw new EmpleadoSignatureStoredFileNotFoundError();
+    }
+
+    throw new Error("No fue posible leer la firma almacenada.");
   }
 
   private async persistLegacyFileBestEffort(relativePath: string, buffer: Buffer): Promise<void> {
@@ -97,6 +101,41 @@ export class LocalEmpleadosSignatureFilesStorage implements EmpleadosSignatureFi
 
     return resolvedPath;
   }
+}
+
+export function resolveReadBaseDirs(
+  configuredDirectory: string,
+  currentWorkingDirectory: string = process.cwd(),
+): string[] {
+  const primaryBaseDir = resolvePrimaryBaseDir(configuredDirectory);
+  const currentWorkingDirectoryBaseDir = resolveBaseDirFromCwd(
+    configuredDirectory,
+    currentWorkingDirectory,
+  );
+
+  return Array.from(
+    new Set([
+      primaryBaseDir,
+      currentWorkingDirectoryBaseDir,
+      path.resolve(LEGACY_SIGNATURES_DIRECTORY),
+    ]),
+  );
+}
+
+function resolvePrimaryBaseDir(configuredDirectory: string): string {
+  if (path.isAbsolute(configuredDirectory)) {
+    return path.resolve(configuredDirectory);
+  }
+
+  return path.resolve(API_ROOT_DIR, configuredDirectory);
+}
+
+function resolveBaseDirFromCwd(configuredDirectory: string, currentWorkingDirectory: string): string {
+  if (path.isAbsolute(configuredDirectory)) {
+    return path.resolve(configuredDirectory);
+  }
+
+  return path.resolve(currentWorkingDirectory, configuredDirectory);
 }
 
 function isMissingFileError(error: unknown): error is NodeJS.ErrnoException {

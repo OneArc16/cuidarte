@@ -25,6 +25,7 @@ import {
 } from "../domain/adulto-mayor-import.policy";
 import {
   ADULTOS_MAYORES_IMPORT_REPOSITORY,
+  AdultoMayorImportCommitConflictError,
   type AdultosMayoresImportRepository,
 } from "../domain/adultos-mayores-import.repository";
 import { AdultosMayoresImportValidator } from "../domain/adultos-mayores-import-validator";
@@ -97,6 +98,7 @@ export class AdultosMayoresImportService {
         normalizedPayload: row.normalizedPayload,
         issues: row.issues,
         existingAdultoId: row.existingAdultoId,
+        existingAdultoUpdatedAt: row.existingAdultoUpdatedAt,
       })),
     });
 
@@ -111,7 +113,9 @@ export class AdultosMayoresImportService {
         templateVersion: parsed.templateVersion,
         totalRows: batch.summary.totalRows,
         readyRows: batch.summary.readyRows,
+        updateRows: batch.summary.updateRows,
         invalidRows: batch.summary.invalidRows,
+        unchangedRows: batch.summary.unchangedRows,
         existingRows: batch.summary.existingRows,
       },
     });
@@ -147,6 +151,8 @@ export class AdultosMayoresImportService {
         importId: batch.id,
         status: "completed",
         createdRows: batch.summary.createdRows,
+        updatedRows: batch.summary.updatedRows,
+        unchangedRows: batch.summary.unchangedRows,
         existingRows: batch.summary.existingRows,
         completedAt: batch.confirmedAt ?? batch.updatedAt,
       });
@@ -173,6 +179,8 @@ export class AdultosMayoresImportService {
           importId: currentBatch.id,
           status: "completed",
           createdRows: currentBatch.summary.createdRows,
+          updatedRows: currentBatch.summary.updatedRows,
+          unchangedRows: currentBatch.summary.unchangedRows,
           existingRows: currentBatch.summary.existingRows,
           completedAt: currentBatch.confirmedAt ?? currentBatch.updatedAt,
         });
@@ -181,101 +189,40 @@ export class AdultosMayoresImportService {
       throw new ConflictException("El lote no se encuentra listo para confirmar.");
     }
 
-    const rows = await this.importRepository.findImportBatchRows(importId);
-    const readyRows = rows.filter((row) => row.status === "ready" && row.normalizedPayload !== null);
-    const existingRows = rows.filter((row) => row.status === "existing" || row.existingAdultoId !== null);
-    const readyDocuments = readyRows.map((row) => ({
-      documentType: row.normalizedPayload?.documentType ?? "",
-      documentNumber: row.normalizedPayload?.documentNumber ?? "",
-    }));
-    const concurrentExisting = await this.importRepository.findExistingAdultsByTenantAndDocuments({
-      tenantId: lockedBatch.tenant.id,
-      documents: readyDocuments,
-    });
-    const concurrentExistingKeys = new Set(
-      concurrentExisting.map((adulto) => `${adulto.documentType}::${adulto.documentNumber}`),
-    );
-    const rowsToInsert = readyRows.filter(
-      (row) =>
-        row.normalizedPayload !== null &&
-        !concurrentExistingKeys.has(
-          `${row.normalizedPayload.documentType}::${row.normalizedPayload.documentNumber}`,
-        ),
-    );
-    const skippedExisting = readyRows.filter(
-      (row) =>
-        row.normalizedPayload !== null &&
-        concurrentExistingKeys.has(
-          `${row.normalizedPayload.documentType}::${row.normalizedPayload.documentNumber}`,
-        ),
-    );
-
-    if (concurrentExisting.length > 0) {
-      await this.importRepository.attachExistingAdults({
+    try {
+      const result = await this.importRepository.commitValidatedBatch({
         importId,
-        existingAdults: concurrentExisting.map((adulto) => ({
-          documentType: adulto.documentType,
-          documentNumber: adulto.documentNumber,
-          adultoId: adulto.id,
-        })),
+        actorUserId: actor.id,
       });
-    }
 
-    const insertedAdults = await this.importRepository.insertAdultosMayores({
-      tenantId: lockedBatch.tenant.id,
-      requestedByUserId: actor.id,
-      rows: rowsToInsert.map((row) => ({
-        documentType: row.normalizedPayload?.documentType ?? "",
-        documentNumber: row.normalizedPayload?.documentNumber ?? "",
-        normalizedPayload: row.normalizedPayload ?? {},
-      })),
-    });
-
-    if (insertedAdults.length > 0) {
-      await this.importRepository.attachCreatedAdults({
+      return adultoMayorImportConfirmResponseSchema.parse({
         importId,
-        createdAdults: insertedAdults.map((adulto) => ({
-          documentType: adulto.documentType,
-          documentNumber: adulto.documentNumber,
-          adultoId: adulto.id,
-        })),
+        status: "completed",
+        createdRows: result.createdRows,
+        updatedRows: result.updatedRows,
+        unchangedRows: result.unchangedRows,
+        existingRows: result.existingRows,
+        completedAt: result.confirmedAt.toISOString(),
       });
-    }
+    } catch (error) {
+      if (error instanceof AdultoMayorImportCommitConflictError) {
+        await this.importRepository.markImportAsFailed({
+          importId,
+          failureCode: "concurrency_conflict",
+        });
 
-    const createdRows = insertedAdults.length;
-    const finalExistingRows = existingRows.length + skippedExisting.length;
-    const confirmedAt = new Date();
+        throw new ConflictException(
+          "Se detectaron cambios recientes en los registros. Vuelve a validar el archivo antes de confirmar.",
+        );
+      }
 
-    await this.importRepository.markImportAsCompleted({
-      importId,
-      createdRows,
-      existingRows: finalExistingRows,
-      confirmedAt,
-    });
-
-    await this.importRepository.recordAudit({
-      actorUserId: actor.id,
-      action: "adultos-mayores.import.completed",
-      targetTenantId: lockedBatch.tenant.id,
-      summary: `Importacion completada para ${lockedBatch.tenant.name}`,
-      metadata: {
+      await this.importRepository.markImportAsFailed({
         importId,
-        checksum: lockedBatch.fileChecksumSha256,
-        templateVersion: lockedBatch.templateVersion,
-        totalRows: lockedBatch.summary.totalRows,
-        createdRows,
-        existingRows: finalExistingRows,
-        invalidRows: lockedBatch.summary.invalidRows,
-      },
-    });
+        failureCode: "confirmation_failed",
+      });
 
-    return adultoMayorImportConfirmResponseSchema.parse({
-      importId,
-      status: "completed",
-      createdRows,
-      existingRows: finalExistingRows,
-      completedAt: confirmedAt.toISOString(),
-    });
+      throw error;
+    }
   }
 
   async downloadIssuesWorkbook(importId: string, actor: AuthUser) {
@@ -386,7 +333,9 @@ export class AdultosMayoresImportService {
 
   private ensureCanImport(actor: Pick<AuthUser, "role">) {
     if (!canImportAdultosMayores(actor)) {
-      throw new ForbiddenException("Solo Admin y SuperAdmin pueden importar adultos mayores.");
+      throw new ForbiddenException(
+        "Solo Director, Admin y SuperAdmin pueden importar adultos mayores.",
+      );
     }
   }
 
