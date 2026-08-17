@@ -571,8 +571,11 @@ export class ActividadesGrupalesService {
     detail: ActividadGrupalDiligenciamientoDetailRecord,
     actor: AuthUser,
   ): ActividadGrupalDiligenciamientoDetail {
+    const baseItem = this.toListItem(detail.activity, actor);
+
     return actividadGrupalDiligenciamientoDetailSchema.parse({
-      ...this.toListItem(detail.activity, actor),
+      ...baseItem,
+      canEdit: this.canEditDiligenciamiento(detail, actor),
       assignedProfessionals: detail.assignedProfessionals.map((professional) =>
         actividadGrupalEmpleadoOptionSchema.parse(professional),
       ),
@@ -608,6 +611,17 @@ export class ActividadesGrupalesService {
     return (
       (actor.role === "admin" || actor.role === "director") && actor.tenantId === activity.tenantId
     );
+  }
+
+  private canEditDiligenciamiento(
+    detail: ActividadGrupalDiligenciamientoDetailRecord,
+    actor: AuthUser,
+  ): boolean {
+    if (this.canEditActivity(detail.activity, actor)) {
+      return true;
+    }
+
+    return detail.assignedProfessionals.some((professional) => professional.id === actor.id);
   }
 
   private toSupportFile(file: ActividadGrupalSupportFileRecord): ActividadGrupalSupportFile {

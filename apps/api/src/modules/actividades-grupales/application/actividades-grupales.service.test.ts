@@ -31,6 +31,15 @@ const medicoUser: AuthUser = {
   passwordSetByAdmin: true,
 };
 
+const enfermeriaUser: AuthUser = {
+  id: enfermeriaUserId,
+  tenantId,
+  email: "enfermeria@centro-demo.test",
+  fullName: "Enfermera Centro Demo",
+  role: "enfermeria",
+  passwordSetByAdmin: true,
+};
+
 const superAdminUser: AuthUser = {
   id: "4c5b84e6-d88e-4f8a-93de-af2916d62f40",
   tenantId: null,
@@ -265,6 +274,21 @@ describe("ActividadesGrupalesService", () => {
 
     assert.equal(result.id, targetRecord.id);
     assert.equal(result.assignedProfessionals[0]?.id, medicoUser.id);
+  });
+
+  it("enables edit mode for assigned professionals that did not create the activity", async () => {
+    const repository = createRepository();
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+    const targetRecord = records[0]!;
+
+    const result = await service.getActividadGrupalDiligenciamiento(
+      targetRecord.id,
+      enfermeriaUser,
+    );
+
+    assert.equal(result.id, targetRecord.id);
+    assert.equal(result.canEdit, true);
+    assert.equal(result.canDelete, false);
   });
 
   it("allows auditor users to open diligenciamiento details in read-only mode", async () => {
