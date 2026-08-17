@@ -10,6 +10,7 @@ import {
   pgEnum,
   pgTable,
   text,
+  time,
   timestamp,
   uniqueIndex,
   uuid,
@@ -109,6 +110,16 @@ export const alimentacionOrganizer = pgEnum("alimentacion_organizer", [
   "fisioterapeuta",
   "recreacionista",
 ]);
+export const atencionEnfermeriaCareType = pgEnum("atencion_enfermeria_care_type", [
+  "control_signos_vitales",
+  "seguimiento",
+  "procedimiento",
+  "otro",
+]);
+export const atencionEnfermeriaGlucometriaContext = pgEnum(
+  "atencion_enfermeria_glucometria_context",
+  ["ayunas", "antes_de_comida", "despues_de_comida", "aleatoria"],
+);
 
 export const cie10Catalog = pgTable(
   "cie10_catalog",
@@ -886,6 +897,98 @@ export const atencionesIndividuales = pgTable(
     index("atenciones_individuales_adulto_mayor_idx").on(table.adultoMayorId),
     index("atenciones_individuales_created_by_user_idx").on(table.createdByUserId),
     index("atenciones_individuales_updated_by_user_idx").on(table.updatedByUserId),
+  ],
+);
+
+export const atencionesEnfermeria = pgTable(
+  "atenciones_enfermeria",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    adultoMayorId: uuid("adulto_mayor_id")
+      .notNull()
+      .references(() => adultosMayores.id, { onDelete: "restrict" }),
+    attentionDate: date("attention_date", { mode: "string" }).notNull(),
+    attentionTime: time("attention_time", { precision: 0 }).notNull(),
+    careType: atencionEnfermeriaCareType("care_type").notNull(),
+    reason: text("reason"),
+    tensionSistolica: integer("tension_sistolica"),
+    tensionDiastolica: integer("tension_diastolica"),
+    frecuenciaCardiaca: integer("frecuencia_cardiaca"),
+    frecuenciaRespiratoria: integer("frecuencia_respiratoria"),
+    temperatura: doublePrecision("temperatura"),
+    saturacionOxigeno: integer("saturacion_oxigeno"),
+    pesoKg: doublePrecision("peso_kg"),
+    tallaCm: doublePrecision("talla_cm"),
+    imc: doublePrecision("imc"),
+    perimetroAbdominalCm: doublePrecision("perimetro_abdominal_cm"),
+    glucometriaMgDl: integer("glucometria_mg_dl"),
+    glucometriaContext: atencionEnfermeriaGlucometriaContext("glucometria_context"),
+    nursingNote: text("nursing_note").notNull(),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    updatedByUserId: uuid("updated_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    version: integer("version").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("atenciones_enfermeria_tenant_date_idx").on(table.tenantId, table.attentionDate),
+    index("atenciones_enfermeria_adulto_date_idx").on(table.adultoMayorId, table.attentionDate),
+    index("atenciones_enfermeria_created_by_date_idx").on(
+      table.createdByUserId,
+      table.attentionDate,
+    ),
+    index("atenciones_enfermeria_tenant_updated_at_idx").on(table.tenantId, table.updatedAt),
+    check(
+      "atenciones_enfermeria_has_measurement",
+      sql`${table.tensionSistolica} is not null
+        or ${table.tensionDiastolica} is not null
+        or ${table.frecuenciaCardiaca} is not null
+        or ${table.frecuenciaRespiratoria} is not null
+        or ${table.temperatura} is not null
+        or ${table.saturacionOxigeno} is not null
+        or ${table.pesoKg} is not null
+        or ${table.tallaCm} is not null
+        or ${table.perimetroAbdominalCm} is not null
+        or ${table.glucometriaMgDl} is not null`,
+    ),
+    check(
+      "atenciones_enfermeria_glucometria_pair",
+      sql`(${table.glucometriaMgDl} is null and ${table.glucometriaContext} is null)
+        or (${table.glucometriaMgDl} is not null and ${table.glucometriaContext} is not null)`,
+    ),
+    check(
+      "atenciones_enfermeria_measurements_range",
+      sql`(${table.tensionSistolica} is null or ${table.tensionSistolica} between 0 and 999999)
+        and (${table.tensionDiastolica} is null or ${table.tensionDiastolica} between 0 and 999999)
+        and (${table.frecuenciaCardiaca} is null or ${table.frecuenciaCardiaca} between 0 and 999999)
+        and (${table.frecuenciaRespiratoria} is null or ${table.frecuenciaRespiratoria} between 0 and 999999)
+        and (${table.temperatura} is null or ${table.temperatura} between 0 and 999999)
+        and (${table.saturacionOxigeno} is null or ${table.saturacionOxigeno} between 0 and 999999)
+        and (${table.pesoKg} is null or ${table.pesoKg} between 0 and 999999)
+        and (${table.tallaCm} is null or ${table.tallaCm} between 0 and 999999)
+        and (${table.imc} is null or ${table.imc} between 0 and 999999)
+        and (${table.perimetroAbdominalCm} is null or ${table.perimetroAbdominalCm} between 0 and 999999)`,
+    ),
+    check(
+      "atenciones_enfermeria_glucometria_range",
+      sql`${table.glucometriaMgDl} is null or ${table.glucometriaMgDl} between 20 and 600`,
+    ),
+    check(
+      "atenciones_enfermeria_reason_length",
+      sql`${table.reason} is null or char_length(${table.reason}) <= 1000`,
+    ),
+    check(
+      "atenciones_enfermeria_nursing_note_length",
+      sql`char_length(btrim(${table.nursingNote})) between 1 and 4000`,
+    ),
+    check("atenciones_enfermeria_version_positive", sql`${table.version} > 0`),
   ],
 );
 

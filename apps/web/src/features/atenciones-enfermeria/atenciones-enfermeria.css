@@ -1,0 +1,523 @@
+.atenciones-enfermeria-stack {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.atenciones-enfermeria-form-stack {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.atenciones-enfermeria-toolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 460px) max-content;
+  gap: 12px;
+  align-items: end;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.atenciones-enfermeria-toolbar__grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 460px) max-content;
+  gap: 12px;
+  align-items: end;
+}
+
+.atenciones-enfermeria-search,
+.atenciones-enfermeria-field {
+  display: grid;
+  gap: 6px;
+}
+
+.atenciones-enfermeria-search > span,
+.atenciones-enfermeria-field > span {
+  color: var(--color-deep);
+  font-size: 0.76rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.atenciones-enfermeria-search__control {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  min-height: 40px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 0 10px 24px rgb(8 80 65 / 5%);
+}
+
+.atenciones-enfermeria-search__control svg {
+  justify-self: center;
+  width: 18px;
+  height: 18px;
+  color: var(--color-care);
+}
+
+.atenciones-enfermeria-search__control input {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 10px 0 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-deep);
+  font-size: 0.88rem;
+  outline: none;
+}
+
+.atenciones-enfermeria-toolbar__actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: end;
+}
+
+.atenciones-enfermeria-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.atenciones-enfermeria-row-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid rgb(8 80 65 / 13%);
+  border-radius: 8px;
+  background: white;
+  color: var(--color-deep);
+  cursor: pointer;
+  font: inherit;
+  box-shadow: 0 10px 24px rgb(8 80 65 / 5%);
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.atenciones-enfermeria-row-action:hover {
+  transform: translateY(-1px);
+  border-color: rgb(18 120 91 / 18%);
+  background: rgb(18 120 91 / 10%);
+}
+
+.atenciones-enfermeria-row-action svg {
+  width: 18px;
+  height: 18px;
+}
+
+.atenciones-enfermeria-form {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgb(8 80 65 / 10%);
+  border-radius: 20px;
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 0 14px 32px rgb(8 80 65 / 7%);
+}
+
+.atenciones-enfermeria-form-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.atenciones-enfermeria-form-nav__context {
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.atenciones-enfermeria-summary {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgb(8 80 65 / 10%);
+  border-radius: 16px;
+  background: rgb(8 80 65 / 4%);
+}
+
+.atenciones-enfermeria-summary--adulto {
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.95fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.atenciones-enfermeria-summary__identity {
+  display: grid;
+  gap: 4px;
+}
+
+.atenciones-enfermeria-summary h2 {
+  margin: 4px 0 0;
+  color: var(--color-ink);
+  font-size: clamp(1.1rem, 1.6vw, 1.45rem);
+  line-height: 1.1;
+}
+
+.atenciones-enfermeria-summary--adulto h2 {
+  margin-top: 2px;
+  font-size: clamp(1.55rem, 2.3vw, 2rem);
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+
+.atenciones-enfermeria-summary--adulto .atenciones-enfermeria-summary__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.atenciones-enfermeria-summary dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.atenciones-enfermeria-summary dl > div {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 82%);
+}
+
+.atenciones-enfermeria-summary dt {
+  color: var(--color-muted);
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.atenciones-enfermeria-summary dd {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.atenciones-enfermeria-summary--adulto dd {
+  font-size: 0.92rem;
+}
+
+.atenciones-enfermeria-summary dd small {
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.atenciones-enfermeria-history-lead {
+  max-width: 760px;
+  margin: 8px 0 0;
+  color: var(--color-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.atenciones-enfermeria-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.atenciones-enfermeria-tabs button {
+  appearance: none;
+  border: 1px solid rgb(8 80 65 / 10%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 86%);
+  color: var(--color-ink);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  line-height: 1;
+  padding: 8px 12px;
+  font-size: 0.92rem;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.atenciones-enfermeria-tabs button:hover {
+  transform: translateY(-1px);
+}
+
+.atenciones-enfermeria-tabs button.is-active {
+  border-color: rgb(18 120 91 / 28%);
+  background: rgb(18 120 91 / 10%);
+  color: var(--color-deep);
+}
+
+.atenciones-enfermeria-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.atenciones-enfermeria-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.atenciones-enfermeria-grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.atenciones-enfermeria-grid--glucometria {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.atenciones-enfermeria-field-group {
+  display: grid;
+  gap: 5px;
+}
+
+.atenciones-enfermeria-field-group > span {
+  color: var(--color-deep);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.atenciones-enfermeria-field-group input,
+.atenciones-enfermeria-field-group select,
+.atenciones-enfermeria-field-group textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid rgb(8 80 65 / 10%);
+  border-radius: 12px;
+  background: white;
+  color: var(--color-ink);
+  font: inherit;
+  outline: none;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.atenciones-enfermeria-field-group input:focus,
+.atenciones-enfermeria-field-group select:focus,
+.atenciones-enfermeria-field-group textarea:focus {
+  border-color: rgb(18 120 91 / 35%);
+  box-shadow: 0 0 0 4px rgb(18 120 91 / 8%);
+}
+
+.atenciones-enfermeria-field-group input[readonly],
+.atenciones-enfermeria-field-group textarea[readonly],
+.atenciones-enfermeria-field-group select:disabled {
+  background: rgb(8 80 65 / 3%);
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+
+.atenciones-enfermeria-field-group .field-error {
+  color: var(--color-danger, #b42318);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.atenciones-enfermeria-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.atenciones-enfermeria-actions .outline-action,
+.atenciones-enfermeria-actions .primary-action {
+  min-width: 142px;
+}
+
+.atenciones-enfermeria-panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.atenciones-enfermeria-panel-actions .primary-action {
+  min-width: 180px;
+}
+
+.atencion-readonly-banner {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid rgb(18 120 91 / 18%);
+  border-radius: 14px;
+  background: rgb(18 120 91 / 8%);
+  color: var(--color-deep);
+  font-weight: 700;
+}
+
+.atenciones-enfermeria-access {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.atenciones-enfermeria-table-wrap {
+  overflow: auto;
+  border: 1px solid rgb(8 80 65 / 11%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 90%);
+  box-shadow: 0 12px 30px rgb(8 80 65 / 6%);
+}
+
+.atenciones-enfermeria-table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.atenciones-enfermeria-table thead th {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgb(8 80 65 / 10%);
+  background: rgb(225 245 238 / 52%);
+  color: var(--color-deep);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.atenciones-enfermeria-table tbody td {
+  padding: 10px 12px;
+  border-bottom: 1px solid rgb(8 80 65 / 10%);
+  vertical-align: top;
+  color: var(--color-ink);
+}
+
+.atenciones-enfermeria-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.atenciones-enfermeria-table tbody td strong {
+  display: block;
+  color: var(--color-ink);
+}
+
+.atenciones-enfermeria-table tbody td small {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+}
+
+.atenciones-enfermeria-cell-datetime {
+  white-space: nowrap;
+}
+
+.atenciones-enfermeria-cell-measurements {
+  min-width: 220px;
+}
+
+.atenciones-enfermeria-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgb(8 80 65 / 8%);
+  color: var(--color-deep);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.atenciones-enfermeria-access {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgb(8 80 65 / 8%);
+  color: var(--color-ink);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.atenciones-enfermeria-access[data-access="edit"] {
+  background: rgb(18 120 91 / 14%);
+  color: var(--color-deep);
+}
+
+.atenciones-enfermeria-cell-author {
+  min-width: 180px;
+}
+
+.atenciones-enfermeria-author-badge {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgb(8 80 65 / 8%);
+  color: var(--color-deep);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.atenciones-enfermeria-author-badge[data-access="edit"] {
+  background: rgb(18 120 91 / 14%);
+}
+
+.atenciones-enfermeria-history-nav-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.atenciones-enfermeria-history-table {
+  min-width: 920px;
+}
+
+.atenciones-enfermeria-empty {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+  align-content: start;
+  padding: 20px;
+  border: 1px solid rgb(8 80 65 / 10%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 84%);
+}
+
+@media (max-width: 1100px) {
+  .atenciones-enfermeria-toolbar__grid {
+    grid-template-columns: 1fr;
+  }
+  .atenciones-enfermeria-grid--three,
+  .atenciones-enfermeria-grid--glucometria {
+    grid-template-columns: 1fr;
+  }
+
+  .atenciones-enfermeria-actions,
+  .atenciones-enfermeria-form-nav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

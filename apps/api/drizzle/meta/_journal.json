@@ -204,6 +204,13 @@
       "when": 1786838400000,
       "tag": "0028_adulto_mayor_import_updates",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1786905183572,
+      "tag": "0029_atenciones_enfermeria",
+      "breakpoints": true
     }
   ]
 }

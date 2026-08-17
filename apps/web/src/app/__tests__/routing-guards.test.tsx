@@ -5,6 +5,7 @@ import {
   auditorUserFixture,
   authUserFixture,
   empleadoFixture,
+  enfermeriaUserFixture,
   medicoUserFixture,
 } from "../../test/fixtures";
 import { server } from "../../test/test-server";
@@ -122,5 +123,62 @@ describe("App routing guards", () => {
     expect(
       within(navigation).queryByRole("button", { name: "Registro de alimentación" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("redirects unsupported roles away from Atenciones de enfermería and hides the module", async () => {
+    server.use(
+      mockAuthMe({
+        ...medicoUserFixture,
+        role: "recreacionista",
+      }),
+    );
+
+    renderAppAtPath("/atenciones-enfermeria");
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/home");
+    });
+    const navigation = await screen.findByRole("navigation", { name: "Modulos principales" });
+
+    expect(
+      within(navigation).queryByRole("button", { name: "Enfermería" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("allows medical users to access read-only atenciones de enfermería routes", async () => {
+    server.use(mockAuthMe(medicoUserFixture));
+
+    renderAppAtPath("/atenciones-enfermeria");
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/atenciones-enfermeria");
+    });
+  });
+
+  it("hides the individual attention action for enfermeria users", async () => {
+    server.use(mockAuthMe(enfermeriaUserFixture));
+
+    renderAppAtPath("/adultos-mayores");
+
+    const navigation = await screen.findByRole("navigation", { name: "Modulos principales" });
+
+    expect(
+      within(navigation).getByRole("button", { name: "Adultos mayores" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", {
+        name: /Atencion individual de /,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("blocks enfermeria users from direct atencion individual create routes", async () => {
+    server.use(mockAuthMe(enfermeriaUserFixture));
+
+    renderAppAtPath("/adultos-mayores/0b17e370-8f81-48c0-b707-c7046f497855/atenciones/new");
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/adultos-mayores");
+    });
   });
 });

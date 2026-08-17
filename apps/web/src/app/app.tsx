@@ -32,7 +32,7 @@ import {
 import {
   CREACION_ACTIVIDADES_NEW_PATH,
   CREACION_ACTIVIDADES_PATH,
-  getActividadGrupalDiligenciamientoIdFromPath,
+  getActividadGrupalEditIdFromPath,
   isActividadesGrupalesTrashPath,
   isActividadesGrupalesPath,
 } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
@@ -52,6 +52,12 @@ import {
   canOpenEmpleados,
 } from "@/features/empleados/lib/empleados-permissions";
 import { getAtencionIndividualCreateAdultoIdFromPath } from "@/features/atenciones-individuales/lib/atenciones-individuales-paths";
+import { canCreateAtencionIndividual } from "@/features/atenciones-individuales/lib/historia-clinica-permissions";
+import {
+  getAtencionesEnfermeriaHistoryAdultoIdFromPath,
+  isAtencionesEnfermeriaPath,
+} from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-paths";
+import { canReadAtencionesEnfermeria } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-permissions";
 
 export function App() {
   const currentUserQuery = useCurrentUserQuery();
@@ -113,10 +119,15 @@ export function App() {
       }
     }
 
+    if (isAtencionesEnfermeriaPath(path) && !canReadAtencionesEnfermeria(user)) {
+      navigate(HOME_PATH, { replace: true });
+      return;
+    }
+
     if (isActividadesGrupalesPath(path)) {
       const isActividadesWritePath =
         path === CREACION_ACTIVIDADES_NEW_PATH ||
-        getActividadGrupalDiligenciamientoIdFromPath(path) !== null;
+        getActividadGrupalEditIdFromPath(path) !== null;
 
       if (!canManageActividadesGrupales(user) && isActividadesWritePath) {
         navigate(CREACION_ACTIVIDADES_PATH, { replace: true });
@@ -155,6 +166,14 @@ export function App() {
         getAdultoMayorEditIdFromPath(path) !== null ||
         getAtencionIndividualCreateAdultoIdFromPath(path) !== null;
 
+      if (
+        getAtencionIndividualCreateAdultoIdFromPath(path) !== null &&
+        !canCreateAtencionIndividual(user)
+      ) {
+        navigate(ADULTOS_MAYORES_PATH, { replace: true });
+        return;
+      }
+
       if (!canManageAdultosMayores(user) && isAdultosWritePath) {
         navigate(ADULTOS_MAYORES_PATH, { replace: true });
         return;
@@ -166,6 +185,7 @@ export function App() {
       !isBackofficePath(path) &&
       !isAdultosMayoresPath(path) &&
       !isAlimentacionPath(path) &&
+      !isAtencionesEnfermeriaPath(path) &&
       !isActividadesGrupalesPath(path) &&
       !isEmpleadosPath(path)
     ) {
@@ -185,6 +205,10 @@ export function App() {
               : "Adultos mayores | CuidarTe"
             : isAlimentacionPath(path)
               ? "Registro de alimentacion | CuidarTe"
+              : isAtencionesEnfermeriaPath(path)
+                ? getAtencionesEnfermeriaHistoryAdultoIdFromPath(path) !== null
+                  ? "Historia de enfermeria | CuidarTe"
+                  : "Atenciones de enfermeria | CuidarTe"
               : isActividadesGrupalesTrashPath(path)
                 ? "Papelera de actas | CuidarTe"
                 : isActividadesGrupalesPath(path)

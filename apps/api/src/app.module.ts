@@ -4,6 +4,7 @@ import { AdultosMayoresModule } from "./modules/adultos-mayores/adultos-mayores.
 import { AlimentacionModule } from "./modules/alimentacion/alimentacion.module";
 import { ActividadesGrupalesModule } from "./modules/actividades-grupales/actividades-grupales.module";
 import { AtencionesIndividualesModule } from "./modules/atenciones-individuales/atenciones-individuales.module";
+import { AtencionesEnfermeriaModule } from "./modules/atenciones-enfermeria/atenciones-enfermeria.module";
 import { Cie10Module } from "./modules/cie10/cie10.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { BackofficeModule } from "./modules/backoffice/backoffice.module";
@@ -19,6 +20,7 @@ import { UbicacionesModule } from "./modules/ubicaciones/ubicaciones.module";
     AlimentacionModule,
     ActividadesGrupalesModule,
     AtencionesIndividualesModule,
+    AtencionesEnfermeriaModule,
     Cie10Module,
     AuthModule,
     BackofficeModule,
