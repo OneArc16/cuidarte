@@ -1,6 +1,7 @@
 import { http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import {
   authUserFixture,
@@ -79,6 +80,9 @@ describe("App home dashboard", () => {
         within(indicatorsRegion).getByRole("button", { name: "Adultos registrados" }),
       ).toHaveTextContent(String(homeDashboardFixture.indicators[0].total));
       expect(
+        within(indicatorsRegion).getByRole("button", { name: "Atenciones de enfermería" }),
+      ).toHaveTextContent("84");
+      expect(
         within(indicatorsRegion).getByRole("button", { name: "Raciones entregadas" }),
       ).toHaveTextContent("123.200");
       expect(
@@ -137,5 +141,24 @@ describe("App home dashboard", () => {
       "Gestion y seguimiento",
     );
     expect(workspace.querySelector(".home-access-shortcut-card__arrow")).toBeInTheDocument();
+  });
+
+  it("navigates the nursing indicator to the nursing module", async () => {
+    server.use(mockAuthMe(authUserFixture));
+    const user = userEvent.setup();
+
+    renderAppAtPath("/home");
+
+    const indicatorsRegion = await screen.findByRole("region", { name: "Resumen operativo" });
+
+    await user.click(
+      within(indicatorsRegion).getByRole("button", { name: "Atenciones de enfermería" }),
+    );
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/atenciones-enfermeria");
+    });
+
+    expect(await screen.findByLabelText("Filtros de enfermería")).toBeInTheDocument();
   });
 });

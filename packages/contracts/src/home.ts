@@ -19,6 +19,7 @@ export const homeDashboardShortcutModuleIdValues = [
 
 export const homeDashboardIndicatorIdValues = [
   "adultos_registrados",
+  "atenciones_enfermeria",
   "salud_preventiva",
   "sesiones_psicosocial",
   "raciones_entregadas",

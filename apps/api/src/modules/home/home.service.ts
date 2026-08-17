@@ -18,6 +18,7 @@ import {
   actividadesGrupales,
   adultosMayores,
   adultoMayorImportBatches,
+  atencionesEnfermeria,
   alimentacionRegistros,
   tenants,
   users,
@@ -25,6 +26,7 @@ import {
 import { resolveActividadesGrupalesScope } from "../actividades-grupales/domain/actividad-grupal.policy";
 import { canImportAdultosMayores } from "../adultos-mayores/domain/adulto-mayor-import.policy";
 import { resolveAdultosMayoresScope } from "../adultos-mayores/domain/adulto-mayor.policy";
+import { resolveAtencionEnfermeriaScope } from "../atenciones-enfermeria/domain/atencion-enfermeria.policy";
 import { resolveAlimentacionScope } from "../alimentacion/domain/alimentacion.policy";
 import { resolveEmpleadosScope } from "../empleados/domain/empleado.policy";
 import { canViewHomeDashboard } from "./home.policy";
@@ -64,6 +66,7 @@ export class HomeService {
     }
 
     const adultosScope = resolveAdultosMayoresScope(actor);
+    const atencionesScope = resolveAtencionEnfermeriaScope(actor);
     const actividadesScope = resolveActividadesGrupalesScope(actor);
     const alimentacionScope = resolveAlimentacionScope(actor);
     const empleadosScope = resolveEmpleadosScope(actor);
@@ -71,6 +74,7 @@ export class HomeService {
 
     const [
       adultosTotal,
+      atencionesTotal,
       actividadesSummary,
       alimentacionSummary,
       empleadosTotal,
@@ -80,6 +84,9 @@ export class HomeService {
       adultosScope === null
         ? Promise.resolve<number | null>(null)
         : this.countAdultosMayores(adultosScope),
+      atencionesScope === null
+        ? Promise.resolve<number | null>(null)
+        : this.countAtencionesEnfermeria(atencionesScope),
       actividadesScope === null
         ? Promise.resolve<ActivitySummary | null>(null)
         : this.summarizeActividades(actividadesScope),
@@ -105,6 +112,10 @@ export class HomeService {
     if (adultosTotal !== null) {
       shortcutTotals["adultos-mayores"] = adultosTotal;
       indicatorTotals.adultos_registrados = adultosTotal;
+    }
+
+    if (atencionesTotal !== null) {
+      indicatorTotals.atenciones_enfermeria = atencionesTotal;
     }
 
     if (actividadesSummary !== null) {
@@ -144,6 +155,10 @@ export class HomeService {
 
   private async countAdultosMayores(scope: TenantScope): Promise<number> {
     return this.countScopedRows(adultosMayores, adultosMayores.tenantId, scope);
+  }
+
+  private async countAtencionesEnfermeria(scope: TenantScope): Promise<number> {
+    return this.countScopedRows(atencionesEnfermeria, atencionesEnfermeria.tenantId, scope);
   }
 
   private async countEmpleados(scope: TenantScope): Promise<number> {
@@ -251,7 +266,7 @@ export class HomeService {
   }
 
   private async countScopedRows(
-    table: typeof adultosMayores | typeof adultoMayorImportBatches,
+    table: typeof adultosMayores | typeof adultoMayorImportBatches | typeof atencionesEnfermeria,
     tenantColumn: AnyPgColumn,
     scope: TenantScope,
     extraCondition?: SQL,

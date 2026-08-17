@@ -1,11 +1,12 @@
 import {
   type HomeDashboardIndicatorId,
-  type HomeDashboardShortcutModuleId,
 } from "@cuidarte/contracts";
+import { type HomeModuleId } from "./home-modules";
 import {
   Activity,
   Apple,
   CalendarDays,
+  HeartPulse,
   MapPinned,
   Palette,
   PartyPopper,
@@ -16,12 +17,14 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 
+type HomeDashboardIndicatorTargetModuleId = Exclude<HomeModuleId, "inicio">;
+
 export type HomeDashboardIndicatorDefinition = {
   id: HomeDashboardIndicatorId;
   label: string;
   icon: LucideIcon;
   tone: "emerald" | "sky" | "gold" | "coral" | "ink";
-  targetModuleId: HomeDashboardShortcutModuleId;
+  targetModuleId: HomeDashboardIndicatorTargetModuleId;
 };
 
 export const HOME_DASHBOARD_INDICATORS = [
@@ -31,6 +34,13 @@ export const HOME_DASHBOARD_INDICATORS = [
     icon: UsersRound,
     tone: "emerald",
     targetModuleId: "adultos-mayores",
+  },
+  {
+    id: "atenciones_enfermeria",
+    label: "Atenciones de enfermería",
+    icon: HeartPulse,
+    tone: "emerald",
+    targetModuleId: "atenciones-enfermeria",
   },
   {
     id: "salud_preventiva",
