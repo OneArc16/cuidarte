@@ -39,6 +39,14 @@ const medicoUser: AuthUser = {
   passwordSetByAdmin: true,
 };
 
+const enfermeriaUser: AuthUser = {
+  ...medicoUser,
+  id: "bdeba5d1-ef43-4e7d-8c53-9b86c0dc9d53",
+  email: "enfermeria@centro-demo.test",
+  fullName: "Enfermera Centro Demo",
+  role: "enfermeria",
+};
+
 const psicologoUser: AuthUser = {
   ...medicoUser,
   id: "0d516183-3e18-40ba-90d0-f4e2e978bb9a",
@@ -130,6 +138,7 @@ const atencionRecord: AtencionIndividualRecord = {
     },
   ],
   createdByUserId: medicoUser.id,
+  createdByUserRole: medicoUser.role,
   updatedByUserId: medicoUser.id,
   createdAt: new Date("2026-04-24T12:00:00.000Z"),
   updatedAt: new Date("2026-04-24T12:00:00.000Z"),
@@ -141,6 +150,7 @@ const otherProfessionalAtencionRecord: AtencionIndividualRecord = {
   ...atencionRecord,
   id: "3f8c63f0-8915-42ee-96c8-0af15b2f26a6",
   createdByUserId: psicologoUser.id,
+  createdByUserRole: psicologoUser.role,
   updatedByUserId: psicologoUser.id,
 };
 
@@ -321,6 +331,23 @@ describe("AtencionesIndividualesService", () => {
     assert.equal(repository.historyQueries[2]?.createdByUserId, undefined);
   });
 
+  it("filters the medical history projection to records authored by medicos", async () => {
+    const repository = createRepository({
+      historyRecords: [historyItemRecord, otherProfessionalHistoryItemRecord],
+    });
+    const service = new AtencionesIndividualesService(repository, createFilesStorage());
+
+    const result = await service.getMedicalHistoriaClinica(adultoMayorId, enfermeriaUser);
+
+    assert.equal(result.atenciones.length, 1);
+    assert.equal(result.atenciones[0]?.professional.role, "medico");
+    assert.deepEqual(repository.historyQueries[0], {
+      adultoMayorId,
+      scope: { type: "tenant", tenantId },
+      createdByUserRole: "medico",
+    });
+  });
+
   it("rejects historia clinica access for unsupported roles", async () => {
     const repository = createRepository();
     const service = new AtencionesIndividualesService(repository, createFilesStorage());
@@ -377,7 +404,7 @@ describe("AtencionesIndividualesService", () => {
     );
   });
 
-  it("allows read-only roles to view any attention but blocks direct access from another professional", async () => {
+  it("allows cross-clinical read access but keeps edit ownership scoped to the author", async () => {
     const adminRepository = createRepository({ detail: otherProfessionalAtencionRecord });
     const adminService = new AtencionesIndividualesService(adminRepository, createFilesStorage());
 
@@ -399,6 +426,32 @@ describe("AtencionesIndividualesService", () => {
     );
 
     assert.equal(auditorResult.id, otherProfessionalAtencionRecord.id);
+
+    const nurseRepository = createRepository({ detail: atencionRecord });
+    const nurseService = new AtencionesIndividualesService(nurseRepository, createFilesStorage());
+    const nurseResult = await nurseService.getAtencion(atencionId, enfermeriaUser);
+
+    assert.equal(nurseResult.id, atencionId);
+    assert.equal(nurseResult.access, "view");
+
+    const medicalRepository = createRepository({
+      detail: {
+        ...otherProfessionalAtencionRecord,
+        createdByUserId: enfermeriaUser.id,
+        createdByUserRole: "enfermeria",
+      },
+    });
+    const medicalService = new AtencionesIndividualesService(
+      medicalRepository,
+      createFilesStorage(),
+    );
+    const medicalResult = await medicalService.getAtencion(
+      otherProfessionalAtencionRecord.id,
+      medicoUser,
+    );
+
+    assert.equal(medicalResult.id, otherProfessionalAtencionRecord.id);
+    assert.equal(medicalResult.access, "view");
 
     const professionalRepository = createRepository({ detail: otherProfessionalAtencionRecord });
     const professionalService = new AtencionesIndividualesService(
@@ -486,11 +539,19 @@ function createRepository(
       const records =
         options.historyRecords === undefined ? [historyItemRecord] : options.historyRecords;
 
-      if (query.createdByUserId === undefined) {
-        return records;
+      let filteredRecords = records;
+
+      if (query.createdByUserId !== undefined) {
+        filteredRecords = filteredRecords.filter((record) => record.createdByUserId === query.createdByUserId);
       }
 
-      return records.filter((record) => record.createdByUserId === query.createdByUserId);
+      if (query.createdByUserRole !== undefined) {
+        filteredRecords = filteredRecords.filter(
+          (record) => record.createdByUserRole === query.createdByUserRole,
+        );
+      }
+
+      return filteredRecords;
     },
     async findById(query) {
       this.detailQueries.push(query);
@@ -511,6 +572,14 @@ function createRepository(
         ...command,
         adultoMayor: adultoRecord,
         createdByUserId: command.actorUserId,
+        createdByUserRole:
+          command.actorUserId === medicoUser.id
+            ? medicoUser.role
+            : command.actorUserId === psicologoUser.id
+              ? psicologoUser.role
+              : command.actorUserId === enfermeriaUser.id
+                ? enfermeriaUser.role
+                : medicoUser.role,
         updatedByUserId: command.actorUserId,
         createdAt: atencionRecord.createdAt,
         updatedAt: atencionRecord.updatedAt,
@@ -534,6 +603,7 @@ function createRepository(
           adultoMayorId,
           adultoMayor: adultoRecord,
           createdByUserId: (options.detail ?? atencionRecord).createdByUserId,
+          createdByUserRole: (options.detail ?? atencionRecord).createdByUserRole,
           updatedByUserId: command.actorUserId,
           createdAt: (options.detail ?? atencionRecord).createdAt,
           updatedAt: new Date("2026-04-24T12:10:00.000Z"),

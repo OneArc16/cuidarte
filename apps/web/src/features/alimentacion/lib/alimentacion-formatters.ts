@@ -6,6 +6,7 @@ import {
 } from "@cuidarte/contracts";
 
 import { ApiError } from "@/shared/api/api-error";
+import { getLocalDateInputValue } from "@/shared/lib/date-input";
 
 const ORGANIZER_LABELS = {
   director: "Director",
@@ -41,10 +42,7 @@ export function formatAlimentacionStatus(value: AlimentacionStatus): string {
 }
 
 export function getTodayDateInputValue(): string {
-  const now = new Date();
-  const localTime = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
-
-  return localTime.toISOString().slice(0, 10);
+  return getLocalDateInputValue();
 }
 
 export function getCurrentMonthInputValue(): string {

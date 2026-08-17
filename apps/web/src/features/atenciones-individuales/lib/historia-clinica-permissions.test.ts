@@ -34,6 +34,14 @@ const directorUser = {
   role: "director",
 } as const;
 
+const enfermeriaUser = {
+  ...medicoUser,
+  id: "bdeba5d1-ef43-4e7d-8c53-9b86c0dc9d53",
+  email: "enfermeria@centro-demo.test",
+  fullName: "Enfermera Centro Demo",
+  role: "enfermeria",
+} as const;
+
 const adminUser = {
   ...medicoUser,
   id: "149ec0be-51c3-41a2-9175-2101c489ae47",
@@ -71,6 +79,7 @@ describe("historia clinica permissions", () => {
   it("allows only clinical roles to create individual attention records", () => {
     expect(canCreateAtencionIndividual(medicoUser)).toBe(true);
     expect(canCreateAtencionIndividual(nutricionistaUser)).toBe(true);
+    expect(canCreateAtencionIndividual(enfermeriaUser)).toBe(false);
     expect(canCreateAtencionIndividual(adminUser)).toBe(false);
     expect(canCreateAtencionIndividual(auditorUser)).toBe(false);
     expect(canCreateAtencionIndividual(directorUser)).toBe(false);
@@ -80,6 +89,12 @@ describe("historia clinica permissions", () => {
     expect(resolveHistoriaClinicaAction(medicoUser, { createdByUserId: medicoUser.id })).toBe(
       "edit",
     );
+    expect(
+      resolveHistoriaClinicaAction(enfermeriaUser, {
+        createdByUserId: enfermeriaUser.id,
+        createdByUserRole: enfermeriaUser.role,
+      }),
+    ).toBe("view");
     expect(
       resolveHistoriaClinicaAction(medicoUser, {
         createdByUserId: nutricionistaUser.id,

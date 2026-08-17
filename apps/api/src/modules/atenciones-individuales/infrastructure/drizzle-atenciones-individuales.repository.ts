@@ -50,6 +50,7 @@ type AtencionIndividualRow = Omit<
   adultoSex: string;
   adultoEps: string | null;
   adultoHealthRegime: string | null;
+  createdByUserRole: AtencionIndividualHistoryItemRecord["createdByUserRole"];
 };
 
 type AtencionIndividualAdultoRow = {
@@ -119,6 +120,10 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
       conditions.push(eq(atencionesIndividuales.createdByUserId, query.createdByUserId));
     }
 
+    if (query.createdByUserRole !== undefined) {
+      conditions.push(eq(users.role, query.createdByUserRole));
+    }
+
     const rows = await this.database.db
       .select(this.getHistorySelection())
       .from(atencionesIndividuales)
@@ -146,6 +151,7 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
       .from(atencionesIndividuales)
       .innerJoin(adultosMayores, eq(adultosMayores.id, atencionesIndividuales.adultoMayorId))
       .innerJoin(tenants, eq(tenants.id, atencionesIndividuales.tenantId))
+      .innerJoin(users, eq(users.id, atencionesIndividuales.createdByUserId))
       .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
       .where(and(...conditions))
       .limit(1);
@@ -172,6 +178,7 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
       .from(atencionesIndividuales)
       .innerJoin(adultosMayores, eq(adultosMayores.id, atencionesIndividuales.adultoMayorId))
       .innerJoin(tenants, eq(tenants.id, atencionesIndividuales.tenantId))
+      .innerJoin(users, eq(users.id, atencionesIndividuales.createdByUserId))
       .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
       .where(and(...conditions))
       .limit(1);
@@ -274,6 +281,7 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
         .from(atencionesIndividuales)
         .innerJoin(adultosMayores, eq(adultosMayores.id, atencionesIndividuales.adultoMayorId))
         .innerJoin(tenants, eq(tenants.id, atencionesIndividuales.tenantId))
+        .innerJoin(users, eq(users.id, atencionesIndividuales.createdByUserId))
         .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
         .where(eq(atencionesIndividuales.id, created.id))
         .limit(1);
@@ -300,6 +308,7 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
         .from(atencionesIndividuales)
         .innerJoin(adultosMayores, eq(adultosMayores.id, atencionesIndividuales.adultoMayorId))
         .innerJoin(tenants, eq(tenants.id, atencionesIndividuales.tenantId))
+        .innerJoin(users, eq(users.id, atencionesIndividuales.createdByUserId))
         .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
         .where(eq(atencionesIndividuales.id, command.id))
         .limit(1);
@@ -411,6 +420,7 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
         .from(atencionesIndividuales)
         .innerJoin(adultosMayores, eq(adultosMayores.id, atencionesIndividuales.adultoMayorId))
         .innerJoin(tenants, eq(tenants.id, atencionesIndividuales.tenantId))
+        .innerJoin(users, eq(users.id, atencionesIndividuales.createdByUserId))
         .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
         .where(eq(atencionesIndividuales.id, command.id))
         .limit(1);
@@ -494,6 +504,7 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
       ordenesMedicas: atencionesIndividuales.ordenesMedicas,
       diagnosticos: atencionesIndividuales.diagnosticos,
       createdByUserId: atencionesIndividuales.createdByUserId,
+      createdByUserRole: users.role,
       updatedByUserId: atencionesIndividuales.updatedByUserId,
       createdAt: atencionesIndividuales.createdAt,
       updatedAt: atencionesIndividuales.updatedAt,
@@ -620,6 +631,7 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
         healthRegime: row.adultoHealthRegime,
       },
       supportFiles,
+      createdByUserRole: row.createdByUserRole,
     };
   }
 

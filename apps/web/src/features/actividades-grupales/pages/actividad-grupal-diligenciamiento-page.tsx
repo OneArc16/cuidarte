@@ -81,13 +81,16 @@ export function ActividadGrupalDiligenciamientoPage({
           <FileText aria-hidden="true" />
           <span>Ver PDF</span>
         </button>
-        <span className="actividades-form-nav__context">Diligenciar sesion</span>
+        <span className="actividades-form-nav__context">
+          {detailQuery.data.canEdit ? "Diligenciar sesion" : "Vista de solo lectura"}
+        </span>
       </div>
 
       <ActividadGrupalDiligenciamientoForm
         activityId={activityId}
         detail={detailQuery.data}
         error={resolveActividadesGrupalesApiError(saveMutation.error)}
+        mode={detailQuery.data.canEdit ? "edit" : "view"}
         isPending={saveMutation.isPending}
         onCancel={() => navigate(CREACION_ACTIVIDADES_PATH)}
         onSubmit={(request) => {

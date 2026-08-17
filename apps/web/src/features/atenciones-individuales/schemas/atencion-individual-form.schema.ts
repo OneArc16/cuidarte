@@ -13,6 +13,7 @@ import {
 import { z } from "zod";
 
 import { calculateImc } from "../lib/imc";
+import { getLocalDateInputValue } from "@/shared/lib/date-input";
 import { normalizeCie10Code } from "@/shared/lib/cie10-code";
 
 const textOrEmptySchema = z.string().max(4000);
@@ -86,7 +87,7 @@ export function createDefaultAtencionIndividualFormValues(
   suggestedConsecutive: number,
 ): AtencionIndividualFormValues {
   return {
-    attentionDate: new Date().toISOString().slice(0, 10),
+    attentionDate: getLocalDateInputValue(),
     modalidad: "intramural",
     tipoConsulta: "primera_vez",
     nombreConsulta: "Atencion individual",

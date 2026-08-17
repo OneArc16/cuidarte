@@ -89,7 +89,6 @@ export function AdultosMayoresPage({ navigate, path, user }: AdultosMayoresPageP
       <AtencionIndividualDetailPage
         atencionId={atencionDetailIds.atencionId}
         navigate={navigate}
-        user={user}
       />
     );
   }

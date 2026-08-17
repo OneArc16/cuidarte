@@ -3,9 +3,15 @@ import { http, HttpResponse } from "msw";
 import { adultoMayorFixture, backofficeTenantDetailFixture } from "../fixtures";
 
 export const adultosMayoresHandlers = [
-  http.get("http://localhost:3001/api/adultos-mayores", () =>
-    HttpResponse.json({ adultosMayores: [adultoMayorFixture] }),
-  ),
+  http.get("http://localhost:3001/api/adultos-mayores", ({ request }) => {
+    const search = new URL(request.url).searchParams.get("search");
+
+    if (search === "sin-resultados") {
+      return HttpResponse.json({ adultosMayores: [] });
+    }
+
+    return HttpResponse.json({ adultosMayores: [adultoMayorFixture] });
+  }),
   http.get("http://localhost:3001/api/adultos-mayores/tenant-options", () =>
     HttpResponse.json({ tenants: [backofficeTenantDetailFixture.tenant] }),
   ),

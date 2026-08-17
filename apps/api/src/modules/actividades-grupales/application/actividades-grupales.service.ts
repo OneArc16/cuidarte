@@ -378,17 +378,11 @@ export class ActividadesGrupalesService {
       return;
     }
 
-    if (actor.role === "admin" && actor.tenantId === detail.activity.tenantId) {
+    if (actor.tenantId === detail.activity.tenantId) {
       return;
     }
 
-    const isAssignedProfessional = detail.assignedProfessionals.some(
-      (professional) => professional.id === actor.id,
-    );
-
-    if (!isAssignedProfessional) {
-      throw new ForbiddenException("No tienes permisos para diligenciar esta sesion.");
-    }
+    throw new ForbiddenException("No tienes permisos para diligenciar esta sesion.");
   }
 
   private assertCanEditActivity(activity: ActividadGrupalRecord, actor: AuthUser): void {

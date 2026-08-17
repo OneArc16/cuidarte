@@ -1,9 +1,12 @@
 import { ArrowRight } from "lucide-react";
 
-import { type ShortcutHomeModule } from "../lib/home-modules";
+import { type HomeModule } from "../lib/home-modules";
 
 type HomeAccessShortcutCardProps = {
-  module: ShortcutHomeModule;
+  module: HomeModule & {
+    summaryLabel: string;
+    directAccessDescription: string;
+  };
   onClick: () => void;
 };
 

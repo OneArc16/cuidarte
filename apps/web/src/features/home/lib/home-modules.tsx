@@ -1,11 +1,13 @@
 import {
   alimentacionAccessRoleValues,
+  atencionEnfermeriaModuleRoleValues,
   type AuthUser,
   type HomeDashboardShortcutModuleId,
 } from "@cuidarte/contracts";
 import {
   BriefcaseBusiness,
   CalendarPlus,
+  HeartPulse,
   Home,
   Upload,
   type LucideIcon,
@@ -15,6 +17,7 @@ import {
 } from "lucide-react";
 
 import { HOME_PATH } from "@/app/routes/paths";
+import { ATENCIONES_ENFERMERIA_PATH } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-paths";
 import { ADULTOS_MAYORES_PATH } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
 import { ADULTOS_MAYORES_IMPORT_PATH } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
 import { REGISTRO_ALIMENTACION_PATH } from "@/features/alimentacion/lib/alimentacion-paths";
@@ -22,7 +25,7 @@ import { CREACION_ACTIVIDADES_PATH } from "@/features/actividades-grupales/lib/a
 import { BACKOFFICE_PATH } from "@/features/backoffice/lib/backoffice-paths";
 import { EMPLEADOS_PATH } from "@/features/empleados/lib/empleados-paths";
 
-export type HomeModuleId = "inicio" | HomeDashboardShortcutModuleId;
+export type HomeModuleId = "inicio" | HomeDashboardShortcutModuleId | "atenciones-enfermeria";
 
 export type HomeModule = {
   id: HomeModuleId;
@@ -73,6 +76,15 @@ export const HOME_MODULES = [
     directAccessDescription: "Planeacion y actas",
   },
   {
+    id: "atenciones-enfermeria",
+    label: "Enfermería",
+    icon: HeartPulse,
+    path: ATENCIONES_ENFERMERIA_PATH,
+    roles: atencionEnfermeriaModuleRoleValues,
+    summaryLabel: "Atenciones de enfermería",
+    directAccessDescription: "Signos vitales, glucometría y notas",
+  },
+  {
     id: "registro-alimentacion",
     label: "Registro de alimentación",
     icon: Utensils,
@@ -114,5 +126,5 @@ export function isMobilePrimaryModule(module: HomeModule): boolean {
 }
 
 export function isShortcutModule(module: HomeModule): module is ShortcutHomeModule {
-  return module.id !== "inicio";
+  return module.id !== "inicio" && module.id !== "atenciones-enfermeria";
 }

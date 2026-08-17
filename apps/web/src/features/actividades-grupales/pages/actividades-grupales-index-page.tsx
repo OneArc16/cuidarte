@@ -42,7 +42,6 @@ export function ActividadesGrupalesIndexPage({
   const [selectedActivityType, setSelectedActivityType] = useState<ActividadGrupalType | "">("");
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const showTenantFilter = user.role === "super_admin";
-  const canManageActivities = canManageActividadesGrupales(user);
   const canViewTrash = canViewActividadesGrupalesTrash(user);
   const tenantOptionsQuery = useActividadGrupalTenantOptionsQuery(showTenantFilter);
   const deleteMutation = useDeleteActividadGrupalMutation();
@@ -95,7 +94,6 @@ export function ActividadesGrupalesIndexPage({
 
       <ActividadesGrupalesTable
         actividadesGrupales={actividadesQuery.data?.actividadesGrupales ?? []}
-        canManageActividadesGrupales={canManageActivities}
         isLoading={actividadesQuery.isLoading}
         onDelete={(actividad) => {
           deleteMutation.reset();
@@ -132,7 +130,7 @@ export function ActividadesGrupalesIndexPage({
         />
       ) : null}
 
-      {canManageActivities ? (
+      {canManageActividadesGrupales(user) ? (
         <button
           className="actividades-floating-action"
           type="button"

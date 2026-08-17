@@ -16,6 +16,7 @@ type HistoriaClinicaActor = Pick<AuthUser, "id" | "role">;
 
 type HistoriaClinicaRecordOwner = {
   createdByUserId: string;
+  createdByUserRole?: AuthUser["role"];
 };
 
 export function canOpenHistoriaClinica(user: Pick<AuthUser, "role">): boolean {
@@ -25,7 +26,7 @@ export function canOpenHistoriaClinica(user: Pick<AuthUser, "role">): boolean {
 }
 
 export function canCreateAtencionIndividual(user: Pick<AuthUser, "role">): boolean {
-  return CLINICAL_HISTORY_EDITOR_ROLES.has(user.role);
+  return user.role !== "enfermeria" && CLINICAL_HISTORY_EDITOR_ROLES.has(user.role);
 }
 
 export function resolveHistoriaClinicaAction(
@@ -33,6 +34,10 @@ export function resolveHistoriaClinicaAction(
   record: HistoriaClinicaRecordOwner,
 ): AtencionIndividualHistoryAccess | null {
   if (CLINICAL_HISTORY_READER_ROLES.has(user.role)) {
+    return "view";
+  }
+
+  if (record.createdByUserRole === "enfermeria") {
     return "view";
   }
 

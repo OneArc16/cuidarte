@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import {
   adultoMayorFixture,
   atencionIndividualFixture,
+  atencionEnfermeriaHistoryFixture,
   authUserFixture,
   cie10OptionsFixture,
   historiaClinicaFixture,
@@ -56,6 +57,26 @@ describe("App atenciones flow", () => {
     expect(await screen.findByText("Nueva atencion individual")).toBeInTheDocument();
     expect(screen.getByText(atencionIndividualFixture.adultoMayor.fullName)).toBeInTheDocument();
     expect(screen.getByLabelText("Consecutivo")).toHaveValue(1);
+
+    server.use(
+      http.get(
+        "http://localhost:3001/api/atenciones-enfermeria/adultos-mayores/:adultoMayorId/history",
+        () =>
+          HttpResponse.json({
+            ...atencionEnfermeriaHistoryFixture,
+            atenciones: atencionEnfermeriaHistoryFixture.atenciones.map((atencion) => ({
+              ...atencion,
+              access: "view",
+            })),
+          }),
+      ),
+    );
+
+    await user.click(screen.getByRole("tab", { name: "Atenciones de enfermería" }));
+
+    const accessButtons = await screen.findAllByRole("button", { name: "Acceso Ver" });
+    expect(accessButtons.length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Acceso Editar" })).not.toBeInTheDocument();
   });
 
   it("opens historia clinica for a professional and shows only editable owned attentions", async () => {
@@ -98,7 +119,10 @@ describe("App atenciones flow", () => {
         ],
       }),
       http.get("http://localhost:3001/api/atenciones-individuales/:atencionId", () =>
-        HttpResponse.json(otherProfessionalAtencionIndividualFixture),
+        HttpResponse.json({
+          ...otherProfessionalAtencionIndividualFixture,
+          access: "view",
+        }),
       ),
     );
     const user = userEvent.setup();
@@ -120,7 +144,7 @@ describe("App atenciones flow", () => {
       );
     });
     expect(
-      await screen.findByText("Vista de solo lectura. Esta atencion pertenece a otro profesional."),
+      await screen.findByText("Vista de solo lectura. Esta atencion no se puede editar desde tu rol."),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Guardar atencion" })).not.toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: "Volver" }).length).toBeGreaterThan(0);
@@ -152,6 +176,7 @@ describe("App atenciones flow", () => {
         return HttpResponse.json({
           ...atencionIndividualFixture,
           ...createPayload,
+          access: "edit",
           diagnosticos: [
             {
               id: "diagnostico-1",
@@ -183,6 +208,8 @@ describe("App atenciones flow", () => {
     );
     expect(screen.getByDisplayValue(cie10OptionsFixture[0].title)).toBeInTheDocument();
 
+    await user.click(screen.getByRole("button", { name: "Guardar y continuar" }));
+    await user.click(screen.getByRole("tab", { name: "Atenciones de enfermería" }));
     await user.click(screen.getByRole("button", { name: "Guardar atencion" }));
 
     await waitFor(() => {

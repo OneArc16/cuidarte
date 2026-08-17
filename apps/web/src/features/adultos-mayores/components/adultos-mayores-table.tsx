@@ -13,6 +13,7 @@ type AdultosMayoresTableProps = {
   canCreateAtencionIndividual: boolean;
   canManageAdultosMayores: boolean;
   canOpenHistoriaClinica: boolean;
+  hideAtencionIndividualAction: boolean;
   isLoading: boolean;
   showTenantColumn: boolean;
   onOpenAlimentacion: (adultoMayorId: string) => void;
@@ -27,6 +28,7 @@ export function AdultosMayoresTable({
   canCreateAtencionIndividual,
   canManageAdultosMayores,
   canOpenHistoriaClinica,
+  hideAtencionIndividualAction,
   isLoading,
   onOpenAlimentacion,
   onOpenAtencionIndividual,
@@ -94,16 +96,18 @@ export function AdultosMayoresTable({
                       <Utensils aria-hidden="true" />
                     </button>
                   ) : null}
-                  <button
-                    className="adultos-row-action"
-                    type="button"
-                    aria-label={`Atencion individual de ${adultoMayor.names} ${adultoMayor.surnames}`}
-                    title="Atencion individual"
-                    disabled={!canCreateAtencionIndividual}
-                    onClick={() => onOpenAtencionIndividual(adultoMayor.id)}
-                  >
-                    <HeartPulse aria-hidden="true" />
-                  </button>
+                  {hideAtencionIndividualAction ? null : (
+                    <button
+                      className="adultos-row-action"
+                      type="button"
+                      aria-label={`Atencion individual de ${adultoMayor.names} ${adultoMayor.surnames}`}
+                      title="Atencion individual"
+                      disabled={!canCreateAtencionIndividual}
+                      onClick={() => onOpenAtencionIndividual(adultoMayor.id)}
+                    >
+                      <HeartPulse aria-hidden="true" />
+                    </button>
+                  )}
                   {canManageAdultosMayores ? (
                     <button
                       className="adultos-row-action"

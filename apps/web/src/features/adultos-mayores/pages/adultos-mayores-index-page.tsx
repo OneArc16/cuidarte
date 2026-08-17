@@ -43,6 +43,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
   const showTenantColumn = user.role === "super_admin";
   const canManageRecords = canManageAdultosMayores(user);
   const canCreateClinicalAttention = canCreateAtencionIndividual(user);
+  const hideAtencionIndividualAction = user.role === "enfermeria";
   const canOpenClinicalHistory = canOpenHistoriaClinica(user);
   const canCreateFeedingRecord = canManageAlimentacion(user);
   const canImportRecords = canImportAdultosMayores(user);
@@ -114,6 +115,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
         canCreateAtencionIndividual={canCreateClinicalAttention}
         canManageAdultosMayores={canManageRecords}
         canOpenHistoriaClinica={canOpenClinicalHistory}
+        hideAtencionIndividualAction={hideAtencionIndividualAction}
         onOpenAlimentacion={(adultoMayorId) =>
           navigate(buildAlimentacionCreateFromAdultoPath(adultoMayorId))
         }

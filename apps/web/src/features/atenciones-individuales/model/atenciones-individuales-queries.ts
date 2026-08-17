@@ -8,6 +8,8 @@ export const atencionesIndividualesQueryKeys = {
     ["atenciones-individuales", "adulto-lookup", adultoMayorId] as const,
   history: (adultoMayorId: string) =>
     ["atenciones-individuales", "history", adultoMayorId] as const,
+  medicalHistory: (adultoMayorId: string) =>
+    ["atenciones-individuales", "medical-history", adultoMayorId] as const,
 };
 
 export function useAtencionIndividualAdultoLookupQuery(adultoMayorId: string) {
@@ -26,10 +28,20 @@ export function useAtencionIndividualQuery(atencionId: string) {
   });
 }
 
-export function useHistoriaClinicaQuery(adultoMayorId: string) {
+export function useHistoriaClinicaQuery(adultoMayorId: string, enabled = true) {
   return useQuery({
     queryKey: atencionesIndividualesQueryKeys.history(adultoMayorId),
     queryFn: () => atencionesApi.getHistoriaClinica(adultoMayorId),
+    enabled,
+    retry: false,
+  });
+}
+
+export function useMedicalHistoriaClinicaQuery(adultoMayorId: string, enabled = true) {
+  return useQuery({
+    queryKey: atencionesIndividualesQueryKeys.medicalHistory(adultoMayorId),
+    queryFn: () => atencionesApi.getMedicalHistoriaClinica(adultoMayorId),
+    enabled,
     retry: false,
   });
 }

@@ -1,4 +1,3 @@
-import { type AuthUser } from "@cuidarte/contracts";
 import { ChevronLeft } from "lucide-react";
 import { useEffect } from "react";
 import { toast } from "sonner";
@@ -9,7 +8,7 @@ import { ADULTOS_MAYORES_PATH } from "@/features/adultos-mayores/lib/adultos-may
 import { AtencionIndividualForm } from "../components/atencion-individual-form";
 import { resolveAtencionIndividualApiError } from "../lib/atenciones-individuales-formatters";
 import { buildHistoriaClinicaPath } from "../lib/atenciones-individuales-paths";
-import { resolveHistoriaClinicaAction } from "../lib/historia-clinica-permissions";
+import { buildAtencionEnfermeriaDetailPath } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-paths";
 import {
   useAtencionIndividualQuery,
   useUpdateAtencionIndividualMutation,
@@ -18,13 +17,11 @@ import {
 type AtencionIndividualDetailPageProps = {
   atencionId: string;
   navigate: Navigate;
-  user: AuthUser;
 };
 
 export function AtencionIndividualDetailPage({
   atencionId,
   navigate,
-  user,
 }: AtencionIndividualDetailPageProps) {
   const atencionQuery = useAtencionIndividualQuery(atencionId);
   const updateMutation = useUpdateAtencionIndividualMutation(atencionId);
@@ -65,9 +62,7 @@ export function AtencionIndividualDetailPage({
     );
   }
 
-  const access = resolveHistoriaClinicaAction(user, {
-    createdByUserId: atencionQuery.data.createdByUserId,
-  });
+  const access = atencionQuery.data.access;
   const historyPath = buildHistoriaClinicaPath(atencionQuery.data.adultoMayorId);
 
   if (access === null) {
@@ -107,7 +102,7 @@ export function AtencionIndividualDetailPage({
 
       {!isEditable ? (
         <p className="atencion-readonly-banner" role="status">
-          Vista de solo lectura. Esta atencion pertenece a otro profesional.
+          Vista de solo lectura. Esta atencion no se puede editar desde tu rol.
         </p>
       ) : null}
 
@@ -122,6 +117,7 @@ export function AtencionIndividualDetailPage({
               : resolveAtencionIndividualApiError(updateMutation.error)
           }
           onCancel={() => navigate(historyPath)}
+          onOpenNursingAttention={(atencionId) => navigate(buildAtencionEnfermeriaDetailPath(atencionId))}
           onSubmit={async (values) => {
             await updateMutation.mutateAsync(values);
           }}
@@ -131,6 +127,7 @@ export function AtencionIndividualDetailPage({
           mode="view"
           detail={atencionQuery.data}
           onCancel={() => navigate(historyPath)}
+          onOpenNursingAttention={(atencionId) => navigate(buildAtencionEnfermeriaDetailPath(atencionId))}
         />
       )}
     </section>

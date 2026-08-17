@@ -3,22 +3,24 @@ import { type AuthUser } from "@cuidarte/contracts";
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
 import { HomeAccessShortcutCard } from "./home-access-shortcut-card";
-import {
-  canViewModule,
-  HOME_MODULES,
-  isShortcutModule,
-  type ShortcutHomeModule,
-} from "../lib/home-modules";
+import { canViewModule, HOME_MODULES, type HomeModule } from "../lib/home-modules";
 
 type HomeDirectAccessProps = {
   user: AuthUser;
   navigate: Navigate;
 };
 
-const HOME_SHORTCUT_MODULES = HOME_MODULES.filter(isShortcutModule) as readonly ShortcutHomeModule[];
+type HomeAccessModule = HomeModule & {
+  summaryLabel: string;
+  directAccessDescription: string;
+};
+
+const HOME_ACCESS_MODULES = HOME_MODULES.filter(
+  (module) => module.id !== "inicio",
+) as readonly HomeAccessModule[];
 
 export function HomeDirectAccess({ navigate, user }: HomeDirectAccessProps) {
-  const visibleShortcutModules = HOME_SHORTCUT_MODULES.filter((module) =>
+  const visibleShortcutModules = HOME_ACCESS_MODULES.filter((module) =>
     canViewModule(module, user.role),
   );
 

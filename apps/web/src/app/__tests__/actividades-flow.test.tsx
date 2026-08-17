@@ -103,6 +103,45 @@ describe("App actividades flow", () => {
     expect(screen.getByRole("button", { name: "Guardar diligenciamiento" })).toBeInTheDocument();
   });
 
+  it("opens activities from other users in read-only mode", async () => {
+    server.use(
+      mockAuthMe(authUserFixture),
+      http.get("http://localhost:3001/api/actividades-grupales", () =>
+        HttpResponse.json({
+          actividadesGrupales: [
+            {
+              ...actividadGrupalFixture,
+              canEdit: false,
+              canDelete: false,
+            },
+          ],
+        }),
+      ),
+      mockActividadDiligenciamiento({
+        ...actividadGrupalDiligenciamientoFixture,
+        canEdit: false,
+        canDelete: false,
+      }),
+    );
+    const user = userEvent.setup();
+    renderAppAtPath("/creacion-actividades");
+
+    expect(
+      await screen.findByRole("button", { name: "Ver actividad Jornada psicomotriz" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Ver actividad Jornada psicomotriz" }));
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        `/creacion-actividades/${actividadGrupalFixture.id}/diligenciamiento`,
+      );
+    });
+
+    expect(await screen.findByText("Vista de solo lectura")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Guardar diligenciamiento" })).not.toBeInTheDocument();
+  });
+
   it("filters the activities list by type", async () => {
     server.use(mockAuthMe(authUserFixture));
     const user = userEvent.setup();
@@ -211,8 +250,9 @@ describe("App actividades flow", () => {
     );
     await user.click(screen.getByRole("button", { name: "Guardar diligenciamiento" }));
 
-    expect(await screen.findByText("Diligenciamiento guardado.")).toBeInTheDocument();
-    expect(saveRequestCount).toBe(1);
+    await waitFor(() => {
+      expect(saveRequestCount).toBe(1);
+    });
     expect(receivedContentType).toContain("multipart/form-data");
   });
 
@@ -267,7 +307,9 @@ describe("App actividades flow", () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe("/creacion-actividades");
     });
-    expect(await screen.findByText("Actividad creada.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(createPayload).not.toBeNull();
+    });
     expect(await screen.findByText("Actividad creada desde test")).toBeInTheDocument();
     expect(createPayload).toMatchObject({
       tenantId: null,

@@ -72,6 +72,7 @@ type ActividadGrupalDiligenciamientoFormProps = {
   detail: ActividadGrupalDiligenciamientoDetail;
   error: string | null;
   isPending: boolean;
+  mode: "edit" | "view";
   onCancel: () => void;
   onSubmit: (request: {
     payload: SaveActividadGrupalDiligenciamiento;
@@ -85,9 +86,11 @@ export function ActividadGrupalDiligenciamientoForm({
   detail,
   error,
   isPending,
+  mode,
   onCancel,
   onSubmit,
 }: ActividadGrupalDiligenciamientoFormProps) {
+  const isReadOnly = mode === "view";
   const form = useForm<ActividadGrupalDiligenciamientoFormValues>({
     resolver: zodResolver(
       actividadGrupalDiligenciamientoFormSchema,
@@ -296,6 +299,11 @@ export function ActividadGrupalDiligenciamientoForm({
       className="actividad-form actividad-diligenciamiento-form"
       noValidate
       onSubmit={(event) => {
+        if (isReadOnly) {
+          event.preventDefault();
+          return;
+        }
+
         void form.handleSubmit((values) => {
           if (values.responsibleDepartment === "") {
             form.setError("responsibleDepartment", {
@@ -324,8 +332,9 @@ export function ActividadGrupalDiligenciamientoForm({
           <div className="actividad-form-summary__note">
             <ShieldCheck aria-hidden="true" />
             <p>
-              Completa objetivos, desarrollo, conclusion y soportes para dejar la sesion documentada
-              en un solo flujo.
+              {isReadOnly
+                ? "Esta sesión está en modo lectura. Puedes revisar la información y los soportes, pero no editarla."
+                : "Completa objetivos, desarrollo, conclusion y soportes para dejar la sesion documentada en un solo flujo."}
             </p>
           </div>
 
@@ -364,6 +373,7 @@ export function ActividadGrupalDiligenciamientoForm({
             <ActividadGrupalFieldGroup label="Objetivos" error={getError("objectives")}>
               <textarea
                 rows={5}
+                readOnly={isReadOnly}
                 aria-invalid={getError("objectives") === undefined ? "false" : "true"}
                 {...form.register("objectives")}
               />
@@ -374,6 +384,7 @@ export function ActividadGrupalDiligenciamientoForm({
               error={getError("responsibleDepartment")}
             >
               <select
+                disabled={isReadOnly}
                 aria-invalid={getError("responsibleDepartment") === undefined ? "false" : "true"}
                 {...form.register("responsibleDepartment")}
               >
@@ -389,6 +400,7 @@ export function ActividadGrupalDiligenciamientoForm({
             <ActividadGrupalFieldGroup label="Desarrollo" error={getError("development")}>
               <textarea
                 rows={8}
+                readOnly={isReadOnly}
                 aria-invalid={getError("development") === undefined ? "false" : "true"}
                 {...form.register("development")}
               />
@@ -397,6 +409,7 @@ export function ActividadGrupalDiligenciamientoForm({
             <ActividadGrupalFieldGroup label="Conclusion" error={getError("conclusion")}>
               <textarea
                 rows={8}
+                readOnly={isReadOnly}
                 aria-invalid={getError("conclusion") === undefined ? "false" : "true"}
                 {...form.register("conclusion")}
               />
@@ -416,50 +429,58 @@ export function ActividadGrupalDiligenciamientoForm({
           <span>{selectedIntegrantes.length} asignados</span>
         </div>
 
-        <label className="actividad-empleados-search actividad-diligenciamiento-search">
-          <Search aria-hidden="true" />
-          <input
-            type="search"
-            value={integranteSearch}
-            aria-label="Buscar por nombre o documento"
-            placeholder="Buscar por nombre o documento"
-            onChange={(event) => setIntegranteSearch(event.target.value)}
-          />
-        </label>
-
-        {integranteOptionsQuery.isError ? (
-          <p className="form-error" role="alert">
-            {resolveActividadesGrupalesApiError(integranteOptionsQuery.error)}
-          </p>
-        ) : null}
-
-        {!hasIntegranteSearch ? (
+        {isReadOnly ? (
           <div className="actividad-empleados-empty">
-            <p>Escribe un nombre o documento para buscar adultos mayores.</p>
-          </div>
-        ) : integranteOptionsQuery.isFetching ? (
-          <div className="actividad-empleados-empty" aria-live="polite">
-            <p>Buscando adultos mayores...</p>
-          </div>
-        ) : integranteOptions.length === 0 ? (
-          <div className="actividad-empleados-empty">
-            <p>No encontramos adultos mayores con ese criterio.</p>
+            <p>Esta sesión está en modo lectura. Solo puedes revisar los integrantes asignados.</p>
           </div>
         ) : (
-          <div className="actividad-diligenciamiento-suggestions">
-            {integranteOptions.map((integrante) => (
-              <button
-                key={integrante.id}
-                className="actividad-diligenciamiento-suggestion"
-                type="button"
-                onClick={() => addIntegrante(integrante)}
-              >
-                <UsersRound aria-hidden="true" />
-                <strong>{integrante.fullName}</strong>
-                <small>{integrante.documentNumber}</small>
-              </button>
-            ))}
-          </div>
+          <>
+            <label className="actividad-empleados-search actividad-diligenciamiento-search">
+              <Search aria-hidden="true" />
+              <input
+                type="search"
+                value={integranteSearch}
+                aria-label="Buscar por nombre o documento"
+                placeholder="Buscar por nombre o documento"
+                onChange={(event) => setIntegranteSearch(event.target.value)}
+              />
+            </label>
+
+            {integranteOptionsQuery.isError ? (
+              <p className="form-error" role="alert">
+                {resolveActividadesGrupalesApiError(integranteOptionsQuery.error)}
+              </p>
+            ) : null}
+
+            {!hasIntegranteSearch ? (
+              <div className="actividad-empleados-empty">
+                <p>Escribe un nombre o documento para buscar adultos mayores.</p>
+              </div>
+            ) : integranteOptionsQuery.isFetching ? (
+              <div className="actividad-empleados-empty" aria-live="polite">
+                <p>Buscando adultos mayores...</p>
+              </div>
+            ) : integranteOptions.length === 0 ? (
+              <div className="actividad-empleados-empty">
+                <p>No encontramos adultos mayores con ese criterio.</p>
+              </div>
+            ) : (
+              <div className="actividad-diligenciamiento-suggestions">
+                {integranteOptions.map((integrante) => (
+                  <button
+                    key={integrante.id}
+                    className="actividad-diligenciamiento-suggestion"
+                    type="button"
+                    onClick={() => addIntegrante(integrante)}
+                  >
+                    <UsersRound aria-hidden="true" />
+                    <strong>{integrante.fullName}</strong>
+                    <small>{integrante.documentNumber}</small>
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         <ActividadGrupalFieldGroup
@@ -474,18 +495,21 @@ export function ActividadGrupalDiligenciamientoForm({
             ) : (
               <div className="actividad-diligenciamiento-selected-list">
                 {selectedIntegrantes.map((integrante) => (
-                  <button
-                    key={integrante.id}
-                    className="actividad-diligenciamiento-chip"
-                    type="button"
-                    onClick={() => removeIntegrante(integrante.id)}
-                  >
+                  <div key={integrante.id} className="actividad-diligenciamiento-chip">
                     <span>
                       <strong>{integrante.fullName}</strong>
                       <small>{integrante.documentNumber}</small>
                     </span>
-                    <X aria-hidden="true" />
-                  </button>
+                    {isReadOnly ? null : (
+                      <button
+                        type="button"
+                        onClick={() => removeIntegrante(integrante.id)}
+                        aria-label={`Quitar integrante ${integrante.fullName}`}
+                      >
+                        <X aria-hidden="true" />
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             )}
@@ -514,21 +538,23 @@ export function ActividadGrupalDiligenciamientoForm({
               </div>
             </div>
 
-            <label className="outline-action actividad-diligenciamiento-upload-button">
-              <Upload aria-hidden="true" />
-              <span>Agregar fotos</span>
-              <input
-                className="visually-hidden"
-                type="file"
-                aria-label="Agregar fotos de soporte"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                onChange={(event) => {
-                  handleNewPhotos(event.target.files);
-                  event.target.value = "";
-                }}
-              />
-            </label>
+            {isReadOnly ? null : (
+              <label className="outline-action actividad-diligenciamiento-upload-button">
+                <Upload aria-hidden="true" />
+                <span>Agregar fotos</span>
+                <input
+                  className="visually-hidden"
+                  type="file"
+                  aria-label="Agregar fotos de soporte"
+                  accept="image/jpeg,image/png,image/webp"
+                  multiple
+                  onChange={(event) => {
+                    handleNewPhotos(event.target.files);
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+            )}
 
             {photoUploadError !== null ? (
               <p className="form-error" role="alert">
@@ -540,14 +566,18 @@ export function ActividadGrupalDiligenciamientoForm({
               activeIndex={activePhotoIndex}
               slides={photoSlides}
               onChange={setActivePhotoIndex}
-              onRemoveSlide={(slide) => {
-                if (slide.kind === "existing") {
-                  toggleExistingPhoto(slide.id);
-                  return;
-                }
+              {...(isReadOnly
+                ? {}
+                : {
+                    onRemoveSlide: (slide: PhotoSlide) => {
+                      if (slide.kind === "existing") {
+                        toggleExistingPhoto(slide.id);
+                        return;
+                      }
 
-                removeDraftPhoto(slide.file);
-              }}
+                      removeDraftPhoto(slide.file);
+                    },
+                  })}
             />
           </div>
 
@@ -560,20 +590,22 @@ export function ActividadGrupalDiligenciamientoForm({
               </div>
             </div>
 
-            <label className="outline-action actividad-diligenciamiento-upload-button">
-              <Upload aria-hidden="true" />
-              <span>{newPdfFile === null ? "Adjuntar PDF" : "Reemplazar PDF"}</span>
-              <input
-                className="visually-hidden"
-                type="file"
-                aria-label="Adjuntar documento PDF"
-                accept="application/pdf"
-                onChange={(event) => {
-                  handlePdf(event.target.files);
-                  event.target.value = "";
-                }}
-              />
-            </label>
+            {isReadOnly ? null : (
+              <label className="outline-action actividad-diligenciamiento-upload-button">
+                <Upload aria-hidden="true" />
+                <span>{newPdfFile === null ? "Adjuntar PDF" : "Reemplazar PDF"}</span>
+                <input
+                  className="visually-hidden"
+                  type="file"
+                  aria-label="Adjuntar documento PDF"
+                  accept="application/pdf"
+                  onChange={(event) => {
+                    handlePdf(event.target.files);
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+            )}
 
             {pdfUploadError !== null ? (
               <p className="form-error" role="alert">
@@ -588,13 +620,16 @@ export function ActividadGrupalDiligenciamientoForm({
                 description={formatActividadGrupalFileSize(visiblePdfFile.sizeBytes)}
                 href={buildActividadGrupalDiligenciamientoFileUrl(activityId, visiblePdfFile.id)}
                 title={visiblePdfFile.originalName}
-                onAction={() =>
-                  form.setValue("removePdfFile", true, {
-                    shouldDirty: true,
-                    shouldTouch: true,
-                    shouldValidate: true,
-                  })
-                }
+                {...(isReadOnly
+                  ? {}
+                  : {
+                      onAction: () =>
+                        form.setValue("removePdfFile", true, {
+                          shouldDirty: true,
+                          shouldTouch: true,
+                          shouldValidate: true,
+                        }),
+                    })}
               />
             ) : null}
 
@@ -604,7 +639,7 @@ export function ActividadGrupalDiligenciamientoForm({
                 actionIcon={<X aria-hidden="true" />}
                 description={formatActividadGrupalFileSize(newPdfFile.size)}
                 title={newPdfFile.name}
-                onAction={() => setNewPdfFile(null)}
+                {...(isReadOnly ? {} : { onAction: () => setNewPdfFile(null) })}
               />
             ) : null}
           </div>
@@ -621,9 +656,11 @@ export function ActividadGrupalDiligenciamientoForm({
         <button className="outline-action" type="button" onClick={onCancel}>
           Cancelar
         </button>
-        <button className="primary-action" type="submit" disabled={isPending}>
-          {isPending ? "Guardando..." : "Guardar diligenciamiento"}
-        </button>
+        {isReadOnly ? null : (
+          <button className="primary-action" type="submit" disabled={isPending}>
+            {isPending ? "Guardando..." : "Guardar diligenciamiento"}
+          </button>
+        )}
       </div>
     </form>
   );
@@ -660,7 +697,7 @@ function FileCard({
   actionLabel: string;
   description: string;
   href?: string;
-  onAction: () => void;
+  onAction?: () => void;
   title: string;
 }) {
   return (
@@ -682,15 +719,17 @@ function FileCard({
             <ExternalLink aria-hidden="true" />
           </a>
         ) : null}
-        <button
-          className="actividades-row-action"
-          type="button"
-          aria-label={actionLabel}
-          title={actionLabel}
-          onClick={onAction}
-        >
-          {actionIcon}
-        </button>
+        {onAction !== undefined ? (
+          <button
+            className="actividades-row-action"
+            type="button"
+            aria-label={actionLabel}
+            title={actionLabel}
+            onClick={onAction}
+          >
+            {actionIcon}
+          </button>
+        ) : null}
       </div>
     </article>
   );
@@ -705,7 +744,7 @@ function PhotoCarousel({
   activeIndex: number;
   slides: PhotoSlide[];
   onChange: (nextIndex: number) => void;
-  onRemoveSlide: (slide: PhotoSlide) => void;
+  onRemoveSlide?: (slide: PhotoSlide) => void;
 }) {
   if (slides.length === 0) {
     return (
@@ -767,22 +806,20 @@ function PhotoCarousel({
           <span className="actividad-diligenciamiento-photo-carousel__counter">
             {safeIndex + 1} / {slides.length}
           </span>
-          <button
-            className="actividades-row-action"
-            type="button"
-            aria-label={
-              activeSlide.kind === "draft"
-                ? `Quitar foto nueva ${activeSlide.title}`
-                : `Retirar foto ${activeSlide.title}`
-            }
-            onClick={() => onRemoveSlide(activeSlide)}
-          >
-            {activeSlide.kind === "draft" ? (
-              <X aria-hidden="true" />
-            ) : (
-              <Trash2 aria-hidden="true" />
-            )}
-          </button>
+          {onRemoveSlide !== undefined ? (
+            <button
+              className="actividades-row-action"
+              type="button"
+              aria-label={
+                activeSlide.kind === "draft"
+                  ? `Quitar foto nueva ${activeSlide.title}`
+                  : `Retirar foto ${activeSlide.title}`
+              }
+              onClick={() => onRemoveSlide(activeSlide)}
+            >
+              {activeSlide.kind === "draft" ? <X aria-hidden="true" /> : <Trash2 aria-hidden="true" />}
+            </button>
+          ) : null}
         </div>
       </div>
 

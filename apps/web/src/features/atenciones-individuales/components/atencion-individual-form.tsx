@@ -27,6 +27,9 @@ import {
   type CreateAtencionIndividualWithSupportsRequest,
   type UpdateAtencionIndividualWithSupportsRequest,
 } from "../api/atenciones-individuales-api";
+import { AtencionesEnfermeriaHistoryTable } from "@/features/atenciones-enfermeria/components/atenciones-enfermeria-history-table";
+import { resolveAtencionesEnfermeriaApiError } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-formatters";
+import { useAtencionesEnfermeriaHistoryQuery } from "@/features/atenciones-enfermeria/model/atenciones-enfermeria-queries";
 import {
   CAUSA_EXTERNA_LABELS,
   DIAGNOSTICO_TIPO_LABELS,
@@ -94,6 +97,7 @@ const FORM_SECTIONS = [
   { id: "ordenes", label: "Ordenes medicas", fields: ["ordenesMedicas"] },
   { id: "diagnosticos", label: "Diagnosticos", fields: ["diagnosticos"] },
   { id: "soportes", label: "Soportes", fields: [] },
+  { id: "enfermeria", label: "Atenciones de enfermería", fields: [] },
 ] as const;
 
 const MAX_SUPPORT_FILES = 3;
@@ -113,6 +117,7 @@ type AtencionIndividualFormProps =
       error: string | null;
       isPending: boolean;
       onCancel: () => void;
+      onOpenNursingAttention: (atencionId: string) => void;
       onSubmit: (values: CreateAtencionIndividualWithSupportsRequest) => Promise<void> | void;
     }
   | {
@@ -121,12 +126,14 @@ type AtencionIndividualFormProps =
       error: string | null;
       isPending: boolean;
       onCancel: () => void;
+      onOpenNursingAttention: (atencionId: string) => void;
       onSubmit: (values: UpdateAtencionIndividualWithSupportsRequest) => Promise<void> | void;
     }
   | {
       mode: "view";
       detail: AtencionIndividualDetail;
       onCancel: () => void;
+      onOpenNursingAttention: (atencionId: string) => void;
     };
 
 export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
@@ -137,6 +144,10 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
   const isReadOnly = props.mode === "view";
   const adultoMayor = props.mode === "create" ? props.adultoMayor : props.detail.adultoMayor;
   const detail = props.mode === "create" ? null : props.detail;
+  const nursingHistoryQuery = useAtencionesEnfermeriaHistoryQuery(
+    adultoMayor.id,
+    activeSection === "enfermeria",
+  );
   const existingSupportFiles =
     props.mode !== "create"
       ? props.detail.supportFiles.filter((file) => !removedSupportFileIds.includes(file.id))
@@ -732,6 +743,32 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
           items={supportItems}
           onRemove={removeSupportItem}
         />
+      </section>
+
+      <section
+        className="adulto-form-panel"
+        id={`${tabPanelIdPrefix}-enfermeria-panel`}
+        role="tabpanel"
+        aria-label="Contenido de atenciones de enfermería"
+        hidden={activeSection !== "enfermeria"}
+      >
+        <div className="atencion-cross-history-header">
+          <div>
+            <span className="eyebrow">Consulta cruzada</span>
+          </div>
+        </div>
+
+        {nursingHistoryQuery.isError ? (
+          <p className="form-error" role="alert">
+            {resolveAtencionesEnfermeriaApiError(nursingHistoryQuery.error)}
+          </p>
+        ) : (
+          <AtencionesEnfermeriaHistoryTable
+            atenciones={nursingHistoryQuery.data?.atenciones ?? []}
+            isLoading={nursingHistoryQuery.isLoading}
+            onOpenAtencion={props.onOpenNursingAttention}
+          />
+        )}
       </section>
 
       {props.mode === "view" ? (
