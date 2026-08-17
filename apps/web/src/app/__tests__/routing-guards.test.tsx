@@ -4,15 +4,13 @@ import { screen, waitFor, within } from "@testing-library/react";
 import {
   auditorUserFixture,
   authUserFixture,
+  directorUserFixture,
   empleadoFixture,
   enfermeriaUserFixture,
   medicoUserFixture,
 } from "../../test/fixtures";
 import { server } from "../../test/test-server";
-import {
-  renderAppAtPath,
-  resetAppTestState,
-} from "../../test/helpers/app-test.helpers";
+import { renderAppAtPath, resetAppTestState } from "../../test/helpers/app-test.helpers";
 import { mockAuthMe } from "../../test/helpers/msw-auth.helpers";
 
 describe("App routing guards", () => {
@@ -108,6 +106,26 @@ describe("App routing guards", () => {
     await waitFor(() => {
       expect(window.location.pathname).toBe("/adultos-mayores");
     });
+  });
+
+  it("redirects auditor users away from the adultos mayores import route", async () => {
+    server.use(mockAuthMe(auditorUserFixture));
+
+    renderAppAtPath("/adultos-mayores/importar");
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/home");
+    });
+  });
+
+  it("allows director users to open the adultos mayores import route", async () => {
+    server.use(mockAuthMe(directorUserFixture));
+
+    renderAppAtPath("/adultos-mayores/importar");
+
+    expect(await screen.findByRole("button", { name: "Descargar plantilla" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Importar adultos mayores" })).toBeInTheDocument();
+    expect(window.location.pathname).toBe("/adultos-mayores/importar");
   });
 
   it("redirects unsupported roles away from Registro de alimentación and hides the module", async () => {

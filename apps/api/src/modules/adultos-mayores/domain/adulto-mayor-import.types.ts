@@ -2,6 +2,7 @@ import type {
   AdultoMayorImportIssue,
   AdultoMayorImportRow,
   AdultoMayorImportStatus,
+  AdultoMayorImportRowStatus,
   AdultoMayorImportSummary,
   AdultoMayorImportTenant,
 } from "@cuidarte/contracts";
@@ -55,7 +56,17 @@ export type AdultoMayorImportNormalizedRow = {
   emergencyContactRelationship: string | null;
   emergencyContactPhone: string | null;
   emergencyContactAddress: string | null;
-  bloodType: "a_positive" | "a_negative" | "b_positive" | "b_negative" | "ab_positive" | "ab_negative" | "o_positive" | "o_negative" | "unknown" | null;
+  bloodType:
+    | "a_positive"
+    | "a_negative"
+    | "b_positive"
+    | "b_negative"
+    | "ab_positive"
+    | "ab_negative"
+    | "o_positive"
+    | "o_negative"
+    | "unknown"
+    | null;
   sisben: string | null;
   healthRegime: string | null;
   epsId: string | null;
@@ -69,6 +80,16 @@ export type AdultoMayorImportNormalizedRow = {
 export type AdultoMayorImportExistingRecord = AdultoMayorImportNormalizedRow & {
   id: string;
   updatedAt: string;
+};
+
+export type AdultoMayorImportExistingAdultRecord = Omit<
+  AdultoMayorImportNormalizedRow,
+  "departmentId" | "municipalityId"
+> & {
+  id: string;
+  departmentId: string | null;
+  municipalityId: string | null;
+  updatedAt: Date;
 };
 
 export type AdultoMayorImportValidatedRow = {
@@ -90,7 +111,7 @@ export type AdultoMayorImportBatchRecord = {
   status: AdultoMayorImportStatus;
   summary: AdultoMayorImportSummary;
   issues: AdultoMayorImportIssue[];
-  rows: AdultoMayorImportRow[];
+  rows: AdultoMayorImportBatchDetailRowRecord[];
   canConfirm: boolean;
   expiresAt: Date;
   confirmedAt: Date | null;
@@ -120,9 +141,11 @@ export type AdultoMayorImportBatchRowCreateCommand = {
   existingAdultoUpdatedAt: string | null;
 };
 
-export type AdultoMayorImportBatchDetailRowRecord = AdultoMayorImportRow & {
+export type AdultoMayorImportBatchDetailRowRecord = Omit<AdultoMayorImportRow, "status"> & {
+  status: AdultoMayorImportRowStatus | "existing";
   normalizedPayload: AdultoMayorImportNormalizedRow | null;
   issues: AdultoMayorImportIssue[];
+  existingAdultoUpdatedAt: string | null;
 };
 
 export type AdultoMayorImportCommitResult = {

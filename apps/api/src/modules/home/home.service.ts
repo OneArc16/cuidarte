@@ -23,6 +23,7 @@ import {
   users,
 } from "../../database/schema";
 import { resolveActividadesGrupalesScope } from "../actividades-grupales/domain/actividad-grupal.policy";
+import { canImportAdultosMayores } from "../adultos-mayores/domain/adulto-mayor-import.policy";
 import { resolveAdultosMayoresScope } from "../adultos-mayores/domain/adulto-mayor.policy";
 import { resolveAlimentacionScope } from "../alimentacion/domain/alimentacion.policy";
 import { resolveEmpleadosScope } from "../empleados/domain/empleado.policy";
@@ -66,23 +67,35 @@ export class HomeService {
     const actividadesScope = resolveActividadesGrupalesScope(actor);
     const alimentacionScope = resolveAlimentacionScope(actor);
     const empleadosScope = resolveEmpleadosScope(actor);
-    const importScope = resolveAdultosMayoresScope(actor);
+    const importScope = canImportAdultosMayores(actor) ? adultosScope : null;
 
-    const [adultosTotal, actividadesSummary, alimentacionSummary, empleadosTotal, tenantsTotal, importsTotal] =
-      await Promise.all([
-        adultosScope === null
-          ? Promise.resolve<number | null>(null)
-          : this.countAdultosMayores(adultosScope),
-        actividadesScope === null
-          ? Promise.resolve<ActivitySummary | null>(null)
-          : this.summarizeActividades(actividadesScope),
-        alimentacionScope === null
-          ? Promise.resolve<AlimentacionSummary | null>(null)
-          : this.summarizeAlimentacion(alimentacionScope),
-        empleadosScope === null ? Promise.resolve<number | null>(null) : this.countEmpleados(empleadosScope),
-        actor.role === "super_admin" ? this.countActiveTenants() : Promise.resolve<number | null>(null),
-        importScope === null ? Promise.resolve<number | null>(null) : this.countCompletedImports(importScope),
-      ]);
+    const [
+      adultosTotal,
+      actividadesSummary,
+      alimentacionSummary,
+      empleadosTotal,
+      tenantsTotal,
+      importsTotal,
+    ] = await Promise.all([
+      adultosScope === null
+        ? Promise.resolve<number | null>(null)
+        : this.countAdultosMayores(adultosScope),
+      actividadesScope === null
+        ? Promise.resolve<ActivitySummary | null>(null)
+        : this.summarizeActividades(actividadesScope),
+      alimentacionScope === null
+        ? Promise.resolve<AlimentacionSummary | null>(null)
+        : this.summarizeAlimentacion(alimentacionScope),
+      empleadosScope === null
+        ? Promise.resolve<number | null>(null)
+        : this.countEmpleados(empleadosScope),
+      actor.role === "super_admin"
+        ? this.countActiveTenants()
+        : Promise.resolve<number | null>(null),
+      importScope === null
+        ? Promise.resolve<number | null>(null)
+        : this.countCompletedImports(importScope),
+    ]);
 
     const shortcutTotals: Partial<
       Record<HomeDashboardShortcutModuleId | "importacion-adultos-mayores", number>
@@ -136,7 +149,9 @@ export class HomeService {
   private async countEmpleados(scope: TenantScope): Promise<number> {
     const scopeCondition = this.buildScopeCondition(scope, users.tenantId);
     const where =
-      scopeCondition === undefined ? eq(users.isActive, true) : and(scopeCondition, eq(users.isActive, true));
+      scopeCondition === undefined
+        ? eq(users.isActive, true)
+        : and(scopeCondition, eq(users.isActive, true));
     const [row] = await this.database.db
       .select({
         total: sql<number>`count(*)::int`,
@@ -299,6 +314,8 @@ export class HomeService {
   }
 }
 
-function isActivityIndicatorId(value: typeof actividadesGrupales.$inferSelect.activityType): value is ActivityIndicatorId {
+function isActivityIndicatorId(
+  value: typeof actividadesGrupales.$inferSelect.activityType,
+): value is ActivityIndicatorId {
   return ACTIVITY_INDICATOR_IDS.includes(value as ActivityIndicatorId);
 }
