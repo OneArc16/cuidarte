@@ -162,9 +162,16 @@ export class AdultosMayoresImportValidator {
     const existingKeyMap = new Map(
       existingAdults.map((adulto) => [this.buildKey(adulto.documentType, adulto.documentNumber), adulto]),
     );
+    const existingNumberMap = new Map<string, AdultoMayorImportExistingRecord[]>();
+
+    for (const adult of existingAdults) {
+      const bucket = existingNumberMap.get(adult.documentNumber) ?? [];
+      bucket.push(adult);
+      existingNumberMap.set(adult.documentNumber, bucket);
+    }
 
     const validatedRows = rows.map((row) =>
-      this.validateRow(row, catalogs, duplicateKeys, existingKeyMap),
+      this.validateRow(row, catalogs, duplicateKeys, existingKeyMap, existingNumberMap),
     );
 
     const allIssues = validatedRows.flatMap((row) => row.issues);
@@ -196,12 +203,15 @@ export class AdultosMayoresImportValidator {
     catalogs: AdultoMayorImportCatalogMaps,
     duplicateKeys: Set<string>,
     existingKeyMap: Map<string, AdultoMayorImportExistingRecord>,
+    existingNumberMap: Map<string, AdultoMayorImportExistingRecord[]>,
   ): AdultoMayorImportValidatedRow {
     const issues: AdultoMayorImportIssue[] = [];
     const normalized = this.normalizeRow(row, catalogs, issues);
     const key = this.buildKey(normalized.documentType, normalized.documentNumber);
     const duplicateInFile = duplicateKeys.has(key);
-    const existingAdult = existingKeyMap.get(key) ?? null;
+    const existingAdult =
+      existingKeyMap.get(key) ??
+      this.resolveExistingAdultByDocumentNumber(normalized.documentNumber, existingNumberMap);
 
     if (duplicateInFile) {
       issues.push(
@@ -432,6 +442,19 @@ export class AdultosMayoresImportValidator {
     }
 
     return payload;
+  }
+
+  private resolveExistingAdultByDocumentNumber(
+    documentNumber: string,
+    existingNumberMap: Map<string, AdultoMayorImportExistingRecord[]>,
+  ): AdultoMayorImportExistingRecord | null {
+    const candidates = existingNumberMap.get(documentNumber);
+
+    if (candidates === undefined || candidates.length !== 1) {
+      return null;
+    }
+
+    return candidates[0] ?? null;
   }
 
   private mapDocumentType(row: AdultoMayorImportRowInput, issues: AdultoMayorImportIssue[]) {

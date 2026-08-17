@@ -133,4 +133,23 @@ describe("AdultosMayoresImportValidator", () => {
     assert.equal(result.summary.unchangedRows, 1);
     assert.equal(result.summary.updatedRows, 0);
   });
+
+  it("falls back to document number when the stored type differs but the document is unique", () => {
+    const row = buildRow({
+      tipo_documento: "CE",
+      direccion: "Carrera 10 # 20-30",
+    });
+
+    const result = validator.validateRows(
+      [row],
+      catalogs,
+      [{ ...existingAdult, documentType: "ce" }],
+    );
+    const [validatedRow] = result.rows;
+
+    assert.equal(validatedRow?.status, "update_ready");
+    assert.equal(validatedRow?.existingAdultoId, existingAdult.id);
+    assert.equal(result.summary.updateRows, 1);
+    assert.equal(result.summary.existingRows, 1);
+  });
 });

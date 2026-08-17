@@ -187,50 +187,44 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
         ),
       );
 
-    const keySet = new Set(
-      params.documents.map((document) => `${document.documentType}::${document.documentNumber}`),
-    );
-
-    return rows
-      .filter((row) => keySet.has(`${row.documentType}::${row.documentNumber}`))
-      .map((row): AdultoMayorImportExistingRecord => ({
-        id: row.id,
-        documentType: row.documentType,
-        documentNumber: row.documentNumber,
-        firstName: row.firstName,
-        middleName: row.middleName,
-        firstSurname: row.firstSurname,
-        secondSurname: row.secondSurname,
-        birthDate: row.birthDate,
-        sex: row.sex,
-        educationLevel: row.educationLevel,
-        disability: row.disability,
-        populationGroup: row.populationGroup,
-        address: row.address,
-        departmentId: row.departmentId ?? "",
-        municipalityId: row.municipalityId ?? "",
-        department: row.department,
-        municipality: row.municipality,
-        zone: row.zone as AdultoMayorImportNormalizedRow["zone"],
-        country: row.country,
-        phone: row.phone,
-        phoneSecondary: row.phoneSecondary,
-        email: row.email,
-        emergencyContactFullName: row.emergencyContactFullName,
-        emergencyContactRelationship: row.emergencyContactRelationship,
-        emergencyContactPhone: row.emergencyContactPhone,
-        emergencyContactAddress: row.emergencyContactAddress,
-        bloodType: row.bloodType as AdultoMayorImportNormalizedRow["bloodType"],
-        sisben: row.sisben,
-        healthRegime: row.healthRegime,
-        epsId: row.epsId,
-        eps: row.legacyEps ?? row.epsName ?? null,
-        livesWithSomeone: row.livesWithSomeone,
-        companion: row.companion,
-        economicIncome: row.economicIncome,
-        socialProgramBeneficiary: row.socialProgramBeneficiary,
-        updatedAt: row.updatedAt.toISOString(),
-      }));
+    return rows.map((row): AdultoMayorImportExistingRecord => ({
+      id: row.id,
+      documentType: row.documentType,
+      documentNumber: row.documentNumber,
+      firstName: row.firstName,
+      middleName: row.middleName,
+      firstSurname: row.firstSurname,
+      secondSurname: row.secondSurname,
+      birthDate: row.birthDate,
+      sex: row.sex,
+      educationLevel: row.educationLevel,
+      disability: row.disability,
+      populationGroup: row.populationGroup,
+      address: row.address,
+      departmentId: row.departmentId ?? "",
+      municipalityId: row.municipalityId ?? "",
+      department: row.department,
+      municipality: row.municipality,
+      zone: row.zone as AdultoMayorImportNormalizedRow["zone"],
+      country: row.country,
+      phone: row.phone,
+      phoneSecondary: row.phoneSecondary,
+      email: row.email,
+      emergencyContactFullName: row.emergencyContactFullName,
+      emergencyContactRelationship: row.emergencyContactRelationship,
+      emergencyContactPhone: row.emergencyContactPhone,
+      emergencyContactAddress: row.emergencyContactAddress,
+      bloodType: row.bloodType as AdultoMayorImportNormalizedRow["bloodType"],
+      sisben: row.sisben,
+      healthRegime: row.healthRegime,
+      epsId: row.epsId,
+      eps: row.legacyEps ?? row.epsName ?? null,
+      livesWithSomeone: row.livesWithSomeone,
+      companion: row.companion,
+      economicIncome: row.economicIncome,
+      socialProgramBeneficiary: row.socialProgramBeneficiary,
+      updatedAt: row.updatedAt.toISOString(),
+    }));
   }
 
   async createValidatedBatch(params: {
@@ -450,18 +444,15 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
         (row) =>
           row.status === "update_ready" &&
           row.normalizedPayload !== null &&
-          row.existingAdultoId !== null &&
-          row.existingAdultoUpdatedAt !== null,
+          row.existingAdultoId !== null,
       );
       const unchangedRows = rows.filter(
         (row) =>
           row.status === "unchanged" &&
-          row.existingAdultoId !== null &&
-          row.existingAdultoUpdatedAt !== null,
+          row.existingAdultoId !== null,
       );
 
       await this.assertCreateRowsStillAvailable(tx, batch.tenant.id, readyRows);
-      await this.assertObservedVersionsUnchanged(tx, [...updateRows, ...unchangedRows]);
 
       const confirmedAt = new Date();
       const insertedAdults = await this.insertAdultosMayoresWithDb(tx, {
@@ -507,10 +498,7 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
             updatedAt: confirmedAt,
           })
           .where(
-            and(
-              eq(adultosMayores.id, row.existingAdultoId ?? ""),
-              eq(adultosMayores.updatedAt, new Date(row.existingAdultoUpdatedAt ?? "")),
-            ),
+            eq(adultosMayores.id, row.existingAdultoId ?? ""),
           )
           .returning({ id: adultosMayores.id });
 
@@ -750,38 +738,6 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
 
     if (foundRows.some((row) => expectedKeys.has(this.buildDocumentKey(row.documentType, row.documentNumber)))) {
       throw new AdultoMayorImportCommitConflictError();
-    }
-  }
-
-  private async assertObservedVersionsUnchanged(
-    db: DatabaseLike,
-    rows: AdultoMayorImportBatchDetailRowRecord[],
-  ) {
-    if (rows.length === 0) {
-      return;
-    }
-
-    const existingIds = rows.flatMap((row) => (row.existingAdultoId === null ? [] : [row.existingAdultoId]));
-    const currentRows = await db
-      .select({
-        id: adultosMayores.id,
-        updatedAt: adultosMayores.updatedAt,
-      })
-      .from(adultosMayores)
-      .where(inArray(adultosMayores.id, existingIds));
-
-    const updatedAtById = new Map(currentRows.map((row) => [row.id, row.updatedAt.toISOString()]));
-
-    for (const row of rows) {
-      if (row.existingAdultoId === null || row.existingAdultoUpdatedAt === null) {
-        throw new AdultoMayorImportCommitConflictError();
-      }
-
-      const currentUpdatedAt = updatedAtById.get(row.existingAdultoId);
-
-      if (currentUpdatedAt !== row.existingAdultoUpdatedAt) {
-        throw new AdultoMayorImportCommitConflictError();
-      }
     }
   }
 

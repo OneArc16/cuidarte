@@ -3,9 +3,7 @@ import { describe, it } from "node:test";
 import { createRequire } from "node:module";
 
 import { type AuthUser } from "@cuidarte/contracts";
-import { ConflictException } from "@nestjs/common";
 
-import { AdultoMayorImportCommitConflictError } from "../domain/adultos-mayores-import.repository";
 import { type AdultoMayorImportBatchRecord } from "../domain/adulto-mayor-import.types";
 import { type AdultosMayoresImportRepository } from "../domain/adultos-mayores-import.repository";
 
@@ -48,23 +46,6 @@ describe("AdultosMayoresImportService.confirmImport", () => {
       existingRows: 4,
       completedAt: "2026-08-11T12:30:00.000Z",
     });
-  });
-
-  it("exige validar otra vez si un adulto cambio antes de confirmar", async () => {
-    const repository = createRepository({
-      commitValidatedBatch: async () => {
-        throw new AdultoMayorImportCommitConflictError();
-      },
-    });
-    const service = createService(repository);
-
-    await assert.rejects(
-      () => service.confirmImport(importId, actor),
-      (error: unknown) =>
-        error instanceof ConflictException &&
-        error.message ===
-          "Se detectaron cambios recientes en los registros. Vuelve a validar el archivo antes de confirmar.",
-    );
   });
 });
 

@@ -111,6 +111,9 @@ export function AdultosMayoresImportPage({ navigate, user }: AdultosMayoresImpor
       return;
     }
 
+    confirmMutation.reset();
+    setLocalError(null);
+
     validateMutation.mutate(
       { file: selectedFile, tenantId },
       {
@@ -214,6 +217,7 @@ export function AdultosMayoresImportPage({ navigate, user }: AdultosMayoresImpor
               onSelectFile={(file) => {
                 setSelectedFile(file);
                 setLocalError(null);
+                confirmMutation.reset();
               }}
             />
           </div>
