@@ -44,6 +44,7 @@ const FORM_SECTIONS = [
       "documentType",
       "documentNumber",
       "sex",
+      "status",
       "firstName",
       "middleName",
       "firstSurname",
@@ -449,6 +450,16 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
               <option value="female">Femenino</option>
               <option value="male">Masculino</option>
               <option value="other">Otro</option>
+            </select>
+          </AdultoMayorFieldGroup>
+
+          <AdultoMayorFieldGroup label="Estado" error={getError("status")}>
+            <select
+              aria-invalid={getError("status") === undefined ? "false" : "true"}
+              {...form.register("status")}
+            >
+              <option value="alive">Vivo</option>
+              <option value="deceased">Fallecido</option>
             </select>
           </AdultoMayorFieldGroup>
 

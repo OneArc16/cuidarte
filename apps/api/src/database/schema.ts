@@ -39,6 +39,7 @@ export const adultoMayorDocumentType = pgEnum("adulto_mayor_document_type", [
   "other",
 ]);
 export const adultoMayorSex = pgEnum("adulto_mayor_sex", ["female", "male", "other"]);
+export const adultoMayorStatus = pgEnum("adulto_mayor_status", ["alive", "deceased"]);
 export const adultoMayorImportStatus = pgEnum("adulto_mayor_import_status", [
   "ready",
   "validated_with_errors",
@@ -462,6 +463,7 @@ export const adultosMayores = pgTable(
     socialProgramBeneficiary: boolean("social_program_beneficiary").notNull().default(false),
     birthDate: date("birth_date", { mode: "string" }).notNull(),
     sex: adultoMayorSex("sex").notNull(),
+    status: adultoMayorStatus("status").notNull().default("alive"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

@@ -218,6 +218,13 @@
       "when": 1786995183572,
       "tag": "0030_adulto_mayor_import_legacy_backfill",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1788291293824,
+      "tag": "0031_adulto_mayor_status",
+      "breakpoints": true
     }
   ]
 }

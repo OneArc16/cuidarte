@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { toast } from "sonner";
 
 import {
   adultoMayorFixture,
@@ -17,6 +18,7 @@ import { renderAppAtPath, resetAppTestState } from "../../test/helpers/app-test.
 import { mockAuthMe } from "../../test/helpers/msw-auth.helpers";
 
 type AdultoMayorMutationPayload = {
+  status?: string;
   documentType?: string;
   documentNumber?: string;
   firstName?: string;
@@ -139,6 +141,7 @@ describe("App adultos mayores flow", () => {
       );
     });
     expect(createPayload).toMatchObject({
+      status: "alive",
       documentType: "cc",
       documentNumber: "1099887766",
       firstName: "Julia",
@@ -154,6 +157,7 @@ describe("App adultos mayores flow", () => {
 
   it("edits an adulto mayor from the reusable form", async () => {
     server.use(mockAuthMe(authUserFixture));
+    const successToastSpy = vi.spyOn(toast, "success");
     let updatePayload: AdultoMayorMutationPayload | null = null;
     server.use(
       http.patch(
@@ -165,6 +169,7 @@ describe("App adultos mayores flow", () => {
             ...adultoMayorFixture,
             names: "Rosa Maria",
             middleName: "Maria",
+            status: "deceased",
           });
         },
       ),
@@ -174,16 +179,20 @@ describe("App adultos mayores flow", () => {
 
     const secondNameInput = await screen.findByLabelText("Segundo nombre");
 
+    await user.selectOptions(screen.getByLabelText("Estado"), "deceased");
     await user.clear(secondNameInput);
     await user.type(secondNameInput, "Maria");
     await user.click(screen.getByRole("button", { name: "Guardar" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Cambios guardados.");
-    expect(updatePayload).toMatchObject({
-      documentNumber: adultoMayorFixture.documentNumber,
-      firstName: "Rosa",
-      middleName: "Maria",
-      firstSurname: "Martinez",
+    await waitFor(() => {
+      expect(updatePayload).toMatchObject({
+        status: "deceased",
+        documentNumber: adultoMayorFixture.documentNumber,
+        firstName: "Rosa",
+        middleName: "Maria",
+        firstSurname: "Martinez",
+      });
+      expect(successToastSpy).toHaveBeenCalledWith("Cambios guardados.");
     });
   });
 
@@ -277,7 +286,7 @@ describe("App adultos mayores flow", () => {
     await waitFor(() => {
       expect(pdfSearch).toBe("Rosa");
     });
-    expect(createObjectUrlSpy).toHaveBeenCalledTimes(1);
+    expect(createObjectUrlSpy).toHaveBeenCalledTimes(2);
     expect(openSpy).toHaveBeenCalledWith("blob:adultos-mayores", "_blank", "noopener,noreferrer");
 
     await user.click(screen.getByRole("button", { name: "Imprimir listado" }));

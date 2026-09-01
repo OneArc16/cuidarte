@@ -4,6 +4,7 @@ import { type UserRole } from "./auth.js";
 
 export const adultoMayorDocumentTypeSchema = z.enum(["cc", "ce", "passport", "other"]);
 export const adultoMayorSexSchema = z.enum(["female", "male", "other"]);
+export const adultoMayorStatusSchema = z.enum(["alive", "deceased"]);
 export const adultoMayorZoneSchema = z.enum(["urban", "rural"]);
 export const adultoMayorBloodTypeSchema = z.enum([
   "a_positive",
@@ -262,6 +263,7 @@ export const adultoMayorListItemSchema = z.object({
   birthDate: dateSchema,
   age: z.number().int().min(0),
   sex: adultoMayorSexSchema,
+  status: adultoMayorStatusSchema,
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
 });
@@ -303,6 +305,7 @@ export const adultoMayorCommandSchema = z.object({
   documentType: adultoMayorDocumentTypeSchema,
   documentNumber: requiredTextSchema(80),
   sex: adultoMayorSexSchema,
+  status: adultoMayorStatusSchema,
   firstName: requiredTextSchema(80),
   middleName: nullableTextSchema(80),
   firstSurname: requiredTextSchema(80),
@@ -335,6 +338,7 @@ export const adultoMayorCommandSchema = z.object({
 
 export const createAdultoMayorRequestSchema = adultoMayorCommandSchema.extend({
   tenantId: z.uuid().nullable().optional().default(null),
+  status: adultoMayorStatusSchema.optional().default("alive"),
 });
 
 export const updateAdultoMayorRequestSchema = adultoMayorCommandSchema;
@@ -359,6 +363,7 @@ export const adultoMayorImportHistoryResponseSchema = z.object({
 
 export type AdultoMayorDocumentType = z.infer<typeof adultoMayorDocumentTypeSchema>;
 export type AdultoMayorSex = z.infer<typeof adultoMayorSexSchema>;
+export type AdultoMayorStatus = z.infer<typeof adultoMayorStatusSchema>;
 export type AdultoMayorZone = z.infer<typeof adultoMayorZoneSchema>;
 export type AdultoMayorBloodType = z.infer<typeof adultoMayorBloodTypeSchema>;
 export type AdultoMayorHealthRegime = z.infer<typeof adultoMayorHealthRegimeSchema>;

@@ -20,6 +20,7 @@ export const adultoMayorFixture = {
   birthDate: "1948-03-12",
   age: 78,
   sex: "female",
+  status: "alive",
   educationLevel: "Primaria",
   disability: null,
   populationGroup: "Persona mayor",

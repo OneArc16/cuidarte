@@ -266,6 +266,7 @@ export class AdultosMayoresService {
       birthDate: record.birthDate,
       age: calculateAgeFromBirthDate(record.birthDate),
       sex: record.sex,
+      status: record.status,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
     });

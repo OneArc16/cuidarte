@@ -3,6 +3,7 @@ import {
   type AdultoMayorDocumentType,
   type AdultoMayorHealthRegime,
   type AdultoMayorSex,
+  type AdultoMayorStatus,
   type AdultoMayorZone,
 } from "@cuidarte/contracts";
 
@@ -50,6 +51,7 @@ export type AdultoMayorCommandRecord = {
   email: string | null;
   birthDate: string;
   sex: AdultoMayorSex;
+  status: AdultoMayorStatus;
   educationLevel: string | null;
   disability: string | null;
   populationGroup: string | null;
@@ -105,6 +107,7 @@ export type AdultoMayorRecord = {
   email: string | null;
   birthDate: string;
   sex: AdultoMayorSex;
+  status: AdultoMayorStatus;
   educationLevel: string | null;
   disability: string | null;
   populationGroup: string | null;

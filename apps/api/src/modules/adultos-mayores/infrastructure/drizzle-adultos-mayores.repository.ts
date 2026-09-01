@@ -38,6 +38,7 @@ type AdultoMayorSelectionRow = {
   email: string | null;
   birthDate: string;
   sex: AdultoMayorRecord["sex"];
+  status: AdultoMayorRecord["status"];
   educationLevel: string | null;
   disability: string | null;
   populationGroup: string | null;
@@ -259,6 +260,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       email: adultosMayores.email,
       birthDate: adultosMayores.birthDate,
       sex: adultosMayores.sex,
+      status: adultosMayores.status,
       educationLevel: adultosMayores.educationLevel,
       disability: adultosMayores.disability,
       populationGroup: adultosMayores.populationGroup,
@@ -303,6 +305,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       email: command.email,
       birthDate: command.birthDate,
       sex: command.sex,
+      status: command.status,
       educationLevel: command.educationLevel,
       disability: command.disability,
       populationGroup: command.populationGroup,
