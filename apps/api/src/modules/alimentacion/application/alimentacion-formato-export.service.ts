@@ -41,7 +41,7 @@ type CurrentFormatoDependencies = {
 };
 
 const INSTITUTIONAL_LOGO_RELATIVE_PATH = path.join("public", "logos", "gobernacion-magdalena.png");
-const VISIT_BASED_FORMAT_ROLLOUT_AT = new Date("2026-08-09T05:00:00.000Z");
+const DATED_VISIT_LIST_FORMAT_ROLLOUT_AT = new Date("2026-09-01T18:27:35.000Z");
 
 let cachedInstitutionalLogoDataUrl: string | null | undefined;
 
@@ -113,7 +113,6 @@ export class AlimentacionFormatoExportService {
       institutionalLogoDataUrl,
       tenantLogoDataUrl,
       directorSignatureDataUrl,
-      generatedAt,
     );
     const filename = buildFormatoEntregaPdfFilename(
       exportData.documentNumber,
@@ -176,7 +175,6 @@ export class AlimentacionFormatoExportService {
     institutionalLogoDataUrl: string | null,
     tenantLogoDataUrl: string,
     directorSignatureDataUrl: string | null,
-    generatedAt: Date,
   ): Promise<Buffer> {
     let browser: Browser | undefined;
 
@@ -189,7 +187,6 @@ export class AlimentacionFormatoExportService {
       await page.setContent(
         buildFormatoEntregaPdfHtml({
           data,
-          generatedAt,
           institutionalLogoDataUrl,
           tenantLogoDataUrl,
           directorSignatureDataUrl,
@@ -286,7 +283,7 @@ export class AlimentacionFormatoExportService {
     exportData: AlimentacionFormatoEntregaExportData,
     currentDependencies: CurrentFormatoDependencies,
   ): boolean {
-    if (existingEmission.issuedAt < VISIT_BASED_FORMAT_ROLLOUT_AT) {
+    if (existingEmission.issuedAt < DATED_VISIT_LIST_FORMAT_ROLLOUT_AT) {
       return false;
     }
 

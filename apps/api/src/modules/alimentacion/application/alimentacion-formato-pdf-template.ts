@@ -13,7 +13,6 @@ const ACTIVITY_DESCRIPTION_VALUE = "Entrega de alimentos";
 
 type BuildFormatoEntregaPdfHtmlParams = {
   data: AlimentacionFormatoEntregaExportData;
-  generatedAt: Date;
   institutionalLogoDataUrl: string | null;
   tenantLogoDataUrl: string;
   directorSignatureDataUrl: string | null;
@@ -30,17 +29,14 @@ export function buildFormatoEntregaPdfFilename(
 
 export function buildFormatoEntregaPdfHtml({
   data,
-  generatedAt,
   institutionalLogoDataUrl,
   tenantLogoDataUrl,
   directorSignatureDataUrl,
 }: BuildFormatoEntregaPdfHtmlParams): string {
   const visitBlocks = buildFormatoEntregaVisitBlocks(data.records);
-  const generatedDateLabel = formatBogotaDate(generatedAt);
   const cityLabel = formatTenantCityLabel(data.tenantCity, data.tenantDepartment);
   const stubSections = buildPageHtml({
     visitBlocks,
-    generatedDateLabel,
     cityLabel,
     directorSignatureDataUrl,
     fullName: data.fullName,
@@ -133,6 +129,10 @@ export function buildFormatoEntregaPdfHtml({
           .meta-table td:last-child {
             text-align: center;
           }
+          .meta-table .delivery-dates {
+            font-size: 9px;
+            white-space: nowrap;
+          }
           .products-table {
             margin-top: 4px;
             table-layout: fixed;
@@ -213,7 +213,6 @@ export function buildFormatoEntregaPdfHtml({
 
 function buildPageHtml({
   visitBlocks,
-  generatedDateLabel,
   cityLabel,
   directorSignatureDataUrl,
   fullName,
@@ -223,7 +222,6 @@ function buildPageHtml({
   tenantName,
 }: {
   visitBlocks: AlimentacionFormatoEntregaVisitBlock[];
-  generatedDateLabel: string;
   cityLabel: string;
   directorSignatureDataUrl: string | null;
   fullName: string;
@@ -235,19 +233,18 @@ function buildPageHtml({
   const stubs = visitBlocks
     .slice(0, STUBS_PER_PAGE)
     .map((visitBlock, stubIndex) =>
-    buildStubHtml({
-      visitBlock,
-      generatedDateLabel,
-      cityLabel,
-      directorSignatureDataUrl,
-      fullName,
-      documentNumber,
-      institutionalLogoDataUrl,
-      tenantLogoDataUrl,
-      tenantName,
-      blockIndex: visitBlock.blockIndex,
-      stubIndex,
-    }),
+      buildStubHtml({
+        visitBlock,
+        cityLabel,
+        directorSignatureDataUrl,
+        fullName,
+        documentNumber,
+        institutionalLogoDataUrl,
+        tenantLogoDataUrl,
+        tenantName,
+        blockIndex: visitBlock.blockIndex,
+        stubIndex,
+      }),
     )
     .join("");
 
@@ -256,7 +253,6 @@ function buildPageHtml({
 
 function buildStubHtml({
   visitBlock,
-  generatedDateLabel,
   cityLabel,
   directorSignatureDataUrl,
   fullName,
@@ -268,7 +264,6 @@ function buildStubHtml({
   stubIndex,
 }: {
   visitBlock: AlimentacionFormatoEntregaVisitBlock;
-  generatedDateLabel: string;
   cityLabel: string;
   directorSignatureDataUrl: string | null;
   fullName: string;
@@ -279,6 +274,7 @@ function buildStubHtml({
   blockIndex: number;
   stubIndex: number;
 }): string {
+  const deliveryDatesLabel = buildMarkedDeliveryDatesLabel(visitBlock.slots);
   const dayHeaders = visitBlock.slots
     .map((slot) => `<th class="day-label">Dia<br>${slot.columnLabel}</th>`)
     .join("");
@@ -287,11 +283,7 @@ function buildStubHtml({
     visitBlock.slots,
     (slot) => slot.refrigerio1Mark,
   );
-  const rowAlmuerzo = buildProductRow(
-    "Almuerzo",
-    visitBlock.slots,
-    (slot) => slot.almuerzoMark,
-  );
+  const rowAlmuerzo = buildProductRow("Almuerzo", visitBlock.slots, (slot) => slot.almuerzoMark);
   const rowRefrigerio2 = buildProductRow(
     "Refrigerio 2",
     visitBlock.slots,
@@ -330,7 +322,7 @@ function buildStubHtml({
       </tr>
       <tr>
         <td>Fecha:</td>
-        <td>${escapeHtml(generatedDateLabel)}</td>
+        <td class="delivery-dates">${escapeHtml(deliveryDatesLabel)}</td>
       </tr>
       <tr>
         <td>Lugar:</td>
@@ -388,13 +380,26 @@ function buildProductRow(
   return `<tr><td class="product-label">${escapeHtml(label)}</td>${cells}</tr>`;
 }
 
-function formatBogotaDate(value: Date): string {
-  return new Intl.DateTimeFormat("es-CO", {
-    timeZone: "America/Bogota",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
+function buildMarkedDeliveryDatesLabel(visitSlots: AlimentacionFormatoEntregaVisitSlot[]): string {
+  return visitSlots
+    .filter(hasDeliveryMark)
+    .flatMap((slot) => (slot.deliveryDate === null ? [] : [formatDeliveryDate(slot.deliveryDate)]))
+    .join(", ");
+}
+
+function hasDeliveryMark(slot: AlimentacionFormatoEntregaVisitSlot): boolean {
+  return (
+    slot.refrigerio1Mark === "X" ||
+    slot.almuerzoMark === "X" ||
+    slot.refrigerio2Mark === "X" ||
+    slot.auxilioTransporteMark === "X"
+  );
+}
+
+function formatDeliveryDate(deliveryDate: string): string {
+  const [year, month, day] = deliveryDate.split("-");
+
+  return `${day}-${month}-${year}`;
 }
 
 function formatTenantCityLabel(city: string | null, department: string | null): string {

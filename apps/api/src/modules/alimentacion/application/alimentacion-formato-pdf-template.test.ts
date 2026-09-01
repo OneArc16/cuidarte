@@ -48,7 +48,6 @@ describe("alimentacion-formato-pdf-template", () => {
           },
         ],
       },
-      generatedAt: new Date("2026-04-30T15:00:00.000Z"),
       institutionalLogoDataUrl: null,
       tenantLogoDataUrl: "data:image/png;base64,bG9nbw==",
       directorSignatureDataUrl: "data:image/png;base64,ZmlybWE=",
@@ -66,6 +65,8 @@ describe("alimentacion-formato-pdf-template", () => {
     assert.ok(!html.includes("Dia<br>25"));
     assert.equal((html.match(/data-block-index="/g) ?? []).length, 2);
     assert.equal((html.match(/>X</g) ?? []).length, 8);
+    assert.match(html, /class="delivery-dates">01-04-2026, 13-04-2026, 25-04-2026<\/td>/);
+    assert.equal((html.match(/class="delivery-dates"><\/td>/g) ?? []).length, 1);
     assert.ok(!html.includes(">N/A<"));
     assert.match(html, /data:image\/png;base64,ZmlybWE=/);
     assert.match(html, /alt="Logo de Centro de Vida Demo"/);
@@ -94,7 +95,6 @@ describe("alimentacion-formato-pdf-template", () => {
           updatedAt: new Date(`2026-04-${String(index + 1).padStart(2, "0")}T12:00:00.000Z`),
         })),
       },
-      generatedAt: new Date("2026-04-30T15:00:00.000Z"),
       institutionalLogoDataUrl: null,
       tenantLogoDataUrl: "data:image/png;base64,bG9nbw==",
       directorSignatureDataUrl: "data:image/png;base64,ZmlybWE=",
@@ -103,6 +103,8 @@ describe("alimentacion-formato-pdf-template", () => {
     assert.equal((html.match(/>X</g) ?? []).length, 4);
     assert.equal((html.match(/>Dia<br>1<\/th>/g) ?? []).length, 2);
     assert.ok(!html.includes("Dia<br>13"));
+    assert.match(html, /class="delivery-dates">13-04-2026<\/td>/);
+    assert.equal((html.match(/class="delivery-dates"><\/td>/g) ?? []).length, 1);
   });
 
   it("uses city fallback when city and department are missing", () => {
@@ -118,7 +120,6 @@ describe("alimentacion-formato-pdf-template", () => {
         deliveryMonth: "2026-02",
         records: [],
       },
-      generatedAt: new Date("2026-02-01T15:00:00.000Z"),
       institutionalLogoDataUrl: null,
       tenantLogoDataUrl: "data:image/png;base64,bG9nbw==",
       directorSignatureDataUrl: "data:image/png;base64,ZmlybWE=",
@@ -141,7 +142,6 @@ describe("alimentacion-formato-pdf-template", () => {
         deliveryMonth: "2026-04",
         records: [],
       },
-      generatedAt: new Date("2026-04-30T15:00:00.000Z"),
       institutionalLogoDataUrl: null,
       tenantLogoDataUrl: "data:image/png;base64,bG9nbw==",
       directorSignatureDataUrl: null,
