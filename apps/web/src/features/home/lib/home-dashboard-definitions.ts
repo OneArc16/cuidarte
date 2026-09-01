@@ -11,6 +11,7 @@ import {
   Palette,
   PartyPopper,
   ShieldPlus,
+  Stethoscope,
   type LucideIcon,
   UserRound,
   UsersRound,
@@ -41,6 +42,13 @@ export const HOME_DASHBOARD_INDICATORS = [
     icon: HeartPulse,
     tone: "emerald",
     targetModuleId: "atenciones-enfermeria",
+  },
+  {
+    id: "atenciones_medico",
+    label: "Atenciones del médico",
+    icon: Stethoscope,
+    tone: "sky",
+    targetModuleId: "adultos-mayores",
   },
   {
     id: "salud_preventiva",

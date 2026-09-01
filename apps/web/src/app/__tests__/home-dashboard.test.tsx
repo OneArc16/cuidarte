@@ -83,6 +83,9 @@ describe("App home dashboard", () => {
         within(indicatorsRegion).getByRole("button", { name: "Atenciones de enfermería" }),
       ).toHaveTextContent("84");
       expect(
+        within(indicatorsRegion).getByRole("button", { name: "Atenciones del médico" }),
+      ).toHaveTextContent("31");
+      expect(
         within(indicatorsRegion).getByRole("button", { name: "Raciones entregadas" }),
       ).toHaveTextContent("123.200");
       expect(
@@ -160,5 +163,29 @@ describe("App home dashboard", () => {
     });
 
     expect(await screen.findByLabelText("Filtros de enfermería")).toBeInTheDocument();
+  });
+
+  it("navigates the medical attention indicator to adultos mayores", async () => {
+    server.use(mockAuthMe(authUserFixture));
+    const user = userEvent.setup();
+
+    renderAppAtPath("/home");
+
+    const indicatorsRegion = await screen.findByRole("region", { name: "Resumen operativo" });
+
+    await user.click(
+      within(indicatorsRegion).getByRole("button", { name: "Atenciones del médico" }),
+    );
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/adultos-mayores");
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: "Listado de adultos mayores" }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole("region", { name: "Adultos mayores registrados" }),
+    ).toBeInTheDocument();
   });
 });

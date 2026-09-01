@@ -32,6 +32,7 @@ describe("HomeService", () => {
     stubService(service, {
       countAdultosMayores: async () => 468,
       countAtencionesEnfermeria: async () => 84,
+      countAtencionesMedico: async () => 31,
       summarizeActividades: async () => ({
         total: 469,
         byIndicatorId: {
@@ -67,6 +68,7 @@ describe("HomeService", () => {
     assert.deepEqual(result.indicators, [
       { id: "adultos_registrados", total: 468 },
       { id: "atenciones_enfermeria", total: 84 },
+      { id: "atenciones_medico", total: 31 },
       { id: "salud_preventiva", total: 140 },
       { id: "sesiones_psicosocial", total: 140 },
       { id: "raciones_entregadas", total: 123200 },
@@ -84,6 +86,7 @@ describe("HomeService", () => {
     stubService(service, {
       countAdultosMayores: async () => 468,
       countAtencionesEnfermeria: async () => 84,
+      countAtencionesMedico: async () => 31,
       countEmpleados: async () => 42,
       countCompletedImports: async () => 12,
       countActiveTenants: async () => 12,
@@ -92,12 +95,13 @@ describe("HomeService", () => {
     const result = await service.getDashboard(superAdminUser);
 
     assert.equal(result.shortcuts.length, 6);
-    assert.equal(result.indicators.length, 11);
+    assert.equal(result.indicators.length, 12);
   });
 
-  it("uses the tenant scope for nursing totals", async () => {
+  it("uses the tenant scope for clinical attention totals", async () => {
     const service = new HomeService({} as never);
-    let receivedScope: unknown;
+    let receivedNursingScope: unknown;
+    let receivedMedicalScope: unknown;
     const tenantAdminUser: AuthUser = {
       ...superAdminUser,
       id: "8e1b1d74-4e4c-4d2f-b8cc-1a8df1a6d2b7",
@@ -110,7 +114,12 @@ describe("HomeService", () => {
     stubService(service, {
       countAdultosMayores: async () => 0,
       countAtencionesEnfermeria: async (scope) => {
-        receivedScope = scope;
+        receivedNursingScope = scope;
+
+        return 0;
+      },
+      countAtencionesMedico: async (scope) => {
+        receivedMedicalScope = scope;
 
         return 0;
       },
@@ -137,9 +146,14 @@ describe("HomeService", () => {
 
     const result = await service.getDashboard(tenantAdminUser);
 
-    assert.deepEqual(receivedScope, { type: "tenant", tenantId });
+    assert.deepEqual(receivedNursingScope, { type: "tenant", tenantId });
+    assert.deepEqual(receivedMedicalScope, { type: "tenant", tenantId });
     assert.deepEqual(result.indicators[1], {
       id: "atenciones_enfermeria",
+      total: 0,
+    });
+    assert.deepEqual(result.indicators[2], {
+      id: "atenciones_medico",
       total: 0,
     });
   });
@@ -168,6 +182,7 @@ function stubService(
   stubs: {
     countAdultosMayores?: (scope: unknown) => Promise<number>;
     countAtencionesEnfermeria?: (scope: unknown) => Promise<number>;
+    countAtencionesMedico?: (scope: unknown) => Promise<number>;
     summarizeActividades?: (scope: unknown) => Promise<{
       total: number;
       byIndicatorId: Partial<Record<HomeDashboardIndicatorId, number>>;
