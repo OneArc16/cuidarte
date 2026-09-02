@@ -1,5 +1,6 @@
 import {
   type UpdateActividadGrupalRequest,
+  type ActividadGrupalOrganizer,
   type ActividadGrupalType,
   type CreateActividadGrupalRequest,
   type SaveActividadGrupalDiligenciamiento,
@@ -23,6 +24,7 @@ type UpdateActividadGrupalMutationRequest = {
 type TrashActividadesGrupalesParams = {
   search: string;
   activityType: ActividadGrupalType | null;
+  organizer: ActividadGrupalOrganizer | null;
   tenantId: string | null;
 };
 
@@ -34,6 +36,7 @@ export const actividadesGrupalesQueryKeys = {
   list: (params: {
     search: string;
     activityType: ActividadGrupalType | null;
+    organizer: ActividadGrupalOrganizer | null;
     tenantId: string | null;
   }) => ["actividades-grupales", params] as const,
   detail: (activityId: string) => ["actividades-grupales", activityId, "diligenciamiento"] as const,
@@ -50,6 +53,7 @@ export const actividadesGrupalesQueryKeys = {
 export function useActividadesGrupalesQuery(params: {
   search: string;
   activityType: ActividadGrupalType | null;
+  organizer: ActividadGrupalOrganizer | null;
   tenantId: string | null;
 }) {
   return useQuery({

@@ -139,7 +139,9 @@ describe("App actividades flow", () => {
     });
 
     expect(await screen.findByText("Vista de solo lectura")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Guardar diligenciamiento" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Guardar diligenciamiento" }),
+    ).not.toBeInTheDocument();
   });
 
   it("filters the activities list by type", async () => {
@@ -155,6 +157,26 @@ describe("App actividades flow", () => {
     });
 
     await user.selectOptions(screen.getByLabelText("Tipo de actividad"), "fisioterapia");
+
+    expect(await screen.findByText(actividadGrupalFixture.activityName)).toBeInTheDocument();
+  });
+
+  it("filters the activities list by organizer", async () => {
+    server.use(mockAuthMe(authUserFixture));
+    const user = userEvent.setup();
+    renderAppAtPath("/creacion-actividades");
+
+    expect(await screen.findByText(actividadGrupalFixture.activityName)).toBeInTheDocument();
+    await user.selectOptions(screen.getByLabelText("Organizador"), "medico");
+
+    await waitFor(() => {
+      expect(screen.queryByText(actividadGrupalFixture.activityName)).not.toBeInTheDocument();
+    });
+
+    await user.selectOptions(
+      screen.getByLabelText("Organizador"),
+      actividadGrupalFixture.organizer,
+    );
 
     expect(await screen.findByText(actividadGrupalFixture.activityName)).toBeInTheDocument();
   });

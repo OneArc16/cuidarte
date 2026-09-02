@@ -1,17 +1,24 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { type ActividadGrupalDiligenciamientoDetail, type AuthUser } from "@cuidarte/contracts";
 import {
-  type ActividadGrupalDiligenciamientoDetail,
-  type AuthUser,
-} from "@cuidarte/contracts";
-import { Inject, Injectable, InternalServerErrorException, NotFoundException } from "@nestjs/common";
+  Inject,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from "@nestjs/common";
 import { chromium, type Browser } from "playwright";
 
 import { ActividadesGrupalesService } from "./actividades-grupales.service";
 import { prepareActividadGrupalActaPhotoAssets } from "./actividad-grupal-acta-photo-assets";
 import {
+  composeActividadGrupalActaPdf,
+  prepareActividadGrupalActaSupportPdf,
+} from "./actividad-grupal-acta-support-pdf";
+import {
   type ActividadGrupalActaPdfDetail,
+  buildActividadGrupalActaPhotoEvidencePdfHtml,
   buildActividadGrupalActaPdfFilename,
   buildActividadGrupalActaPdfHtml,
 } from "./actividad-grupal-acta-pdf-template";
@@ -52,29 +59,40 @@ export class ActividadesGrupalesActaExportService {
   ) {}
 
   async exportPdf(activityId: string, actor: AuthUser): Promise<ExportedActividadGrupalActaPdf> {
-    const { detail, photoFiles } =
+    const { detail, photoFiles, pdfFile } =
       await this.actividadesGrupalesService.getActividadGrupalActaExportData(activityId, actor);
-    const [detailWithSignatures, logoDataUrl, photoAssets] = await Promise.all([
+    const [detailWithSignatures, logoDataUrl, photoAssets, supportPdf] = await Promise.all([
       hydrateActividadGrupalActaPdfDetailWithSignatures(detail, {
         empleadosRepository: this.empleadosRepository,
         empleadosSignatureService: this.empleadosSignatureService,
       }),
       this.getLogoDataUrl(),
       prepareActividadGrupalActaPhotoAssets(photoFiles, this.filesStorage),
+      prepareActividadGrupalActaSupportPdf(pdfFile, this.filesStorage),
     ]);
+    const actaPdf = await this.renderPdfHtml(
+      buildActividadGrupalActaPdfHtml({
+        detail: detailWithSignatures,
+        logoDataUrl,
+        photoAssets: [],
+      }),
+    );
+    const photoPdf =
+      photoAssets.length === 0
+        ? null
+        : await this.renderPdfHtml(buildActividadGrupalActaPhotoEvidencePdfHtml(photoAssets));
+    const orderedPdfParts = [actaPdf, supportPdf, photoPdf].filter(
+      (pdfPart): pdfPart is Buffer => pdfPart !== null,
+    );
 
     return {
-      buffer: await this.renderPdf(detailWithSignatures, logoDataUrl, photoAssets),
+      buffer: await composeActividadGrupalActaPdf(orderedPdfParts),
       contentType: "application/pdf",
       filename: buildActividadGrupalActaPdfFilename(detailWithSignatures),
     };
   }
 
-  private async renderPdf(
-    detail: ActividadGrupalActaPdfDetail,
-    logoDataUrl: string | null,
-    photoAssets: Awaited<ReturnType<typeof prepareActividadGrupalActaPhotoAssets>>,
-  ): Promise<Buffer> {
+  private async renderPdfHtml(html: string): Promise<Buffer> {
     let browser: Browser | undefined;
 
     try {
@@ -83,9 +101,7 @@ export class ActividadesGrupalesActaExportService {
         env: playwrightEnv.createPlaywrightLaunchEnv(),
       });
       const page = await browser.newPage();
-      await page.setContent(buildActividadGrupalActaPdfHtml({ detail, logoDataUrl, photoAssets }), {
-        waitUntil: "load",
-      });
+      await page.setContent(html, { waitUntil: "load" });
 
       return Buffer.from(
         await page.pdf({

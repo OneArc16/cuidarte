@@ -1,4 +1,9 @@
-import { type ActividadGrupalTrashListItem, type ActividadGrupalType, type AuthUser } from "@cuidarte/contracts";
+import {
+  type ActividadGrupalOrganizer,
+  type ActividadGrupalTrashListItem,
+  type ActividadGrupalType,
+  type AuthUser,
+} from "@cuidarte/contracts";
 import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -28,22 +33,26 @@ export function ActividadesGrupalesTrashPage({
 }: ActividadesGrupalesTrashPageProps) {
   const [search, setSearch] = useState("");
   const [selectedActivityType, setSelectedActivityType] = useState<ActividadGrupalType | "">("");
+  const [selectedOrganizer, setSelectedOrganizer] = useState<ActividadGrupalOrganizer | "">("");
   const [selectedTenantId, setSelectedTenantId] = useState("");
-  const [activityPendingRestore, setActivityPendingRestore] = useState<ActividadGrupalTrashListItem | null>(
-    null,
-  );
+  const [activityPendingRestore, setActivityPendingRestore] =
+    useState<ActividadGrupalTrashListItem | null>(null);
   const showTenantFilter = user.role === "super_admin";
   const canViewTrash = canViewActividadesGrupalesTrash(user);
   const tenantOptionsQuery = useActividadGrupalTenantOptionsQuery(showTenantFilter && canViewTrash);
-  const trashQuery = useActividadesGrupalesTrashQuery({
-    search,
-    activityType: selectedActivityType === "" ? null : selectedActivityType,
-    tenantId: showTenantFilter
-      ? selectedTenantId === ""
-        ? null
-        : selectedTenantId
-      : user.tenantId,
-  }, canViewTrash);
+  const trashQuery = useActividadesGrupalesTrashQuery(
+    {
+      search,
+      activityType: selectedActivityType === "" ? null : selectedActivityType,
+      organizer: selectedOrganizer === "" ? null : selectedOrganizer,
+      tenantId: showTenantFilter
+        ? selectedTenantId === ""
+          ? null
+          : selectedTenantId
+        : user.tenantId,
+    },
+    canViewTrash,
+  );
   const restoreMutation = useRestoreActividadGrupalMutation();
 
   if (!canViewTrash) {
@@ -84,11 +93,13 @@ export function ActividadesGrupalesTrashPage({
       <ActividadesGrupalesToolbar
         search={search}
         selectedActivityType={selectedActivityType}
+        selectedOrganizer={selectedOrganizer}
         selectedTenantId={selectedTenantId}
         showTenantFilter={showTenantFilter}
         tenantOptions={tenantOptionsQuery.data?.tenants ?? []}
         isTenantOptionsLoading={tenantOptionsQuery.isLoading}
         onActivityTypeChange={setSelectedActivityType}
+        onOrganizerChange={setSelectedOrganizer}
         onSearchChange={setSearch}
         onTenantChange={setSelectedTenantId}
       />

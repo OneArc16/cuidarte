@@ -6,7 +6,7 @@ import { DatabaseService } from "../../../database/database.service";
 import { departments, epsCatalog, municipalities } from "../../../database/schema";
 import { AdultosMayoresImportParser } from "../domain/adultos-mayores-import-parser";
 
-const TEMPLATE_FILENAME = "plantilla-importacion-adultos-mayores-v1.xlsx";
+const TEMPLATE_FILENAME = "plantilla-importacion-adultos-mayores-v2.xlsx";
 
 @Injectable()
 export class AdultosMayoresImportTemplateService {
@@ -21,7 +21,9 @@ export class AdultosMayoresImportTemplateService {
     const parser = new AdultosMayoresImportParser();
     const headers = parser.getExpectedHeaders();
 
-    const dataSheet = workbook.addWorksheet("Adultos mayores", { views: [{ state: "frozen", ySplit: 1 }] });
+    const dataSheet = workbook.addWorksheet("Adultos mayores", {
+      views: [{ state: "frozen", ySplit: 1 }],
+    });
     const instructionsSheet = workbook.addWorksheet("Instrucciones");
     const catalogosSheet = workbook.addWorksheet("Catalogos");
     const ubicacionesSheet = workbook.addWorksheet("Ubicaciones");
@@ -86,6 +88,7 @@ export class AdultosMayoresImportTemplateService {
     exampleRow.primer_apellido = "Gomez";
     exampleRow.fecha_nacimiento = "1950-01-01";
     exampleRow.sexo = "Femenino";
+    exampleRow.estado = "Vivo";
     exampleRow.direccion = "Calle 1 # 2-3";
     exampleRow.codigo_departamento = exampleDepartment?.code ?? "05";
     exampleRow.codigo_municipio = exampleMunicipality?.code ?? "05001";
@@ -103,12 +106,17 @@ export class AdultosMayoresImportTemplateService {
       ["1. Solo edita la hoja 'Adultos mayores'."],
       ["2. No cambies los encabezados ni el orden de las columnas."],
       ["3. Usa texto para documentos, codigos DIVIPOLA, telefonos y EPS."],
-      ["4. La importacion crea nuevos registros y tambien actualiza adultos existentes del mismo centro."],
+      [
+        "4. La importacion crea nuevos registros y tambien actualiza adultos existentes del mismo centro.",
+      ],
       ["5. El archivo soportado es .xlsx y tiene un maximo de 1.000 filas de datos."],
       ["6. Si una celda opcional viene vacia y el adulto ya existe, se conserva el valor actual."],
       ["7. Revalida el archivo si alguien modifico esos registros antes de confirmar el lote."],
       ["8. Para tipo_sangre usa valores como O+, A-, AB+ o Desconocido."],
       ["9. Para codigo_eps consulta la hoja 'EPS' y copia el codigo exacto de una EPS activa."],
+      [
+        "10. Para estado usa Vivo o Fallecido. Si lo dejas vacio en un adulto nuevo, se crea como Vivo.",
+      ],
     ]);
     instructionsSheet.getColumn(1).width = 96;
 
@@ -116,11 +124,15 @@ export class AdultosMayoresImportTemplateService {
       ["campo", "valores"],
       ["tipo_documento", "CC, CE, Pasaporte, Otro"],
       ["sexo", "Femenino, Masculino, Otro"],
+      ["estado", "Vivo, Fallecido"],
       ["zona", "Urbana, Rural"],
       ["vive_con_alguien", "Si, No"],
       ["beneficiario_programa_social", "Si, No"],
       ["tipo_sangre", "A+, A-, B+, B-, AB+, AB-, O+, O-, Desconocido"],
-      ["codigo_eps", "Usa un codigo existente de la hoja EPS. Ejemplo: codigo_eps de una EPS activa"],
+      [
+        "codigo_eps",
+        "Usa un codigo existente de la hoja EPS. Ejemplo: codigo_eps de una EPS activa",
+      ],
     ]);
     catalogosSheet.getColumn(1).width = 28;
     catalogosSheet.getColumn(2).width = 48;

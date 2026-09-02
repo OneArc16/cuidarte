@@ -83,7 +83,9 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     }));
   }
 
-  async findTrashMany(query: FindActividadesGrupalesTrashQuery): Promise<ActividadGrupalTrashRecord[]> {
+  async findTrashMany(
+    query: FindActividadesGrupalesTrashQuery,
+  ): Promise<ActividadGrupalTrashRecord[]> {
     const rows = await this.database.db
       .select(this.getTrashActivitySelection())
       .from(actividadesGrupales)
@@ -161,14 +163,18 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     };
   }
 
-  async findTrashById(query: FindActividadGrupalByIdQuery): Promise<ActividadGrupalTrashRecord | null> {
+  async findTrashById(
+    query: FindActividadGrupalByIdQuery,
+  ): Promise<ActividadGrupalTrashRecord | null> {
     const [activityRow] = await this.database.db
       .select(this.getTrashActivitySelection())
       .from(actividadesGrupales)
       .innerJoin(tenants, eq(tenants.id, actividadesGrupales.tenantId))
       .innerJoin(users, eq(users.id, actividadesGrupales.deletedByUserId))
       .where(
-        this.buildTrashActivityScopedWhere(query.scope, [eq(actividadesGrupales.id, query.activityId)]),
+        this.buildTrashActivityScopedWhere(query.scope, [
+          eq(actividadesGrupales.id, query.activityId),
+        ]),
       )
       .limit(1);
 
@@ -497,7 +503,12 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           deletedByUserId: null,
           updatedAt: now,
         })
-        .where(and(eq(actividadesGrupales.id, command.activityId), isNotNull(actividadesGrupales.deletedAt)))
+        .where(
+          and(
+            eq(actividadesGrupales.id, command.activityId),
+            isNotNull(actividadesGrupales.deletedAt),
+          ),
+        )
         .returning({
           tenantId: actividadesGrupales.tenantId,
           actaNumber: actividadesGrupales.actaNumber,
@@ -787,6 +798,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       conditions.push(eq(actividadesGrupales.activityType, query.activityType));
     }
 
+    if (query.organizer !== null) {
+      conditions.push(eq(actividadesGrupales.organizer, query.organizer));
+    }
+
     if (query.search !== null) {
       const searchPattern = `%${escapeLikePattern(query.search)}%`;
 
@@ -815,6 +830,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
 
     if (query.activityType !== null) {
       conditions.push(eq(actividadesGrupales.activityType, query.activityType));
+    }
+
+    if (query.organizer !== null) {
+      conditions.push(eq(actividadesGrupales.organizer, query.organizer));
     }
 
     if (query.search !== null) {

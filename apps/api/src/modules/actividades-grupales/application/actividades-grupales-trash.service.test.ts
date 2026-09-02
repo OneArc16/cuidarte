@@ -58,6 +58,7 @@ describe("ActividadesGrupalesTrashService", () => {
       {
         search: null,
         activityType: null,
+        organizer: null,
         tenantId: null,
       },
       directorUser,
@@ -91,9 +92,12 @@ describe("ActividadesGrupalesTrashService", () => {
   it("rejects auditors", async () => {
     const service = new ActividadesGrupalesTrashService(createRepository());
 
-    await assert.rejects(() => service.sendToTrash("bd962778-117e-4275-aa07-1ea2f7a1d6f8", auditorUser), {
-      constructor: ForbiddenException,
-    });
+    await assert.rejects(
+      () => service.sendToTrash("bd962778-117e-4275-aa07-1ea2f7a1d6f8", auditorUser),
+      {
+        constructor: ForbiddenException,
+      },
+    );
   });
 
   it("rejects restore when the acta is already active or missing", async () => {
@@ -120,6 +124,7 @@ describe("ActividadesGrupalesTrashService", () => {
           {
             search: null,
             activityType: null,
+            organizer: null,
             tenantId: null,
           },
           auditorUser,
@@ -139,6 +144,7 @@ describe("ActividadesGrupalesTrashService", () => {
           {
             search: null,
             activityType: null,
+            organizer: null,
             tenantId: otherTenantId,
           },
           directorUser,
@@ -170,13 +176,18 @@ describe("ActividadesGrupalesTrashService", () => {
     });
     const service = new ActividadesGrupalesTrashService(repository);
 
-    await assert.rejects(() => service.sendToTrash("bd962778-117e-4275-aa07-1ea2f7a1d6f8", directorUser), {
-      constructor: NotFoundException,
-    });
+    await assert.rejects(
+      () => service.sendToTrash("bd962778-117e-4275-aa07-1ea2f7a1d6f8", directorUser),
+      {
+        constructor: NotFoundException,
+      },
+    );
   });
 });
 
-function createRepository(overrides: Partial<ActividadesGrupalesRepository> = {}): ActividadesGrupalesRepository {
+function createRepository(
+  overrides: Partial<ActividadesGrupalesRepository> = {},
+): ActividadesGrupalesRepository {
   const activity = createActivityRecord();
   const trashActivity = createTrashActivityRecord();
   const detail = createDetail(activity);
@@ -259,7 +270,9 @@ function createTrashActivityRecord(): ActividadGrupalTrashRecord {
   };
 }
 
-function createDetail(activity: ActividadGrupalRecord): ActividadGrupalDiligenciamientoDetailRecord {
+function createDetail(
+  activity: ActividadGrupalRecord,
+): ActividadGrupalDiligenciamientoDetailRecord {
   return {
     activity,
     assignedProfessionals: [],

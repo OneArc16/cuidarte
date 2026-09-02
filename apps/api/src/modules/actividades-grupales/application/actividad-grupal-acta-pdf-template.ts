@@ -81,6 +81,84 @@ type BuildActividadGrupalActaPdfHtmlOptions = {
   photoAssets: PreparedActividadGrupalActaPhotoAsset[];
 };
 
+const ACTA_DOCUMENT_BASE_STYLES = `
+      @page {
+        size: 216mm 279mm;
+        margin: 12mm;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: #fff;
+      }
+
+      body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .acta-document,
+      .acta-document * {
+        box-sizing: border-box;
+      }
+
+      .acta-document {
+        width: 100%;
+        min-height: 100%;
+        padding: 0;
+        color: #000;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 7.4pt;
+        line-height: 1.24;
+      }`;
+
+const ACTA_SECTION_TITLE_STYLES = `
+      .acta-document__section-title {
+        margin: 0;
+        padding: 3px 5px;
+        border: 1px solid #111;
+        background: #f4f4f4;
+        color: #000;
+        font-size: 7pt;
+        font-weight: 700;
+        line-height: 1.2;
+      }`;
+
+const ACTA_PHOTO_EVIDENCE_STYLES = `
+      .acta-document__photo-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 4mm;
+      }
+
+      .acta-document__photo-card {
+        margin: 0;
+        padding: 4mm;
+        border: 1px solid #111;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .acta-document__photo-image {
+        display: block;
+        width: 100%;
+        height: 52mm;
+        border: 1px solid #555;
+        background: #f8f8f8;
+        object-fit: contain;
+      }
+
+      .acta-document__photo-caption {
+        margin-top: 2.5mm;
+        color: #000;
+        font-size: 6.4pt;
+        font-weight: 600;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+      }`;
+
 export function buildActividadGrupalActaPdfHtml({
   detail,
   logoDataUrl,
@@ -107,11 +185,7 @@ export function buildActividadGrupalActaPdfHtml({
   }));
   const attendeeRows = detail.integrantes.map((integrante) => ({
     key: integrante.id,
-    cells: [
-      textCell(integrante.fullName),
-      textCell(integrante.documentNumber),
-      textCell(""),
-    ],
+    cells: [textCell(integrante.fullName), textCell(integrante.documentNumber), textCell("")],
   }));
 
   return `<!doctype html>
@@ -120,37 +194,7 @@ export function buildActividadGrupalActaPdfHtml({
     <meta charset="utf-8" />
     <title>Acta No. ${detail.actaNumber}</title>
     <style>
-      @page {
-        size: 216mm 279mm;
-        margin: 0;
-      }
-
-      html,
-      body {
-        margin: 0;
-        padding: 0;
-        background: #fff;
-      }
-
-      body {
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-      }
-
-      .acta-document,
-      .acta-document * {
-        box-sizing: border-box;
-      }
-
-      .acta-document {
-        width: 216mm;
-        min-height: 279mm;
-        padding: 12mm;
-        color: #000;
-        font-family: Arial, Helvetica, sans-serif;
-        font-size: 7.4pt;
-        line-height: 1.24;
-      }
+      ${ACTA_DOCUMENT_BASE_STYLES}
 
       .acta-document table {
         width: 100%;
@@ -240,16 +284,7 @@ export function buildActividadGrupalActaPdfHtml({
         margin-bottom: 3mm;
       }
 
-      .acta-document__section-title {
-        margin: 0;
-        padding: 3px 5px;
-        border: 1px solid #111;
-        background: #f4f4f4;
-        color: #000;
-        font-size: 7pt;
-        font-weight: 700;
-        line-height: 1.2;
-      }
+      ${ACTA_SECTION_TITLE_STYLES}
 
       .acta-document__section-body {
         min-height: 17mm;
@@ -319,37 +354,7 @@ export function buildActividadGrupalActaPdfHtml({
         page-break-before: always;
       }
 
-      .acta-document__photo-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 4mm;
-      }
-
-      .acta-document__photo-card {
-        margin: 0;
-        padding: 4mm;
-        border: 1px solid #111;
-        break-inside: avoid;
-        page-break-inside: avoid;
-      }
-
-      .acta-document__photo-image {
-        display: block;
-        width: 100%;
-        height: 52mm;
-        border: 1px solid #555;
-        background: #f8f8f8;
-        object-fit: contain;
-      }
-
-      .acta-document__photo-caption {
-        margin-top: 2.5mm;
-        color: #000;
-        font-size: 6.4pt;
-        font-weight: 600;
-        line-height: 1.25;
-        overflow-wrap: anywhere;
-      }
+      ${ACTA_PHOTO_EVIDENCE_STYLES}
     </style>
   </head>
   <body>
@@ -390,9 +395,7 @@ export function buildActividadGrupalActaPdfHtml({
           </tr>
           <tr>
             <th scope="row">TIPO ACTIVIDAD:</th>
-            <td colspan="5">${escapeHtml(
-              formatUpper(TYPE_LABELS[detail.activityType]),
-            )}</td>
+            <td colspan="5">${escapeHtml(formatUpper(TYPE_LABELS[detail.activityType]))}</td>
           </tr>
           <tr>
             <th scope="row">ACTIVIDAD:</th>
@@ -422,6 +425,28 @@ export function buildActividadGrupalActaPdfHtml({
       )}
 
       ${renderPhotoEvidenceSection(photoAssets)}
+    </article>
+  </body>
+</html>`;
+}
+
+export function buildActividadGrupalActaPhotoEvidencePdfHtml(
+  photoAssets: PreparedActividadGrupalActaPhotoAsset[],
+): string {
+  return `<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Evidencia fotografica</title>
+    <style>
+      ${ACTA_DOCUMENT_BASE_STYLES}
+      ${ACTA_SECTION_TITLE_STYLES}
+      ${ACTA_PHOTO_EVIDENCE_STYLES}
+    </style>
+  </head>
+  <body>
+    <article class="acta-document" aria-label="Evidencia fotografica del acta">
+      ${renderPhotoEvidenceSection(photoAssets, { forcePageBreak: false })}
     </article>
   </body>
 </html>`;
@@ -482,7 +507,10 @@ function renderPeopleSection(
           .map(
             (row) =>
               `<tr>${row.cells
-                .map((cell) => `<td>${cell.kind === "html" ? cell.value : escapeHtml(cell.value)}</td>`)
+                .map(
+                  (cell) =>
+                    `<td>${cell.kind === "html" ? cell.value : escapeHtml(cell.value)}</td>`,
+                )
                 .join("")}</tr>`,
           )
           .join("");
@@ -498,7 +526,10 @@ function renderPeopleSection(
   </section>`;
 }
 
-function renderProfessionalSignature(signatureDataUrl: string, professionalFullName: string): string {
+function renderProfessionalSignature(
+  signatureDataUrl: string,
+  professionalFullName: string,
+): string {
   return `<img
     class="acta-document__signature-image"
     src="${escapeHtml(signatureDataUrl)}"
@@ -506,12 +537,19 @@ function renderProfessionalSignature(signatureDataUrl: string, professionalFullN
   />`;
 }
 
-function renderPhotoEvidenceSection(photoAssets: PreparedActividadGrupalActaPhotoAsset[]): string {
+function renderPhotoEvidenceSection(
+  photoAssets: PreparedActividadGrupalActaPhotoAsset[],
+  options: { forcePageBreak: boolean } = { forcePageBreak: true },
+): string {
   if (photoAssets.length === 0) {
     return "";
   }
 
-  return `<section class="acta-document__section acta-document__section--photo-evidence">
+  const className = options.forcePageBreak
+    ? "acta-document__section acta-document__section--photo-evidence"
+    : "acta-document__section";
+
+  return `<section class="${className}">
     <h2 class="acta-document__section-title">EVIDENCIA FOTOGRAFICA</h2>
     <div class="acta-document__photo-grid" aria-label="Evidencia fotografica">
       ${photoAssets.map((photo) => renderPhotoCard(photo)).join("")}

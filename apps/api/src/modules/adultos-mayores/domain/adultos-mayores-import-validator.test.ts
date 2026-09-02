@@ -31,6 +31,7 @@ const existingAdult: AdultoMayorImportExistingRecord = {
   secondSurname: null,
   birthDate: "1950-01-01",
   sex: "female",
+  status: "alive",
   educationLevel: null,
   disability: null,
   populationGroup: null,
@@ -60,7 +61,9 @@ const existingAdult: AdultoMayorImportExistingRecord = {
   updatedAt: "2026-08-16T12:00:00.000Z",
 };
 
-function buildRow(overrides: Partial<AdultoMayorImportRowInput["values"]> = {}): AdultoMayorImportRowInput {
+function buildRow(
+  overrides: Partial<AdultoMayorImportRowInput["values"]> = {},
+): AdultoMayorImportRowInput {
   return {
     rowNumber: 2,
     values: {
@@ -72,6 +75,7 @@ function buildRow(overrides: Partial<AdultoMayorImportRowInput["values"]> = {}):
       segundo_apellido: "",
       fecha_nacimiento: "1950-01-01",
       sexo: "Femenino",
+      estado: "",
       nivel_academico: "",
       discapacidad: "",
       grupo_poblacional: "",
@@ -116,9 +120,56 @@ describe("AdultosMayoresImportValidator", () => {
     assert.equal(validatedRow?.normalizedPayload?.phone, existingAdult.phone);
     assert.equal(validatedRow?.normalizedPayload?.country, existingAdult.country);
     assert.equal(validatedRow?.normalizedPayload?.epsId, existingAdult.epsId);
+    assert.equal(validatedRow?.normalizedPayload?.status, existingAdult.status);
     assert.equal(result.summary.updateRows, 1);
     assert.equal(result.summary.unchangedRows, 0);
     assert.equal(result.summary.existingRows, 1);
+  });
+
+  it("maps status for new imported adults", () => {
+    const row = buildRow({
+      numero_documento: "20000001",
+      estado: "Fallecido",
+      telefono: "3001112233",
+    });
+
+    const result = validator.validateRows([row], catalogs, []);
+    const [validatedRow] = result.rows;
+
+    assert.equal(validatedRow?.status, "ready");
+    assert.equal(validatedRow?.normalizedPayload?.status, "deceased");
+    assert.equal(result.summary.readyRows, 1);
+  });
+
+  it("marks existing rows as update_ready when status changes", () => {
+    const row = buildRow({
+      estado: "Fallecido",
+    });
+
+    const result = validator.validateRows([row], catalogs, [existingAdult]);
+    const [validatedRow] = result.rows;
+
+    assert.equal(validatedRow?.status, "update_ready");
+    assert.equal(validatedRow?.normalizedPayload?.status, "deceased");
+    assert.equal(result.summary.updateRows, 1);
+  });
+
+  it("marks rows as invalid when status has an unsupported value", () => {
+    const row = buildRow({
+      numero_documento: "20000002",
+      estado: "Retirado",
+    });
+
+    const result = validator.validateRows([row], catalogs, []);
+    const [validatedRow] = result.rows;
+
+    assert.equal(validatedRow?.status, "invalid");
+    assert.equal(validatedRow?.normalizedPayload, null);
+    assert.equal(
+      validatedRow?.issues.some((issue) => issue.column === "estado"),
+      true,
+    );
+    assert.equal(result.summary.invalidRows, 1);
   });
 
   it("marks existing rows as unchanged when the effective payload does not vary", () => {
@@ -140,11 +191,9 @@ describe("AdultosMayoresImportValidator", () => {
       direccion: "Carrera 10 # 20-30",
     });
 
-    const result = validator.validateRows(
-      [row],
-      catalogs,
-      [{ ...existingAdult, documentType: "ce" }],
-    );
+    const result = validator.validateRows([row], catalogs, [
+      { ...existingAdult, documentType: "ce" },
+    ]);
     const [validatedRow] = result.rows;
 
     assert.equal(validatedRow?.status, "update_ready");

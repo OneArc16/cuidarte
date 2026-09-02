@@ -5,6 +5,7 @@ import {
   type ActividadGrupalFormOptionsResponse,
   type ActividadGrupalIntegranteOptionsResponse,
   type ActividadGrupalListResponse,
+  type ActividadGrupalOrganizer,
   type ActividadGrupalTrashListResponse,
   type ActividadGrupalTenantOptionsResponse,
   type ActividadGrupalType,
@@ -30,6 +31,7 @@ import { fetchJson } from "@/shared/api/fetch-json";
 type ListActividadesGrupalesParams = {
   search: string;
   activityType: ActividadGrupalType | null;
+  organizer: ActividadGrupalOrganizer | null;
   tenantId: string | null;
 };
 
@@ -88,10 +90,7 @@ export function getActividadGrupalForEdit(activityId: string): Promise<Actividad
   );
 }
 
-export function updateActividadGrupal(
-  activityId: string,
-  request: UpdateActividadGrupalRequest,
-) {
+export function updateActividadGrupal(activityId: string, request: UpdateActividadGrupalRequest) {
   return fetchJson(
     `${getApiBaseUrl()}/actividades-grupales/${activityId}`,
     actividadGrupalListItemSchema,
@@ -102,9 +101,7 @@ export function updateActividadGrupal(
   );
 }
 
-export function deleteActividadGrupal(
-  activityId: string,
-): Promise<DeleteActividadGrupalResponse> {
+export function deleteActividadGrupal(activityId: string): Promise<DeleteActividadGrupalResponse> {
   return fetchJson(
     `${getApiBaseUrl()}/actividades-grupales/${activityId}`,
     deleteActividadGrupalResponseSchema,
@@ -114,7 +111,9 @@ export function deleteActividadGrupal(
   );
 }
 
-export function restoreActividadGrupal(activityId: string): Promise<RestoreActividadGrupalResponse> {
+export function restoreActividadGrupal(
+  activityId: string,
+): Promise<RestoreActividadGrupalResponse> {
   return fetchJson(
     `${getApiBaseUrl()}/actividades-grupales/${activityId}/restaurar`,
     restoreActividadGrupalResponseSchema,
@@ -205,6 +204,10 @@ function buildActividadesGrupalesUrl(params: ListActividadesGrupalesParams): str
     searchParams.set("activityType", params.activityType);
   }
 
+  if (params.organizer !== null) {
+    searchParams.set("organizer", params.organizer);
+  }
+
   if (params.tenantId !== null) {
     searchParams.set("tenantId", params.tenantId);
   }
@@ -223,6 +226,10 @@ function buildActividadesGrupalesTrashUrl(params: TrashActividadesGrupalesParams
 
   if (params.activityType !== null) {
     searchParams.set("activityType", params.activityType);
+  }
+
+  if (params.organizer !== null) {
+    searchParams.set("organizer", params.organizer);
   }
 
   if (params.tenantId !== null) {

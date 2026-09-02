@@ -14,9 +14,7 @@ import {
 } from "../model/adultos-mayores-import-queries";
 import { useAdultoMayorTenantOptionsQuery } from "../model/adultos-mayores-queries";
 import { canImportAdultosMayores } from "../lib/adultos-mayores-permissions";
-import {
-  AdultosMayoresImportConfirmation,
-} from "../components/adultos-mayores-import-confirmation";
+import { AdultosMayoresImportConfirmation } from "../components/adultos-mayores-import-confirmation";
 import { AdultosMayoresImportIssuesTable as IssuesTable } from "../components/adultos-mayores-import-issues-table";
 import { AdultosMayoresImportSummary as Summary } from "../components/adultos-mayores-import-summary";
 import { AdultosMayoresImportTarget as Target } from "../components/adultos-mayores-import-target";
@@ -79,7 +77,7 @@ export function AdultosMayoresImportPage({ navigate, user }: AdultosMayoresImpor
   async function handleDownloadTemplate() {
     try {
       const blob = await downloadAdultoMayorImportTemplate();
-      downloadBlob(blob, "plantilla-importacion-adultos-mayores-v1.xlsx");
+      downloadBlob(blob, "plantilla-importacion-adultos-mayores-v2.xlsx");
     } catch (error: unknown) {
       setLocalError(resolveAdultosMayoresApiError(error));
     }
@@ -136,8 +134,8 @@ export function AdultosMayoresImportPage({ navigate, user }: AdultosMayoresImpor
 
   const isBusy = validateMutation.isPending || confirmMutation.isPending || importQuery.isLoading;
   const selectedTenantName = canSelectTenant
-    ? tenantOptions.find((tenant) => tenant.id === selectedTenantId)?.name ?? ""
-    : tenantOptions.find((tenant) => tenant.id === user.tenantId)?.name ?? "Centro asociado";
+    ? (tenantOptions.find((tenant) => tenant.id === selectedTenantId)?.name ?? "")
+    : (tenantOptions.find((tenant) => tenant.id === user.tenantId)?.name ?? "Centro asociado");
 
   return (
     <section className="import-page" aria-labelledby="adultos-import-title">
@@ -189,7 +187,9 @@ export function AdultosMayoresImportPage({ navigate, user }: AdultosMayoresImpor
             <span className="import-step-card__index">2.</span>
             <div>
               <h2>Configuracion y archivo</h2>
-              <p>Selecciona el centro de destino, carga el Excel y valida el lote antes de confirmar.</p>
+              <p>
+                Selecciona el centro de destino, carga el Excel y valida el lote antes de confirmar.
+              </p>
             </div>
           </div>
 

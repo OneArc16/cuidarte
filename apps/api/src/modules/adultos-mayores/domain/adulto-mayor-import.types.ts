@@ -5,6 +5,7 @@ import type {
   AdultoMayorImportRowStatus,
   AdultoMayorImportSummary,
   AdultoMayorImportTenant,
+  AdultoMayorStatus,
 } from "@cuidarte/contracts";
 
 export type AdultoMayorImportRowInput = {
@@ -39,6 +40,7 @@ export type AdultoMayorImportNormalizedRow = {
   secondSurname: string | null;
   birthDate: string;
   sex: "female" | "male" | "other";
+  status: AdultoMayorStatus;
   educationLevel: string | null;
   disability: string | null;
   populationGroup: string | null;

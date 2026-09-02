@@ -104,7 +104,9 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
     };
   }
 
-  async findTenantById(tenantId: string): Promise<{ id: string; name: string; isActive: boolean } | null> {
+  async findTenantById(
+    tenantId: string,
+  ): Promise<{ id: string; name: string; isActive: boolean } | null> {
     const [tenant] = await this.database.db
       .select({
         id: tenants.id,
@@ -137,7 +139,9 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
       return [];
     }
 
-    const documentNumbers = [...new Set(params.documents.map((document) => document.documentNumber))];
+    const documentNumbers = [
+      ...new Set(params.documents.map((document) => document.documentNumber)),
+    ];
     const rows = await this.database.db
       .select({
         id: adultosMayores.id,
@@ -149,6 +153,7 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
         secondSurname: adultosMayores.secondSurname,
         birthDate: adultosMayores.birthDate,
         sex: adultosMayores.sex,
+        status: adultosMayores.status,
         educationLevel: adultosMayores.educationLevel,
         disability: adultosMayores.disability,
         populationGroup: adultosMayores.populationGroup,
@@ -187,44 +192,47 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
         ),
       );
 
-    return rows.map((row): AdultoMayorImportExistingRecord => ({
-      id: row.id,
-      documentType: row.documentType,
-      documentNumber: row.documentNumber,
-      firstName: row.firstName,
-      middleName: row.middleName,
-      firstSurname: row.firstSurname,
-      secondSurname: row.secondSurname,
-      birthDate: row.birthDate,
-      sex: row.sex,
-      educationLevel: row.educationLevel,
-      disability: row.disability,
-      populationGroup: row.populationGroup,
-      address: row.address,
-      departmentId: row.departmentId ?? "",
-      municipalityId: row.municipalityId ?? "",
-      department: row.department,
-      municipality: row.municipality,
-      zone: row.zone as AdultoMayorImportNormalizedRow["zone"],
-      country: row.country,
-      phone: row.phone,
-      phoneSecondary: row.phoneSecondary,
-      email: row.email,
-      emergencyContactFullName: row.emergencyContactFullName,
-      emergencyContactRelationship: row.emergencyContactRelationship,
-      emergencyContactPhone: row.emergencyContactPhone,
-      emergencyContactAddress: row.emergencyContactAddress,
-      bloodType: row.bloodType as AdultoMayorImportNormalizedRow["bloodType"],
-      sisben: row.sisben,
-      healthRegime: row.healthRegime,
-      epsId: row.epsId,
-      eps: row.legacyEps ?? row.epsName ?? null,
-      livesWithSomeone: row.livesWithSomeone,
-      companion: row.companion,
-      economicIncome: row.economicIncome,
-      socialProgramBeneficiary: row.socialProgramBeneficiary,
-      updatedAt: row.updatedAt.toISOString(),
-    }));
+    return rows.map(
+      (row): AdultoMayorImportExistingRecord => ({
+        id: row.id,
+        documentType: row.documentType,
+        documentNumber: row.documentNumber,
+        firstName: row.firstName,
+        middleName: row.middleName,
+        firstSurname: row.firstSurname,
+        secondSurname: row.secondSurname,
+        birthDate: row.birthDate,
+        sex: row.sex,
+        status: row.status,
+        educationLevel: row.educationLevel,
+        disability: row.disability,
+        populationGroup: row.populationGroup,
+        address: row.address,
+        departmentId: row.departmentId ?? "",
+        municipalityId: row.municipalityId ?? "",
+        department: row.department,
+        municipality: row.municipality,
+        zone: row.zone as AdultoMayorImportNormalizedRow["zone"],
+        country: row.country,
+        phone: row.phone,
+        phoneSecondary: row.phoneSecondary,
+        email: row.email,
+        emergencyContactFullName: row.emergencyContactFullName,
+        emergencyContactRelationship: row.emergencyContactRelationship,
+        emergencyContactPhone: row.emergencyContactPhone,
+        emergencyContactAddress: row.emergencyContactAddress,
+        bloodType: row.bloodType as AdultoMayorImportNormalizedRow["bloodType"],
+        sisben: row.sisben,
+        healthRegime: row.healthRegime,
+        epsId: row.epsId,
+        eps: row.legacyEps ?? row.epsName ?? null,
+        livesWithSomeone: row.livesWithSomeone,
+        companion: row.companion,
+        economicIncome: row.economicIncome,
+        socialProgramBeneficiary: row.socialProgramBeneficiary,
+        updatedAt: row.updatedAt.toISOString(),
+      }),
+    );
   }
 
   async createValidatedBatch(params: {
@@ -287,49 +295,49 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
 
   async findImportBatchById(
     params: {
-    importId: string;
-    tenantId?: string;
-    requestedByUserId?: string;
-  },
+      importId: string;
+      tenantId?: string;
+      requestedByUserId?: string;
+    },
     db: DatabaseLike = this.database.db,
   ): Promise<AdultoMayorImportBatchRecord | null> {
-      const [batchRow] = await db
-        .select({
-          id: adultoMayorImportBatches.id,
-          tenantId: adultoMayorImportBatches.tenantId,
-          tenantName: tenants.name,
-          requestedByUserId: adultoMayorImportBatches.requestedByUserId,
-          originalFilename: adultoMayorImportBatches.originalFilename,
-          fileChecksumSha256: adultoMayorImportBatches.fileChecksumSha256,
-          templateVersion: adultoMayorImportBatches.templateVersion,
-          status: adultoMayorImportBatches.status,
-          totalRows: adultoMayorImportBatches.totalRows,
-          readyRows: adultoMayorImportBatches.readyRows,
-          updateRows: adultoMayorImportBatches.updateRows,
-          invalidRows: adultoMayorImportBatches.invalidRows,
-          warningRows: adultoMayorImportBatches.warningRows,
-          unchangedRows: adultoMayorImportBatches.unchangedRows,
-          existingRows: adultoMayorImportBatches.existingRows,
-          createdRows: adultoMayorImportBatches.createdRows,
-          updatedRows: adultoMayorImportBatches.updatedRows,
-          expiresAt: adultoMayorImportBatches.expiresAt,
-          confirmedAt: adultoMayorImportBatches.confirmedAt,
-          failureCode: adultoMayorImportBatches.failureCode,
-          createdAt: adultoMayorImportBatches.createdAt,
-          updatedAt: adultoMayorImportBatches.updatedAt,
-        })
-        .from(adultoMayorImportBatches)
-        .innerJoin(tenants, eq(tenants.id, adultoMayorImportBatches.tenantId))
-        .where(this.buildBatchWhere(params))
-        .limit(1);
+    const [batchRow] = await db
+      .select({
+        id: adultoMayorImportBatches.id,
+        tenantId: adultoMayorImportBatches.tenantId,
+        tenantName: tenants.name,
+        requestedByUserId: adultoMayorImportBatches.requestedByUserId,
+        originalFilename: adultoMayorImportBatches.originalFilename,
+        fileChecksumSha256: adultoMayorImportBatches.fileChecksumSha256,
+        templateVersion: adultoMayorImportBatches.templateVersion,
+        status: adultoMayorImportBatches.status,
+        totalRows: adultoMayorImportBatches.totalRows,
+        readyRows: adultoMayorImportBatches.readyRows,
+        updateRows: adultoMayorImportBatches.updateRows,
+        invalidRows: adultoMayorImportBatches.invalidRows,
+        warningRows: adultoMayorImportBatches.warningRows,
+        unchangedRows: adultoMayorImportBatches.unchangedRows,
+        existingRows: adultoMayorImportBatches.existingRows,
+        createdRows: adultoMayorImportBatches.createdRows,
+        updatedRows: adultoMayorImportBatches.updatedRows,
+        expiresAt: adultoMayorImportBatches.expiresAt,
+        confirmedAt: adultoMayorImportBatches.confirmedAt,
+        failureCode: adultoMayorImportBatches.failureCode,
+        createdAt: adultoMayorImportBatches.createdAt,
+        updatedAt: adultoMayorImportBatches.updatedAt,
+      })
+      .from(adultoMayorImportBatches)
+      .innerJoin(tenants, eq(tenants.id, adultoMayorImportBatches.tenantId))
+      .where(this.buildBatchWhere(params))
+      .limit(1);
 
-      if (batchRow === undefined) {
-        return null;
-      }
+    if (batchRow === undefined) {
+      return null;
+    }
 
-      const rows = await this.findImportBatchRows(batchRow.id, db);
+    const rows = await this.findImportBatchRows(batchRow.id, db);
 
-      return this.toBatchRecord(batchRow, rows);
+    return this.toBatchRecord(batchRow, rows);
   }
 
   async findImportBatchRows(
@@ -439,7 +447,9 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
       }
 
       const rows = await this.findImportBatchRows(params.importId, tx);
-      const readyRows = rows.filter((row) => row.status === "ready" && row.normalizedPayload !== null);
+      const readyRows = rows.filter(
+        (row) => row.status === "ready" && row.normalizedPayload !== null,
+      );
       const updateRows = rows.filter(
         (row) =>
           row.status === "update_ready" &&
@@ -447,9 +457,7 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
           row.existingAdultoId !== null,
       );
       const unchangedRows = rows.filter(
-        (row) =>
-          row.status === "unchanged" &&
-          row.existingAdultoId !== null,
+        (row) => row.status === "unchanged" && row.existingAdultoId !== null,
       );
 
       await this.assertCreateRowsStillAvailable(tx, batch.tenant.id, readyRows);
@@ -470,7 +478,10 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
       }
 
       const createdAdultsByKey = new Map(
-        insertedAdults.map((adulto) => [this.buildDocumentKey(adulto.documentType, adulto.documentNumber), adulto.id]),
+        insertedAdults.map((adulto) => [
+          this.buildDocumentKey(adulto.documentType, adulto.documentNumber),
+          adulto.id,
+        ]),
       );
 
       for (const row of readyRows) {
@@ -497,9 +508,7 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
             ...this.buildAdultoMutableValues(row.normalizedPayload ?? {}),
             updatedAt: confirmedAt,
           })
-          .where(
-            eq(adultosMayores.id, row.existingAdultoId ?? ""),
-          )
+          .where(eq(adultosMayores.id, row.existingAdultoId ?? ""))
           .returning({ id: adultosMayores.id });
 
         if (updatedAdult === undefined) {
@@ -664,7 +673,10 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
     return and(...conditions);
   }
 
-  private toBatchRecord(batchRow: ImportBatchRow, rows: AdultoMayorImportBatchDetailRowRecord[]): AdultoMayorImportBatchRecord {
+  private toBatchRecord(
+    batchRow: ImportBatchRow,
+    rows: AdultoMayorImportBatchDetailRowRecord[],
+  ): AdultoMayorImportBatchRecord {
     const issues = rows.flatMap((row) => row.issues);
 
     return {
@@ -713,7 +725,9 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
       return;
     }
 
-    const documentNumbers = [...new Set(rows.map((row) => row.normalizedPayload?.documentNumber ?? ""))];
+    const documentNumbers = [
+      ...new Set(rows.map((row) => row.normalizedPayload?.documentNumber ?? "")),
+    ];
     const foundRows = await db
       .select({
         documentType: adultosMayores.documentType,
@@ -736,7 +750,11 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
       ),
     );
 
-    if (foundRows.some((row) => expectedKeys.has(this.buildDocumentKey(row.documentType, row.documentNumber)))) {
+    if (
+      foundRows.some((row) =>
+        expectedKeys.has(this.buildDocumentKey(row.documentType, row.documentNumber)),
+      )
+    ) {
       throw new AdultoMayorImportCommitConflictError();
     }
   }
@@ -813,6 +831,7 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
       socialProgramBeneficiary: Boolean(payload.socialProgramBeneficiary),
       birthDate: String(payload.birthDate),
       sex: payload.sex as never,
+      status: payload.status as never,
     };
   }
 

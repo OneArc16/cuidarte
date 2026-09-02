@@ -51,6 +51,7 @@ describe("App actividades trash flow", () => {
       http.get("http://localhost:3001/api/actividades-grupales/papelera", ({ request }) => {
         const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? null;
         const activityType = new URL(request.url).searchParams.get("activityType");
+        const organizer = new URL(request.url).searchParams.get("organizer");
 
         return HttpResponse.json({
           actividadesGrupales: trashActivities.filter((actividad) => {
@@ -64,9 +65,13 @@ describe("App actividades trash flow", () => {
                 actividad.deletedByUserFullName,
               ].some((value) => value.toLowerCase().includes(search));
             const matchesActivityType =
-              activityType === null || activityType === "" || actividad.activityType === activityType;
+              activityType === null ||
+              activityType === "" ||
+              actividad.activityType === activityType;
+            const matchesOrganizer =
+              organizer === null || organizer === "" || actividad.organizer === organizer;
 
-            return matchesSearch && matchesActivityType;
+            return matchesSearch && matchesActivityType && matchesOrganizer;
           }),
         });
       }),

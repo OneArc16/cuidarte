@@ -4,7 +4,13 @@ import {
   actividadGrupalTrashListItemSchema,
   type AuthUser,
 } from "@cuidarte/contracts";
-import { ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 
 import {
   canListTrashActividadesGrupales,
@@ -52,6 +58,7 @@ export class ActividadesGrupalesTrashService {
     const records = await this.actividadesGrupalesRepository.findTrashMany({
       search: query.search,
       activityType: query.activityType,
+      organizer: query.organizer,
       tenantId: effectiveTenantId,
       scope,
     });

@@ -15,6 +15,7 @@ export const actividadesHandlers = [
   http.get("http://localhost:3001/api/actividades-grupales", ({ request }) => {
     const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? null;
     const activityType = new URL(request.url).searchParams.get("activityType");
+    const organizer = new URL(request.url).searchParams.get("organizer");
     const actividades = [actividadGrupalFixture].filter((actividad) => {
       const matchesSearch =
         search === null ||
@@ -26,8 +27,10 @@ export const actividadesHandlers = [
         ].some((value) => value.toLowerCase().includes(search));
       const matchesActivityType =
         activityType === null || activityType === "" || actividad.activityType === activityType;
+      const matchesOrganizer =
+        organizer === null || organizer === "" || actividad.organizer === organizer;
 
-      return matchesSearch && matchesActivityType;
+      return matchesSearch && matchesActivityType && matchesOrganizer;
     });
 
     return HttpResponse.json({ actividadesGrupales: actividades });
@@ -35,6 +38,7 @@ export const actividadesHandlers = [
   http.get("http://localhost:3001/api/actividades-grupales/papelera", ({ request }) => {
     const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? null;
     const activityType = new URL(request.url).searchParams.get("activityType");
+    const organizer = new URL(request.url).searchParams.get("organizer");
     const actividades = [actividadGrupalTrashFixture].filter((actividad) => {
       const matchesSearch =
         search === null ||
@@ -47,8 +51,10 @@ export const actividadesHandlers = [
         ].some((value) => value.toLowerCase().includes(search));
       const matchesActivityType =
         activityType === null || activityType === "" || actividad.activityType === activityType;
+      const matchesOrganizer =
+        organizer === null || organizer === "" || actividad.organizer === organizer;
 
-      return matchesSearch && matchesActivityType;
+      return matchesSearch && matchesActivityType && matchesOrganizer;
     });
 
     return HttpResponse.json({ actividadesGrupales: actividades });

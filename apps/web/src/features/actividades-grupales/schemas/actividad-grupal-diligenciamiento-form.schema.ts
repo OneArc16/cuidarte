@@ -7,12 +7,12 @@ import {
 } from "@cuidarte/contracts";
 import { z } from "zod";
 
-const requiredTextSchema = (maxLength: number) => z.string().trim().min(1).max(maxLength);
+const requiredLongTextSchema = z.string().trim().min(1);
 
 export const actividadGrupalDiligenciamientoFormSchema = z.object({
-  objectives: requiredTextSchema(4000),
-  development: requiredTextSchema(10_000),
-  conclusion: requiredTextSchema(4000),
+  objectives: requiredLongTextSchema,
+  development: requiredLongTextSchema,
+  conclusion: requiredLongTextSchema,
   responsibleDepartment: z.union([actividadGrupalResponsibleDepartmentSchema, z.literal("")]),
   integranteIds: z.array(z.string().uuid()).min(1, "Selecciona minimo un integrante."),
   removedPhotoFileIds: z.array(z.string().uuid()).default([]),

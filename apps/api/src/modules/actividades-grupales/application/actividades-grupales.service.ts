@@ -72,6 +72,7 @@ type DownloadActividadGrupalSupportFile = {
 export type ActividadGrupalActaExportData = {
   detail: ActividadGrupalDiligenciamientoDetail;
   photoFiles: ActividadGrupalSupportFileRecord[];
+  pdfFile: ActividadGrupalSupportFileRecord | null;
 };
 
 @Injectable()
@@ -92,6 +93,7 @@ export class ActividadesGrupalesService {
     const records = await this.actividadesGrupalesRepository.findMany({
       search: query.search,
       activityType: query.activityType,
+      organizer: query.organizer,
       tenantId: effectiveTenantId,
       scope,
     });
@@ -231,6 +233,7 @@ export class ActividadesGrupalesService {
     return {
       detail: this.toDiligenciamientoDetail(record, actor),
       photoFiles: record.photoFiles,
+      pdfFile: record.pdfFile,
     };
   }
 

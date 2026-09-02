@@ -18,6 +18,7 @@ export type ActividadesGrupalesScope =
 export type FindActividadesGrupalesQuery = {
   search: string | null;
   activityType: ActividadGrupalType | null;
+  organizer: ActividadGrupalOrganizer | null;
   tenantId: string | null;
   scope: ActividadesGrupalesScope;
 };

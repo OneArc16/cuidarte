@@ -108,7 +108,7 @@ describe("ActividadesGrupalesService", () => {
     const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.listActividadesGrupales(
-      { search: "bienestar", activityType: null, tenantId: null },
+      { search: "bienestar", activityType: null, organizer: null, tenantId: null },
       medicoUser,
     );
 
@@ -117,6 +117,7 @@ describe("ActividadesGrupalesService", () => {
     assert.deepEqual(repository.queries[0], {
       search: "bienestar",
       activityType: null,
+      organizer: null,
       tenantId,
       scope: { type: "tenant", tenantId },
     });
@@ -127,7 +128,7 @@ describe("ActividadesGrupalesService", () => {
     const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.listActividadesGrupales(
-      { search: null, activityType: null, tenantId: otherTenantId },
+      { search: null, activityType: null, organizer: null, tenantId: otherTenantId },
       superAdminUser,
     );
 
@@ -136,6 +137,7 @@ describe("ActividadesGrupalesService", () => {
     assert.deepEqual(repository.queries[0], {
       search: null,
       activityType: null,
+      organizer: null,
       tenantId: otherTenantId,
       scope: { type: "all" },
     });
@@ -146,7 +148,7 @@ describe("ActividadesGrupalesService", () => {
     const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.listActividadesGrupales(
-      { search: null, activityType: null, tenantId: null },
+      { search: null, activityType: null, organizer: null, tenantId: null },
       auditorUser,
     );
 
@@ -154,6 +156,7 @@ describe("ActividadesGrupalesService", () => {
     assert.deepEqual(repository.queries[0], {
       search: null,
       activityType: null,
+      organizer: null,
       tenantId,
       scope: { type: "tenant", tenantId },
     });
@@ -164,7 +167,7 @@ describe("ActividadesGrupalesService", () => {
     const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.listActividadesGrupales(
-      { search: null, activityType: "actividad_campo", tenantId: null },
+      { search: null, activityType: "actividad_campo", organizer: null, tenantId: null },
       superAdminUser,
     );
 
@@ -173,6 +176,27 @@ describe("ActividadesGrupalesService", () => {
     assert.deepEqual(repository.queries[0], {
       search: null,
       activityType: "actividad_campo",
+      organizer: null,
+      tenantId: null,
+      scope: { type: "all" },
+    });
+  });
+
+  it("filters the list by organizer", async () => {
+    const repository = createRepository();
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+
+    const result = await service.listActividadesGrupales(
+      { search: null, activityType: null, organizer: "trabajadora_social", tenantId: null },
+      superAdminUser,
+    );
+
+    assert.equal(result.length, 1);
+    assert.equal(result[0]?.organizer, "trabajadora_social");
+    assert.deepEqual(repository.queries[0], {
+      search: null,
+      activityType: null,
+      organizer: "trabajadora_social",
       tenantId: null,
       scope: { type: "all" },
     });
@@ -185,7 +209,7 @@ describe("ActividadesGrupalesService", () => {
     await assert.rejects(
       () =>
         service.listActividadesGrupales(
-          { search: null, activityType: null, tenantId: otherTenantId },
+          { search: null, activityType: null, organizer: null, tenantId: otherTenantId },
           medicoUser,
         ),
       { constructor: ForbiddenException },
@@ -258,7 +282,7 @@ describe("ActividadesGrupalesService", () => {
     await assert.rejects(
       () =>
         service.listActividadesGrupales(
-          { search: null, activityType: null, tenantId: null },
+          { search: null, activityType: null, organizer: null, tenantId: null },
           tenantlessDirectorUser,
         ),
       { constructor: ForbiddenException },
@@ -334,10 +358,9 @@ describe("ActividadesGrupalesService", () => {
     const repository = createRepository();
     const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
-    await assert.rejects(
-      () => service.getFormOptions({ tenantId }, auditorUser),
-      { constructor: ForbiddenException },
-    );
+    await assert.rejects(() => service.getFormOptions({ tenantId }, auditorUser), {
+      constructor: ForbiddenException,
+    });
 
     await assert.rejects(
       () =>
@@ -434,11 +457,12 @@ function createRepository(): ActividadesGrupalesRepository & {
             : query.tenantId === null || record.tenantId === query.tenantId;
         const matchesActivityType =
           query.activityType === null || record.activityType === query.activityType;
+        const matchesOrganizer = query.organizer === null || record.organizer === query.organizer;
         const matchesSearch =
           query.search === null ||
           record.activityName.toLowerCase().includes(query.search.toLowerCase());
 
-        return matchesTenant && matchesActivityType && matchesSearch;
+        return matchesTenant && matchesActivityType && matchesOrganizer && matchesSearch;
       });
     },
     async findTrashMany() {

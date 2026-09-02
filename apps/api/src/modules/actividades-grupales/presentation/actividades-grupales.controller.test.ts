@@ -44,11 +44,16 @@ describe("ActividadesGrupalesController", () => {
         ];
       },
     };
-    const controller = new ActividadesGrupalesController(service as never, {} as never, {} as never);
+    const controller = new ActividadesGrupalesController(
+      service as never,
+      {} as never,
+      {} as never,
+    );
 
     const result = await controller.listActividadesGrupales(
       {
         search: "bienestar",
+        organizer: "director",
       },
       { currentUser } as never,
     );
@@ -56,6 +61,7 @@ describe("ActividadesGrupalesController", () => {
     assert.deepEqual(receivedQuery, {
       search: "bienestar",
       activityType: null,
+      organizer: "director",
       tenantId: null,
     });
     assert.equal(receivedActorId, currentUser.id);
@@ -111,6 +117,7 @@ describe("ActividadesGrupalesController", () => {
     assert.deepEqual(receivedQuery, {
       search: "bienestar",
       activityType: null,
+      organizer: null,
       tenantId: null,
     });
     assert.equal(receivedActorId, currentUser.id);
@@ -142,7 +149,11 @@ describe("ActividadesGrupalesController", () => {
         };
       },
     };
-    const controller = new ActividadesGrupalesController(service as never, {} as never, {} as never);
+    const controller = new ActividadesGrupalesController(
+      service as never,
+      {} as never,
+      {} as never,
+    );
 
     const result = await controller.createActividadGrupal(
       {
@@ -210,7 +221,11 @@ describe("ActividadesGrupalesController", () => {
         };
       },
     };
-    const controller = new ActividadesGrupalesController(service as never, {} as never, {} as never);
+    const controller = new ActividadesGrupalesController(
+      service as never,
+      {} as never,
+      {} as never,
+    );
 
     const result = await controller.getActividadGrupalDiligenciamiento(
       "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
@@ -267,10 +282,7 @@ describe("ActividadesGrupalesController", () => {
     assert.equal(receivedActivityId, "5f0361fb-ff51-43d7-a6e8-83c58df345b6");
     assert.equal(receivedActorId, currentUser.id);
     assert.equal(headers["Content-Type"], "application/pdf");
-    assert.equal(
-      headers["Content-Disposition"],
-      'inline; filename="acta-sesion-grupal-0004.pdf"',
-    );
+    assert.equal(headers["Content-Disposition"], 'inline; filename="acta-sesion-grupal-0004.pdf"');
     assert.equal(Buffer.isBuffer(sentPayload), true);
     assert.equal((sentPayload as Buffer).toString("utf8"), "pdf");
   });
@@ -290,10 +302,9 @@ describe("ActividadesGrupalesController", () => {
       trashService as never,
     );
 
-    const result = await controller.deleteActividadGrupal(
-      "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
-      { currentUser } as never,
-    );
+    const result = await controller.deleteActividadGrupal("5f0361fb-ff51-43d7-a6e8-83c58df345b6", {
+      currentUser,
+    } as never);
 
     assert.equal(receivedActivityId, "5f0361fb-ff51-43d7-a6e8-83c58df345b6");
     assert.equal(receivedActorId, currentUser.id);
@@ -315,10 +326,9 @@ describe("ActividadesGrupalesController", () => {
       trashService as never,
     );
 
-    const result = await controller.restoreActividadGrupal(
-      "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
-      { currentUser } as never,
-    );
+    const result = await controller.restoreActividadGrupal("5f0361fb-ff51-43d7-a6e8-83c58df345b6", {
+      currentUser,
+    } as never);
 
     assert.equal(receivedActivityId, "5f0361fb-ff51-43d7-a6e8-83c58df345b6");
     assert.equal(receivedActorId, currentUser.id);

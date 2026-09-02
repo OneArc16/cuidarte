@@ -12,7 +12,7 @@ import {
 } from "./adulto-mayor-import.types";
 
 const TEMPLATE_KEY = "adultos-mayores-import";
-const TEMPLATE_VERSION = 1;
+const TEMPLATE_VERSION = 2;
 const DATA_SHEET_NAME = "Adultos mayores";
 const METADATA_SHEET_NAME = "_metadata";
 const MAX_ROWS = 1_000;
@@ -26,6 +26,7 @@ const EXPECTED_HEADERS = [
   "segundo_apellido",
   "fecha_nacimiento",
   "sexo",
+  "estado",
   "nivel_academico",
   "discapacidad",
   "grupo_poblacional",
@@ -69,7 +70,10 @@ export class AdultosMayoresImportParser {
       const workbookSource = buffer as unknown as Parameters<ExcelJS.Workbook["xlsx"]["load"]>[0];
       await workbook.xlsx.load(workbookSource);
     } catch {
-      throw new AdultoMayorImportParseError("invalid_workbook", "El archivo no es un workbook valido.");
+      throw new AdultoMayorImportParseError(
+        "invalid_workbook",
+        "El archivo no es un workbook valido.",
+      );
     }
 
     const metadataSheet = this.getSingleWorksheet(workbook, METADATA_SHEET_NAME);
@@ -192,7 +196,10 @@ export class AdultosMayoresImportParser {
     }
   }
 
-  private readRows(sheet: ExcelJS.Worksheet, headers: readonly string[]): AdultoMayorImportRowInput[] {
+  private readRows(
+    sheet: ExcelJS.Worksheet,
+    headers: readonly string[],
+  ): AdultoMayorImportRowInput[] {
     const rows: AdultoMayorImportRowInput[] = [];
 
     for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber += 1) {

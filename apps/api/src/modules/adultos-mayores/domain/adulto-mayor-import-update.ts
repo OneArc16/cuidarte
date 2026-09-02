@@ -11,6 +11,7 @@ export const ADULTO_MAYOR_IMPORT_MUTABLE_FIELDS = [
   "secondSurname",
   "birthDate",
   "sex",
+  "status",
   "educationLevel",
   "disability",
   "populationGroup",
@@ -56,6 +57,7 @@ export function mergeAdultoMayorImportUpdate(
 
   return {
     ...imported,
+    status: preserveBlank("status", "estado"),
     middleName: preserveBlank("middleName", "segundo_nombre"),
     secondSurname: preserveBlank("secondSurname", "segundo_apellido"),
     educationLevel: preserveBlank("educationLevel", "nivel_academico"),

@@ -48,6 +48,7 @@ export const actividadGrupalSupportFileKindSchema = z.enum(actividadGrupalSuppor
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const requiredTextSchema = (maxLength: number) => z.string().trim().min(1).max(maxLength);
+const requiredLongTextSchema = z.string().trim().min(1);
 const actaNumberSchema = requiredTextSchema(40);
 
 const nullableSearchSchema = z
@@ -87,6 +88,17 @@ const nullableActivityTypeSchema = z
   })
   .pipe(actividadGrupalTypeSchema.nullable());
 
+const nullableOrganizerSchema = z
+  .union([actividadGrupalOrganizerSchema, z.literal(""), z.null(), z.undefined()])
+  .transform((value) => {
+    if (value === null || value === undefined || value === "") {
+      return null;
+    }
+
+    return value;
+  })
+  .pipe(actividadGrupalOrganizerSchema.nullable());
+
 const nullableResponsibleDepartmentSchema = z
   .union([actividadGrupalResponsibleDepartmentSchema, z.literal(""), z.null(), z.undefined()])
   .transform((value) => {
@@ -121,6 +133,7 @@ const removableFileIdsSchema = z
 export const actividadGrupalListQuerySchema = z.object({
   search: nullableSearchSchema.optional().default(null),
   activityType: nullableActivityTypeSchema.optional().default(null),
+  organizer: nullableOrganizerSchema.optional().default(null),
   tenantId: nullableTenantIdSchema.optional().default(null),
 });
 
@@ -196,9 +209,9 @@ export const createActividadGrupalRequestSchema = actividadGrupalCommandSchema.e
 export const updateActividadGrupalRequestSchema = actividadGrupalCommandSchema;
 
 export const saveActividadGrupalDiligenciamientoSchema = z.object({
-  objectives: requiredTextSchema(4000),
-  development: requiredTextSchema(10_000),
-  conclusion: requiredTextSchema(4000),
+  objectives: requiredLongTextSchema,
+  development: requiredLongTextSchema,
+  conclusion: requiredLongTextSchema,
   responsibleDepartment: actividadGrupalResponsibleDepartmentSchema,
   integranteIds: integranteIdsSchema,
   removedPhotoFileIds: removableFileIdsSchema.optional().default([]),
@@ -276,7 +289,9 @@ export type ActividadGrupalEmpleadoOption = z.infer<typeof actividadGrupalEmplea
 export type ActividadGrupalIntegranteOption = z.infer<typeof actividadGrupalIntegranteOptionSchema>;
 export type ActividadGrupalSupportFile = z.infer<typeof actividadGrupalSupportFileSchema>;
 export type ActividadGrupalTrashListItem = z.infer<typeof actividadGrupalTrashListItemSchema>;
-export type ActividadGrupalTrashListResponse = z.infer<typeof actividadGrupalTrashListResponseSchema>;
+export type ActividadGrupalTrashListResponse = z.infer<
+  typeof actividadGrupalTrashListResponseSchema
+>;
 export type RestoreActividadGrupalResponse = z.infer<typeof restoreActividadGrupalResponseSchema>;
 export type ActividadGrupalListItem = z.infer<typeof actividadGrupalListItemSchema>;
 export type CreateActividadGrupalRequest = z.infer<typeof createActividadGrupalRequestSchema>;

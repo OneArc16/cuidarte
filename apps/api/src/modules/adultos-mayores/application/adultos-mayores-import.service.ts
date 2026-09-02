@@ -18,7 +18,10 @@ import ExcelJS from "exceljs";
 
 import { type AuthUser } from "@cuidarte/contracts";
 
-import { AdultosMayoresImportParser, AdultoMayorImportParseError } from "../domain/adultos-mayores-import-parser";
+import {
+  AdultosMayoresImportParser,
+  AdultoMayorImportParseError,
+} from "../domain/adultos-mayores-import-parser";
 import {
   canImportAdultosMayores,
   resolveAdultoMayorImportTenantForValidate,
@@ -34,7 +37,7 @@ import { AdultosMayoresImportTemplateService } from "./adultos-mayores-import-te
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const TEMPLATE_KEY = "adultos-mayores-import";
-const TEMPLATE_VERSION = 1;
+const TEMPLATE_VERSION = 2;
 
 export type BufferedAdultoMayorImportUpload = {
   originalName: string;
@@ -134,7 +137,10 @@ export class AdultosMayoresImportService {
     return this.toDetailResponse(batch);
   }
 
-  async confirmImport(importId: string, actor: AuthUser): Promise<AdultoMayorImportConfirmResponse> {
+  async confirmImport(
+    importId: string,
+    actor: AuthUser,
+  ): Promise<AdultoMayorImportConfirmResponse> {
     this.ensureCanImport(actor);
     const batch = await this.findVisibleImport(importId, actor);
 
@@ -311,7 +317,9 @@ export class AdultosMayoresImportService {
     }
 
     if (actor.role === "super_admin" && tenantId === null) {
-      throw new BadRequestException("Selecciona el centro donde se importaran los adultos mayores.");
+      throw new BadRequestException(
+        "Selecciona el centro donde se importaran los adultos mayores.",
+      );
     }
 
     if (actor.role !== "super_admin" && tenantId === null) {

@@ -1,9 +1,9 @@
 import {
   type AdultoMayorImportIssue,
   adultoMayorBloodTypeSchema,
-  adultoMayorCommandSchema,
   adultoMayorDocumentTypeSchema,
   adultoMayorHealthRegimeSchema,
+  adultoMayorStatusSchema,
   adultoMayorSexSchema,
   adultoMayorZoneSchema,
   adultoMayorImportIssueSchema,
@@ -44,6 +44,7 @@ const COLUMN_BY_PATH: Record<string, string> = {
   secondSurname: "segundo_apellido",
   birthDate: "fecha_nacimiento",
   sex: "sexo",
+  status: "estado",
   educationLevel: "nivel_academico",
   disability: "discapacidad",
   populationGroup: "grupo_poblacional",
@@ -72,6 +73,7 @@ const COLUMN_BY_PATH: Record<string, string> = {
 const OPTIONAL_PRESERVED_FIELDS = {
   middleName: "segundo_nombre",
   secondSurname: "segundo_apellido",
+  status: "estado",
   educationLevel: "nivel_academico",
   disability: "discapacidad",
   populationGroup: "grupo_poblacional",
@@ -110,6 +112,17 @@ const SEX_MAP: Record<string, AdultoMayorImportNormalizedRow["sex"]> = {
   male: "male",
   otro: "other",
   other: "other",
+};
+
+const STATUS_MAP: Record<string, AdultoMayorImportNormalizedRow["status"]> = {
+  vivo: "alive",
+  viva: "alive",
+  alive: "alive",
+  fallecido: "deceased",
+  fallecida: "deceased",
+  muerto: "deceased",
+  muerta: "deceased",
+  deceased: "deceased",
 };
 
 const ZONE_MAP: Record<string, AdultoMayorImportNormalizedRow["zone"]> = {
@@ -160,7 +173,10 @@ export class AdultosMayoresImportValidator {
   } {
     const duplicateKeys = this.findDuplicateKeys(rows);
     const existingKeyMap = new Map(
-      existingAdults.map((adulto) => [this.buildKey(adulto.documentType, adulto.documentNumber), adulto]),
+      existingAdults.map((adulto) => [
+        this.buildKey(adulto.documentType, adulto.documentNumber),
+        adulto,
+      ]),
     );
     const existingNumberMap = new Map<string, AdultoMayorImportExistingRecord[]>();
 
@@ -181,7 +197,8 @@ export class AdultosMayoresImportValidator {
       updateRows: validatedRows.filter((row) => row.status === "update_ready").length,
       invalidRows: validatedRows.filter((row) => row.status === "invalid").length,
       warningRows: validatedRows.filter(
-        (row) => row.status !== "invalid" && row.issues.some((issue) => issue.severity === "warning"),
+        (row) =>
+          row.status !== "invalid" && row.issues.some((issue) => issue.severity === "warning"),
       ).length,
       unchangedRows: validatedRows.filter((row) => row.status === "unchanged").length,
       existingRows: validatedRows.filter(
@@ -215,7 +232,14 @@ export class AdultosMayoresImportValidator {
 
     if (duplicateInFile) {
       issues.push(
-        this.issue(row.rowNumber, "numero_documento", "duplicate_in_file", "error", "El documento esta repetido dentro del mismo archivo.", normalized.documentNumber),
+        this.issue(
+          row.rowNumber,
+          "numero_documento",
+          "duplicate_in_file",
+          "error",
+          "El documento esta repetido dentro del mismo archivo.",
+          normalized.documentNumber,
+        ),
       );
     }
 
@@ -294,6 +318,7 @@ export class AdultosMayoresImportValidator {
         secondSurname: existingAdult.secondSurname,
         birthDate: existingAdult.birthDate,
         sex: existingAdult.sex,
+        status: existingAdult.status,
         educationLevel: existingAdult.educationLevel,
         disability: existingAdult.disability,
         populationGroup: existingAdult.populationGroup,
@@ -345,6 +370,7 @@ export class AdultosMayoresImportValidator {
       secondSurname: this.optionalText(row, "segundo_apellido", 80, issues),
       birthDate: this.mapBirthDate(row, issues),
       sex: this.mapSex(row, issues),
+      status: this.mapStatus(row, issues),
       educationLevel: this.catalogText(row, "nivel_academico", 80, issues),
       disability: this.catalogText(row, "discapacidad", 120, issues),
       populationGroup: this.catalogText(row, "grupo_poblacional", 120, issues),
@@ -463,7 +489,16 @@ export class AdultosMayoresImportValidator {
     const documentType = DOCUMENT_TYPE_MAP[key];
 
     if (documentType === undefined) {
-      issues.push(this.issue(row.rowNumber, "tipo_documento", "invalid_enum", "error", "Tipo de documento invalido.", raw));
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          "tipo_documento",
+          "invalid_enum",
+          "error",
+          "Tipo de documento invalido.",
+          raw,
+        ),
+      );
       return "cc";
     }
 
@@ -475,11 +510,40 @@ export class AdultosMayoresImportValidator {
     const sex = SEX_MAP[this.normalizeLookup(raw)];
 
     if (sex === undefined) {
-      issues.push(this.issue(row.rowNumber, "sexo", "invalid_enum", "error", "Sexo invalido.", raw));
+      issues.push(
+        this.issue(row.rowNumber, "sexo", "invalid_enum", "error", "Sexo invalido.", raw),
+      );
       return "female";
     }
 
     return sex;
+  }
+
+  private mapStatus(row: AdultoMayorImportRowInput, issues: AdultoMayorImportIssue[]) {
+    const raw = this.optionalText(row, "estado", 40, issues);
+
+    if (raw === null) {
+      return "alive";
+    }
+
+    const status = STATUS_MAP[this.normalizeLookup(raw)];
+
+    if (status === undefined) {
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          "estado",
+          "invalid_enum",
+          "error",
+          "Estado invalido. Usa Vivo o Fallecido.",
+          raw,
+        ),
+      );
+      return "alive";
+    }
+
+    adultoMayorStatusSchema.parse(status);
+    return status;
   }
 
   private mapZone(row: AdultoMayorImportRowInput, issues: AdultoMayorImportIssue[]) {
@@ -487,7 +551,9 @@ export class AdultosMayoresImportValidator {
     const zone = ZONE_MAP[this.normalizeLookup(raw)];
 
     if (zone === undefined) {
-      issues.push(this.issue(row.rowNumber, "zona", "invalid_enum", "error", "Zona invalida.", raw));
+      issues.push(
+        this.issue(row.rowNumber, "zona", "invalid_enum", "error", "Zona invalida.", raw),
+      );
       return "urban";
     }
 
@@ -503,7 +569,16 @@ export class AdultosMayoresImportValidator {
     const mapped = BOOLEAN_MAP[this.normalizeLookup(raw)];
 
     if (mapped === undefined) {
-      issues.push(this.issue(row.rowNumber, column, "invalid_enum", "error", "El valor debe ser Si o No.", raw));
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          column,
+          "invalid_enum",
+          "error",
+          "El valor debe ser Si o No.",
+          raw,
+        ),
+      );
       return false;
     }
 
@@ -520,7 +595,16 @@ export class AdultosMayoresImportValidator {
     const bloodType = BLOOD_TYPE_MAP[this.normalizeLookup(raw)];
 
     if (bloodType === undefined) {
-      issues.push(this.issue(row.rowNumber, "tipo_sangre", "invalid_enum", "error", "Tipo de sangre invalido.", raw));
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          "tipo_sangre",
+          "invalid_enum",
+          "error",
+          "Tipo de sangre invalido.",
+          raw,
+        ),
+      );
       return null;
     }
 
@@ -538,7 +622,14 @@ export class AdultosMayoresImportValidator {
 
     if (department === undefined) {
       issues.push(
-        this.issue(row.rowNumber, "codigo_departamento", "unknown_department", "error", "Departamento no encontrado o inactivo.", raw),
+        this.issue(
+          row.rowNumber,
+          "codigo_departamento",
+          "unknown_department",
+          "error",
+          "Departamento no encontrado o inactivo.",
+          raw,
+        ),
       );
       return { id: "", name: "" };
     }
@@ -556,7 +647,14 @@ export class AdultosMayoresImportValidator {
 
     if (municipality === undefined) {
       issues.push(
-        this.issue(row.rowNumber, "codigo_municipio", "unknown_municipality", "error", "Municipio no encontrado o inactivo.", raw),
+        this.issue(
+          row.rowNumber,
+          "codigo_municipio",
+          "unknown_municipality",
+          "error",
+          "Municipio no encontrado o inactivo.",
+          raw,
+        ),
       );
       return { id: "", departmentId: "", name: "" };
     }
@@ -592,12 +690,23 @@ export class AdultosMayoresImportValidator {
     const eps = catalogs.epsByCode.get(raw);
 
     if (eps === undefined) {
-      issues.push(this.issue(row.rowNumber, "codigo_eps", "unknown_eps", "error", "La EPS no existe.", raw));
+      issues.push(
+        this.issue(row.rowNumber, "codigo_eps", "unknown_eps", "error", "La EPS no existe.", raw),
+      );
       return null;
     }
 
     if (!eps.isActive) {
-      issues.push(this.issue(row.rowNumber, "codigo_eps", "inactive_eps", "error", "La EPS seleccionada no se encuentra activa.", raw));
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          "codigo_eps",
+          "inactive_eps",
+          "error",
+          "La EPS seleccionada no se encuentra activa.",
+          raw,
+        ),
+      );
       return null;
     }
 
@@ -608,28 +717,60 @@ export class AdultosMayoresImportValidator {
     const raw = this.requiredText(row, "fecha_nacimiento", 20, issues);
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-      issues.push(this.issue(row.rowNumber, "fecha_nacimiento", "invalid_format", "error", "La fecha debe tener formato YYYY-MM-DD.", raw));
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          "fecha_nacimiento",
+          "invalid_format",
+          "error",
+          "La fecha debe tener formato YYYY-MM-DD.",
+          raw,
+        ),
+      );
       return "1900-01-01";
     }
 
     const parsed = new Date(`${raw}T00:00:00.000Z`);
 
     if (Number.isNaN(parsed.getTime())) {
-      issues.push(this.issue(row.rowNumber, "fecha_nacimiento", "invalid_format", "error", "La fecha de nacimiento no es valida.", raw));
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          "fecha_nacimiento",
+          "invalid_format",
+          "error",
+          "La fecha de nacimiento no es valida.",
+          raw,
+        ),
+      );
       return "1900-01-01";
     }
 
     const today = new Date();
-    const todayIso = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+    const todayIso = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
+    );
 
     if (parsed > todayIso) {
-      issues.push(this.issue(row.rowNumber, "fecha_nacimiento", "future_date", "error", "La fecha de nacimiento no puede estar en el futuro.", raw));
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          "fecha_nacimiento",
+          "future_date",
+          "error",
+          "La fecha de nacimiento no puede estar en el futuro.",
+          raw,
+        ),
+      );
     }
 
     return raw;
   }
 
-  private optionalEmail(row: AdultoMayorImportRowInput, issues: AdultoMayorImportIssue[]): string | null {
+  private optionalEmail(
+    row: AdultoMayorImportRowInput,
+    issues: AdultoMayorImportIssue[],
+  ): string | null {
     const raw = row.values.correo ?? null;
 
     if (raw === null) {
@@ -643,7 +784,16 @@ export class AdultosMayoresImportValidator {
     }
 
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-      issues.push(this.issue(row.rowNumber, "correo", "invalid_format", "error", "El correo no es valido.", raw));
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          "correo",
+          "invalid_format",
+          "error",
+          "El correo no es valido.",
+          raw,
+        ),
+      );
       return null;
     }
 
@@ -659,14 +809,25 @@ export class AdultosMayoresImportValidator {
     const raw = row.values[column] ?? null;
 
     if (raw === null || raw.trim() === "") {
-      issues.push(this.issue(row.rowNumber, column, "required", "error", "El campo es obligatorio.", raw));
+      issues.push(
+        this.issue(row.rowNumber, column, "required", "error", "El campo es obligatorio.", raw),
+      );
       return "";
     }
 
     const value = raw.trim();
 
     if (value.length > maxLength) {
-      issues.push(this.issue(row.rowNumber, column, "max_length", "error", `El campo admite maximo ${maxLength} caracteres.`, raw));
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          column,
+          "max_length",
+          "error",
+          `El campo admite maximo ${maxLength} caracteres.`,
+          raw,
+        ),
+      );
       return value.slice(0, maxLength);
     }
 
@@ -692,7 +853,16 @@ export class AdultosMayoresImportValidator {
     }
 
     if (value.length > maxLength) {
-      issues.push(this.issue(row.rowNumber, column, "max_length", "error", `El campo admite maximo ${maxLength} caracteres.`, raw));
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          column,
+          "max_length",
+          "error",
+          `El campo admite maximo ${maxLength} caracteres.`,
+          raw,
+        ),
+      );
       return value.slice(0, maxLength);
     }
 
@@ -727,14 +897,32 @@ export class AdultosMayoresImportValidator {
     }
 
     if (!/^\d+$/.test(raw.trim())) {
-      issues.push(this.issue(row.rowNumber, column, "invalid_format", "error", "Debe ser un numero entero.", raw));
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          column,
+          "invalid_format",
+          "error",
+          "Debe ser un numero entero.",
+          raw,
+        ),
+      );
       return null;
     }
 
     const value = Number(raw.trim());
 
     if (!Number.isInteger(value) || value < 0 || value > maxValue) {
-      issues.push(this.issue(row.rowNumber, column, "invalid_format", "error", "El numero esta fuera de rango.", raw));
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          column,
+          "invalid_format",
+          "error",
+          "El numero esta fuera de rango.",
+          raw,
+        ),
+      );
       return null;
     }
 

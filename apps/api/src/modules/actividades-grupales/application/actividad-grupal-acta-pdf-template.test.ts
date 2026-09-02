@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   type ActividadGrupalActaPdfDetail,
   buildActividadGrupalActaPdfHtml,
+  buildActividadGrupalActaPhotoEvidencePdfHtml,
   buildActividadGrupalActaPdfFilename,
 } from "./actividad-grupal-acta-pdf-template";
 
@@ -46,11 +47,39 @@ describe("actividad-grupal-acta-pdf-template", () => {
     assert.ok(htmlWithPhotos.indexOf("foto &lt;1&gt;") < htmlWithPhotos.indexOf("foto 2.png"));
   });
 
+  it("renders a standalone photo evidence document without forcing a page break", () => {
+    const html = buildActividadGrupalActaPhotoEvidencePdfHtml([
+      {
+        id: "photo-1",
+        originalName: "foto cierre.png",
+        dataUrl: "data:image/jpeg;base64,Zm9v",
+      },
+    ]);
+
+    assert.match(html, /EVIDENCIA FOTOGRAFICA/);
+    assert.match(html, /foto cierre\.png/);
+    assert.doesNotMatch(
+      html,
+      /<section class="acta-document__section acta-document__section--photo-evidence">/,
+    );
+  });
+
   it("builds a sanitized filename", () => {
     assert.equal(
       buildActividadGrupalActaPdfFilename(createDetail({ actaNumber: "10 20/30" })),
       "acta-sesion-grupal-10-20-30.pdf",
     );
+  });
+
+  it("uses page margins so split tables do not touch the page edge", () => {
+    const html = buildActividadGrupalActaPdfHtml({
+      detail: createDetail(),
+      logoDataUrl: null,
+      photoAssets: [],
+    });
+
+    assert.match(html, /@page\s*{[^}]*margin: 12mm;/);
+    assert.match(html, /padding: 0;/);
   });
 
   it("renders assigned professional signatures inside the signature column", () => {

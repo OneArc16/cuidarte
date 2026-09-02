@@ -1,19 +1,27 @@
 import { Search } from "lucide-react";
-import { type ActividadGrupalTenantOption, type ActividadGrupalType } from "@cuidarte/contracts";
+import {
+  type ActividadGrupalOrganizer,
+  type ActividadGrupalTenantOption,
+  type ActividadGrupalType,
+} from "@cuidarte/contracts";
 
 import {
+  formatActividadGrupalOrganizer,
   formatActividadGrupalType,
+  getActividadGrupalOrganizerOptions,
   getActividadGrupalTypeOptions,
 } from "../lib/actividades-grupales-formatters";
 
 type ActividadesGrupalesToolbarProps = {
   selectedActivityType: ActividadGrupalType | "";
+  selectedOrganizer: ActividadGrupalOrganizer | "";
   search: string;
   selectedTenantId: string;
   showTenantFilter: boolean;
   tenantOptions: ActividadGrupalTenantOption[];
   isTenantOptionsLoading: boolean;
   onActivityTypeChange: (activityType: ActividadGrupalType | "") => void;
+  onOrganizerChange: (organizer: ActividadGrupalOrganizer | "") => void;
   onSearchChange: (search: string) => void;
   onTenantChange: (tenantId: string) => void;
 };
@@ -21,10 +29,12 @@ type ActividadesGrupalesToolbarProps = {
 export function ActividadesGrupalesToolbar({
   isTenantOptionsLoading,
   onActivityTypeChange,
+  onOrganizerChange,
   onSearchChange,
   onTenantChange,
   search,
   selectedActivityType,
+  selectedOrganizer,
   selectedTenantId,
   showTenantFilter,
   tenantOptions,
@@ -53,6 +63,23 @@ export function ActividadesGrupalesToolbar({
           {getActividadGrupalTypeOptions().map((activityType) => (
             <option key={activityType} value={activityType}>
               {formatActividadGrupalType(activityType)}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="actividades-filter">
+        <span>Organizador</span>
+        <select
+          value={selectedOrganizer}
+          onChange={(event) =>
+            onOrganizerChange(event.target.value as ActividadGrupalOrganizer | "")
+          }
+        >
+          <option value="">Todos los organizadores</option>
+          {getActividadGrupalOrganizerOptions().map((organizer) => (
+            <option key={organizer} value={organizer}>
+              {formatActividadGrupalOrganizer(organizer)}
             </option>
           ))}
         </select>

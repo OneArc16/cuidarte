@@ -1,4 +1,9 @@
-import { type ActividadGrupalListItem, type ActividadGrupalType, type AuthUser } from "@cuidarte/contracts";
+import {
+  type ActividadGrupalListItem,
+  type ActividadGrupalOrganizer,
+  type ActividadGrupalType,
+  type AuthUser,
+} from "@cuidarte/contracts";
 import { CalendarPlus } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -36,10 +41,10 @@ export function ActividadesGrupalesIndexPage({
   user,
 }: ActividadesGrupalesIndexPageProps) {
   const [search, setSearch] = useState("");
-  const [activityPendingDelete, setActivityPendingDelete] = useState<ActividadGrupalListItem | null>(
-    null,
-  );
+  const [activityPendingDelete, setActivityPendingDelete] =
+    useState<ActividadGrupalListItem | null>(null);
   const [selectedActivityType, setSelectedActivityType] = useState<ActividadGrupalType | "">("");
+  const [selectedOrganizer, setSelectedOrganizer] = useState<ActividadGrupalOrganizer | "">("");
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const showTenantFilter = user.role === "super_admin";
   const canViewTrash = canViewActividadesGrupalesTrash(user);
@@ -48,6 +53,7 @@ export function ActividadesGrupalesIndexPage({
   const actividadesQuery = useActividadesGrupalesQuery({
     search,
     activityType: selectedActivityType === "" ? null : selectedActivityType,
+    organizer: selectedOrganizer === "" ? null : selectedOrganizer,
     tenantId: showTenantFilter
       ? selectedTenantId === ""
         ? null
@@ -77,11 +83,13 @@ export function ActividadesGrupalesIndexPage({
       <ActividadesGrupalesToolbar
         search={search}
         selectedActivityType={selectedActivityType}
+        selectedOrganizer={selectedOrganizer}
         selectedTenantId={selectedTenantId}
         showTenantFilter={showTenantFilter}
         tenantOptions={tenantOptionsQuery.data?.tenants ?? []}
         isTenantOptionsLoading={tenantOptionsQuery.isLoading}
         onActivityTypeChange={setSelectedActivityType}
+        onOrganizerChange={setSelectedOrganizer}
         onSearchChange={setSearch}
         onTenantChange={setSelectedTenantId}
       />
