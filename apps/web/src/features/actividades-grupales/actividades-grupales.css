@@ -821,6 +821,15 @@
   gap: 16px;
 }
 
+.actividad-diligenciamiento-actions {
+  flex-wrap: wrap;
+}
+
+.actividad-diligenciamiento-actions > button {
+  min-width: 108px;
+  padding-inline: 18px;
+}
+
 .actividad-diligenciamiento-shell {
   display: grid;
   grid-template-columns: 1fr;
@@ -1029,33 +1038,41 @@
 .actividad-diligenciamiento-files-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+  align-items: start;
   gap: 14px;
 }
 
 .actividad-diligenciamiento-upload-card {
   display: grid;
-  gap: 14px;
-  padding: 16px;
-  border: 1px solid rgb(8 80 65 / 12%);
-  border-radius: 12px;
-  background: rgb(252 255 254 / 88%);
+  align-content: start;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid rgb(8 80 65 / 13%);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 96%);
+  box-shadow:
+    0 14px 34px rgb(8 80 65 / 7%),
+    0 2px 7px rgb(8 80 65 / 5%);
 }
 
 .actividad-diligenciamiento-upload-card__header {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
 }
 
 .actividad-diligenciamiento-upload-card__header svg {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
   color: var(--color-care);
 }
 
 .actividad-diligenciamiento-upload-card__header strong {
   display: block;
   color: var(--color-ink);
+  font-size: 1rem;
 }
 
 .actividad-diligenciamiento-upload-card__header small {
@@ -1065,18 +1082,38 @@
 }
 
 .actividad-diligenciamiento-upload-button {
+  align-self: start;
   width: fit-content;
-  min-height: 40px;
-  gap: 8px;
+  min-height: 44px;
+  gap: 9px;
+  padding: 0 16px;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--color-deep), var(--color-care));
+  color: white;
+  box-shadow: 0 10px 20px rgb(8 80 65 / 15%);
+}
+
+.actividad-diligenciamiento-upload-button:not(:disabled):hover,
+.actividad-diligenciamiento-upload-button:focus-within {
+  border-color: transparent;
+  background: linear-gradient(135deg, rgb(6 70 58), rgb(24 139 105));
+  color: white;
+  box-shadow: 0 13px 24px rgb(8 80 65 / 20%);
 }
 
 .actividad-diligenciamiento-file-card {
   display: grid;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid rgb(8 80 65 / 10%);
-  border-radius: 10px;
-  background: white;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid rgb(8 80 65 / 12%);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 98%);
+  box-shadow: 0 7px 18px rgb(8 80 65 / 5%);
+}
+
+.actividad-diligenciamiento-support-empty {
+  width: 100%;
+  min-height: 40px;
 }
 
 .actividad-diligenciamiento-photo-carousel {
@@ -1263,9 +1300,36 @@
   align-items: center;
 }
 
+.actividad-diligenciamiento-file-card__details {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.actividad-diligenciamiento-file-card__details > svg {
+  width: 23px;
+  height: 23px;
+  color: var(--color-deep);
+}
+
 .actividad-diligenciamiento-file-card__actions {
   display: inline-flex;
   gap: 8px;
+}
+
+.actividad-diligenciamiento-file-card__remove {
+  border-color: rgb(176 48 45 / 18%);
+  background: rgb(255 239 238);
+  color: var(--color-danger);
+}
+
+.actividad-diligenciamiento-file-card__remove:not(:disabled):hover,
+.actividad-diligenciamiento-file-card__remove:not(:disabled):focus-visible {
+  border-color: rgb(176 48 45 / 30%);
+  background: rgb(255 226 224);
+  color: var(--color-danger);
 }
 
 @media (max-width: 1320px) {

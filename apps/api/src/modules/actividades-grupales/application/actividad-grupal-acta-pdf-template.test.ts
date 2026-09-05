@@ -103,6 +103,65 @@ describe("actividad-grupal-acta-pdf-template", () => {
     assert.match(html, /src="data:image\/png;base64,ZmlybWE="/);
     assert.match(html, /acta-document__people-table--professionals/);
   });
+
+  it("renders each professional's own role instead of the responsible department", () => {
+    const html = buildActividadGrupalActaPdfHtml({
+      detail: createDetail({
+        responsibleDepartment: "enfermeria",
+        assignedProfessionals: [
+          {
+            id: "profesional-1",
+            fullName: "Daniel Castaño",
+            role: "medico",
+            signatureDataUrl: null,
+          },
+          {
+            id: "profesional-2",
+            fullName: "Danna Núñez",
+            role: "psicologo",
+            signatureDataUrl: null,
+          },
+        ],
+      }),
+      logoDataUrl: null,
+      photoAssets: [],
+    });
+
+    assert.match(html, /<td>Daniel Castaño<\/td><td>Medico<\/td>/);
+    assert.match(html, /<td>Danna Núñez<\/td><td>Psicologo<\/td>/);
+    assert.doesNotMatch(html, /<td>Enfermeria<\/td>/);
+  });
+
+  it("omits the attendee section when no integrantes are registered", () => {
+    const html = buildActividadGrupalActaPdfHtml({
+      detail: createDetail({ integrantes: [] }),
+      logoDataUrl: null,
+      photoAssets: [],
+    });
+
+    assert.doesNotMatch(html, /LISTADO DE ASISTENTES/);
+    assert.doesNotMatch(html, /acta-document__people-table--attendees/);
+  });
+
+  it("renders the attendee section when integrantes are registered", () => {
+    const html = buildActividadGrupalActaPdfHtml({
+      detail: createDetail({
+        integrantes: [
+          {
+            id: "integrante-1",
+            fullName: "Ana Leonor Florian de Moreno",
+            documentNumber: "26783623",
+          },
+        ],
+      }),
+      logoDataUrl: null,
+      photoAssets: [],
+    });
+
+    assert.match(html, /LISTADO DE ASISTENTES/);
+    assert.match(html, /Ana Leonor Florian de Moreno/);
+    assert.match(html, /26783623/);
+  });
 });
 
 function createDetail(

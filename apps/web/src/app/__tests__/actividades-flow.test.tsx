@@ -100,7 +100,7 @@ describe("App actividades flow", () => {
     expect(
       screen.queryByDisplayValue(actividadGrupalDiligenciamientoFixture.activityName),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Guardar diligenciamiento" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Guardar" })).toBeInTheDocument();
   });
 
   it("opens activities from other users in read-only mode", async () => {
@@ -140,7 +140,7 @@ describe("App actividades flow", () => {
 
     expect(await screen.findByText("Vista de solo lectura")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Guardar diligenciamiento" }),
+      screen.queryByRole("button", { name: "Guardar" }),
     ).not.toBeInTheDocument();
   });
 
@@ -241,7 +241,7 @@ describe("App actividades flow", () => {
     renderAppAtPath(`/creacion-actividades/${actividadGrupalFixture.id}/diligenciamiento`);
 
     expect(
-      await screen.findByRole("button", { name: "Guardar diligenciamiento" }),
+      await screen.findByRole("button", { name: "Guardar" }),
     ).toBeInTheDocument();
     expect(
       screen.getByText("Escribe un nombre o documento para buscar adultos mayores."),
@@ -270,12 +270,64 @@ describe("App actividades flow", () => {
       screen.getByLabelText("Adjuntar documento PDF"),
       new File(["pdf"], "soporte-final.pdf", { type: "application/pdf" }),
     );
-    await user.click(screen.getByRole("button", { name: "Guardar diligenciamiento" }));
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
 
     await waitFor(() => {
       expect(saveRequestCount).toBe(1);
     });
     expect(receivedContentType).toContain("multipart/form-data");
+  });
+
+  it("saves a diligenciamiento without integrantes", async () => {
+    let receivedPayload: unknown = null;
+    server.use(
+      mockAuthMe(authUserFixture),
+      mockActividadDiligenciamiento({
+        ...actividadGrupalDiligenciamientoFixture,
+        objectives: "",
+        development: "",
+        conclusion: "",
+        responsibleDepartment: null,
+        integrantes: [],
+        photoFiles: [],
+        pdfFile: null,
+      }),
+      http.put(
+        "http://localhost:3001/api/actividades-grupales/:activityId/diligenciamiento",
+        async ({ request }) => {
+          const formData = await request.formData();
+          const payload = formData.get("payload");
+
+          receivedPayload = typeof payload === "string" ? JSON.parse(payload) : null;
+
+          return HttpResponse.json({
+            ...actividadGrupalDiligenciamientoFixture,
+            objectives: "Objetivos sin asistentes",
+            development: "Desarrollo sin asistentes",
+            conclusion: "Conclusión sin asistentes",
+            responsibleDepartment: "direccion",
+            integrantes: [],
+          });
+        },
+      ),
+    );
+    const user = userEvent.setup();
+    renderAppAtPath(`/creacion-actividades/${actividadGrupalFixture.id}/diligenciamiento`);
+
+    expect(
+      await screen.findByRole("button", { name: "Guardar" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("No hay integrantes seleccionados.")).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("Objetivos"), "Objetivos sin asistentes");
+    await user.type(screen.getByLabelText("Desarrollo"), "Desarrollo sin asistentes");
+    await user.type(screen.getByLabelText("Conclusion"), "Conclusión sin asistentes");
+    await user.selectOptions(screen.getByLabelText("Departamento encargado"), "direccion");
+    await user.click(screen.getByRole("button", { name: "Guardar" }));
+
+    await waitFor(() => {
+      expect(receivedPayload).toMatchObject({ integranteIds: [] });
+    });
   });
 
   it("creates an activity and returns to the list", async () => {

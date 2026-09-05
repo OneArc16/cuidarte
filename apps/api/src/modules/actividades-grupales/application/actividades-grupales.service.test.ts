@@ -354,6 +354,32 @@ describe("ActividadesGrupalesService", () => {
     );
   });
 
+  it("allows saving diligenciamiento without integrantes", async () => {
+    const repository = createRepository();
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+    const targetRecord = records[0]!;
+
+    const result = await service.saveActividadGrupalDiligenciamiento(
+      {
+        activityId: targetRecord.id,
+        payload: {
+          objectives: "Objetivos",
+          development: "Desarrollo",
+          conclusion: "Conclusion",
+          responsibleDepartment: "nutricion",
+          integranteIds: [],
+          removedPhotoFileIds: [],
+          removePdfFile: false,
+        },
+        newPhotos: [],
+        newPdf: null,
+      },
+      medicoUser,
+    );
+
+    assert.deepEqual(result.integrantes, []);
+  });
+
   it("forbids auditor users from create and diligenciamiento actions", async () => {
     const repository = createRepository();
     const service = new ActividadesGrupalesService(repository, createFilesStorage());

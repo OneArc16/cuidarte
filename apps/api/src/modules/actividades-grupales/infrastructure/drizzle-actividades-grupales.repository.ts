@@ -591,12 +591,14 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .delete(actividadGrupalDiligenciamientoIntegrantes)
         .where(eq(actividadGrupalDiligenciamientoIntegrantes.activityId, command.activityId));
 
-      await tx.insert(actividadGrupalDiligenciamientoIntegrantes).values(
-        command.integranteIds.map((integranteId) => ({
-          activityId: command.activityId,
-          adultoMayorId: integranteId,
-        })),
-      );
+      if (command.integranteIds.length > 0) {
+        await tx.insert(actividadGrupalDiligenciamientoIntegrantes).values(
+          command.integranteIds.map((integranteId) => ({
+            activityId: command.activityId,
+            adultoMayorId: integranteId,
+          })),
+        );
+      }
 
       if (removedFileIds.length > 0) {
         await tx

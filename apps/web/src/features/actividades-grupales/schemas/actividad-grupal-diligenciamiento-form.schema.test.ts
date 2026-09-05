@@ -34,6 +34,21 @@ describe("actividadGrupalDiligenciamientoFormSchema", () => {
     );
 
     expect(result.success).toBe(false);
+    expect(result.error?.flatten().fieldErrors).toMatchObject({
+      objectives: ["Ingresa los objetivos de la sesión."],
+      development: ["Ingresa el desarrollo de la sesión."],
+      conclusion: ["Ingresa la conclusión de la sesión."],
+    });
+  });
+
+  it("allows saving without integrantes", () => {
+    const values = createValues({ integranteIds: [] });
+
+    const result = actividadGrupalDiligenciamientoFormSchema.safeParse(values);
+    const payload = toSaveActividadGrupalDiligenciamiento(values);
+
+    expect(result.success).toBe(true);
+    expect(payload.integranteIds).toEqual([]);
   });
 });
 

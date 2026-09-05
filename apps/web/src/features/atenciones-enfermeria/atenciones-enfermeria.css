@@ -435,6 +435,18 @@
   min-width: 220px;
 }
 
+.atenciones-enfermeria-cell-measurements > span,
+.atenciones-enfermeria-cell-measurements > small {
+  display: block;
+}
+
+.atenciones-enfermeria-cell-measurements > small {
+  margin-top: 5px;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
 .atenciones-enfermeria-pill {
   display: inline-flex;
   align-items: center;

@@ -48,7 +48,7 @@ export const actividadGrupalSupportFileKindSchema = z.enum(actividadGrupalSuppor
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const requiredTextSchema = (maxLength: number) => z.string().trim().min(1).max(maxLength);
-const requiredLongTextSchema = z.string().trim().min(1);
+const requiredLongTextSchema = (message: string) => z.string().trim().min(1, message);
 const actaNumberSchema = requiredTextSchema(40);
 
 const nullableSearchSchema = z
@@ -119,7 +119,6 @@ const employeeIdsSchema = z
 
 const integranteIdsSchema = z
   .array(z.uuid())
-  .min(1, "Selecciona minimo un integrante.")
   .refine((values) => new Set(values).size === values.length, {
     message: "No repitas integrantes.",
   });
@@ -209,9 +208,9 @@ export const createActividadGrupalRequestSchema = actividadGrupalCommandSchema.e
 export const updateActividadGrupalRequestSchema = actividadGrupalCommandSchema;
 
 export const saveActividadGrupalDiligenciamientoSchema = z.object({
-  objectives: requiredLongTextSchema,
-  development: requiredLongTextSchema,
-  conclusion: requiredLongTextSchema,
+  objectives: requiredLongTextSchema("Ingresa los objetivos de la sesión."),
+  development: requiredLongTextSchema("Ingresa el desarrollo de la sesión."),
+  conclusion: requiredLongTextSchema("Ingresa la conclusión de la sesión."),
   responsibleDepartment: actividadGrupalResponsibleDepartmentSchema,
   integranteIds: integranteIdsSchema,
   removedPhotoFileIds: removableFileIdsSchema.optional().default([]),

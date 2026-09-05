@@ -1,6 +1,5 @@
 import {
   type ActividadGrupalDiligenciamientoDetail,
-  type ActividadGrupalResponsibleDepartment,
   type ActividadGrupalType,
   type UserRole,
 } from "@cuidarte/contracts";
@@ -34,17 +33,6 @@ const TYPE_LABELS = {
   actividades_manualidad: "Actividades de manualidad",
   actividades_recreacion: "Actividades de recreacion",
 } satisfies Record<ActividadGrupalType, string>;
-
-const RESPONSIBLE_DEPARTMENT_LABELS = {
-  direccion: "Direccion",
-  medicina: "Medicina",
-  enfermeria: "Enfermeria",
-  psicologia: "Psicologia",
-  trabajo_social: "Trabajo Social",
-  nutricion: "Nutricion",
-  fisioterapia: "Fisioterapia",
-  recreacion: "Recreacion",
-} satisfies Record<ActividadGrupalResponsibleDepartment, string>;
 
 const ROLE_LABELS = {
   super_admin: "SuperAdmin",
@@ -165,17 +153,11 @@ export function buildActividadGrupalActaPdfHtml({
   photoAssets,
 }: BuildActividadGrupalActaPdfHtmlOptions): string {
   const actaDate = formatActaDate(detail.activityDate);
-  const responsibleDepartment =
-    detail.responsibleDepartment === null
-      ? ""
-      : RESPONSIBLE_DEPARTMENT_LABELS[detail.responsibleDepartment];
   const professionalRows = detail.assignedProfessionals.map((professional) => ({
     key: professional.id,
     cells: [
       textCell(professional.fullName),
-      textCell(
-        responsibleDepartment === "" ? ROLE_LABELS[professional.role] : responsibleDepartment,
-      ),
+      textCell(ROLE_LABELS[professional.role]),
       htmlCell(
         professional.signatureDataUrl === null
           ? ""
@@ -416,13 +398,17 @@ export function buildActividadGrupalActaPdfHtml({
         "professionals",
       )}
 
-      ${renderPeopleSection(
-        "LISTADO DE ASISTENTES",
-        ["NOMBRE COMPLETO", "CEDULA", "FIRMA"],
-        attendeeRows,
-        EMPTY_ATTENDEES_LABEL,
-        "attendees",
-      )}
+      ${
+        attendeeRows.length === 0
+          ? ""
+          : renderPeopleSection(
+              "LISTADO DE ASISTENTES",
+              ["NOMBRE COMPLETO", "CEDULA", "FIRMA"],
+              attendeeRows,
+              EMPTY_ATTENDEES_LABEL,
+              "attendees",
+            )
+      }
 
       ${renderPhotoEvidenceSection(photoAssets)}
     </article>

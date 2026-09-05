@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
+  Eye,
   FileText,
   ImagePlus,
   Search,
@@ -421,7 +421,7 @@ export function ActividadGrupalDiligenciamientoForm({
       <section className="actividad-form-panel actividad-diligenciamiento-members">
         <div className="actividad-form-panel__header">
           <div>
-            <h2>Agregar integrantes</h2>
+            <h2>Agregar integrantes (opcional)</h2>
             <p className="muted-copy">
               Busca adultos mayores del centro y vincula los que participaron en la sesion.
             </p>
@@ -490,7 +490,7 @@ export function ActividadGrupalDiligenciamientoForm({
           <div className="actividad-diligenciamiento-selected">
             {selectedIntegrantes.length === 0 ? (
               <div className="actividad-empleados-empty">
-                <p>Agrega minimo un adulto mayor para guardar el diligenciamiento.</p>
+                <p>No hay integrantes seleccionados.</p>
               </div>
             ) : (
               <div className="actividad-diligenciamiento-selected-list">
@@ -522,7 +522,7 @@ export function ActividadGrupalDiligenciamientoForm({
           <div>
             <h2>Soportes</h2>
             <p className="muted-copy">
-              Adjunta hasta 5 fotos y un PDF de soporte para completar el registro de la sesion.
+              Adjunta hasta 5 fotos y un PDF de soporte para completar el registro de la sesión.
             </p>
           </div>
           <span>Fotos + PDF</span>
@@ -534,7 +534,7 @@ export function ActividadGrupalDiligenciamientoForm({
               <ImagePlus aria-hidden="true" />
               <div>
                 <strong>Fotos de soporte</strong>
-                <small>Maximo 5 imagenes JPG, PNG o WEBP de hasta 5 MB.</small>
+                <small>Máximo 5 imágenes JPG, PNG o WEBP de hasta 5 MB.</small>
               </div>
             </div>
 
@@ -613,6 +613,8 @@ export function ActividadGrupalDiligenciamientoForm({
               </p>
             ) : null}
 
+            {visiblePdfFile === null && newPdfFile === null ? <EmptySupportSlot /> : null}
+
             {visiblePdfFile !== null ? (
               <FileCard
                 actionLabel="Retirar PDF actual"
@@ -652,13 +654,13 @@ export function ActividadGrupalDiligenciamientoForm({
         </p>
       ) : null}
 
-      <div className="actividad-form-actions">
+      <div className="actividad-form-actions actividad-diligenciamiento-actions">
         <button className="outline-action" type="button" onClick={onCancel}>
           Cancelar
         </button>
         {isReadOnly ? null : (
           <button className="primary-action" type="submit" disabled={isPending}>
-            {isPending ? "Guardando..." : "Guardar diligenciamiento"}
+            {isPending ? "Guardando..." : "Guardar"}
           </button>
         )}
       </div>
@@ -702,9 +704,12 @@ function FileCard({
 }) {
   return (
     <article className="actividad-diligenciamiento-file-card">
-      <div className="actividad-diligenciamiento-file-card__content">
-        <strong>{title}</strong>
-        <small>{description}</small>
+      <div className="actividad-diligenciamiento-file-card__details">
+        <FileText aria-hidden="true" />
+        <div className="actividad-diligenciamiento-file-card__content">
+          <strong>{title}</strong>
+          <small>{description}</small>
+        </div>
       </div>
       <div className="actividad-diligenciamiento-file-card__actions">
         {href !== undefined ? (
@@ -714,14 +719,14 @@ function FileCard({
             target="_blank"
             rel="noreferrer"
             aria-label={`Abrir ${title}`}
-            title="Abrir soporte"
+            title="Ver PDF"
           >
-            <ExternalLink aria-hidden="true" />
+            <Eye aria-hidden="true" />
           </a>
         ) : null}
         {onAction !== undefined ? (
           <button
-            className="actividades-row-action"
+            className="actividades-row-action actividad-diligenciamiento-file-card__remove"
             type="button"
             aria-label={actionLabel}
             title={actionLabel}
@@ -747,11 +752,7 @@ function PhotoCarousel({
   onRemoveSlide?: (slide: PhotoSlide) => void;
 }) {
   if (slides.length === 0) {
-    return (
-      <div className="actividad-diligenciamiento-photo-carousel actividad-empleados-empty">
-        <p>Agrega fotos para verlas en carrusel y revisar cada soporte con mas claridad.</p>
-      </div>
-    );
+    return <EmptySupportSlot />;
   }
 
   const safeIndex = activeIndex >= slides.length ? slides.length - 1 : activeIndex;
@@ -839,5 +840,14 @@ function PhotoCarousel({
         ))}
       </div>
     </div>
+  );
+}
+
+function EmptySupportSlot() {
+  return (
+    <div
+      className="actividad-diligenciamiento-support-empty actividad-empleados-empty"
+      aria-hidden="true"
+    />
   );
 }
