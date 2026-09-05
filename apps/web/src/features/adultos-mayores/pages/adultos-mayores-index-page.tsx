@@ -18,8 +18,14 @@ import { AdultosMayoresToolbar } from "../components/adultos-mayores-toolbar";
 import { exportAdultosMayoresExcel, exportAdultosMayoresPdf } from "../api/adultos-mayores-api";
 import { downloadBlob } from "../lib/download-file";
 import { resolveAdultosMayoresApiError } from "../lib/adultos-mayores-formatters";
-import { ADULTOS_MAYORES_NEW_PATH, buildAdultoMayorEditPath } from "../lib/adultos-mayores-paths";
+import {
+  ADULTOS_MAYORES_IMPORT_PATH,
+  ADULTOS_MAYORES_NEW_PATH,
+  buildAdultoMayorEditPath,
+} from "../lib/adultos-mayores-paths";
 import { useAdultosMayoresQuery } from "../model/adultos-mayores-queries";
+import { openBlobInNewTab } from "@/shared/lib/open-blob-in-new-tab";
+import { canImportAdultosMayores } from "../lib/adultos-mayores-permissions";
 
 type AdultosMayoresIndexPageProps = {
   navigate: Navigate;
@@ -37,8 +43,10 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
   const showTenantColumn = user.role === "super_admin";
   const canManageRecords = canManageAdultosMayores(user);
   const canCreateClinicalAttention = canCreateAtencionIndividual(user);
+  const hideAtencionIndividualAction = user.role === "enfermeria";
   const canOpenClinicalHistory = canOpenHistoriaClinica(user);
   const canCreateFeedingRecord = canManageAlimentacion(user);
+  const canImportRecords = canImportAdultosMayores(user);
 
   async function handleExportExcel() {
     await exportFile("excel");
@@ -58,7 +66,11 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
           ? await exportAdultosMayoresExcel(search)
           : await exportAdultosMayoresPdf(search);
 
-      downloadBlob(blob, target === "excel" ? "adultos-mayores.xlsx" : "adultos-mayores.pdf");
+      if (target === "excel") {
+        downloadBlob(blob, "adultos-mayores.xlsx");
+      } else {
+        openBlobInNewTab(blob);
+      }
     } catch (error: unknown) {
       setExportError(resolveAdultosMayoresApiError(error));
     } finally {
@@ -73,9 +85,11 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
       </h1>
 
       <AdultosMayoresToolbar
+        canImportAdultosMayores={canImportRecords}
         search={search}
         isExporting={exportTarget !== null}
         onSearchChange={setSearch}
+        onImportAdultosMayores={() => navigate(ADULTOS_MAYORES_IMPORT_PATH)}
         onExportExcel={handleExportExcel}
         onExportPdf={handleExportPdf}
         onPrint={() => window.print()}
@@ -101,6 +115,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
         canCreateAtencionIndividual={canCreateClinicalAttention}
         canManageAdultosMayores={canManageRecords}
         canOpenHistoriaClinica={canOpenClinicalHistory}
+        hideAtencionIndividualAction={hideAtencionIndividualAction}
         onOpenAlimentacion={(adultoMayorId) =>
           navigate(buildAlimentacionCreateFromAdultoPath(adultoMayorId))
         }

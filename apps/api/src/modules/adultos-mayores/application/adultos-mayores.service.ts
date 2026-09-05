@@ -30,12 +30,16 @@ import {
   type AdultosMayoresRepository,
 } from "../domain/adultos-mayores.repository";
 import { type AdultoMayorRecord } from "../domain/adulto-mayor.types";
+import { UbicacionesService } from "../../ubicaciones/application/ubicaciones.service";
+import { EpsService } from "../../eps/application/eps.service";
 
 @Injectable()
 export class AdultosMayoresService {
   constructor(
     @Inject(ADULTOS_MAYORES_REPOSITORY)
     private readonly adultosMayoresRepository: AdultosMayoresRepository,
+    private readonly ubicacionesService: UbicacionesService,
+    private readonly epsService: EpsService,
   ) {}
 
   async listAdultosMayores(
@@ -99,6 +103,14 @@ export class AdultosMayoresService {
       throw new ForbiddenException("No puedes crear adultos mayores en otro centro.");
     }
 
+    const [location, selectedEps] = await Promise.all([
+      this.ubicacionesService.resolveDepartmentMunicipalityPair(
+        command.departmentId,
+        command.municipalityId,
+      ),
+      this.epsService.resolveForWrite(command.epsId),
+    ]);
+
     await this.ensureDocumentIsUnique({
       tenantId,
       documentType: command.documentType,
@@ -109,6 +121,11 @@ export class AdultosMayoresService {
       const record = await this.adultosMayoresRepository.create(
         {
           ...command,
+          departmentId: location.department.id,
+          municipalityId: location.municipality.id,
+          department: location.department.name,
+          municipality: location.municipality.name,
+          epsId: selectedEps?.id ?? null,
           tenantId,
         },
         {
@@ -146,6 +163,14 @@ export class AdultosMayoresService {
       throw new NotFoundException("Adulto mayor no encontrado.");
     }
 
+    const [location, selectedEps] = await Promise.all([
+      this.ubicacionesService.resolveDepartmentMunicipalityPair(
+        command.departmentId,
+        command.municipalityId,
+      ),
+      this.epsService.resolveForWrite(command.epsId, currentRecord.epsId),
+    ]);
+
     await this.ensureDocumentIsUnique({
       tenantId: currentRecord.tenantId,
       documentType: command.documentType,
@@ -163,6 +188,11 @@ export class AdultosMayoresService {
       const record = await this.adultosMayoresRepository.update(
         {
           ...safeCommand,
+          departmentId: location.department.id,
+          municipalityId: location.municipality.id,
+          department: location.department.name,
+          municipality: location.municipality.name,
+          epsId: selectedEps?.id ?? null,
           id: adultoMayorId,
         },
         {
@@ -236,6 +266,7 @@ export class AdultosMayoresService {
       birthDate: record.birthDate,
       age: calculateAgeFromBirthDate(record.birthDate),
       sex: record.sex,
+      status: record.status,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
     });
@@ -253,7 +284,9 @@ export class AdultosMayoresService {
       populationGroup: record.populationGroup,
       address: record.address,
       department: record.department,
+      departmentId: record.departmentId,
       municipality: record.municipality,
+      municipalityId: record.municipalityId,
       zone: record.zone,
       country: record.country,
       phoneSecondary: record.phoneSecondary,
@@ -265,6 +298,8 @@ export class AdultosMayoresService {
       bloodType: record.bloodType,
       sisben: record.sisben,
       healthRegime: record.healthRegime,
+      epsId: record.epsId,
+      epsName: record.epsName,
       eps: record.eps,
       livesWithSomeone: record.livesWithSomeone,
       companion: record.companion,

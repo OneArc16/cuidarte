@@ -8,6 +8,7 @@ import ExcelJS from "exceljs";
 import { chromium } from "playwright";
 
 import { AdultosMayoresService } from "./adultos-mayores.service";
+import playwrightEnv from "../../../common/playwright-env";
 
 export type ExportedAdultosMayoresFile = {
   buffer: Buffer;
@@ -81,7 +82,7 @@ export class AdultosMayoresExportService {
     adultosMayores: AdultoMayorListItem[],
     includeTenant: boolean,
   ): Promise<Buffer> {
-    const browser = await chromium.launch({ headless: true });
+    const browser = await chromium.launch({ headless: true, env: playwrightEnv.createPlaywrightLaunchEnv() });
 
     try {
       const page = await browser.newPage();
@@ -113,6 +114,7 @@ export class AdultosMayoresExportService {
       { header: "Telefono", key: "telefono", width: 18 },
       { header: "Edad", key: "edad", width: 10 },
       { header: "Sexo", key: "sexo", width: 14 },
+      { header: "Estado", key: "estado", width: 14 },
     ];
 
     if (includeTenant) {
@@ -133,6 +135,7 @@ export class AdultosMayoresExportService {
       telefono: adultoMayor.phone ?? "Sin telefono",
       edad: adultoMayor.age,
       sexo: formatSex(adultoMayor.sex),
+      estado: formatStatus(adultoMayor.status),
     };
 
     if (!includeTenant) {
@@ -159,6 +162,7 @@ export class AdultosMayoresExportService {
           <td>${escapeHtml(adultoMayor.phone ?? "Sin telefono")}</td>
           <td>${adultoMayor.age}</td>
           <td>${escapeHtml(formatSex(adultoMayor.sex))}</td>
+          <td>${escapeHtml(formatStatus(adultoMayor.status))}</td>
         </tr>`;
       })
       .join("");
@@ -233,6 +237,7 @@ export class AdultosMayoresExportService {
                 <th>Telefono</th>
                 <th>Edad</th>
                 <th>Sexo</th>
+                <th>Estado</th>
               </tr>
             </thead>
             <tbody>
@@ -268,6 +273,10 @@ function formatSex(sex: AdultoMayorListItem["sex"]): string {
   return sexLabels[sex];
 }
 
+function formatStatus(status: AdultoMayorListItem["status"]): string {
+  return status === "alive" ? "Vivo" : "Fallecido";
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => {
     const entities: Record<string, string> = {
@@ -289,9 +298,11 @@ function buildBasicPdf(adultosMayores: AdultoMayorListItem[], includeTenant: boo
   const rowHeight = 22;
   const rows = adultosMayores.map((adultoMayor) => toPdfRow(adultoMayor, includeTenant));
   const headers = includeTenant
-    ? ["Centro", "Documento", "Nombres", "Apellidos", "Telefono", "Edad", "Sexo"]
-    : ["Documento", "Nombres", "Apellidos", "Telefono", "Edad", "Sexo"];
-  const columns = includeTenant ? [135, 104, 122, 122, 96, 46, 76] : [125, 150, 150, 122, 52, 86];
+    ? ["Centro", "Documento", "Nombres", "Apellidos", "Telefono", "Edad", "Sexo", "Estado"]
+    : ["Documento", "Nombres", "Apellidos", "Telefono", "Edad", "Sexo", "Estado"];
+  const columns = includeTenant
+    ? [135, 104, 122, 122, 96, 46, 76, 62]
+    : [125, 150, 150, 122, 52, 86, 70];
   const pages: string[] = [];
   let cursor = 0;
 
@@ -332,6 +343,7 @@ function toPdfRow(adultoMayor: AdultoMayorListItem, includeTenant: boolean): str
     adultoMayor.phone ?? "Sin telefono",
     String(adultoMayor.age),
     formatSex(adultoMayor.sex),
+    formatStatus(adultoMayor.status),
   ];
 
   return includeTenant ? [adultoMayor.tenantName, ...row] : row;

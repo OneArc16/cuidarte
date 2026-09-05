@@ -10,6 +10,7 @@ import {
   pgEnum,
   pgTable,
   text,
+  time,
   timestamp,
   uniqueIndex,
   uuid,
@@ -38,6 +39,26 @@ export const adultoMayorDocumentType = pgEnum("adulto_mayor_document_type", [
   "other",
 ]);
 export const adultoMayorSex = pgEnum("adulto_mayor_sex", ["female", "male", "other"]);
+export const adultoMayorStatus = pgEnum("adulto_mayor_status", ["alive", "deceased"]);
+export const adultoMayorImportStatus = pgEnum("adulto_mayor_import_status", [
+  "ready",
+  "validated_with_errors",
+  "committing",
+  "completed",
+  "failed",
+  "expired",
+]);
+export const adultoMayorImportRowStatus = pgEnum("adulto_mayor_import_row_status", [
+  "ready",
+  "update_ready",
+  "unchanged",
+  "invalid",
+  "existing",
+]);
+export const adultoMayorImportIssueSeverity = pgEnum("adulto_mayor_import_issue_severity", [
+  "error",
+  "warning",
+]);
 export const actividadGrupalType = pgEnum("actividad_grupal_type", [
   "centro_vida",
   "actividad_campo",
@@ -91,6 +112,16 @@ export const alimentacionOrganizer = pgEnum("alimentacion_organizer", [
   "fisioterapeuta",
   "recreacionista",
 ]);
+export const atencionEnfermeriaCareType = pgEnum("atencion_enfermeria_care_type", [
+  "control_signos_vitales",
+  "seguimiento",
+  "procedimiento",
+  "otro",
+]);
+export const atencionEnfermeriaGlucometriaContext = pgEnum(
+  "atencion_enfermeria_glucometria_context",
+  ["ayunas", "antes_de_comida", "despues_de_comida", "aleatoria"],
+);
 
 export const cie10Catalog = pgTable(
   "cie10_catalog",
@@ -122,6 +153,64 @@ export const referenceDataVersions = pgTable(
   (table) => [check("reference_data_versions_row_count_positive", sql`${table.rowCount} > 0`)],
 );
 
+export const departments = pgTable(
+  "departments",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    code: varchar("code", { length: 10 }).notNull(),
+    name: varchar("name", { length: 120 }).notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("departments_code_unique").on(table.code),
+    uniqueIndex("departments_name_unique").on(table.name),
+    index("departments_is_active_idx").on(table.isActive),
+  ],
+);
+
+export const municipalities = pgTable(
+  "municipalities",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    code: varchar("code", { length: 10 }).notNull(),
+    departmentId: uuid("department_id")
+      .notNull()
+      .references(() => departments.id, { onDelete: "restrict" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("municipalities_code_unique").on(table.code),
+    uniqueIndex("municipalities_department_name_unique").on(table.departmentId, table.name),
+    index("municipalities_department_id_idx").on(table.departmentId),
+    index("municipalities_is_active_idx").on(table.isActive),
+  ],
+);
+
+export const epsCatalog = pgTable(
+  "eps",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    code: varchar("code", { length: 40 }).notNull(),
+    nit: varchar("nit", { length: 20 }).notNull(),
+    name: varchar("name", { length: 160 }).notNull(),
+    nameNormalized: varchar("name_normalized", { length: 160 }).notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("eps_code_unique").on(table.code),
+    index("eps_nit_idx").on(table.nit),
+    uniqueIndex("eps_name_normalized_unique").on(table.nameNormalized),
+    index("eps_is_active_idx").on(table.isActive),
+  ],
+);
+
 export const tenants = pgTable(
   "tenants",
   {
@@ -132,6 +221,12 @@ export const tenants = pgTable(
     email: varchar("email", { length: 320 }),
     phone: varchar("phone", { length: 40 }),
     address: varchar("address", { length: 220 }),
+    departmentId: uuid("department_id").references(() => departments.id, {
+      onDelete: "restrict",
+    }),
+    municipalityId: uuid("municipality_id").references(() => municipalities.id, {
+      onDelete: "restrict",
+    }),
     city: varchar("city", { length: 100 }),
     department: varchar("department", { length: 100 }),
     isActive: boolean("is_active").notNull().default(true),
@@ -145,6 +240,8 @@ export const tenants = pgTable(
     uniqueIndex("tenants_email_unique")
       .on(table.email)
       .where(sql`${table.email} is not null`),
+    index("tenants_department_id_idx").on(table.departmentId),
+    index("tenants_municipality_id_idx").on(table.municipalityId),
   ],
 );
 
@@ -295,6 +392,32 @@ export const tenantDirectorSignatureAssignments = pgTable(
   ],
 );
 
+export const tenantActiveSigners = pgTable(
+  "tenant_active_signers",
+  {
+    tenantId: uuid("tenant_id")
+      .primaryKey()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    employeeId: uuid("employee_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    signatureVersionId: uuid("signature_version_id")
+      .notNull()
+      .references(() => employeeSignatureVersions.id, { onDelete: "restrict" }),
+    activatedByUserId: uuid("activated_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    activatedAt: timestamp("activated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("tenant_active_signers_employee_idx").on(table.employeeId),
+    index("tenant_active_signers_signature_version_idx").on(table.signatureVersionId),
+    index("tenant_active_signers_activated_by_user_idx").on(table.activatedByUserId),
+    index("tenant_active_signers_activated_at_idx").on(table.activatedAt),
+  ],
+);
+
 export const adultosMayores = pgTable(
   "adultos_mayores",
   {
@@ -314,6 +437,10 @@ export const adultosMayores = pgTable(
     disability: varchar("disability", { length: 120 }),
     populationGroup: varchar("population_group", { length: 120 }),
     address: varchar("address", { length: 220 }).notNull(),
+    departmentId: uuid("department_id").references(() => departments.id, { onDelete: "restrict" }),
+    municipalityId: uuid("municipality_id").references(() => municipalities.id, {
+      onDelete: "restrict",
+    }),
     department: varchar("department", { length: 100 }).notNull(),
     municipality: varchar("municipality", { length: 100 }).notNull(),
     zone: varchar("zone", { length: 20 }).notNull(),
@@ -327,7 +454,8 @@ export const adultosMayores = pgTable(
     emergencyContactAddress: varchar("emergency_contact_address", { length: 220 }),
     bloodType: varchar("blood_type", { length: 20 }),
     sisben: varchar("sisben", { length: 40 }),
-    healthRegime: varchar("health_regime", { length: 40 }),
+    healthRegime: varchar("health_regime", { length: 120 }),
+    epsId: uuid("eps_id").references(() => epsCatalog.id, { onDelete: "restrict" }),
     eps: varchar("eps", { length: 160 }),
     livesWithSomeone: boolean("lives_with_someone").notNull().default(false),
     companion: varchar("companion", { length: 160 }),
@@ -335,6 +463,7 @@ export const adultosMayores = pgTable(
     socialProgramBeneficiary: boolean("social_program_beneficiary").notNull().default(false),
     birthDate: date("birth_date", { mode: "string" }).notNull(),
     sex: adultoMayorSex("sex").notNull(),
+    status: adultoMayorStatus("status").notNull().default("alive"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -344,9 +473,106 @@ export const adultosMayores = pgTable(
       table.documentType,
       table.documentNumber,
     ),
+    index("adultos_mayores_eps_id_idx").on(table.epsId),
     index("adultos_mayores_tenant_id_idx").on(table.tenantId),
+    index("adultos_mayores_department_id_idx").on(table.departmentId),
+    index("adultos_mayores_municipality_id_idx").on(table.municipalityId),
     index("adultos_mayores_names_idx").on(table.names),
     index("adultos_mayores_surnames_idx").on(table.surnames),
+  ],
+);
+
+export const adultoMayorImportBatches = pgTable(
+  "adulto_mayor_import_batches",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    requestedByUserId: uuid("requested_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    originalFilename: varchar("original_filename", { length: 260 }).notNull(),
+    fileChecksumSha256: varchar("file_checksum_sha256", { length: 64 }).notNull(),
+    templateVersion: integer("template_version").notNull(),
+    status: adultoMayorImportStatus("status").notNull(),
+    totalRows: integer("total_rows").notNull().default(0),
+    readyRows: integer("ready_rows").notNull().default(0),
+    updateRows: integer("update_rows").notNull().default(0),
+    invalidRows: integer("invalid_rows").notNull().default(0),
+    warningRows: integer("warning_rows").notNull().default(0),
+    unchangedRows: integer("unchanged_rows").notNull().default(0),
+    existingRows: integer("existing_rows").notNull().default(0),
+    createdRows: integer("created_rows").notNull().default(0),
+    updatedRows: integer("updated_rows").notNull().default(0),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+    failureCode: varchar("failure_code", { length: 80 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("adulto_mayor_import_batches_tenant_created_at_idx").on(table.tenantId, table.createdAt),
+    index("adulto_mayor_import_batches_requested_by_user_idx").on(
+      table.requestedByUserId,
+      table.createdAt,
+    ),
+    index("adulto_mayor_import_batches_status_expires_at_idx").on(table.status, table.expiresAt),
+    index("adulto_mayor_import_batches_checksum_idx").on(table.fileChecksumSha256),
+    check("adulto_mayor_import_batches_total_rows_non_negative", sql`${table.totalRows} >= 0`),
+    check("adulto_mayor_import_batches_ready_rows_non_negative", sql`${table.readyRows} >= 0`),
+    check("adulto_mayor_import_batches_update_rows_non_negative", sql`${table.updateRows} >= 0`),
+    check("adulto_mayor_import_batches_invalid_rows_non_negative", sql`${table.invalidRows} >= 0`),
+    check("adulto_mayor_import_batches_warning_rows_non_negative", sql`${table.warningRows} >= 0`),
+    check("adulto_mayor_import_batches_unchanged_rows_non_negative", sql`${table.unchangedRows} >= 0`),
+    check("adulto_mayor_import_batches_existing_rows_non_negative", sql`${table.existingRows} >= 0`),
+    check("adulto_mayor_import_batches_created_rows_non_negative", sql`${table.createdRows} >= 0`),
+    check("adulto_mayor_import_batches_updated_rows_non_negative", sql`${table.updatedRows} >= 0`),
+    check("adulto_mayor_import_batches_template_version_positive", sql`${table.templateVersion} > 0`),
+  ],
+);
+
+export const adultoMayorImportRows = pgTable(
+  "adulto_mayor_import_rows",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    importBatchId: uuid("import_batch_id")
+      .notNull()
+      .references(() => adultoMayorImportBatches.id, { onDelete: "cascade" }),
+    rowNumber: integer("row_number").notNull(),
+    status: adultoMayorImportRowStatus("status").notNull(),
+    normalizedPayload: jsonb("normalized_payload").$type<Record<string, unknown>>(),
+    issues: jsonb("issues")
+      .$type<
+        Array<{
+          rowNumber: number;
+          column: string;
+          code: string;
+          severity: "error" | "warning";
+          message: string;
+          receivedValue: string | null;
+        }>
+      >()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    existingAdultoId: uuid("existing_adulto_id").references(() => adultosMayores.id, {
+      onDelete: "restrict",
+    }),
+    existingAdultoUpdatedAt: timestamp("existing_adulto_updated_at", { withTimezone: true }),
+    createdAdultoId: uuid("created_adulto_id").references(() => adultosMayores.id, {
+      onDelete: "restrict",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("adulto_mayor_import_rows_batch_row_unique").on(
+      table.importBatchId,
+      table.rowNumber,
+    ),
+    index("adulto_mayor_import_rows_batch_status_idx").on(table.importBatchId, table.status),
+    index("adulto_mayor_import_rows_existing_adulto_idx").on(table.existingAdultoId),
+    index("adulto_mayor_import_rows_created_adulto_idx").on(table.createdAdultoId),
+    check("adulto_mayor_import_rows_row_number_positive", sql`${table.rowNumber} > 0`),
   ],
 );
 
@@ -369,7 +595,7 @@ export const actividadesGrupales = pgTable(
     tenantId: uuid("tenant_id")
       .notNull()
       .references(() => tenants.id, { onDelete: "restrict" }),
-    actaNumber: integer("acta_number").notNull(),
+    actaNumber: varchar("acta_number", { length: 40 }).notNull(),
     activityName: varchar("activity_name", { length: 160 }).notNull(),
     activityType: actividadGrupalType("activity_type").notNull(),
     activityDate: date("activity_date", { mode: "string" }).notNull(),
@@ -379,12 +605,17 @@ export const actividadesGrupales = pgTable(
     createdByUserId: uuid("created_by_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedByUserId: uuid("deleted_by_user_id").references(() => users.id, {
+      onDelete: "restrict",
+    }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("actividades_grupales_tenant_acta_unique").on(table.tenantId, table.actaNumber),
     index("actividades_grupales_tenant_date_idx").on(table.tenantId, table.activityDate),
+    index("actividades_grupales_tenant_deleted_at_idx").on(table.tenantId, table.deletedAt),
     index("actividades_grupales_created_by_user_idx").on(table.createdByUserId),
   ],
 );
@@ -564,6 +795,45 @@ export const alimentacionFormatoEmissions = pgTable(
   ],
 );
 
+export const alimentacionFormatoImportedVersions = pgTable(
+  "alimentacion_formato_imported_versions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    adultoMayorId: uuid("adulto_mayor_id")
+      .notNull()
+      .references(() => adultosMayores.id, { onDelete: "restrict" }),
+    deliveryMonth: varchar("delivery_month", { length: 7 }).notNull(),
+    version: integer("version").notNull(),
+    source: varchar("source", { length: 20 }).notNull().default("importado"),
+    originalName: varchar("original_name", { length: 260 }).notNull(),
+    storedName: varchar("stored_name", { length: 260 }).notNull(),
+    pdfRelativePath: varchar("pdf_relative_path", { length: 500 }).notNull(),
+    mimeType: varchar("mime_type", { length: 100 }).notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    importedByUserId: uuid("imported_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    importedAt: timestamp("imported_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("alimentacion_formato_imported_versions_unique_version").on(
+      table.adultoMayorId,
+      table.deliveryMonth,
+      table.version,
+    ),
+    index("alimentacion_formato_imported_versions_tenant_month_idx").on(
+      table.tenantId,
+      table.deliveryMonth,
+    ),
+    index("alimentacion_formato_imported_versions_adulto_mayor_idx").on(table.adultoMayorId),
+    index("alimentacion_formato_imported_versions_imported_by_user_idx").on(table.importedByUserId),
+    check("alimentacion_formato_imported_versions_size_positive", sql`${table.sizeBytes} > 0`),
+  ],
+);
+
 export const atencionIndividualCounters = pgTable(
   "atencion_individual_counters",
   {
@@ -636,6 +906,98 @@ export const atencionesIndividuales = pgTable(
     index("atenciones_individuales_adulto_mayor_idx").on(table.adultoMayorId),
     index("atenciones_individuales_created_by_user_idx").on(table.createdByUserId),
     index("atenciones_individuales_updated_by_user_idx").on(table.updatedByUserId),
+  ],
+);
+
+export const atencionesEnfermeria = pgTable(
+  "atenciones_enfermeria",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    adultoMayorId: uuid("adulto_mayor_id")
+      .notNull()
+      .references(() => adultosMayores.id, { onDelete: "restrict" }),
+    attentionDate: date("attention_date", { mode: "string" }).notNull(),
+    attentionTime: time("attention_time", { precision: 0 }).notNull(),
+    careType: atencionEnfermeriaCareType("care_type").notNull(),
+    reason: text("reason"),
+    tensionSistolica: integer("tension_sistolica"),
+    tensionDiastolica: integer("tension_diastolica"),
+    frecuenciaCardiaca: integer("frecuencia_cardiaca"),
+    frecuenciaRespiratoria: integer("frecuencia_respiratoria"),
+    temperatura: doublePrecision("temperatura"),
+    saturacionOxigeno: integer("saturacion_oxigeno"),
+    pesoKg: doublePrecision("peso_kg"),
+    tallaCm: doublePrecision("talla_cm"),
+    imc: doublePrecision("imc"),
+    perimetroAbdominalCm: doublePrecision("perimetro_abdominal_cm"),
+    glucometriaMgDl: integer("glucometria_mg_dl"),
+    glucometriaContext: atencionEnfermeriaGlucometriaContext("glucometria_context"),
+    nursingNote: text("nursing_note").notNull(),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    updatedByUserId: uuid("updated_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    version: integer("version").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("atenciones_enfermeria_tenant_date_idx").on(table.tenantId, table.attentionDate),
+    index("atenciones_enfermeria_adulto_date_idx").on(table.adultoMayorId, table.attentionDate),
+    index("atenciones_enfermeria_created_by_date_idx").on(
+      table.createdByUserId,
+      table.attentionDate,
+    ),
+    index("atenciones_enfermeria_tenant_updated_at_idx").on(table.tenantId, table.updatedAt),
+    check(
+      "atenciones_enfermeria_has_measurement",
+      sql`${table.tensionSistolica} is not null
+        or ${table.tensionDiastolica} is not null
+        or ${table.frecuenciaCardiaca} is not null
+        or ${table.frecuenciaRespiratoria} is not null
+        or ${table.temperatura} is not null
+        or ${table.saturacionOxigeno} is not null
+        or ${table.pesoKg} is not null
+        or ${table.tallaCm} is not null
+        or ${table.perimetroAbdominalCm} is not null
+        or ${table.glucometriaMgDl} is not null`,
+    ),
+    check(
+      "atenciones_enfermeria_glucometria_pair",
+      sql`(${table.glucometriaMgDl} is null and ${table.glucometriaContext} is null)
+        or (${table.glucometriaMgDl} is not null and ${table.glucometriaContext} is not null)`,
+    ),
+    check(
+      "atenciones_enfermeria_measurements_range",
+      sql`(${table.tensionSistolica} is null or ${table.tensionSistolica} between 0 and 999999)
+        and (${table.tensionDiastolica} is null or ${table.tensionDiastolica} between 0 and 999999)
+        and (${table.frecuenciaCardiaca} is null or ${table.frecuenciaCardiaca} between 0 and 999999)
+        and (${table.frecuenciaRespiratoria} is null or ${table.frecuenciaRespiratoria} between 0 and 999999)
+        and (${table.temperatura} is null or ${table.temperatura} between 0 and 999999)
+        and (${table.saturacionOxigeno} is null or ${table.saturacionOxigeno} between 0 and 999999)
+        and (${table.pesoKg} is null or ${table.pesoKg} between 0 and 999999)
+        and (${table.tallaCm} is null or ${table.tallaCm} between 0 and 999999)
+        and (${table.imc} is null or ${table.imc} between 0 and 999999)
+        and (${table.perimetroAbdominalCm} is null or ${table.perimetroAbdominalCm} between 0 and 999999)`,
+    ),
+    check(
+      "atenciones_enfermeria_glucometria_range",
+      sql`${table.glucometriaMgDl} is null or ${table.glucometriaMgDl} between 20 and 600`,
+    ),
+    check(
+      "atenciones_enfermeria_reason_length",
+      sql`${table.reason} is null or char_length(${table.reason}) <= 1000`,
+    ),
+    check(
+      "atenciones_enfermeria_nursing_note_length",
+      sql`char_length(btrim(${table.nursingNote})) between 1 and 4000`,
+    ),
+    check("atenciones_enfermeria_version_positive", sql`${table.version} > 0`),
   ],
 );
 

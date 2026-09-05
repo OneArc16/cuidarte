@@ -6,6 +6,7 @@ import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { EmpleadoForm } from "../components/empleado-form";
 import { buildEmpleadoEditPath, EMPLEADOS_PATH } from "../lib/empleados-paths";
 import { resolveEmpleadosApiError } from "../lib/empleados-formatters";
+import { canEditEmpleados } from "../lib/empleados-permissions";
 import {
   useCreateEmpleadoMutation,
   useEmpleadoTenantOptionsQuery,
@@ -56,7 +57,9 @@ export function EmpleadoCreatePage({ navigate, user }: EmpleadoCreatePageProps) 
         onSubmit={(values) => {
           createMutation.mutate(values, {
             onSuccess: (detail) => {
-              navigate(buildEmpleadoEditPath(detail.id));
+              navigate(
+                canEditEmpleados(user) ? buildEmpleadoEditPath(detail.id) : EMPLEADOS_PATH,
+              );
             },
           });
         }}

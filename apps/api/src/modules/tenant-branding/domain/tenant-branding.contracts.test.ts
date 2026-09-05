@@ -38,6 +38,8 @@ describe("tenant branding contracts", () => {
         email: null,
         phone: null,
         address: null,
+        departmentId: null,
+        municipalityId: null,
         city: null,
         department: null,
         isActive: true,

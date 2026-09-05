@@ -1,19 +1,32 @@
-import { type ActividadGrupalType, type AuthUser } from "@cuidarte/contracts";
+import {
+  type ActividadGrupalListItem,
+  type ActividadGrupalOrganizer,
+  type ActividadGrupalType,
+  type AuthUser,
+} from "@cuidarte/contracts";
 import { CalendarPlus } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
+import { ActividadGrupalDeleteDialog } from "../components/actividad-grupal-delete-dialog";
 import { ActividadesGrupalesTable } from "../components/actividades-grupales-table";
 import { ActividadesGrupalesToolbar } from "../components/actividades-grupales-toolbar";
 import {
+  buildActividadGrupalEditPath,
   buildActividadGrupalDiligenciamientoPath,
+  CREACION_ACTIVIDADES_TRASH_PATH,
   CREACION_ACTIVIDADES_NEW_PATH,
 } from "../lib/actividades-grupales-paths";
-import { canManageActividadesGrupales } from "../lib/actividades-grupales-permissions";
+import {
+  canManageActividadesGrupales,
+  canViewActividadesGrupalesTrash,
+} from "../lib/actividades-grupales-permissions";
 import { resolveActividadesGrupalesApiError } from "../lib/actividades-grupales-formatters";
 import { openActividadGrupalActaPdf } from "../lib/open-actividad-grupal-acta-pdf";
 import {
+  useDeleteActividadGrupalMutation,
   useActividadGrupalTenantOptionsQuery,
   useActividadesGrupalesQuery,
 } from "../model/actividades-grupales-queries";
@@ -28,14 +41,19 @@ export function ActividadesGrupalesIndexPage({
   user,
 }: ActividadesGrupalesIndexPageProps) {
   const [search, setSearch] = useState("");
+  const [activityPendingDelete, setActivityPendingDelete] =
+    useState<ActividadGrupalListItem | null>(null);
   const [selectedActivityType, setSelectedActivityType] = useState<ActividadGrupalType | "">("");
+  const [selectedOrganizer, setSelectedOrganizer] = useState<ActividadGrupalOrganizer | "">("");
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const showTenantFilter = user.role === "super_admin";
-  const canManageActivities = canManageActividadesGrupales(user);
+  const canViewTrash = canViewActividadesGrupalesTrash(user);
   const tenantOptionsQuery = useActividadGrupalTenantOptionsQuery(showTenantFilter);
+  const deleteMutation = useDeleteActividadGrupalMutation();
   const actividadesQuery = useActividadesGrupalesQuery({
     search,
     activityType: selectedActivityType === "" ? null : selectedActivityType,
+    organizer: selectedOrganizer === "" ? null : selectedOrganizer,
     tenantId: showTenantFilter
       ? selectedTenantId === ""
         ? null
@@ -49,14 +67,29 @@ export function ActividadesGrupalesIndexPage({
         Sesiones grupales
       </h1>
 
+      <div className="actividades-form-nav">
+        {canViewTrash ? (
+          <button
+            className="outline-action actividades-back-action"
+            type="button"
+            onClick={() => navigate(CREACION_ACTIVIDADES_TRASH_PATH)}
+          >
+            <span>Ver papelera</span>
+          </button>
+        ) : null}
+        <span className="actividades-form-nav__context">Listado activo</span>
+      </div>
+
       <ActividadesGrupalesToolbar
         search={search}
         selectedActivityType={selectedActivityType}
+        selectedOrganizer={selectedOrganizer}
         selectedTenantId={selectedTenantId}
         showTenantFilter={showTenantFilter}
         tenantOptions={tenantOptionsQuery.data?.tenants ?? []}
         isTenantOptionsLoading={tenantOptionsQuery.isLoading}
         onActivityTypeChange={setSelectedActivityType}
+        onOrganizerChange={setSelectedOrganizer}
         onSearchChange={setSearch}
         onTenantChange={setSelectedTenantId}
       />
@@ -69,8 +102,12 @@ export function ActividadesGrupalesIndexPage({
 
       <ActividadesGrupalesTable
         actividadesGrupales={actividadesQuery.data?.actividadesGrupales ?? []}
-        canManageActividadesGrupales={canManageActivities}
         isLoading={actividadesQuery.isLoading}
+        onDelete={(actividad) => {
+          deleteMutation.reset();
+          setActivityPendingDelete(actividad);
+        }}
+        onEdit={(actividad) => navigate(buildActividadGrupalEditPath(actividad.id))}
         onOpenDiligenciamiento={(actividad) =>
           navigate(buildActividadGrupalDiligenciamientoPath(actividad.id))
         }
@@ -78,7 +115,30 @@ export function ActividadesGrupalesIndexPage({
         showTenantColumn={showTenantFilter}
       />
 
-      {canManageActivities ? (
+      {activityPendingDelete !== null ? (
+        <ActividadGrupalDeleteDialog
+          actividad={activityPendingDelete}
+          errorMessage={resolveActividadesGrupalesApiError(deleteMutation.error)}
+          isPending={deleteMutation.isPending}
+          onClose={() => {
+            if (!deleteMutation.isPending) {
+              deleteMutation.reset();
+              setActivityPendingDelete(null);
+            }
+          }}
+          onConfirm={() => {
+            deleteMutation.mutate(activityPendingDelete.id, {
+              onSuccess: () => {
+                deleteMutation.reset();
+                setActivityPendingDelete(null);
+                toast.success("Acta enviada a la papelera.");
+              },
+            });
+          }}
+        />
+      ) : null}
+
+      {canManageActividadesGrupales(user) ? (
         <button
           className="actividades-floating-action"
           type="button"

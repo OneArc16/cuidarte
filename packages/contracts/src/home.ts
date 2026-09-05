@@ -1,7 +1,16 @@
+import type { UserRole } from "./auth.js";
 import { z } from "zod";
+
+export const homeDashboardAccessRoleValues = [
+  "super_admin",
+  "admin",
+  "auditor",
+  "director",
+] as const satisfies readonly UserRole[];
 
 export const homeDashboardShortcutModuleIdValues = [
   "adultos-mayores",
+  "importacion-adultos-mayores",
   "sesiones-grupales",
   "registro-alimentacion",
   "gestion-empleados",
@@ -10,6 +19,8 @@ export const homeDashboardShortcutModuleIdValues = [
 
 export const homeDashboardIndicatorIdValues = [
   "adultos_registrados",
+  "atenciones_enfermeria",
+  "atenciones_medico",
   "salud_preventiva",
   "sesiones_psicosocial",
   "raciones_entregadas",
@@ -39,9 +50,7 @@ export const homeDashboardResponseSchema = z.object({
   indicators: z.array(homeDashboardIndicatorSchema),
 });
 
-export type HomeDashboardShortcutModuleId = z.infer<
-  typeof homeDashboardShortcutModuleIdSchema
->;
+export type HomeDashboardShortcutModuleId = z.infer<typeof homeDashboardShortcutModuleIdSchema>;
 export type HomeDashboardIndicatorId = z.infer<typeof homeDashboardIndicatorIdSchema>;
 export type HomeDashboardShortcut = z.infer<typeof homeDashboardShortcutSchema>;
 export type HomeDashboardIndicator = z.infer<typeof homeDashboardIndicatorSchema>;

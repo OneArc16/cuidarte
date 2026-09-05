@@ -48,6 +48,8 @@ export const actividadGrupalSupportFileKindSchema = z.enum(actividadGrupalSuppor
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const timeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const requiredTextSchema = (maxLength: number) => z.string().trim().min(1).max(maxLength);
+const requiredLongTextSchema = (message: string) => z.string().trim().min(1, message);
+const actaNumberSchema = requiredTextSchema(40);
 
 const nullableSearchSchema = z
   .union([z.string(), z.null(), z.undefined()])
@@ -86,6 +88,17 @@ const nullableActivityTypeSchema = z
   })
   .pipe(actividadGrupalTypeSchema.nullable());
 
+const nullableOrganizerSchema = z
+  .union([actividadGrupalOrganizerSchema, z.literal(""), z.null(), z.undefined()])
+  .transform((value) => {
+    if (value === null || value === undefined || value === "") {
+      return null;
+    }
+
+    return value;
+  })
+  .pipe(actividadGrupalOrganizerSchema.nullable());
+
 const nullableResponsibleDepartmentSchema = z
   .union([actividadGrupalResponsibleDepartmentSchema, z.literal(""), z.null(), z.undefined()])
   .transform((value) => {
@@ -106,7 +119,6 @@ const employeeIdsSchema = z
 
 const integranteIdsSchema = z
   .array(z.uuid())
-  .min(1, "Selecciona minimo un integrante.")
   .refine((values) => new Set(values).size === values.length, {
     message: "No repitas integrantes.",
   });
@@ -120,6 +132,7 @@ const removableFileIdsSchema = z
 export const actividadGrupalListQuerySchema = z.object({
   search: nullableSearchSchema.optional().default(null),
   activityType: nullableActivityTypeSchema.optional().default(null),
+  organizer: nullableOrganizerSchema.optional().default(null),
   tenantId: nullableTenantIdSchema.optional().default(null),
 });
 
@@ -153,7 +166,7 @@ export const actividadGrupalListItemSchema = z.object({
   id: z.uuid(),
   tenantId: z.uuid(),
   tenantName: z.string().min(1),
-  actaNumber: z.number().int().min(1),
+  actaNumber: actaNumberSchema,
   activityName: z.string().min(1).max(160),
   activityType: actividadGrupalTypeSchema,
   activityDate: dateSchema,
@@ -161,12 +174,15 @@ export const actividadGrupalListItemSchema = z.object({
   endTime: timeSchema,
   organizer: actividadGrupalOrganizerSchema,
   involvedEmployeesCount: z.number().int().min(1),
+  canEdit: z.boolean(),
+  canDelete: z.boolean(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
 });
 
 export const actividadGrupalCommandSchema = z
   .object({
+    actaNumber: actaNumberSchema,
     activityName: requiredTextSchema(160),
     activityType: actividadGrupalTypeSchema,
     activityDate: dateSchema,
@@ -189,10 +205,12 @@ export const createActividadGrupalRequestSchema = actividadGrupalCommandSchema.e
   tenantId: nullableTenantIdSchema.optional().default(null),
 });
 
+export const updateActividadGrupalRequestSchema = actividadGrupalCommandSchema;
+
 export const saveActividadGrupalDiligenciamientoSchema = z.object({
-  objectives: requiredTextSchema(4000),
-  development: requiredTextSchema(10_000),
-  conclusion: requiredTextSchema(4000),
+  objectives: requiredLongTextSchema("Ingresa los objetivos de la sesión."),
+  development: requiredLongTextSchema("Ingresa el desarrollo de la sesión."),
+  conclusion: requiredLongTextSchema("Ingresa la conclusión de la sesión."),
   responsibleDepartment: actividadGrupalResponsibleDepartmentSchema,
   integranteIds: integranteIdsSchema,
   removedPhotoFileIds: removableFileIdsSchema.optional().default([]),
@@ -212,12 +230,29 @@ export const actividadGrupalDiligenciamientoDetailSchema = actividadGrupalListIt
   diligenciamientoUpdatedAt: z.string().nullable(),
 });
 
+export const actividadGrupalEditDetailSchema = actividadGrupalListItemSchema.extend({
+  employeeIds: z.array(z.uuid()),
+});
+
 export const actividadGrupalIntegranteOptionsQuerySchema = z.object({
   search: nullableSearchSchema.optional().default(null),
 });
 
 export const actividadGrupalListResponseSchema = z.object({
   actividadesGrupales: z.array(actividadGrupalListItemSchema),
+});
+
+export const actividadGrupalTrashListItemSchema = actividadGrupalListItemSchema.extend({
+  deletedAt: z.string().min(1),
+  deletedByUserId: z.uuid(),
+  deletedByUserFullName: z.string().min(1).max(180),
+  canRestore: z.boolean(),
+});
+
+export const actividadGrupalTrashListQuerySchema = actividadGrupalListQuerySchema;
+
+export const actividadGrupalTrashListResponseSchema = z.object({
+  actividadesGrupales: z.array(actividadGrupalTrashListItemSchema),
 });
 
 export const actividadGrupalFormOptionsResponseSchema = z.object({
@@ -233,6 +268,14 @@ export const actividadGrupalIntegranteOptionsResponseSchema = z.object({
   integrantes: z.array(actividadGrupalIntegranteOptionSchema),
 });
 
+export const deleteActividadGrupalResponseSchema = z.object({
+  success: z.literal(true),
+});
+
+export const restoreActividadGrupalResponseSchema = z.object({
+  success: z.literal(true),
+});
+
 export type ActividadGrupalType = z.infer<typeof actividadGrupalTypeSchema>;
 export type ActividadGrupalOrganizer = z.infer<typeof actividadGrupalOrganizerSchema>;
 export type ActividadGrupalResponsibleDepartment = z.infer<
@@ -244,14 +287,21 @@ export type ActividadGrupalTenantOption = z.infer<typeof actividadGrupalTenantOp
 export type ActividadGrupalEmpleadoOption = z.infer<typeof actividadGrupalEmpleadoOptionSchema>;
 export type ActividadGrupalIntegranteOption = z.infer<typeof actividadGrupalIntegranteOptionSchema>;
 export type ActividadGrupalSupportFile = z.infer<typeof actividadGrupalSupportFileSchema>;
+export type ActividadGrupalTrashListItem = z.infer<typeof actividadGrupalTrashListItemSchema>;
+export type ActividadGrupalTrashListResponse = z.infer<
+  typeof actividadGrupalTrashListResponseSchema
+>;
+export type RestoreActividadGrupalResponse = z.infer<typeof restoreActividadGrupalResponseSchema>;
 export type ActividadGrupalListItem = z.infer<typeof actividadGrupalListItemSchema>;
 export type CreateActividadGrupalRequest = z.infer<typeof createActividadGrupalRequestSchema>;
+export type UpdateActividadGrupalRequest = z.infer<typeof updateActividadGrupalRequestSchema>;
 export type SaveActividadGrupalDiligenciamiento = z.infer<
   typeof saveActividadGrupalDiligenciamientoSchema
 >;
 export type ActividadGrupalDiligenciamientoDetail = z.infer<
   typeof actividadGrupalDiligenciamientoDetailSchema
 >;
+export type ActividadGrupalEditDetail = z.infer<typeof actividadGrupalEditDetailSchema>;
 export type ActividadGrupalIntegranteOptionsQuery = z.infer<
   typeof actividadGrupalIntegranteOptionsQuerySchema
 >;
@@ -265,3 +315,4 @@ export type ActividadGrupalTenantOptionsResponse = z.infer<
 export type ActividadGrupalIntegranteOptionsResponse = z.infer<
   typeof actividadGrupalIntegranteOptionsResponseSchema
 >;
+export type DeleteActividadGrupalResponse = z.infer<typeof deleteActividadGrupalResponseSchema>;

@@ -1,6 +1,6 @@
 import {
-  type AssignEmpleadoDirectorSignatureRequest,
   type CreateEmpleadoRequest,
+  type SetTenantActiveSignerRequest,
   type UpdateEmpleadoRequest,
 } from "@cuidarte/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -96,15 +96,31 @@ export function useUploadEmpleadoSignatureMutation(empleadoId: string) {
   });
 }
 
-export function useAssignEmpleadoDirectorSignatureMutation(empleadoId: string) {
+export function useSetTenantActiveSignerMutation(tenantId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (request: AssignEmpleadoDirectorSignatureRequest) =>
-      empleadosApi.assignEmpleadoDirectorSignature(empleadoId, request),
-    onSuccess: async (detail) => {
-      queryClient.setQueryData(empleadosQueryKeys.detail(empleadoId), detail);
-      await queryClient.invalidateQueries({ queryKey: ["empleados"] });
+    mutationFn: (request: SetTenantActiveSignerRequest) =>
+      empleadosApi.setTenantActiveSigner(tenantId, request),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["empleados"] }),
+        queryClient.invalidateQueries({ queryKey: ["backoffice", "tenants"] }),
+      ]);
+    },
+  });
+}
+
+export function useClearTenantActiveSignerMutation(tenantId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => empleadosApi.clearTenantActiveSigner(tenantId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["empleados"] }),
+        queryClient.invalidateQueries({ queryKey: ["backoffice", "tenants"] }),
+      ]);
     },
   });
 }

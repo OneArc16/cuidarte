@@ -1,18 +1,24 @@
 import {
   type AlimentacionAdultoOptionsResponse,
   type AlimentacionDetail,
+  type AlimentacionImportedFormatoUploadResponse,
+  type AlimentacionImportedFormatoVersionsResponse,
   type AlimentacionListResponse,
   type AlimentacionLookupByAdultoMayorResponse,
   type AlimentacionTenantOptionsResponse,
   type CreateAlimentacionBatchRequest,
   type CreateAlimentacionBatchResponse,
+  type DeleteAlimentacionResponse,
   type UpdateAlimentacionRequest,
   alimentacionAdultoOptionsResponseSchema,
   alimentacionDetailSchema,
+  alimentacionImportedFormatoUploadResponseSchema,
+  alimentacionImportedFormatoVersionsResponseSchema,
   alimentacionListResponseSchema,
   alimentacionLookupByAdultoMayorResponseSchema,
   alimentacionTenantOptionsResponseSchema,
   createAlimentacionBatchResponseSchema,
+  deleteAlimentacionResponseSchema,
 } from "@cuidarte/contracts";
 
 import { getApiBaseUrl } from "@/shared/api/api-config";
@@ -111,17 +117,80 @@ export function updateAlimentacionRecord(
   );
 }
 
+export function deleteAlimentacionRecord(recordId: string): Promise<DeleteAlimentacionResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/registro-alimentacion/${recordId}`,
+    deleteAlimentacionResponseSchema,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
 export function exportAlimentacionFormatoEntregaPdf(params: {
   adultoMayorId: string;
   deliveryMonth: string;
 }): Promise<Blob> {
+  return fetchBlob(buildAlimentacionFormatoEntregaPdfUrl(params));
+}
+
+export function buildAlimentacionFormatoEntregaPdfUrl(params: {
+  adultoMayorId: string;
+  deliveryMonth: string;
+}): string {
   const searchParams = new URLSearchParams({
     deliveryMonth: params.deliveryMonth,
   });
 
-  return fetchBlob(
-    `${getApiBaseUrl()}/registro-alimentacion/adultos-mayores/${params.adultoMayorId}/formato-entrega/pdf?${searchParams.toString()}`,
+  return `${getApiBaseUrl()}/registro-alimentacion/adultos-mayores/${params.adultoMayorId}/formato-entrega/pdf?${searchParams.toString()}`;
+}
+
+export function importAlimentacionFormatoEntregaPdf(params: {
+  adultoMayorId: string;
+  deliveryMonth: string;
+  file: File;
+}): Promise<AlimentacionImportedFormatoUploadResponse> {
+  const searchParams = new URLSearchParams({ deliveryMonth: params.deliveryMonth });
+  const formData = new FormData();
+
+  formData.set("file", params.file, params.file.name);
+
+  return fetchJson(
+    `${getApiBaseUrl()}/registro-alimentacion/adultos-mayores/${params.adultoMayorId}/formato-entrega/imported-pdfs?${searchParams.toString()}`,
+    alimentacionImportedFormatoUploadResponseSchema,
+    {
+      method: "POST",
+      body: formData,
+    },
   );
+}
+
+export function listAlimentacionImportedFormatoVersions(params: {
+  adultoMayorId: string;
+  deliveryMonth: string;
+}): Promise<AlimentacionImportedFormatoVersionsResponse> {
+  const searchParams = new URLSearchParams({ deliveryMonth: params.deliveryMonth });
+
+  return fetchJson(
+    `${getApiBaseUrl()}/registro-alimentacion/adultos-mayores/${params.adultoMayorId}/formato-entrega/imported-pdfs?${searchParams.toString()}`,
+    alimentacionImportedFormatoVersionsResponseSchema,
+  );
+}
+
+export function downloadAlimentacionImportedFormatoVersion(params: {
+  adultoMayorId: string;
+  versionId: string;
+}): Promise<Blob> {
+  return fetchBlob(
+    `${getApiBaseUrl()}/registro-alimentacion/adultos-mayores/${params.adultoMayorId}/formato-entrega/imported-pdfs/${params.versionId}/download`,
+  );
+}
+
+export function buildAlimentacionImportedFormatoVersionDownloadUrl(params: {
+  adultoMayorId: string;
+  versionId: string;
+}): string {
+  return `${getApiBaseUrl()}/registro-alimentacion/adultos-mayores/${params.adultoMayorId}/formato-entrega/imported-pdfs/${params.versionId}/download`;
 }
 
 function buildAlimentacionUrl(params: ListAlimentacionParams): string {

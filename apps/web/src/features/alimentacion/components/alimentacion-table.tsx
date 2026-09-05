@@ -1,6 +1,15 @@
 import { type AlimentacionListItem } from "@cuidarte/contracts";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ChevronDown, Download, LoaderCircle, Pencil, Upload } from "lucide-react";
+import {
+  ChevronDown,
+  Download,
+  FileDown,
+  History,
+  LoaderCircle,
+  Pencil,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { Fragment, useCallback, useMemo, useState } from "react";
 
 import {
@@ -19,7 +28,22 @@ type AlimentacionTableProps = {
     documentNumber: string;
     fullName: string;
   }) => void;
+  onImportFormato: (params: {
+    adultoMayorId: string;
+    documentNumber: string;
+    fullName: string;
+    hasImportedFormato: boolean;
+  }) => void;
+  onDownloadImportedFormato: (params: {
+    adultoMayorId: string;
+    versionId: string;
+    originalName: string;
+  }) => void;
+  onDelete: (record: AlimentacionListItem) => void;
+  onOpenImportedFormatoHistory: (params: { adultoMayorId: string; fullName: string }) => void;
   exportingAdultoMayorId: string | null;
+  importingAdultoMayorId: string | null;
+  downloadingImportedVersionId: string | null;
 };
 
 type AlimentacionGroupedRecord = {
@@ -35,7 +59,13 @@ export function AlimentacionTable({
   isLoading,
   onOpenEdit,
   onExportFormato,
+  onImportFormato,
+  onDownloadImportedFormato,
+  onDelete,
+  onOpenImportedFormatoHistory,
   exportingAdultoMayorId,
+  importingAdultoMayorId,
+  downloadingImportedVersionId,
   records,
   showTenantColumn,
 }: AlimentacionTableProps) {
@@ -82,7 +112,9 @@ export function AlimentacionTable({
           rightRecord.deliveryDate.localeCompare(leftRecord.deliveryDate),
         ),
       }))
-      .sort((left, right) => left.fullName.localeCompare(right.fullName, "es", { sensitivity: "base" }));
+      .sort((left, right) =>
+        left.fullName.localeCompare(right.fullName, "es", { sensitivity: "base" }),
+      );
   }, [records]);
 
   if (isLoading) {
@@ -135,12 +167,15 @@ export function AlimentacionTable({
         <tbody>
           {records.length === 0 ? (
             <tr>
-              <td colSpan={columnCount}>No hay registros de alimentación para los filtros actuales.</td>
+              <td colSpan={columnCount}>
+                No hay registros de alimentación para los filtros actuales.
+              </td>
             </tr>
           ) : (
             groupedRecords.map((group) => {
               const isExpanded = expandedAdultoIds.has(group.adultoMayorId);
               const isExporting = exportingAdultoMayorId === group.adultoMayorId;
+              const isImporting = importingAdultoMayorId === group.adultoMayorId;
               const latestRecord = group.records[0];
               const detailRowsRegionId = `alimentacion-registros-${group.adultoMayorId}`;
 
@@ -148,24 +183,40 @@ export function AlimentacionTable({
                 return null;
               }
 
+              const importedFormato = latestRecord.importedFormato;
+
               return (
                 <Fragment key={group.adultoMayorId}>
                   <tr className={`alimentacion-group-row ${isExpanded ? "is-expanded" : ""}`}>
                     <td>{group.documentNumber}</td>
                     <td className="alimentacion-cell-name">
                       {canManageAlimentacion ? (
-                        <button
-                          className="alimentacion-record-trigger"
-                          type="button"
-                          aria-controls={detailRowsRegionId}
-                          aria-expanded={isExpanded}
-                          title="Mostrar registros del adulto mayor en el mes"
-                          onClick={() => toggleAdultoRows(group.adultoMayorId)}
-                        >
-                          <strong>{group.fullName}</strong>
-                        </button>
+                        <>
+                          <button
+                            className="alimentacion-record-trigger"
+                            type="button"
+                            aria-controls={detailRowsRegionId}
+                            aria-expanded={isExpanded}
+                            title="Mostrar registros del adulto mayor en el mes"
+                            onClick={() => toggleAdultoRows(group.adultoMayorId)}
+                          >
+                            <strong>{group.fullName}</strong>
+                          </button>
+                          {importedFormato !== null ? (
+                            <span className="alimentacion-imported-badge">
+                              PDF importado v{importedFormato.version}
+                            </span>
+                          ) : null}
+                        </>
                       ) : (
-                        <strong>{group.fullName}</strong>
+                        <>
+                          <strong>{group.fullName}</strong>
+                          {importedFormato !== null ? (
+                            <span className="alimentacion-imported-badge">
+                              PDF importado v{importedFormato.version}
+                            </span>
+                          ) : null}
+                        </>
                       )}
                     </td>
                     <td>{latestRecord.deliveryDate.slice(0, 7)}</td>
@@ -206,12 +257,73 @@ export function AlimentacionTable({
                             <button
                               className="alimentacion-row-action"
                               type="button"
-                              aria-label={`Importar formato diligenciado de ${group.fullName} (próximamente)`}
-                              title="Importar formato diligenciado (próximamente)"
-                              disabled
+                              aria-label={
+                                isImporting
+                                  ? `Importando formato diligenciado de ${group.fullName}`
+                                  : `Importar formato diligenciado de ${group.fullName}`
+                              }
+                              title={
+                                isImporting
+                                  ? "Importando formato..."
+                                  : "Importar formato diligenciado"
+                              }
+                              disabled={isImporting}
+                              onClick={() =>
+                                onImportFormato({
+                                  adultoMayorId: group.adultoMayorId,
+                                  documentNumber: group.documentNumber,
+                                  fullName: group.fullName,
+                                  hasImportedFormato: importedFormato !== null,
+                                })
+                              }
                             >
-                              <Upload aria-hidden="true" />
+                              {isImporting ? (
+                                <LoaderCircle aria-hidden="true" className="alimentacion-spin" />
+                              ) : (
+                                <Upload aria-hidden="true" />
+                              )}
                             </button>
+                            {importedFormato !== null ? (
+                              <>
+                                <button
+                                  className="alimentacion-row-action alimentacion-row-action--imported"
+                                  type="button"
+                                  aria-label={`Descargar PDF importado v${importedFormato.version} de ${group.fullName}`}
+                                  title={`Descargar PDF importado v${importedFormato.version}`}
+                                  disabled={downloadingImportedVersionId === importedFormato.id}
+                                  onClick={() =>
+                                    onDownloadImportedFormato({
+                                      adultoMayorId: group.adultoMayorId,
+                                      versionId: importedFormato.id,
+                                      originalName: importedFormato.originalName,
+                                    })
+                                  }
+                                >
+                                  {downloadingImportedVersionId === importedFormato.id ? (
+                                    <LoaderCircle
+                                      aria-hidden="true"
+                                      className="alimentacion-spin"
+                                    />
+                                  ) : (
+                                    <FileDown aria-hidden="true" />
+                                  )}
+                                </button>
+                                <button
+                                  className="alimentacion-row-action alimentacion-row-action--imported"
+                                  type="button"
+                                  aria-label={`Ver versiones de PDF importado de ${group.fullName}`}
+                                  title={`PDF importado v${importedFormato.version}: ver historial`}
+                                  onClick={() =>
+                                    onOpenImportedFormatoHistory({
+                                      adultoMayorId: group.adultoMayorId,
+                                      fullName: group.fullName,
+                                    })
+                                  }
+                                >
+                                  <History aria-hidden="true" />
+                                </button>
+                              </>
+                            ) : null}
                           </>
                         ) : null}
                         <button
@@ -260,20 +372,31 @@ export function AlimentacionTable({
                             <td>{formatAlimentacionStatus(record.auxilioTransporte)}</td>
                             {showTenantColumn ? <td>{record.tenantName}</td> : null}
                             <td>
-                              {canManageAlimentacion ? (
-                                <button
-                                  className="alimentacion-row-action"
-                                  type="button"
-                                  aria-label={`Editar alimentación de ${record.fullName} del día ${record.deliveryDate}`}
+                            {canManageAlimentacion ? (
+                              <button
+                                className="alimentacion-row-action"
+                                type="button"
+                                aria-label={`Editar alimentación de ${record.fullName} del día ${record.deliveryDate}`}
                                   title="Editar registro"
                                   onClick={() => onOpenEdit(record.id)}
-                                >
-                                  <Pencil aria-hidden="true" />
-                                </button>
-                              ) : null}
-                            </td>
-                          </motion.tr>
-                        ))
+                              >
+                                <Pencil aria-hidden="true" />
+                              </button>
+                            ) : null}
+                            {record.canDelete ? (
+                              <button
+                                className="alimentacion-row-action alimentacion-row-action--danger"
+                                type="button"
+                                aria-label={`Eliminar alimentación de ${record.fullName} del día ${record.deliveryDate}`}
+                                title="Eliminar registro"
+                                onClick={() => onDelete(record)}
+                              >
+                                <Trash2 aria-hidden="true" />
+                              </button>
+                            ) : null}
+                          </td>
+                        </motion.tr>
+                      ))
                       : null}
                   </AnimatePresence>
                 </Fragment>

@@ -1,12 +1,11 @@
 import {
   type ActividadGrupalFormOptionsResponse,
   type ActividadGrupalTenantOption,
-  type CreateActividadGrupalRequest,
 } from "@cuidarte/contracts";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Search, Sparkles } from "lucide-react";
 import { type FieldErrors, type Resolver, useForm } from "react-hook-form";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { formatEmpleadoRole } from "@/features/empleados/lib/empleados-formatters";
 
@@ -21,13 +20,14 @@ import {
   type ActividadGrupalFormValues,
   actividadGrupalFormSchema,
   createDefaultActividadGrupalFormValues,
-  toCreateActividadGrupalRequest,
 } from "../schemas/actividad-grupal-form.schema";
 import { ActividadGrupalFieldGroup } from "./actividad-grupal-field-group";
 
 type ActividadGrupalFormProps = {
+  mode: "create" | "edit";
   error: string | null;
   formOptions: ActividadGrupalFormOptionsResponse | null;
+  initialValues?: ActividadGrupalFormValues;
   isFormOptionsLoading: boolean;
   isPending: boolean;
   isTenantOptionsLoading: boolean;
@@ -35,13 +35,15 @@ type ActividadGrupalFormProps = {
   shouldSelectTenant: boolean;
   tenantOptions: ActividadGrupalTenantOption[];
   onCancel: () => void;
-  onSubmit: (values: CreateActividadGrupalRequest) => void;
+  onSubmit: (values: ActividadGrupalFormValues) => void;
   onTenantChange: (tenantId: string) => void;
 };
 
 export function ActividadGrupalForm({
+  mode,
   error,
   formOptions,
+  initialValues,
   isFormOptionsLoading,
   isPending,
   isTenantOptionsLoading,
@@ -53,14 +55,18 @@ export function ActividadGrupalForm({
   tenantOptions,
 }: ActividadGrupalFormProps) {
   const [employeeSearch, setEmployeeSearch] = useState("");
+  const lastSuggestedActaNumberRef = useRef("");
   const form = useForm<ActividadGrupalFormValues>({
     resolver: zodResolver(actividadGrupalFormSchema) as Resolver<ActividadGrupalFormValues>,
-    defaultValues: createDefaultActividadGrupalFormValues(),
+    defaultValues: initialValues ?? createDefaultActividadGrupalFormValues(),
     mode: "onBlur",
   });
-  const { getValues, resetField, setError, setValue, watch } = form;
+  const { getValues, reset, resetField, setError, setValue, watch } = form;
+  const actaNumber = watch("actaNumber");
   const employeeIds = watch("employeeIds");
   const isTenantSelected = !shouldSelectTenant || selectedTenantId.trim() !== "";
+  const suggestedActaNumber =
+    isTenantSelected && formOptions !== null ? formatActaNumber(formOptions.nextActaNumber) : "";
   const availableEmployees = formOptions?.empleados ?? [];
   const filteredEmployees = useMemo(() => {
     const search = employeeSearch.trim().toLowerCase();
@@ -77,10 +83,31 @@ export function ActividadGrupalForm({
   }, [availableEmployees, employeeSearch]);
 
   useEffect(() => {
+    if (initialValues !== undefined) {
+      reset(initialValues);
+    }
+  }, [
+    initialValues?.tenantId,
+    initialValues?.actaNumber,
+    initialValues?.activityName,
+    initialValues?.activityType,
+    initialValues?.activityDate,
+    initialValues?.startTime,
+    initialValues?.endTime,
+    initialValues?.organizer,
+    initialValues?.employeeIds,
+    reset,
+  ]);
+
+  useEffect(() => {
     setValue("tenantId", selectedTenantId, { shouldDirty: false });
   }, [selectedTenantId, setValue]);
 
   useEffect(() => {
+    if (!isTenantSelected || isFormOptionsLoading || formOptions === null) {
+      return;
+    }
+
     const availableIds = new Set(availableEmployees.map((empleado) => empleado.id));
     const nextEmployeeIds = getValues("employeeIds").filter((employeeId) =>
       availableIds.has(employeeId),
@@ -93,7 +120,39 @@ export function ActividadGrupalForm({
         shouldValidate: true,
       });
     }
-  }, [availableEmployees, getValues, setValue]);
+  }, [availableEmployees, formOptions, getValues, isFormOptionsLoading, isTenantSelected, setValue]);
+
+  useEffect(() => {
+    if (mode !== "create") {
+      return;
+    }
+
+    const previousSuggestedActaNumber = lastSuggestedActaNumberRef.current;
+    const currentActaNumber = getValues("actaNumber").trim();
+
+    if (suggestedActaNumber === "") {
+      if (currentActaNumber === previousSuggestedActaNumber) {
+        setValue("actaNumber", "", {
+          shouldDirty: false,
+          shouldTouch: false,
+          shouldValidate: false,
+        });
+      }
+
+      lastSuggestedActaNumberRef.current = "";
+      return;
+    }
+
+    if (currentActaNumber === "" || currentActaNumber === previousSuggestedActaNumber) {
+      setValue("actaNumber", suggestedActaNumber, {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: false,
+      });
+    }
+
+    lastSuggestedActaNumberRef.current = suggestedActaNumber;
+  }, [getValues, mode, setValue, suggestedActaNumber]);
 
   function getError(field: keyof ActividadGrupalFormValues): string | undefined {
     const message = form.formState.errors[field]?.message;
@@ -136,31 +195,38 @@ export function ActividadGrupalForm({
             return;
           }
 
-          onSubmit(toCreateActividadGrupalRequest(values));
+          onSubmit(values);
         }, handleInvalidSubmit)(event);
       }}
     >
       <section className="actividad-form-shell">
         <aside className="actividad-form-summary">
           <div className="actividad-form-summary__acta">
-            <span className="eyebrow">Consecutivo</span>
+            <span className="eyebrow">{mode === "create" ? "Consecutivo sugerido" : "Acta actual"}</span>
             <strong>
-              {isTenantSelected && formOptions !== null
-                ? formatActaNumber(formOptions.nextActaNumber)
-                : "----"}
+              {mode === "create"
+                ? suggestedActaNumber === ""
+                  ? "----"
+                  : suggestedActaNumber
+                : actaNumber.trim() === ""
+                  ? "Sin acta"
+                  : formatActaNumber(actaNumber)}
             </strong>
             <small>
-              {isTenantSelected
-                ? "Se asigna automaticamente al guardar."
-                : "Selecciona un centro para generar el acta."}
+              {mode === "create"
+                ? isTenantSelected
+                  ? "Se sugiere automaticamente y puedes ajustarlo antes de guardar."
+                  : "Selecciona un centro para generar el acta."
+                : "Corrige los datos base si la actividad quedo registrada con un error."}
             </small>
           </div>
 
           <div className="actividad-form-summary__note">
             <Sparkles aria-hidden="true" />
             <p>
-              Registra la actividad y define de una vez el equipo involucrado para dejar el acta
-              lista sin volver a recorrer el modulo.
+              {mode === "create"
+                ? "Registra la actividad y define de una vez el equipo involucrado para dejar el acta lista sin volver a recorrer el modulo."
+                : "Actualiza la informacion de la actividad y el equipo involucrado sin perder el historial del diligenciamiento."}
             </p>
           </div>
         </aside>
@@ -193,18 +259,20 @@ export function ActividadGrupalForm({
 
             <ActividadGrupalFieldGroup
               label="Numero de acta"
-              hint={isFormOptionsLoading ? "Cargando consecutivo..." : "Solo lectura"}
+              error={getError("actaNumber")}
+              hint={
+                mode === "create"
+                  ? isFormOptionsLoading
+                    ? "Cargando sugerencia..."
+                    : "Acepta letras y numeros."
+                  : "Puedes corregir letras y numeros si hubo un error."
+              }
             >
               <input
                 type="text"
-                value={
-                  isTenantSelected && formOptions !== null
-                    ? formatActaNumber(formOptions.nextActaNumber)
-                    : ""
-                }
-                placeholder="Automatico"
-                disabled
-                readOnly
+                aria-invalid={getError("actaNumber") === undefined ? "false" : "true"}
+                placeholder={isTenantSelected ? "Ej. 0002 o ACTA-02A" : "Selecciona un centro"}
+                {...form.register("actaNumber")}
               />
             </ActividadGrupalFieldGroup>
 
@@ -353,7 +421,7 @@ export function ActividadGrupalForm({
           Cancelar
         </button>
         <button className="primary-action" type="submit" disabled={isPending}>
-          {isPending ? "Guardando..." : "Guardar actividad"}
+          {isPending ? "Guardando..." : mode === "create" ? "Guardar actividad" : "Guardar cambios"}
         </button>
       </div>
     </form>

@@ -14,6 +14,7 @@ export const empleadoFixture = {
   phone: "3105551212",
   role: "medico",
   isActive: true,
+  tenantActiveSigner: null,
   createdAt: "2026-04-21T12:00:00.000Z",
   updatedAt: "2026-04-21T12:00:00.000Z",
 } as const;

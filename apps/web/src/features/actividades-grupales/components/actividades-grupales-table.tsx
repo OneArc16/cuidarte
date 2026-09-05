@@ -1,5 +1,5 @@
 import { type ActividadGrupalListItem } from "@cuidarte/contracts";
-import { ClipboardPenLine, FileText } from "lucide-react";
+import { ClipboardPenLine, Eye, FileText, PencilLine, Trash2 } from "lucide-react";
 
 import {
   formatActividadGrupalOrganizer,
@@ -10,8 +10,9 @@ import {
 
 type ActividadesGrupalesTableProps = {
   actividadesGrupales: ActividadGrupalListItem[];
-  canManageActividadesGrupales: boolean;
   isLoading: boolean;
+  onDelete: (actividad: ActividadGrupalListItem) => void;
+  onEdit: (actividad: ActividadGrupalListItem) => void;
   onOpenDiligenciamiento: (actividad: ActividadGrupalListItem) => void;
   onOpenActaPdf: (actividad: ActividadGrupalListItem) => void;
   showTenantColumn: boolean;
@@ -19,8 +20,9 @@ type ActividadesGrupalesTableProps = {
 
 export function ActividadesGrupalesTable({
   actividadesGrupales,
-  canManageActividadesGrupales,
   isLoading,
+  onDelete,
+  onEdit,
   onOpenDiligenciamiento,
   onOpenActaPdf,
   showTenantColumn,
@@ -78,35 +80,54 @@ export function ActividadesGrupalesTable({
                   <strong>{formatActaNumber(actividad.actaNumber)}</strong>
                 </td>
                 <td className="actividades-cell-activity">
-                  {canManageActividadesGrupales ? (
-                    <button
-                      className="actividades-activity-trigger"
-                      type="button"
-                      title="Diligenciar actividad"
-                      onClick={() => onOpenDiligenciamiento(actividad)}
-                    >
-                      <strong>{actividad.activityName}</strong>
-                    </button>
-                  ) : (
+                  <button
+                    className="actividades-activity-trigger"
+                    type="button"
+                    title={actividad.canEdit ? "Diligenciar actividad" : "Ver actividad"}
+                    onClick={() => onOpenDiligenciamiento(actividad)}
+                  >
                     <strong>{actividad.activityName}</strong>
-                  )}
+                  </button>
                 </td>
-                <td>{formatActividadGrupalType(actividad.activityType)}</td>
+                <td className="actividades-cell-type">
+                  {formatActividadGrupalType(actividad.activityType)}
+                </td>
                 <td>{actividad.activityDate}</td>
                 <td>{formatActivitySchedule(actividad.startTime, actividad.endTime)}</td>
-                <td>{formatActividadGrupalOrganizer(actividad.organizer)}</td>
-                {showTenantColumn ? <td>{actividad.tenantName}</td> : null}
+                <td className="actividades-cell-organizer">
+                  {formatActividadGrupalOrganizer(actividad.organizer)}
+                </td>
+                {showTenantColumn ? (
+                  <td className="actividades-cell-centro">{actividad.tenantName}</td>
+                ) : null}
                 <td>
                   <div className="actividades-row-actions">
-                    {canManageActividadesGrupales ? (
+                    <button
+                      className="actividades-row-action"
+                      type="button"
+                      aria-label={
+                        actividad.canEdit
+                          ? `Diligenciar actividad ${actividad.activityName}`
+                          : `Ver actividad ${actividad.activityName}`
+                      }
+                      title={actividad.canEdit ? "Diligenciar actividad" : "Ver actividad"}
+                      onClick={() => onOpenDiligenciamiento(actividad)}
+                    >
+                      {actividad.canEdit ? (
+                        <ClipboardPenLine aria-hidden="true" />
+                      ) : (
+                        <Eye aria-hidden="true" />
+                      )}
+                    </button>
+                    {actividad.canEdit ? (
                       <button
                         className="actividades-row-action"
                         type="button"
-                        aria-label={`Diligenciar actividad ${actividad.activityName}`}
-                        title="Diligenciar actividad"
-                        onClick={() => onOpenDiligenciamiento(actividad)}
+                        aria-label={`Editar actividad ${actividad.activityName}`}
+                        title="Editar actividad"
+                        onClick={() => onEdit(actividad)}
                       >
-                        <ClipboardPenLine aria-hidden="true" />
+                        <PencilLine aria-hidden="true" />
                       </button>
                     ) : null}
                     <button
@@ -118,6 +139,17 @@ export function ActividadesGrupalesTable({
                     >
                       <FileText aria-hidden="true" />
                     </button>
+                    {actividad.canDelete ? (
+                      <button
+                        className="actividades-row-action"
+                        type="button"
+                        aria-label={`Enviar a la papelera la actividad ${actividad.activityName}`}
+                        title="Enviar a la papelera"
+                        onClick={() => onDelete(actividad)}
+                      >
+                        <Trash2 aria-hidden="true" />
+                      </button>
+                    ) : null}
                   </div>
                 </td>
               </tr>

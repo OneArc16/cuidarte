@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { Injectable } from "@nestjs/common";
 
 import { getEnv } from "../../../config/env";
 import {
+  AlimentacionFormatoStoredFileNotFoundError,
   type AlimentacionFormatoFilesStorage,
   type ReadStoredAlimentacionFormatoFile,
   type StoredAlimentacionFormatoFile,
@@ -25,14 +26,24 @@ export class LocalAlimentacionFormatoFilesStorage implements AlimentacionFormato
       scope.adultoMayorId,
       scope.deliveryMonth,
     );
-    const relativePath = path.posix.join(relativeDirectory, `${randomUUID()}${extension}`);
+    const storedName = `${randomUUID()}${extension}`;
+    const relativePath = path.posix.join(relativeDirectory, storedName);
     const absolutePath = this.resolveStoredPath(relativePath);
+    const temporaryPath = `${absolutePath}.${randomUUID()}.part`;
 
-    await mkdir(path.dirname(absolutePath), { recursive: true });
-    await writeFile(absolutePath, file.buffer);
+    await mkdir(path.dirname(absolutePath), { recursive: true, mode: 0o750 });
+
+    try {
+      await writeFile(temporaryPath, file.buffer, { flag: "wx", mode: 0o640 });
+      await rename(temporaryPath, absolutePath);
+    } catch (error) {
+      await unlink(temporaryPath).catch(() => undefined);
+      throw error;
+    }
 
     return {
       filename: file.filename,
+      storedName,
       contentType: file.contentType,
       relativePath,
     };
@@ -43,7 +54,17 @@ export class LocalAlimentacionFormatoFilesStorage implements AlimentacionFormato
     filename: string,
     contentType: string,
   ): Promise<ReadStoredAlimentacionFormatoFile> {
-    const buffer = await readFile(this.resolveStoredPath(relativePath));
+    let buffer: Buffer;
+
+    try {
+      buffer = await readFile(this.resolveStoredPath(relativePath));
+    } catch (error) {
+      if (isFileNotFoundError(error)) {
+        throw new AlimentacionFormatoStoredFileNotFoundError();
+      }
+
+      throw error;
+    }
 
     return {
       buffer,

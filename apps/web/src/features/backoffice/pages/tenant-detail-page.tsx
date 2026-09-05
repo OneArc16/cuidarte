@@ -1,9 +1,10 @@
 import { ChevronLeft } from "lucide-react";
-import { useState } from "react";
+import { toast } from "sonner";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
 import { BackofficeTenantForm } from "../components/tenant-form";
+import { TenantActiveSignerPanel } from "../components/tenant-active-signer-panel";
 import { BackofficeTopBar } from "../components/backoffice-top-bar";
 import { TenantBrandingPanel } from "../components/tenant-branding-panel";
 import { BACKOFFICE_PATH } from "../lib/backoffice-paths";
@@ -24,7 +25,6 @@ export function BackofficeTenantDetailPage({
 }: BackofficeTenantDetailPageProps) {
   const tenantQuery = useBackofficeTenantQuery(tenantId);
   const updateMutation = useUpdateBackofficeTenantMutation(tenantId);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   if (tenantQuery.isLoading) {
     return (
@@ -59,25 +59,23 @@ export function BackofficeTenantDetailPage({
         onBack={() => navigate(BACKOFFICE_PATH)}
       />
 
-      {successMessage !== null ? (
-        <p className="success-banner" role="status">
-          {successMessage}
-        </p>
-      ) : null}
-
       <BackofficeTenantForm
         mode="edit"
         detail={tenantQuery.data}
         isPending={updateMutation.isPending}
         error={resolveApiError(updateMutation.error)}
         onSubmit={(values) => {
-          setSuccessMessage(null);
           updateMutation.mutate(values, {
             onSuccess: () => {
-              setSuccessMessage("Cambios guardados.");
+              toast.success("Cambios guardados.");
             },
           });
         }}
+      />
+
+      <TenantActiveSignerPanel
+        tenant={tenantQuery.data.tenant}
+        activeSigner={tenantQuery.data.activeSigner}
       />
 
       <TenantBrandingPanel

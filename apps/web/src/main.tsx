@@ -1,7 +1,9 @@
+import "./polyfills/crypto-random-uuid";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./app/app";
+import { AppErrorBoundary } from "./app/components/app-error-boundary";
 import { AppProviders } from "./app/providers";
 import "./styles/index.css";
 
@@ -14,7 +16,9 @@ if (rootElement === null) {
 createRoot(rootElement).render(
   <StrictMode>
     <AppProviders>
-      <App />
+      <AppErrorBoundary>
+        <App />
+      </AppErrorBoundary>
     </AppProviders>
   </StrictMode>,
 );

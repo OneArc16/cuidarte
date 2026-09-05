@@ -1,5 +1,6 @@
-import { type AuthUser } from "@cuidarte/contracts";
 import { ChevronLeft } from "lucide-react";
+import { useEffect } from "react";
+import { toast } from "sonner";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { ADULTOS_MAYORES_PATH } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
@@ -7,7 +8,7 @@ import { ADULTOS_MAYORES_PATH } from "@/features/adultos-mayores/lib/adultos-may
 import { AtencionIndividualForm } from "../components/atencion-individual-form";
 import { resolveAtencionIndividualApiError } from "../lib/atenciones-individuales-formatters";
 import { buildHistoriaClinicaPath } from "../lib/atenciones-individuales-paths";
-import { resolveHistoriaClinicaAction } from "../lib/historia-clinica-permissions";
+import { buildAtencionEnfermeriaDetailPath } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-paths";
 import {
   useAtencionIndividualQuery,
   useUpdateAtencionIndividualMutation,
@@ -16,16 +17,23 @@ import {
 type AtencionIndividualDetailPageProps = {
   atencionId: string;
   navigate: Navigate;
-  user: AuthUser;
 };
 
 export function AtencionIndividualDetailPage({
   atencionId,
   navigate,
-  user,
 }: AtencionIndividualDetailPageProps) {
   const atencionQuery = useAtencionIndividualQuery(atencionId);
   const updateMutation = useUpdateAtencionIndividualMutation(atencionId);
+
+  useEffect(() => {
+    if (!updateMutation.isSuccess) {
+      return;
+    }
+
+    toast.success("Atencion individual guardada.");
+    updateMutation.reset();
+  }, [updateMutation]);
 
   if (atencionQuery.isLoading) {
     return (
@@ -54,9 +62,7 @@ export function AtencionIndividualDetailPage({
     );
   }
 
-  const access = resolveHistoriaClinicaAction(user, {
-    createdByUserId: atencionQuery.data.createdByUserId,
-  });
+  const access = atencionQuery.data.access;
   const historyPath = buildHistoriaClinicaPath(atencionQuery.data.adultoMayorId);
 
   if (access === null) {
@@ -94,15 +100,9 @@ export function AtencionIndividualDetailPage({
         </span>
       </div>
 
-      {isEditable && updateMutation.isSuccess ? (
-        <p className="form-success" role="status">
-          Atencion individual guardada.
-        </p>
-      ) : null}
-
       {!isEditable ? (
         <p className="atencion-readonly-banner" role="status">
-          Vista de solo lectura. Esta atencion pertenece a otro profesional.
+          Vista de solo lectura. Esta atencion no se puede editar desde tu rol.
         </p>
       ) : null}
 
@@ -117,13 +117,17 @@ export function AtencionIndividualDetailPage({
               : resolveAtencionIndividualApiError(updateMutation.error)
           }
           onCancel={() => navigate(historyPath)}
-          onSubmit={(values) => updateMutation.mutate(values)}
+          onOpenNursingAttention={(atencionId) => navigate(buildAtencionEnfermeriaDetailPath(atencionId))}
+          onSubmit={async (values) => {
+            await updateMutation.mutateAsync(values);
+          }}
         />
       ) : (
         <AtencionIndividualForm
           mode="view"
           detail={atencionQuery.data}
           onCancel={() => navigate(historyPath)}
+          onOpenNursingAttention={(atencionId) => navigate(buildAtencionEnfermeriaDetailPath(atencionId))}
         />
       )}
     </section>

@@ -27,6 +27,14 @@ export const homeDashboardFixture = {
       total: 468,
     },
     {
+      id: "atenciones_enfermeria",
+      total: 84,
+    },
+    {
+      id: "atenciones_medico",
+      total: 31,
+    },
+    {
       id: "salud_preventiva",
       total: 140,
     },

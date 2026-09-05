@@ -43,7 +43,7 @@ describe("AlimentacionController", () => {
         ];
       },
     };
-    const controller = new AlimentacionController(service as never, {} as never);
+    const controller = new AlimentacionController(service as never, {} as never, {} as never);
 
     const result = await controller.listRegistros(
       {
@@ -71,7 +71,7 @@ describe("AlimentacionController", () => {
         return { createdCount: 1 };
       },
     };
-    const controller = new AlimentacionController(service as never, {} as never);
+    const controller = new AlimentacionController(service as never, {} as never, {} as never);
 
     const result = await controller.createBatch(
       {
@@ -108,6 +108,27 @@ describe("AlimentacionController", () => {
     assert.equal(result.createdCount, 1);
   });
 
+  it("passes delete requests to the service", async () => {
+    let receivedId: string | null = null;
+    let receivedActorId: string | null = null;
+    const service = {
+      deleteRegistro: async (id: string, actor: AuthUser) => {
+        receivedId = id;
+        receivedActorId = actor.id;
+      },
+    };
+    const controller = new AlimentacionController(service as never, {} as never, {} as never);
+
+    const result = await controller.deleteRegistro(
+      "1a3782f0-b999-412c-a0f4-31ed47cb8f3f",
+      { currentUser } as never,
+    );
+
+    assert.equal(receivedId, "1a3782f0-b999-412c-a0f4-31ed47cb8f3f");
+    assert.equal(receivedActorId, currentUser.id);
+    assert.deepEqual(result, { success: true });
+  });
+
   it("passes adult lookup requests to the service", async () => {
     let receivedAdultoMayorId: string | null = null;
     let receivedDeliveryDate: string | null = null;
@@ -133,7 +154,7 @@ describe("AlimentacionController", () => {
         };
       },
     };
-    const controller = new AlimentacionController(service as never, {} as never);
+    const controller = new AlimentacionController(service as never, {} as never, {} as never);
 
     const result = await controller.lookupAdultoMayorByDate(
       "0b17e370-8f81-48c0-b707-c7046f497855",
@@ -147,7 +168,7 @@ describe("AlimentacionController", () => {
     assert.equal(result.adultoMayor.fullName, "Rosa Elena Martinez Rojas");
   });
 
-  it("exports formato entrega pdf as attachment", async () => {
+  it("exports formato entrega pdf inline", async () => {
     let receivedAdultoMayorId: string | null = null;
     let receivedActorId: string | null = null;
     let receivedQuery: { deliveryMonth: string } | null = null;
@@ -182,7 +203,7 @@ describe("AlimentacionController", () => {
         return payload;
       },
     };
-    const controller = new AlimentacionController({} as never, exportService as never);
+    const controller = new AlimentacionController({} as never, exportService as never, {} as never);
 
     await controller.exportFormatoEntregaPdf(
       "0b17e370-8f81-48c0-b707-c7046f497855",
@@ -197,9 +218,81 @@ describe("AlimentacionController", () => {
     assert.equal(headers["Content-Type"], "application/pdf");
     assert.equal(
       headers["Content-Disposition"],
-      'attachment; filename="formato-entrega-1020304050-2026-04.pdf"',
+      'inline; filename="formato-entrega-1020304050-2026-04.pdf"',
     );
     assert.equal(Buffer.isBuffer(sentPayload), true);
     assert.equal((sentPayload as Buffer).toString("utf8"), "pdf");
+  });
+
+  it("buffers the multipart PDF and forwards the month and current user to the import service", async () => {
+    let receivedAdultoMayorId: string | null = null;
+    let receivedMonth: string | null = null;
+    let receivedUpload: { originalName: string; mimeType: string; sizeBytes: number } | null = null;
+    let receivedActorId: string | null = null;
+    const importedFormatoService = {
+      async importPdf(
+        adultoMayorId: string,
+        query: { deliveryMonth: string },
+        upload: { originalName: string; mimeType: string; sizeBytes: number },
+        actor: AuthUser,
+      ) {
+        receivedAdultoMayorId = adultoMayorId;
+        receivedMonth = query.deliveryMonth;
+        receivedUpload = {
+          originalName: upload.originalName,
+          mimeType: upload.mimeType,
+          sizeBytes: upload.sizeBytes,
+        };
+        receivedActorId = actor.id;
+
+        return {
+          version: {
+            id: "1a3782f0-b999-412c-a0f4-31ed47cb8f3f",
+            version: 1,
+            originalName: upload.originalName,
+            mimeType: "application/pdf" as const,
+            sizeBytes: upload.sizeBytes,
+            importedByUserId: actor.id,
+            importedByUserFullName: actor.fullName,
+            importedAt: "2026-04-24T12:00:00.000Z",
+          },
+        };
+      },
+    };
+    const controller = new AlimentacionController(
+      {} as never,
+      {} as never,
+      importedFormatoService as never,
+    );
+    const pdf = Buffer.from("%PDF-1.7\\ncontenido");
+    const request = {
+      currentUser,
+      isMultipart: () => true,
+      async *parts() {
+        yield {
+          type: "file",
+          fieldname: "file",
+          filename: "formato-diligenciado.pdf",
+          mimetype: "application/pdf",
+          toBuffer: async () => pdf,
+        };
+      },
+    };
+
+    const response = await controller.importFormatoEntregaPdf(
+      "0b17e370-8f81-48c0-b707-c7046f497855",
+      { deliveryMonth: "2026-04" },
+      request as never,
+    );
+
+    assert.equal(receivedAdultoMayorId, "0b17e370-8f81-48c0-b707-c7046f497855");
+    assert.equal(receivedMonth, "2026-04");
+    assert.deepEqual(receivedUpload, {
+      originalName: "formato-diligenciado.pdf",
+      mimeType: "application/pdf",
+      sizeBytes: pdf.byteLength,
+    });
+    assert.equal(receivedActorId, currentUser.id);
+    assert.equal(response.version.version, 1);
   });
 });

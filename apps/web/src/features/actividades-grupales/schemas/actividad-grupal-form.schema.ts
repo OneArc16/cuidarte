@@ -1,8 +1,11 @@
 import {
+  type ActividadGrupalEditDetail,
   type CreateActividadGrupalRequest,
+  type UpdateActividadGrupalRequest,
   actividadGrupalOrganizerSchema,
   actividadGrupalTypeSchema,
   createActividadGrupalRequestSchema,
+  updateActividadGrupalRequestSchema,
 } from "@cuidarte/contracts";
 import { z } from "zod";
 
@@ -11,6 +14,7 @@ const requiredTextSchema = (maxLength: number) => z.string().trim().min(1).max(m
 export const actividadGrupalFormSchema = z
   .object({
     tenantId: z.string().trim(),
+    actaNumber: z.string().trim().min(1).max(40),
     activityName: requiredTextSchema(160),
     activityType: actividadGrupalTypeSchema,
     activityDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -36,6 +40,7 @@ export type ActividadGrupalFormValues = Omit<CreateActividadGrupalRequest, "tena
 export function createDefaultActividadGrupalFormValues(): ActividadGrupalFormValues {
   return {
     tenantId: "",
+    actaNumber: "",
     activityName: "",
     activityType: "centro_vida",
     activityDate: "",
@@ -53,4 +58,35 @@ export function toCreateActividadGrupalRequest(
     ...values,
     tenantId: values.tenantId.trim() === "" ? null : values.tenantId,
   });
+}
+
+export function toUpdateActividadGrupalRequest(
+  values: ActividadGrupalFormValues,
+): UpdateActividadGrupalRequest {
+  return updateActividadGrupalRequestSchema.parse({
+    actaNumber: values.actaNumber,
+    activityName: values.activityName,
+    activityType: values.activityType,
+    activityDate: values.activityDate,
+    startTime: values.startTime,
+    endTime: values.endTime,
+    organizer: values.organizer,
+    employeeIds: values.employeeIds,
+  });
+}
+
+export function toActividadGrupalFormValues(
+  detail: ActividadGrupalEditDetail,
+): ActividadGrupalFormValues {
+  return {
+    tenantId: detail.tenantId,
+    actaNumber: detail.actaNumber,
+    activityName: detail.activityName,
+    activityType: detail.activityType,
+    activityDate: detail.activityDate,
+    startTime: detail.startTime,
+    endTime: detail.endTime,
+    organizer: detail.organizer,
+    employeeIds: detail.employeeIds,
+  };
 }

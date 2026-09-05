@@ -58,6 +58,7 @@ describe("App mobile navigation", () => {
     expect(
       within(moreSheet).getByRole("button", { name: "Registro de alimentación" }),
     ).toBeInTheDocument();
+    expect(within(moreSheet).getByRole("button", { name: "Enfermería" })).toBeInTheDocument();
     expect(
       within(moreSheet).getByRole("button", { name: "Gestión de empleados" }),
     ).toBeInTheDocument();

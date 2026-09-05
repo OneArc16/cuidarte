@@ -10,6 +10,7 @@ export type AlimentacionFormatoEntregaExportRecord = {
   almuerzo: AlimentacionStatus;
   refrigerio2: AlimentacionStatus;
   auxilioTransporte: AlimentacionStatus;
+  updatedAt: Date;
 };
 
 export type AlimentacionFormatoEntregaExportData = {

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { tenantActiveSignerSchema } from "./empleados.js";
+
 export const tenantDocumentTypeSchema = z.enum(["nit", "cc", "ce"]);
 export const tenantStatusFilterSchema = z.enum(["all", "active", "inactive"]);
 
@@ -54,6 +56,8 @@ export const backofficeTenantSchema = z.object({
   email: z.email().nullable(),
   phone: z.string().nullable(),
   address: z.string().nullable(),
+  departmentId: z.uuid().nullable(),
+  municipalityId: z.uuid().nullable(),
   city: z.string().nullable(),
   department: z.string().nullable(),
   isActive: z.boolean(),
@@ -88,6 +92,7 @@ export const backofficeTenantListItemSchema = z.object({
 export const backofficeTenantDetailSchema = z.object({
   tenant: backofficeTenantSchema,
   owner: backofficeTenantOwnerSchema,
+  activeSigner: tenantActiveSignerSchema.nullable(),
   logo: tenantLogoMetadataSchema.nullable(),
 });
 
@@ -103,8 +108,8 @@ export const backofficeTenantCommandSchema = z.object({
   email: nullableEmailSchema,
   phone: nullableTextSchema(40),
   address: nullableTextSchema(220),
-  city: nullableTextSchema(100),
-  department: nullableTextSchema(100),
+  departmentId: z.uuid(),
+  municipalityId: z.uuid(),
   isActive: z.boolean(),
 });
 

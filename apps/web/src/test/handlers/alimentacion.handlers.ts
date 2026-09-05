@@ -90,6 +90,10 @@ export const alimentacionHandlers = [
       refrigerio2: payload.refrigerio2 ?? alimentacionFixture.refrigerio2,
       auxilioTransporte: payload.auxilioTransporte ?? alimentacionFixture.auxilioTransporte,
       updatedAt: "2026-04-25T12:00:00.000Z",
+      canDelete: true,
     });
   }),
+  http.delete("http://localhost:3001/api/registro-alimentacion/:recordId", () =>
+    HttpResponse.json({ success: true }),
+  ),
 ] as const;

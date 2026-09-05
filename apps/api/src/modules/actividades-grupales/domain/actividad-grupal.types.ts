@@ -18,6 +18,7 @@ export type ActividadesGrupalesScope =
 export type FindActividadesGrupalesQuery = {
   search: string | null;
   activityType: ActividadGrupalType | null;
+  organizer: ActividadGrupalOrganizer | null;
   tenantId: string | null;
   scope: ActividadesGrupalesScope;
 };
@@ -26,6 +27,8 @@ export type FindActividadGrupalByIdQuery = {
   activityId: string;
   scope: ActividadesGrupalesScope;
 };
+
+export type FindActividadesGrupalesTrashQuery = FindActividadesGrupalesQuery;
 
 export type SearchActividadGrupalIntegrantesOptionsQuery = {
   tenantId: string;
@@ -63,6 +66,7 @@ export type ActividadGrupalSupportFileRecord = {
 export type CreateActividadGrupalRecordCommand = {
   tenantId: string;
   actorUserId: string;
+  actaNumber: string;
   activityName: string;
   activityType: ActividadGrupalType;
   activityDate: string;
@@ -70,6 +74,29 @@ export type CreateActividadGrupalRecordCommand = {
   endTime: string;
   organizer: ActividadGrupalOrganizer;
   employeeIds: string[];
+};
+
+export type UpdateActividadGrupalRecordCommand = {
+  activityId: string;
+  actorUserId: string;
+  actaNumber: string;
+  activityName: string;
+  activityType: ActividadGrupalType;
+  activityDate: string;
+  startTime: string;
+  endTime: string;
+  organizer: ActividadGrupalOrganizer;
+  employeeIds: string[];
+};
+
+export type DeleteActividadGrupalRecordCommand = {
+  activityId: string;
+  actorUserId: string;
+};
+
+export type RestoreActividadGrupalRecordCommand = {
+  activityId: string;
+  actorUserId: string;
 };
 
 export type PersistActividadGrupalSupportFile = {
@@ -102,7 +129,8 @@ export type ActividadGrupalRecord = {
   id: string;
   tenantId: string;
   tenantName: string;
-  actaNumber: number;
+  createdByUserId: string;
+  actaNumber: string;
   activityName: string;
   activityType: ActividadGrupalType;
   activityDate: string;
@@ -112,6 +140,12 @@ export type ActividadGrupalRecord = {
   involvedEmployeesCount: number;
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type ActividadGrupalTrashRecord = ActividadGrupalRecord & {
+  deletedAt: Date;
+  deletedByUserId: string;
+  deletedByUserFullName: string;
 };
 
 export type ActividadGrupalDiligenciamientoDetailRecord = {

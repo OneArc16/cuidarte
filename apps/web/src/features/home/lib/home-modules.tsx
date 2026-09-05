@@ -1,12 +1,15 @@
 import {
   alimentacionAccessRoleValues,
+  atencionEnfermeriaModuleRoleValues,
   type AuthUser,
   type HomeDashboardShortcutModuleId,
 } from "@cuidarte/contracts";
 import {
   BriefcaseBusiness,
   CalendarPlus,
+  HeartPulse,
   Home,
+  Upload,
   type LucideIcon,
   UserRoundCog,
   UsersRound,
@@ -14,13 +17,15 @@ import {
 } from "lucide-react";
 
 import { HOME_PATH } from "@/app/routes/paths";
+import { ATENCIONES_ENFERMERIA_PATH } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-paths";
 import { ADULTOS_MAYORES_PATH } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
+import { ADULTOS_MAYORES_IMPORT_PATH } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
 import { REGISTRO_ALIMENTACION_PATH } from "@/features/alimentacion/lib/alimentacion-paths";
 import { CREACION_ACTIVIDADES_PATH } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
 import { BACKOFFICE_PATH } from "@/features/backoffice/lib/backoffice-paths";
 import { EMPLEADOS_PATH } from "@/features/empleados/lib/empleados-paths";
 
-export type HomeModuleId = "inicio" | HomeDashboardShortcutModuleId;
+export type HomeModuleId = "inicio" | HomeDashboardShortcutModuleId | "atenciones-enfermeria";
 
 export type HomeModule = {
   id: HomeModuleId;
@@ -29,11 +34,13 @@ export type HomeModule = {
   path: string;
   roles?: readonly AuthUser["role"][];
   summaryLabel?: string;
+  directAccessDescription?: string;
 };
 
 export type ShortcutHomeModule = HomeModule & {
   id: HomeDashboardShortcutModuleId;
   summaryLabel: string;
+  directAccessDescription: string;
 };
 
 export const HOME_MODULES = [
@@ -49,6 +56,16 @@ export const HOME_MODULES = [
     icon: UsersRound,
     path: ADULTOS_MAYORES_PATH,
     summaryLabel: "Adultos registrados",
+    directAccessDescription: "Gestion y seguimiento",
+  },
+  {
+    id: "importacion-adultos-mayores",
+    label: "Importar adultos mayores",
+    icon: Upload,
+    path: ADULTOS_MAYORES_IMPORT_PATH,
+    roles: ["super_admin", "admin", "director"],
+    summaryLabel: "Importaciones completadas",
+    directAccessDescription: "Carga masiva",
   },
   {
     id: "sesiones-grupales",
@@ -56,6 +73,16 @@ export const HOME_MODULES = [
     icon: CalendarPlus,
     path: CREACION_ACTIVIDADES_PATH,
     summaryLabel: "Sesiones registradas",
+    directAccessDescription: "Planeacion y actas",
+  },
+  {
+    id: "atenciones-enfermeria",
+    label: "Enfermería",
+    icon: HeartPulse,
+    path: ATENCIONES_ENFERMERIA_PATH,
+    roles: atencionEnfermeriaModuleRoleValues,
+    summaryLabel: "Atenciones de enfermería",
+    directAccessDescription: "Signos vitales, glucometría y notas",
   },
   {
     id: "registro-alimentacion",
@@ -64,14 +91,16 @@ export const HOME_MODULES = [
     path: REGISTRO_ALIMENTACION_PATH,
     roles: alimentacionAccessRoleValues,
     summaryLabel: "Registros cargados",
+    directAccessDescription: "Registro diario",
   },
   {
     id: "gestion-empleados",
     label: "Gestión de empleados",
     icon: UserRoundCog,
     path: EMPLEADOS_PATH,
-    roles: ["super_admin", "admin", "auditor"],
+    roles: ["super_admin", "admin", "auditor", "director"],
     summaryLabel: "Usuarios activos",
+    directAccessDescription: "Equipo y perfiles",
   },
   {
     id: "backoffice",
@@ -80,6 +109,7 @@ export const HOME_MODULES = [
     path: BACKOFFICE_PATH,
     roles: ["super_admin"],
     summaryLabel: "Centros activos",
+    directAccessDescription: "Configuracion central",
   },
 ] satisfies readonly HomeModule[];
 
@@ -96,5 +126,5 @@ export function isMobilePrimaryModule(module: HomeModule): boolean {
 }
 
 export function isShortcutModule(module: HomeModule): module is ShortcutHomeModule {
-  return module.id !== "inicio";
+  return module.id !== "inicio" && module.id !== "atenciones-enfermeria";
 }

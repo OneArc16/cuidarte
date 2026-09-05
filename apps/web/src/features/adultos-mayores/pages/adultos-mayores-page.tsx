@@ -1,5 +1,6 @@
 import { type AuthUser } from "@cuidarte/contracts";
 import { ChevronLeft } from "lucide-react";
+import { lazy, Suspense } from "react";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { AtencionIndividualCreatePage } from "@/features/atenciones-individuales/pages/atencion-individual-create-page";
@@ -9,7 +10,9 @@ import { AtencionIndividualHistoryPage } from "@/features/atenciones-individuale
 import {
   ADULTOS_MAYORES_NEW_PATH,
   ADULTOS_MAYORES_PATH,
+  ADULTOS_MAYORES_IMPORT_PATH,
   getAdultoMayorEditIdFromPath,
+  isAdultosMayoresImportPath,
 } from "../lib/adultos-mayores-paths";
 import {
   getAtencionIndividualCreateAdultoIdFromPath,
@@ -19,6 +22,12 @@ import {
 import { AdultoMayorCreatePage } from "./adulto-mayor-create-page";
 import { AdultoMayorEditPage } from "./adulto-mayor-edit-page";
 import { AdultosMayoresIndexPage } from "./adultos-mayores-index-page";
+
+const AdultosMayoresImportPage = lazy(async () => {
+  const module = await import("./adultos-mayores-import-page");
+
+  return { default: module.AdultosMayoresImportPage };
+});
 
 type AdultosMayoresPageProps = {
   navigate: Navigate;
@@ -33,6 +42,21 @@ export function AdultosMayoresPage({ navigate, path, user }: AdultosMayoresPageP
 
   if (path === ADULTOS_MAYORES_NEW_PATH) {
     return <AdultoMayorCreatePage navigate={navigate} user={user} />;
+  }
+
+  if (path === ADULTOS_MAYORES_IMPORT_PATH || isAdultosMayoresImportPath(path)) {
+    return (
+      <Suspense
+        fallback={
+          <section className="adultos-form-stack" aria-busy="true">
+            <p className="eyebrow">Adultos mayores</p>
+            <p>Cargando modulo de importacion...</p>
+          </section>
+        }
+      >
+        <AdultosMayoresImportPage navigate={navigate} user={user} />
+      </Suspense>
+    );
   }
 
   const atencionCreateAdultoMayorId = getAtencionIndividualCreateAdultoIdFromPath(path);
@@ -65,7 +89,6 @@ export function AdultosMayoresPage({ navigate, path, user }: AdultosMayoresPageP
       <AtencionIndividualDetailPage
         atencionId={atencionDetailIds.atencionId}
         navigate={navigate}
-        user={user}
       />
     );
   }

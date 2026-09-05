@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { type AuthUser, type HomeDashboardIndicatorId } from "@cuidarte/contracts";
+import { ForbiddenException } from "@nestjs/common";
 
 import { HomeService } from "./home.service";
 
@@ -30,6 +31,8 @@ describe("HomeService", () => {
     const service = new HomeService({} as never);
     stubService(service, {
       countAdultosMayores: async () => 468,
+      countAtencionesEnfermeria: async () => 84,
+      countAtencionesMedico: async () => 31,
       summarizeActividades: async () => ({
         total: 469,
         byIndicatorId: {
@@ -48,6 +51,7 @@ describe("HomeService", () => {
         deliveredRationsTotal: 123200,
       }),
       countEmpleados: async () => 42,
+      countCompletedImports: async () => 12,
       countActiveTenants: async () => 12,
     });
 
@@ -55,6 +59,7 @@ describe("HomeService", () => {
 
     assert.deepEqual(result.shortcuts, [
       { moduleId: "adultos-mayores", total: 468 },
+      { moduleId: "importacion-adultos-mayores", total: 12 },
       { moduleId: "sesiones-grupales", total: 469 },
       { moduleId: "registro-alimentacion", total: 140 },
       { moduleId: "gestion-empleados", total: 42 },
@@ -62,6 +67,8 @@ describe("HomeService", () => {
     ]);
     assert.deepEqual(result.indicators, [
       { id: "adultos_registrados", total: 468 },
+      { id: "atenciones_enfermeria", total: 84 },
+      { id: "atenciones_medico", total: 31 },
       { id: "salud_preventiva", total: 140 },
       { id: "sesiones_psicosocial", total: 140 },
       { id: "raciones_entregadas", total: 123200 },
@@ -74,51 +81,99 @@ describe("HomeService", () => {
     ]);
   });
 
-  it("omits restricted shortcuts for professional roles", async () => {
-    const service = new HomeService({} as never);
+  it("does not rely on undefined where clauses for super admin dashboard queries", async () => {
+    const service = new HomeService(createDashboardDatabase() as never);
     stubService(service, {
-      countAdultosMayores: async () => 25,
+      countAdultosMayores: async () => 468,
+      countAtencionesEnfermeria: async () => 84,
+      countAtencionesMedico: async () => 31,
+      countEmpleados: async () => 42,
+      countCompletedImports: async () => 12,
+      countActiveTenants: async () => 12,
+    });
+
+    const result = await service.getDashboard(superAdminUser);
+
+    assert.equal(result.shortcuts.length, 6);
+    assert.equal(result.indicators.length, 12);
+  });
+
+  it("uses the tenant scope for clinical attention totals", async () => {
+    const service = new HomeService({} as never);
+    let receivedNursingScope: unknown;
+    let receivedMedicalScope: unknown;
+    const tenantAdminUser: AuthUser = {
+      ...superAdminUser,
+      id: "8e1b1d74-4e4c-4d2f-b8cc-1a8df1a6d2b7",
+      tenantId,
+      email: "admin@centro-demo.test",
+      fullName: "Admin Centro Demo",
+      role: "admin",
+    };
+
+    stubService(service, {
+      countAdultosMayores: async () => 0,
+      countAtencionesEnfermeria: async (scope) => {
+        receivedNursingScope = scope;
+
+        return 0;
+      },
+      countAtencionesMedico: async (scope) => {
+        receivedMedicalScope = scope;
+
+        return 0;
+      },
       summarizeActividades: async () => ({
-        total: 8,
+        total: 0,
         byIndicatorId: {
-          salud_preventiva: 3,
-          sesiones_psicosocial: 1,
+          salud_preventiva: 0,
+          sesiones_psicosocial: 0,
           encuentro_intergeneracional: 0,
           nutricion: 0,
           actividades_manualidad: 0,
-          fisioterapia: 4,
+          fisioterapia: 0,
           actividad_campo: 0,
           actividades_recreacion: 0,
         },
       }),
-      summarizeAlimentacion: async () => {
-        throw new Error("alimentacion should not be requested");
-      },
-      countEmpleados: async () => {
-        throw new Error("empleados should not be requested");
-      },
-      countActiveTenants: async () => {
-        throw new Error("tenants should not be requested");
-      },
+      summarizeAlimentacion: async () => ({
+        recordsTotal: 0,
+        deliveredRationsTotal: 0,
+      }),
+      countEmpleados: async () => 0,
+      countCompletedImports: async () => 0,
     });
 
-    const result = await service.getDashboard(medicoUser);
+    const result = await service.getDashboard(tenantAdminUser);
 
-    assert.deepEqual(result.shortcuts, [
-      { moduleId: "adultos-mayores", total: 25 },
-      { moduleId: "sesiones-grupales", total: 8 },
-    ]);
-    assert.deepEqual(result.indicators, [
-      { id: "adultos_registrados", total: 25 },
-      { id: "salud_preventiva", total: 3 },
-      { id: "sesiones_psicosocial", total: 1 },
-      { id: "encuentro_intergeneracional", total: 0 },
-      { id: "nutricion", total: 0 },
-      { id: "actividades_manualidad", total: 0 },
-      { id: "fisioterapia", total: 4 },
-      { id: "actividad_campo", total: 0 },
-      { id: "actividades_recreacion", total: 0 },
-    ]);
+    assert.deepEqual(receivedNursingScope, { type: "tenant", tenantId });
+    assert.deepEqual(receivedMedicalScope, { type: "tenant", tenantId });
+    assert.deepEqual(result.indicators[1], {
+      id: "atenciones_enfermeria",
+      total: 0,
+    });
+    assert.deepEqual(result.indicators[2], {
+      id: "atenciones_medico",
+      total: 0,
+    });
+  });
+
+  it("rejects roles without dashboard access", async () => {
+    const service = new HomeService({} as never);
+
+    let caughtError: unknown;
+
+    try {
+      await service.getDashboard(medicoUser);
+    } catch (error) {
+      caughtError = error;
+    }
+
+    if (!(caughtError instanceof ForbiddenException)) {
+      throw new Error("Expected HomeService to reject unauthorized roles with ForbiddenException");
+    }
+
+    assert.equal(caughtError.message, "No tienes permisos para acceder a este recurso.");
   });
 });
 
@@ -126,6 +181,8 @@ function stubService(
   service: HomeService,
   stubs: {
     countAdultosMayores?: (scope: unknown) => Promise<number>;
+    countAtencionesEnfermeria?: (scope: unknown) => Promise<number>;
+    countAtencionesMedico?: (scope: unknown) => Promise<number>;
     summarizeActividades?: (scope: unknown) => Promise<{
       total: number;
       byIndicatorId: Partial<Record<HomeDashboardIndicatorId, number>>;
@@ -135,8 +192,79 @@ function stubService(
       deliveredRationsTotal: number;
     }>;
     countEmpleados?: (scope: unknown) => Promise<number>;
+    countCompletedImports?: (scope: unknown) => Promise<number>;
     countActiveTenants?: () => Promise<number>;
   },
-) {
+  ) {
   Object.assign(service as unknown as Record<string, unknown>, stubs);
+}
+
+function createDashboardDatabase() {
+  return {
+    db: {
+      select(selection: Record<string, unknown>) {
+        const queryKind = "activityType" in selection ? "actividades" : "alimentacion";
+
+        return {
+          from() {
+            return this;
+          },
+          groupBy() {
+            return this;
+          },
+          where(condition: unknown) {
+            if (condition === undefined) {
+              throw new Error("Dashboard query used an undefined where condition.");
+            }
+
+            if (queryKind === "actividades") {
+              return Promise.resolve([
+                { total: 469 },
+                { activityType: "salud_preventiva", total: 140 },
+                { activityType: "sesiones_psicosocial", total: 140 },
+                { activityType: "encuentro_intergeneracional", total: 7 },
+                { activityType: "nutricion", total: 56 },
+                { activityType: "actividades_manualidad", total: 42 },
+                { activityType: "fisioterapia", total: 56 },
+                { activityType: "actividad_campo", total: 112 },
+                { activityType: "actividades_recreacion", total: 56 },
+              ]);
+            }
+
+            return Promise.resolve([
+              {
+                recordsTotal: 140,
+                deliveredRationsTotal: 123200,
+              },
+            ]);
+          },
+          then(
+            resolve: (value: Array<Record<string, number | string>>) => unknown,
+            reject?: (reason: unknown) => unknown,
+          ) {
+            if (queryKind === "actividades") {
+              return Promise.resolve([
+                { total: 469 },
+                { activityType: "salud_preventiva", total: 140 },
+                { activityType: "sesiones_psicosocial", total: 140 },
+                { activityType: "encuentro_intergeneracional", total: 7 },
+                { activityType: "nutricion", total: 56 },
+                { activityType: "actividades_manualidad", total: 42 },
+                { activityType: "fisioterapia", total: 56 },
+                { activityType: "actividad_campo", total: 112 },
+                { activityType: "actividades_recreacion", total: 56 },
+              ]).then(resolve, reject);
+            }
+
+            return Promise.resolve([
+              {
+                recordsTotal: 140,
+                deliveredRationsTotal: 123200,
+              },
+            ]).then(resolve, reject);
+          },
+        };
+      },
+    },
+  };
 }

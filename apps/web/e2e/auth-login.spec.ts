@@ -10,16 +10,22 @@ const superAdminCredentials = {
   password: "Cuidarte123!",
 };
 
+const e2eApiBaseUrl = `http://127.0.0.1:${process.env.PLAYWRIGHT_API_PORT ?? "3011"}/api`;
+const onePixelPng = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+  "base64",
+);
+
 test.describe("Auth + Login", () => {
   test("permite iniciar sesion, llegar al home y cerrar sesion", async ({ page }) => {
     await page.goto("/login");
 
     await expect(page.getByRole("heading", { name: "Bienvenido" })).toBeVisible();
     await expect(page.getByLabel("Correo")).toBeVisible();
-    await expect(page.getByLabel("Contrasena")).toBeVisible();
+    await expect(page.getByLabel("Contrasena", { exact: true })).toBeVisible();
 
     await page.getByLabel("Correo").fill(adminCredentials.email);
-    await page.getByLabel("Contrasena").fill(adminCredentials.password);
+    await page.getByLabel("Contrasena", { exact: true }).fill(adminCredentials.password);
 
     const loginResponsePromise = page.waitForResponse(
       (response) =>
@@ -38,13 +44,20 @@ test.describe("Auth + Login", () => {
     await expect(page.getByRole("navigation", { name: "Modulos principales" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Admin Centro Demo" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Usuario logueado" })).toContainText("Admin");
-    await expect(page.getByRole("button", { name: "Adultos mayores" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "BackOffice" })).toBeHidden();
-    await expect(page.getByText("Asignada por admin")).toBeVisible();
+    const primaryNavigation = page.getByRole("navigation", { name: "Modulos principales" });
+    await expect(
+      primaryNavigation.getByRole("button", { name: "Adultos mayores", exact: true }),
+    ).toBeVisible();
+    await expect(
+      primaryNavigation.getByRole("button", { name: "BackOffice", exact: true }),
+    ).toBeHidden();
+    await expect(page.getByRole("heading", { name: "Resumen operativo" })).toBeVisible();
 
     await page.goto("/backoffice");
     await expect(page).toHaveURL(/\/home$/);
-    await expect(page.getByRole("button", { name: "BackOffice" })).toBeHidden();
+    await expect(
+      primaryNavigation.getByRole("button", { name: "BackOffice", exact: true }),
+    ).toBeHidden();
 
     const logoutResponsePromise = page.waitForResponse(
       (response) =>
@@ -71,13 +84,16 @@ test.describe("Auth + Login", () => {
 
     await page.goto("/login");
     await page.getByLabel("Correo").fill(superAdminCredentials.email);
-    await page.getByLabel("Contrasena").fill(superAdminCredentials.password);
+    await page.getByLabel("Contrasena", { exact: true }).fill(superAdminCredentials.password);
     await page.getByRole("button", { name: "Iniciar sesion" }).click();
 
     await expect(page).toHaveURL(/\/home$/);
-    await expect(page.getByRole("button", { name: "BackOffice" })).toBeVisible();
+    const primaryNavigation = page.getByRole("navigation", { name: "Modulos principales" });
+    await expect(
+      primaryNavigation.getByRole("button", { name: "BackOffice", exact: true }),
+    ).toBeVisible();
 
-    await page.getByRole("button", { name: "BackOffice" }).click();
+    await primaryNavigation.getByRole("button", { name: "BackOffice", exact: true }).click();
     await expect(page).toHaveURL(/\/backoffice$/);
     await expect(page.locator(".backoffice-heading")).toHaveCount(0);
     await expect(page.getByRole("table")).toBeVisible();
@@ -99,8 +115,10 @@ test.describe("Auth + Login", () => {
     await page.getByLabel("Correo del centro").fill(`contacto-${runId}@centro-e2e.test`);
     await page.getByLabel("Teléfono").fill("6015558899");
     await page.getByLabel("Dirección").fill("Calle 45 # 67-89");
-    await page.getByLabel("Ciudad").fill("Cali");
-    await page.getByLabel("Departamento").fill("Valle del Cauca");
+    await page.getByRole("combobox", { name: "Departamento" }).fill("Bogota");
+    await page.getByRole("option", { name: /Bogotá, D\.C\./i }).click();
+    await page.getByRole("combobox", { name: "Municipio" }).fill("Bogota");
+    await page.getByRole("option", { name: /Bogotá, D\.C\./i }).click();
     await page.getByLabel("Nombre completo").fill("Propietario E2E");
     await page.getByLabel("Correo de acceso").fill(ownerEmail);
     await page.getByLabel("Contraseña inicial").fill("Cuidarte123!");
@@ -110,9 +128,14 @@ test.describe("Auth + Login", () => {
     await expect(page.getByRole("heading", { name: tenantName })).toBeVisible();
 
     await page.getByLabel("Nombre del centro").fill(editedTenantName);
+    const updateTenantResponsePromise = page.waitForResponse(
+      (response) =>
+        /\/api\/backoffice\/tenants\/[0-9a-f-]+$/.test(response.url()) &&
+        response.request().method() === "PATCH",
+    );
     await page.getByRole("button", { name: "Guardar" }).click();
 
-    await expect(page.getByRole("status")).toContainText("Cambios guardados.");
+    expect((await updateTenantResponsePromise).status()).toBe(200);
     await expect(page.getByRole("heading", { name: editedTenantName })).toBeVisible();
   });
 
@@ -122,11 +145,14 @@ test.describe("Auth + Login", () => {
 
     await page.goto("/login");
     await page.getByLabel("Correo").fill(adminCredentials.email);
-    await page.getByLabel("Contrasena").fill(adminCredentials.password);
+    await page.getByLabel("Contrasena", { exact: true }).fill(adminCredentials.password);
     await page.getByRole("button", { name: "Iniciar sesion" }).click();
 
     await expect(page).toHaveURL(/\/home$/);
-    await page.getByRole("button", { name: "Sesiones grupales" }).click();
+    await page
+      .getByRole("navigation", { name: "Modulos principales" })
+      .getByRole("button", { name: "Sesiones grupales", exact: true })
+      .click();
     await expect(page).toHaveURL(/\/creacion-actividades$/);
     await expect(page.getByRole("table")).toBeVisible();
 
@@ -142,12 +168,12 @@ test.describe("Auth + Login", () => {
 
     await expect(page).toHaveURL(/\/creacion-actividades$/);
     await expect(page.getByText(activityName)).toBeVisible();
-    await expect(page.getByRole("button", { name: activityName })).toBeVisible();
+    await expect(page.getByRole("button", { name: activityName, exact: true })).toBeVisible();
     await expect(
       page.getByRole("button", { name: `Diligenciar actividad ${activityName}` }),
     ).toBeVisible();
 
-    await page.getByRole("button", { name: activityName }).click();
+    await page.getByRole("button", { name: activityName, exact: true }).click();
     await expect(page).toHaveURL(/\/creacion-actividades\/[0-9a-f-]+\/diligenciamiento$/);
 
     await page.getByLabel("Objetivos").fill("Objetivos E2E");
@@ -157,41 +183,63 @@ test.describe("Auth + Login", () => {
     await page.getByLabel("Buscar por nombre o documento").fill("Rosa");
     await page.getByRole("button", { name: /Rosa/i }).click();
     await page.getByLabel("Agregar fotos de soporte").setInputFiles({
-      name: "evidencia.jpg",
-      mimeType: "image/jpeg",
-      buffer: Buffer.from("photo"),
+      name: "evidencia.png",
+      mimeType: "image/png",
+      buffer: onePixelPng,
     });
     await page.getByLabel("Adjuntar documento PDF").setInputFiles({
       name: "soporte.pdf",
       mimeType: "application/pdf",
       buffer: Buffer.from("pdf"),
     });
+    const saveDiligenciamientoResponsePromise = page.waitForResponse(
+      (response) =>
+        /\/api\/actividades-grupales\/[0-9a-f-]+\/diligenciamiento$/.test(response.url()) &&
+        response.request().method() === "PUT",
+    );
     await page.getByRole("button", { name: "Guardar diligenciamiento" }).click();
 
-    await expect(page.getByRole("status")).toContainText("Diligenciamiento guardado.");
+    expect((await saveDiligenciamientoResponsePromise).status()).toBe(200);
+    await page.reload();
+    await expect(page.getByLabel("Objetivos")).toHaveValue("Objetivos E2E");
+    await expect(page.getByLabel("Desarrollo")).toHaveValue("Desarrollo E2E");
+    await expect(page.getByLabel("Conclusion")).toHaveValue("Conclusion E2E");
+
+    const activityId = new URL(page.url()).pathname.split("/")[2];
+    expect(activityId).toBeTruthy();
+
+    const pdfResponse = await page.request.get(
+      `${e2eApiBaseUrl}/actividades-grupales/${activityId}/acta/pdf`,
+    );
+    expect(pdfResponse.status()).toBe(200);
+    expect(pdfResponse.headers()["content-type"]).toContain("application/pdf");
+    expect((await pdfResponse.body()).subarray(0, 4).toString()).toBe("%PDF");
   });
 
   test("permite a un admin crear un lote de alimentación", async ({ page }) => {
+    const deliveryDate = new Date().toISOString().slice(0, 10);
+
     await page.goto("/login");
     await page.getByLabel("Correo").fill(adminCredentials.email);
-    await page.getByLabel("Contrasena").fill(adminCredentials.password);
+    await page.getByLabel("Contrasena", { exact: true }).fill(adminCredentials.password);
     await page.getByRole("button", { name: "Iniciar sesion" }).click();
 
     await expect(page).toHaveURL(/\/home$/);
-    await page.getByRole("button", { name: "Registro de alimentación" }).click();
+    await page
+      .getByRole("navigation", { name: "Modulos principales" })
+      .getByRole("button", { name: "Registro de alimentación", exact: true })
+      .click();
     await expect(page).toHaveURL(/\/registro-alimentacion$/);
     await expect(page.getByRole("table")).toBeVisible();
 
     await page.getByRole("button", { name: "Agregar registro de alimentación" }).click();
     await expect(page).toHaveURL(/\/registro-alimentacion\/new$/);
 
-    await page.getByLabel("Fecha").fill("2026-04-24");
+    await page.getByLabel("Fecha").fill(deliveryDate);
     await page.getByLabel("Organizador").selectOption("nutricionista");
     await page.getByLabel("Buscar por nombre o documento").fill("1020304050");
     await page.getByRole("button", { name: /Rosa Elena Martinez Rojas/i }).click();
-    await page
-      .getByLabel("Refrigerio 1 de Rosa Elena Martinez Rojas")
-      .selectOption("entregado");
+    await page.getByLabel("Refrigerio 1 de Rosa Elena Martinez Rojas").selectOption("entregado");
     await page.getByLabel("Almuerzo de Rosa Elena Martinez Rojas").selectOption("entregado");
     await page.getByLabel("Refrigerio 2 de Rosa Elena Martinez Rojas").selectOption("no_aplica");
     await page
@@ -200,6 +248,19 @@ test.describe("Auth + Login", () => {
     await page.getByRole("button", { name: "Guardar alimentación" }).click();
 
     await expect(page).toHaveURL(/\/registro-alimentacion$/);
-    await expect(page.getByRole("button", { name: /Rosa Elena Martinez Rojas/i })).toBeVisible();
+    const adultoRowTrigger = page.getByRole("button", {
+      name: "Rosa Elena Martinez Rojas",
+      exact: true,
+    });
+    await expect(adultoRowTrigger).toBeVisible();
+    await adultoRowTrigger.click();
+    await page
+      .getByRole("button", {
+        name: `Eliminar alimentación de Rosa Elena Martinez Rojas del día ${deliveryDate}`,
+      })
+      .click();
+    await expect(page.getByRole("dialog", { name: "Eliminar alimentación" })).toBeVisible();
+    await page.getByRole("button", { name: "Eliminar registro", exact: true }).click();
+    await expect(adultoRowTrigger).toBeHidden();
   });
 });

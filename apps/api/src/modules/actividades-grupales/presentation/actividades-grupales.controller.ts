@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Post,
@@ -20,6 +21,7 @@ import {
   ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
 import {
+  actividadGrupalEditDetailSchema,
   actividadGrupalDiligenciamientoDetailSchema,
   actividadGrupalFormOptionsResponseSchema,
   actividadGrupalIntegranteOptionsQuerySchema,
@@ -27,9 +29,14 @@ import {
   actividadGrupalListItemSchema,
   actividadGrupalListQuerySchema,
   actividadGrupalListResponseSchema,
+  actividadGrupalTrashListQuerySchema,
+  actividadGrupalTrashListResponseSchema,
   actividadGrupalTenantOptionsResponseSchema,
   createActividadGrupalRequestSchema,
+  deleteActividadGrupalResponseSchema,
+  restoreActividadGrupalResponseSchema,
   saveActividadGrupalDiligenciamientoSchema,
+  updateActividadGrupalRequestSchema,
 } from "@cuidarte/contracts";
 import { type FastifyReply } from "fastify";
 import { type Multipart, type MultipartFile } from "@fastify/multipart";
@@ -41,6 +48,7 @@ import { SessionGuard } from "../../auth/session.guard";
 import { type BufferedActividadGrupalUpload } from "../domain/actividad-grupal.types";
 import { ActividadesGrupalesActaExportService } from "../application/actividades-grupales-acta-export.service";
 import { ActividadesGrupalesService } from "../application/actividades-grupales.service";
+import { ActividadesGrupalesTrashService } from "../application/actividades-grupales-trash.service";
 
 const actividadIdParamSchema = z.uuid();
 const fileIdParamSchema = z.uuid();
@@ -57,6 +65,7 @@ export class ActividadesGrupalesController {
   constructor(
     private readonly actividadesGrupalesService: ActividadesGrupalesService,
     private readonly actividadesGrupalesActaExportService: ActividadesGrupalesActaExportService,
+    private readonly actividadesGrupalesTrashService: ActividadesGrupalesTrashService,
   ) {}
 
   @Get()
@@ -71,6 +80,20 @@ export class ActividadesGrupalesController {
     );
 
     return actividadGrupalListResponseSchema.parse({ actividadesGrupales });
+  }
+
+  @Get("papelera")
+  @ApiOkResponse({ description: "Listado de actas eliminadas." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  @ApiForbiddenResponse({ description: "El usuario no tiene permisos para consultar la papelera." })
+  async listActividadesGrupalesTrash(@Query() query: unknown, @Req() request: AuthenticatedRequest) {
+    const parsedQuery = parseZodSchema(actividadGrupalTrashListQuerySchema, query);
+    const actividadesGrupales = await this.actividadesGrupalesTrashService.listTrash(
+      parsedQuery,
+      request.currentUser,
+    );
+
+    return actividadGrupalTrashListResponseSchema.parse({ actividadesGrupales });
   }
 
   @Get("tenant-options")
@@ -113,6 +136,76 @@ export class ActividadesGrupalesController {
     );
 
     return actividadGrupalListItemSchema.parse(detail);
+  }
+
+  @Get(":id")
+  @ApiOkResponse({ description: "Detalle editable de la actividad grupal." })
+  @ApiNotFoundResponse({ description: "Actividad no encontrada." })
+  @ApiForbiddenResponse({ description: "El usuario no puede editar esta actividad." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async getActividadGrupalForEdit(
+    @Param("id") id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const activityId = parseZodSchema(actividadIdParamSchema, id);
+    const detail = await this.actividadesGrupalesService.getActividadGrupalForEdit(
+      activityId,
+      request.currentUser,
+    );
+
+    return actividadGrupalEditDetailSchema.parse(detail);
+  }
+
+  @Put(":id")
+  @ApiOkResponse({ description: "Actividad grupal actualizada." })
+  @ApiBadRequestResponse({ description: "Solicitud invalida." })
+  @ApiNotFoundResponse({ description: "Actividad no encontrada." })
+  @ApiForbiddenResponse({ description: "El usuario no puede editar esta actividad." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async updateActividadGrupal(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const activityId = parseZodSchema(actividadIdParamSchema, id);
+    const command = parseZodSchema(updateActividadGrupalRequestSchema, body);
+    const detail = await this.actividadesGrupalesService.updateActividadGrupal(
+      activityId,
+      command,
+      request.currentUser,
+    );
+
+    return actividadGrupalListItemSchema.parse(detail);
+  }
+
+  @Delete(":id")
+  @ApiOkResponse({ description: "Acta enviada a la papelera." })
+  @ApiNotFoundResponse({ description: "Actividad no encontrada." })
+  @ApiForbiddenResponse({ description: "El usuario no puede eliminar esta actividad." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async deleteActividadGrupal(
+    @Param("id") id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const activityId = parseZodSchema(actividadIdParamSchema, id);
+    await this.actividadesGrupalesTrashService.sendToTrash(activityId, request.currentUser);
+
+    return deleteActividadGrupalResponseSchema.parse({ success: true });
+  }
+
+  @Post(":id/restaurar")
+  @ApiOkResponse({ description: "Acta restaurada desde la papelera." })
+  @ApiNotFoundResponse({ description: "Acta eliminada no encontrada." })
+  @ApiForbiddenResponse({ description: "El usuario no puede restaurar esta actividad." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async restoreActividadGrupal(
+    @Param("id") id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const activityId = parseZodSchema(actividadIdParamSchema, id);
+    await this.actividadesGrupalesTrashService.restore(activityId, request.currentUser);
+
+    return restoreActividadGrupalResponseSchema.parse({ success: true });
   }
 
   @Get(":id/diligenciamiento")

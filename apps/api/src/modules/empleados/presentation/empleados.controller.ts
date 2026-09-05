@@ -23,7 +23,6 @@ import {
   ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
 import {
-  assignEmpleadoDirectorSignatureRequestSchema,
   createEmpleadoRequestSchema,
   empleadoDetailResponseSchema,
   empleadoListQuerySchema,
@@ -118,7 +117,7 @@ export class EmpleadosController {
   }
 
   @Post(":id/signature")
-  @ApiOkResponse({ description: "Firma del director cargada." })
+  @ApiOkResponse({ description: "Firma del usuario cargada." })
   @ApiConsumes("multipart/form-data")
   @ApiBadRequestResponse({ description: "Archivo de firma invalido." })
   @ApiNotFoundResponse({ description: "Usuario no encontrado." })
@@ -143,7 +142,7 @@ export class EmpleadosController {
   }
 
   @Get(":id/signature/file")
-  @ApiOkResponse({ description: "Archivo de firma del director." })
+  @ApiOkResponse({ description: "Archivo de firma del usuario." })
   @ApiProduces("image/png", "image/jpeg", "image/webp")
   @ApiNotFoundResponse({ description: "Usuario o firma no encontrados." })
   @ApiForbiddenResponse({ description: "El usuario no tiene permisos sobre esta firma." })
@@ -163,31 +162,6 @@ export class EmpleadosController {
     reply.header("Content-Disposition", `inline; filename="${file.originalName}"`);
 
     return reply.send(file.buffer);
-  }
-
-  @Post(":id/director-signature-assignment")
-  @ApiOkResponse({ description: "Director firmante vigente asignado." })
-  @ApiBadRequestResponse({ description: "Solicitud invalida." })
-  @ApiNotFoundResponse({ description: "Usuario no encontrado." })
-  @ApiForbiddenResponse({ description: "El usuario no tiene permisos de empleados." })
-  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
-  async assignDirectorSignature(
-    @Param("id") id: string,
-    @Body() body: unknown,
-    @Req() request: AuthenticatedRequest,
-  ) {
-    const empleadoId = parseZodSchema(empleadoIdParamSchema, id);
-    const command = parseZodSchema(assignEmpleadoDirectorSignatureRequestSchema, body);
-
-    await this.empleadosSignatureService.assignDirectorSignature(
-      empleadoId,
-      command,
-      request.currentUser,
-    );
-
-    const detail = await this.empleadosService.getEmpleado(empleadoId, request.currentUser);
-
-    return empleadoDetailResponseSchema.parse(detail);
   }
 
   @Get(":id")

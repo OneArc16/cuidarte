@@ -1,4 +1,6 @@
 import { backofficeTenantDetailFixture } from "./backoffice.fixtures";
+import { departmentFixture, municipalityFixture } from "./ubicaciones.fixtures";
+import { epsFixture } from "./eps.fixtures";
 
 export const adultoMayorFixture = {
   id: "0b17e370-8f81-48c0-b707-c7046f497855",
@@ -18,10 +20,13 @@ export const adultoMayorFixture = {
   birthDate: "1948-03-12",
   age: 78,
   sex: "female",
+  status: "alive",
   educationLevel: "Primaria",
   disability: null,
   populationGroup: "Persona mayor",
   address: "Calle 45 # 18-20",
+  departmentId: departmentFixture.id,
+  municipalityId: municipalityFixture.id,
   department: "Cundinamarca",
   municipality: "Bogota",
   zone: "urban",
@@ -33,6 +38,8 @@ export const adultoMayorFixture = {
   bloodType: "o_positive",
   sisben: "B2",
   healthRegime: "subsidized",
+  epsId: epsFixture.id,
+  epsName: epsFixture.name,
   eps: "Salud Demo",
   livesWithSomeone: true,
   companion: "Mariana Rojas",

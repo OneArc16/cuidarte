@@ -1,5 +1,6 @@
 import {
   type AtencionIndividualHistoryResponse,
+  medicalAttentionHistoryResponseSchema,
   type AtencionIndividualAdultoResumen,
   type AtencionIndividualDetail,
   type AuthUser,
@@ -117,8 +118,35 @@ export class AtencionesIndividualesService {
     });
   }
 
+  async getMedicalHistoriaClinica(
+    adultoMayorId: string,
+    actor: AuthUser,
+  ): Promise<AtencionIndividualHistoryResponse> {
+    this.ensureCanAccessHistory(actor);
+    const scope = this.resolveScopeOrThrow(actor);
+    const adultoMayor = await this.atencionesRepository.findAdultoMayorById({
+      adultoMayorId,
+      scope,
+    });
+
+    if (adultoMayor === null) {
+      throw new NotFoundException("Adulto mayor no encontrado.");
+    }
+
+    const records = await this.atencionesRepository.findHistoryByAdultoMayor({
+      adultoMayorId,
+      scope,
+      createdByUserRole: "medico",
+    });
+
+    return medicalAttentionHistoryResponseSchema.parse({
+      adultoMayor: this.toAdultoResumen(adultoMayor),
+      atenciones: records.map((record) => this.toHistoryItem(record, actor)),
+    });
+  }
+
   async getAtencion(id: string, actor: AuthUser): Promise<AtencionIndividualDetail> {
-    return this.toDetail(await this.getAccessibleAtencionOrThrow(id, actor));
+    return this.toDetail(await this.getAccessibleAtencionOrThrow(id, actor), actor);
   }
 
   async createAtencion(
@@ -160,7 +188,7 @@ export class AtencionesIndividualesService {
         supportFiles: storedFiles,
       });
 
-      return this.toDetail(record);
+      return this.toDetail(record, actor);
     } catch (error) {
       await this.deleteFilesBestEffort(storedFiles);
       throw error;
@@ -225,7 +253,7 @@ export class AtencionesIndividualesService {
 
       await this.deleteFilesBestEffort(saved.removedFiles);
 
-      return this.toDetail(saved.record);
+      return this.toDetail(saved.record, actor);
     } catch (error) {
       await this.deleteFilesBestEffort(storedFiles);
       throw error;
@@ -407,10 +435,19 @@ export class AtencionesIndividualesService {
     });
   }
 
-  private toDetail(record: AtencionIndividualRecord): AtencionIndividualDetail {
+  private toDetail(record: AtencionIndividualRecord, actor: AuthUser): AtencionIndividualDetail {
+    const access = resolveAtencionIndividualHistoryAccess(actor, record);
+
+    if (access === null) {
+      throw new ForbiddenException(
+        "No puedes consultar atenciones registradas por otro profesional.",
+      );
+    }
+
     return atencionIndividualDetailSchema.parse({
       ...record,
       adultoMayor: this.toAdultoResumen(record.adultoMayor),
+      access,
       supportFiles: record.supportFiles.map((file) => ({
         id: file.id,
         originalName: file.originalName,

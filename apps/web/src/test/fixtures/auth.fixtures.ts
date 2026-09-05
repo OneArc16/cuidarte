@@ -38,6 +38,22 @@ export const directorUserFixture = {
   role: "director",
 } as const;
 
+export const enfermeriaUserFixture = {
+  ...authUserFixture,
+  id: "bdeba5d1-ef43-4e7d-8c53-9b86c0dc9d53",
+  email: "enfermeria@centro-demo.test",
+  fullName: "Enfermera Centro Demo",
+  role: "enfermeria",
+} as const;
+
+export const enfermeriaApoyoUserFixture = {
+  ...authUserFixture,
+  id: "8e70f3b0-1d7f-4c67-9c8e-32f6c3d7e9a1",
+  email: "enfermeria.apoyo@centro-demo.test",
+  fullName: "Enfermera de Apoyo",
+  role: "enfermeria",
+} as const;
+
 export const recreacionistaUserFixture = {
   ...authUserFixture,
   email: "recreacion@centro-demo.test",

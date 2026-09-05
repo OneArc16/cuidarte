@@ -103,21 +103,38 @@ Para preparar la base local:
 ```bash
 docker compose up -d
 pnpm db:bootstrap
-pnpm --filter @cuidarte/api db:seed
+pnpm db:seed:login
 ```
 
-`db:bootstrap` ejecuta las migraciones y sincroniza los datos de referencia obligatorios,
-incluido el catalogo CIE-10 versionado. Es idempotente y debe ejecutarse en cada despliegue,
-antes de iniciar la API. No requiere descargar datos de Internet.
+`db:bootstrap` ejecuta las migraciones, sincroniza los datos de referencia obligatorios y
+completa los IDs de ubicacion de los registros historicos que puedan asociarse sin ambiguedad.
+Es idempotente y debe ejecutarse en cada despliegue, antes de iniciar la API. La sincronizacion
+de DIVIPOLA descarga el catalogo oficial de Datos Abiertos de Colombia, por lo que el entorno
+de despliegue necesita salida HTTPS durante ese paso.
 
-`db:seed` crea exclusivamente datos demo para desarrollo y pruebas; no debe ejecutarse en
-produccion.
+En la configuracion de VPS, el servicio `database-bootstrap` ejecuta este flujo automaticamente
+y la API espera a que finalice correctamente antes de iniciar.
+
+`db:seed` y `db:seed:login` cargan los datos demo de autenticacion y algunos registros de
+apoyo para desarrollo y pruebas; no deben ejecutarse en produccion.
 
 Para actualizar unicamente los datos de referencia:
 
 ```bash
-pnpm db:reference-data
+pnpm db:seed:cie10
+pnpm db:seed:ubicaciones
+EPS_REFERENCE_DATA_FILE=/ruta/catalogo-eps.xlsx EPS_REFERENCE_DATA_VERSION=2026-08 pnpm db:seed:eps
+pnpm db:seed:eps:demo
 ```
+
+El archivo de EPS debe incluir las columnas `codigo`, `nit` y `nombre`. La columna de ID
+externo se ignora. Puede revisar las coincidencias historicas antes de escribirlas con
+`pnpm db:backfill:eps`; use `pnpm db:backfill:eps:write` despues de validar el reporte.
+El seed `db:seed:eps:demo` inserta de forma idempotente el registro `EPS001` sin desactivar
+otras EPS existentes.
+
+Si `EPS_REFERENCE_DATA_FILE` no esta configurado, `pnpm db:seed:eps` y el bootstrap de
+produccion cargan el catalogo versionado incluido en `src/database/reference-data/eps.csv`.
 
 Usuarios de seed:
 

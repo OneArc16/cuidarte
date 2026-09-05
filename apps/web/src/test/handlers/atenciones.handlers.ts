@@ -21,6 +21,10 @@ export const atencionesHandlers = [
     "http://localhost:3001/api/atenciones-individuales/adultos-mayores/:adultoMayorId/history",
     () => HttpResponse.json(historiaClinicaFixture),
   ),
+  http.get(
+    "http://localhost:3001/api/atenciones-individuales/adultos-mayores/:adultoMayorId/medical-history",
+    () => HttpResponse.json(historiaClinicaFixture),
+  ),
   http.post("http://localhost:3001/api/atenciones-individuales", async ({ request }) => {
     const payload = await readRequestPayload(request);
 

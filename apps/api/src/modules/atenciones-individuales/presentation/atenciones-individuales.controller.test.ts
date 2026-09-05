@@ -49,15 +49,36 @@ describe("AtencionesIndividualesController", () => {
       actor: currentUser,
     });
     assert.equal(result.id, "2ef00f9e-9a85-47d7-91a4-7030d6f6f951");
+    assert.equal(result.access, "edit");
+  });
+
+  it("passes the adult id and current user to the medical history projection", async () => {
+    const service = createAtencionesService();
+    const controller = new AtencionesIndividualesController(service as never);
+
+    const result = await controller.getMedicalHistoriaClinica(
+      "0b17e370-8f81-48c0-b707-c7046f497855",
+      {
+        currentUser,
+      } as never,
+    );
+
+    assert.deepEqual(service.medicalHistoryCalls[0], {
+      adultoMayorId: "0b17e370-8f81-48c0-b707-c7046f497855",
+      actor: currentUser,
+    });
+    assert.equal(result.atenciones[0]?.professional.role, "medico");
   });
 });
 
 function createAtencionesService() {
   const historyCalls: Array<{ adultoMayorId: string; actor: AuthUser }> = [];
+  const medicalHistoryCalls: Array<{ adultoMayorId: string; actor: AuthUser }> = [];
   const detailCalls: Array<{ atencionId: string; actor: AuthUser }> = [];
 
   return {
     historyCalls,
+    medicalHistoryCalls,
     detailCalls,
     async getHistoriaClinica(adultoMayorId: string, actor: AuthUser) {
       historyCalls.push({ adultoMayorId, actor });
@@ -91,6 +112,42 @@ function createAtencionesService() {
               role: currentUser.role,
             },
             access: "edit" as const,
+          },
+        ],
+        };
+    },
+    async getMedicalHistoriaClinica(adultoMayorId: string, actor: AuthUser) {
+      medicalHistoryCalls.push({ adultoMayorId, actor });
+
+      return {
+        adultoMayor: {
+          id: "0b17e370-8f81-48c0-b707-c7046f497855",
+          tenantId: "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054",
+          tenantName: "Centro de Vida Demo",
+          documentNumber: "1020304050",
+          fullName: "Rosa Elena Martinez Rojas",
+          age: 78,
+          sex: "female",
+          eps: "Salud Demo",
+          healthRegime: "subsidized",
+        },
+        atenciones: [
+          {
+            id: "2ef00f9e-9a85-47d7-91a4-7030d6f6f951",
+            adultoMayorId: "0b17e370-8f81-48c0-b707-c7046f497855",
+            attentionDate: "2026-04-24",
+            modalidad: "intramural" as const,
+            tipoConsulta: "primera_vez" as const,
+            nombreConsulta: "Atencion individual",
+            consecutive: 1,
+            createdAt: "2026-04-24T12:00:00.000Z",
+            updatedAt: "2026-04-24T12:00:00.000Z",
+            professional: {
+              userId: currentUser.id,
+              fullName: currentUser.fullName,
+              role: "medico" as const,
+            },
+            access: "view" as const,
           },
         ],
       };
@@ -149,6 +206,7 @@ function createAtencionesService() {
         ],
         supportFiles: [],
         createdByUserId: currentUser.id,
+        access: "edit" as const,
         updatedByUserId: currentUser.id,
         createdAt: "2026-04-24T12:00:00.000Z",
         updatedAt: "2026-04-24T12:00:00.000Z",

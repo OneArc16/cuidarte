@@ -2,12 +2,11 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 
 import {
-  type AssignEmpleadoDirectorSignatureRequest,
   type AuthUser,
+  type SetTenantActiveSignerRequest,
 } from "@cuidarte/contracts";
 import {
   BadRequestException,
-  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
@@ -17,13 +16,15 @@ import {
 import { canManageEmpleados, resolveEmpleadosScope } from "../domain/empleado.policy";
 import {
   type BufferedEmpleadoSignatureUpload,
-  type DirectorSignatureDateResolutionRecord,
   type EmpleadoAuditCommand,
   type EmpleadoRecord,
   type EmpleadoSignatureVersionRecord,
+  type TenantActiveSignerRecord,
+  type TenantActiveSignerResolutionRecord,
 } from "../domain/empleado.types";
 import {
   EMPLEADOS_SIGNATURE_FILES_STORAGE,
+  EmpleadoSignatureStoredFileNotFoundError,
   type EmpleadosSignatureFilesStorage,
 } from "../domain/empleados-signature-files.storage";
 import {
@@ -56,7 +57,7 @@ export class EmpleadosSignatureService {
     this.ensureCanManage(actor);
 
     const empleado = await this.getScopedEmpleadoOrThrow(empleadoId, actor);
-    const tenantId = this.assertDirectorEmpleado(empleado);
+    const tenantId = this.assertSignatureEligibleEmpleado(empleado);
 
     this.validateUpload(file);
 
@@ -80,9 +81,10 @@ export class EmpleadosSignatureService {
         actorUserId: actor.id,
         action: "empleados.signature_uploaded",
         targetTenantId: tenantId,
-        summary: `Firma cargada para director: ${empleado.fullName}`,
+        summary: `Firma cargada para usuario: ${empleado.fullName}`,
         metadata: {
           employeeId: empleado.id,
+          employeeRole: empleado.role,
           originalName: storedFile.originalName,
           mimeType: storedFile.mimeType,
           sizeBytes: storedFile.sizeBytes,
@@ -91,135 +93,125 @@ export class EmpleadosSignatureService {
     );
   }
 
-  async assignDirectorSignature(
-    empleadoId: string,
-    command: AssignEmpleadoDirectorSignatureRequest,
+  async setTenantActiveSigner(
+    tenantId: string,
+    command: SetTenantActiveSignerRequest,
     actor: AuthUser,
-  ) {
+  ): Promise<TenantActiveSignerRecord> {
     this.ensureCanManage(actor);
 
-    const empleado = await this.getScopedEmpleadoOrThrow(empleadoId, actor);
-    const tenantId = this.assertDirectorEmpleado(empleado);
+    const empleado = await this.getScopedEmpleadoOrThrow(command.employeeId, actor);
+    const scopedTenantId = this.assertDirectorSignerEmpleado(empleado);
+
+    if (scopedTenantId !== tenantId) {
+      throw new BadRequestException("El director seleccionado no pertenece a ese centro.");
+    }
 
     if (!empleado.isActive) {
       throw new BadRequestException(
-        "Solo puedes asignar como firmante vigente a un director activo.",
+        "Solo puedes activar como firmante a un director activo.",
       );
     }
 
-    const signatureVersionId = command.signatureVersionId ?? empleado.latestSignature?.id ?? null;
-
-    if (signatureVersionId === null) {
-      throw new BadRequestException(
-        "El director debe tener una firma cargada antes de asignarlo como firmante vigente.",
-      );
+    if (empleado.latestSignature === null) {
+      throw new BadRequestException("El director seleccionado no tiene una firma cargada.");
     }
 
     const signatureVersion = await this.empleadosRepository.findSignatureVersionById({
       employeeId: empleado.id,
-      signatureVersionId,
+      signatureVersionId: command.signatureVersionId,
     });
 
     if (signatureVersion === null) {
-      throw new BadRequestException("Selecciona una firma valida del director.");
+      throw new BadRequestException("La firma seleccionada no corresponde al director elegido.");
     }
 
-    const latestAssignment =
-      await this.empleadosRepository.findLatestDirectorSignatureAssignmentByTenantId(tenantId);
-
-    this.assertAssignmentDateIsValid(command.effectiveFrom, latestAssignment);
-
-    const auditEntries: EmpleadoAuditCommand[] =
-      latestAssignment === null
-        ? []
-        : [
-            {
-              actorUserId: actor.id,
-              action: "empleados.director_signature_assignment_closed" as const,
-              targetTenantId: tenantId,
-              summary: "Vigencia de firma del director cerrada.",
-              metadata: {
-                tenantId,
-                employeeId: latestAssignment.employeeId,
-                signatureVersionId: latestAssignment.signatureVersionId,
-                assignmentId: latestAssignment.id,
-                effectiveFrom: latestAssignment.effectiveFrom,
-                effectiveTo: resolvePreviousDate(command.effectiveFrom),
-              },
-            },
-          ];
-
-    auditEntries.push({
+    const audit: EmpleadoAuditCommand = {
       actorUserId: actor.id,
-      action: "empleados.director_signature_assigned",
+      action: "empleados.active_signer_updated",
       targetTenantId: tenantId,
-      summary: `Director firmante asignado: ${empleado.fullName}`,
+      summary: `Firmante activo actualizado: ${empleado.fullName}`,
       metadata: {
         tenantId,
         employeeId: empleado.id,
         signatureVersionId: signatureVersion.id,
-        effectiveFrom: command.effectiveFrom,
       },
-    });
+    };
 
-    try {
-      return await this.empleadosRepository.assignDirectorSignature(
-        {
-          tenantId,
-          employeeId: empleado.id,
-          signatureVersionId: signatureVersion.id,
-          effectiveFrom: command.effectiveFrom,
-          createdByUserId: actor.id,
-        },
-        auditEntries,
-      );
-    } catch (error: unknown) {
-      if (isDirectorSignatureAssignmentOverlap(error)) {
-        throw new ConflictException(
-          "La nueva vigencia se cruza con otra vigencia de firma del centro. Revisa el historial y selecciona una fecha posterior.",
-        );
-      }
+    return await this.empleadosRepository.setTenantActiveSigner(
+      {
+        tenantId,
+        employeeId: empleado.id,
+        signatureVersionId: signatureVersion.id,
+        activatedByUserId: actor.id,
+      },
+      audit,
+    );
+  }
 
-      throw error;
-    }
+  async clearTenantActiveSigner(
+    tenantId: string,
+    actor: AuthUser,
+  ): Promise<TenantActiveSignerRecord | null> {
+    this.ensureCanManage(actor);
+    this.ensureCanManageTenant(actor, tenantId);
+
+    const audit: EmpleadoAuditCommand = {
+      actorUserId: actor.id,
+      action: "empleados.active_signer_cleared",
+      targetTenantId: tenantId,
+      summary: "Firmante activo desactivado.",
+      metadata: { tenantId },
+    };
+
+    return await this.empleadosRepository.clearTenantActiveSigner(
+      {
+        tenantId,
+        deactivatedByUserId: actor.id,
+      },
+      audit,
+    );
   }
 
   async downloadLatestSignatureFile(empleadoId: string, actor: AuthUser) {
     const empleado = await this.getScopedEmpleadoOrThrow(empleadoId, actor);
 
     if (empleado.latestSignature === null) {
-      throw new NotFoundException("El director no tiene una firma cargada.");
+      throw new NotFoundException("El usuario no tiene una firma cargada.");
     }
 
-    return await this.signatureFilesStorage.readFile(
-      empleado.latestSignature.relativePath,
-      empleado.latestSignature.originalName,
-      empleado.latestSignature.mimeType,
-    );
+    try {
+      return await this.signatureFilesStorage.readFile(
+        empleado.latestSignature.relativePath,
+        empleado.latestSignature.originalName,
+        empleado.latestSignature.mimeType,
+      );
+    } catch (error) {
+      if (error instanceof EmpleadoSignatureStoredFileNotFoundError) {
+        throw new NotFoundException("No fue posible encontrar el archivo de firma cargado.");
+      }
+
+      throw error;
+    }
   }
 
-  async resolveDirectorSignatureForDate(
+  async findTenantActiveSignerByTenantId(
     tenantId: string,
-    effectiveDate: string,
-  ): Promise<DirectorSignatureDateResolutionRecord> {
-    const matches = await this.empleadosRepository.resolveDirectorSignatureForDate({
-      tenantId,
-      effectiveDate,
-    });
+  ): Promise<TenantActiveSignerRecord | null> {
+    return await this.empleadosRepository.findTenantActiveSignerByTenantId(tenantId);
+  }
 
-    if (matches.length === 0) {
-      throw new BadRequestException(
-        "El centro no tiene un director firmante vigente para la fecha de emision del formato.",
-      );
+  async resolveTenantActiveDirectorSignature(
+    tenantId: string,
+  ): Promise<TenantActiveSignerResolutionRecord> {
+    const activeSigner =
+      await this.empleadosRepository.resolveTenantActiveDirectorSignatureByTenantId(tenantId);
+
+    if (activeSigner === null) {
+      throw new BadRequestException("El centro no tiene un firmante activo configurado.");
     }
 
-    if (matches.length > 1) {
-      throw new ConflictException(
-        "El centro tiene mas de una vigencia de firma aplicable a la fecha de emision. Revisa el historial de vigencias antes de exportar el formato.",
-      );
-    }
-
-    return matches[0]!;
+    return activeSigner;
   }
 
   async readSignatureFile(signature: {
@@ -227,11 +219,19 @@ export class EmpleadosSignatureService {
     originalName: string;
     mimeType: string;
   }) {
-    return await this.signatureFilesStorage.readFile(
-      signature.relativePath,
-      signature.originalName,
-      signature.mimeType,
-    );
+    try {
+      return await this.signatureFilesStorage.readFile(
+        signature.relativePath,
+        signature.originalName,
+        signature.mimeType,
+      );
+    } catch (error) {
+      if (error instanceof EmpleadoSignatureStoredFileNotFoundError) {
+        throw new NotFoundException("No fue posible encontrar el archivo de firma cargado.");
+      }
+
+      throw error;
+    }
   }
 
   private async getScopedEmpleadoOrThrow(empleadoId: string, actor: AuthUser) {
@@ -256,16 +256,34 @@ export class EmpleadosSignatureService {
     }
   }
 
-  private assertDirectorEmpleado(empleado: EmpleadoRecord): string {
-    if (empleado.tenantId === null) {
-      throw new BadRequestException("Solo los directores de centro pueden tener firma configurada.");
+  private ensureCanManageTenant(actor: AuthUser, tenantId: string) {
+    const scope = resolveEmpleadosScope(actor);
+
+    if (scope === null) {
+      throw new ForbiddenException("No tienes permisos para gestionar empleados.");
     }
 
-    if (empleado.role !== "director") {
-      throw new BadRequestException("Solo puedes cargar firma para usuarios con rol Director.");
+    if (scope.type === "tenant" && scope.tenantId !== tenantId) {
+      throw new ForbiddenException("No tienes permisos para gestionar este centro.");
+    }
+  }
+
+  private assertSignatureEligibleEmpleado(empleado: EmpleadoRecord): string {
+    if (empleado.tenantId === null) {
+      throw new BadRequestException("Solo los usuarios de centro pueden tener firma configurada.");
     }
 
     return empleado.tenantId;
+  }
+
+  private assertDirectorSignerEmpleado(empleado: EmpleadoRecord): string {
+    const tenantId = this.assertSignatureEligibleEmpleado(empleado);
+
+    if (empleado.role !== "director") {
+      throw new BadRequestException("Solo los usuarios con rol Director pueden ser firmantes activos.");
+    }
+
+    return tenantId;
   }
 
   private validateUpload(file: BufferedEmpleadoSignatureUpload) {
@@ -289,26 +307,6 @@ export class EmpleadosSignatureService {
       );
     }
   }
-
-  private assertAssignmentDateIsValid(
-    effectiveFrom: string,
-    latestAssignment: {
-      effectiveFrom: string;
-      effectiveTo: string | null;
-    } | null,
-  ) {
-    if (latestAssignment === null) {
-      return;
-    }
-
-    const lastCoveredDate = latestAssignment.effectiveTo ?? latestAssignment.effectiveFrom;
-
-    if (effectiveFrom <= lastCoveredDate) {
-      throw new BadRequestException(
-        "La nueva vigencia debe iniciar despues de la ultima vigencia configurada del centro.",
-      );
-    }
-  }
 }
 
 function isConsistentExtension(extension: string, mimeType: string): boolean {
@@ -323,29 +321,4 @@ function isConsistentExtension(extension: string, mimeType: string): boolean {
     default:
       return false;
   }
-}
-
-function resolvePreviousDate(dateValue: string): string {
-  const currentDate = new Date(`${dateValue}T00:00:00.000Z`);
-  currentDate.setUTCDate(currentDate.getUTCDate() - 1);
-
-  return currentDate.toISOString().slice(0, 10);
-}
-
-function isDirectorSignatureAssignmentOverlap(error: unknown): boolean {
-  if (typeof error !== "object" || error === null) {
-    return false;
-  }
-
-  const postgresError = error as {
-    code?: unknown;
-    constraint?: unknown;
-    constraint_name?: unknown;
-  };
-  const constraintName = postgresError.constraint_name ?? postgresError.constraint;
-
-  return (
-    postgresError.code === "23P01" ||
-    constraintName === "tenant_director_signature_assignments_no_overlap"
-  );
 }

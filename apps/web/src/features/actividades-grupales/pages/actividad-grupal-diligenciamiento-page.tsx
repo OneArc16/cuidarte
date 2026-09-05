@@ -1,5 +1,5 @@
 import { ChevronLeft, FileText } from "lucide-react";
-import { useState } from "react";
+import { toast } from "sonner";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
@@ -23,7 +23,6 @@ export function ActividadGrupalDiligenciamientoPage({
 }: ActividadGrupalDiligenciamientoPageProps) {
   const detailQuery = useActividadGrupalDiligenciamientoQuery(activityId);
   const saveMutation = useSaveActividadGrupalDiligenciamientoMutation();
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   if (detailQuery.isLoading) {
     return (
@@ -82,23 +81,19 @@ export function ActividadGrupalDiligenciamientoPage({
           <FileText aria-hidden="true" />
           <span>Ver PDF</span>
         </button>
-        <span className="actividades-form-nav__context">Diligenciar sesion</span>
+        <span className="actividades-form-nav__context">
+          {detailQuery.data.canEdit ? "Diligenciar sesion" : "Vista de solo lectura"}
+        </span>
       </div>
-
-      {successMessage !== null ? (
-        <p className="success-banner" role="status">
-          {successMessage}
-        </p>
-      ) : null}
 
       <ActividadGrupalDiligenciamientoForm
         activityId={activityId}
         detail={detailQuery.data}
         error={resolveActividadesGrupalesApiError(saveMutation.error)}
+        mode={detailQuery.data.canEdit ? "edit" : "view"}
         isPending={saveMutation.isPending}
         onCancel={() => navigate(CREACION_ACTIVIDADES_PATH)}
         onSubmit={(request) => {
-          setSuccessMessage(null);
           saveMutation.mutate(
             {
               activityId,
@@ -106,7 +101,7 @@ export function ActividadGrupalDiligenciamientoPage({
             },
             {
               onSuccess: () => {
-                setSuccessMessage("Diligenciamiento guardado.");
+                toast.success("Diligenciamiento guardado.");
               },
             },
           );

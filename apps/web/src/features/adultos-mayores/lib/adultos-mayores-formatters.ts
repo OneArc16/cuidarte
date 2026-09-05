@@ -38,14 +38,36 @@ const BLOOD_TYPE_LABELS = {
   unknown: "No sabe",
 } satisfies Record<AdultoMayorBloodType, string>;
 
-const HEALTH_REGIME_LABELS = {
-  contributory: "Contributivo",
+const HEALTH_REGIME_LABELS: Record<string, string> = {
+  contributory: "Contributivo cotizante",
   subsidized: "Subsidiado",
-  special: "Especial",
-  exception: "Excepcion",
+  special: "Especial o Excepción cotizante",
+  exception: "Especial o Excepción beneficiario",
   uninsured: "No afiliado",
-  unknown: "No sabe",
-} satisfies Record<AdultoMayorHealthRegime, string>;
+  unknown: "Ninguno",
+  "contributory-additional": "Contributivo adicional",
+  "contributory-beneficiary": "Contributivo beneficiario",
+  "arl-protected": "Tomador / Amparado ARL",
+  "soat-protected": "Tomador / Amparado SOAT",
+  "voluntary-health-plans": "Tomador / Amparado Planes voluntarios de salud",
+  particular: "Particular",
+  "prisoners-covered-by-national-health-fund":
+    "Personas privadas de la libertad a cargo del Fondo Nacional de Salud",
+  "Especial o Excepción cotizante": "Especial o Excepción cotizante",
+  "Especial o Excepción beneficiario": "Especial o Excepción beneficiario",
+  "Contributivo cotizante": "Contributivo cotizante",
+  "Contributivo adicional": "Contributivo adicional",
+  "Contributivo beneficiario": "Contributivo beneficiario",
+  "Subsidiado": "Subsidiado",
+  "No afiliado": "No afiliado",
+  "Tomador / Amparado ARL": "Tomador / Amparado ARL",
+  "Tomador / Amparado SOAT": "Tomador / Amparado SOAT",
+  "Tomador / Amparado Planes voluntarios de salud":
+    "Tomador / Amparado Planes voluntarios de salud",
+  Particular: "Particular",
+  "Personas privadas de la libertad a cargo del Fondo Nacional de Salud":
+    "Personas privadas de la libertad a cargo del Fondo Nacional de Salud",
+};
 
 export function formatAdultoMayorDocument(
   documentType: AdultoMayorDocumentType,
@@ -67,7 +89,7 @@ export function formatAdultoMayorBloodType(bloodType: AdultoMayorBloodType): str
 }
 
 export function formatAdultoMayorHealthRegime(regime: AdultoMayorHealthRegime): string {
-  return HEALTH_REGIME_LABELS[regime];
+  return HEALTH_REGIME_LABELS[regime] ?? regime;
 }
 
 export function formatAdultoMayorPhone(phone: string | null): string {

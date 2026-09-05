@@ -9,7 +9,7 @@ import {
 } from "../lib/empleados-formatters";
 
 type EmpleadosTableProps = {
-  canManageEmpleados: boolean;
+  canEditEmpleados: boolean;
   empleados: EmpleadoListItem[];
   isLoading: boolean;
   showTenantColumn: boolean;
@@ -18,7 +18,7 @@ type EmpleadosTableProps = {
 };
 
 export function EmpleadosTable({
-  canManageEmpleados,
+  canEditEmpleados,
   empleados,
   isLoading,
   onEdit,
@@ -86,7 +86,7 @@ export function EmpleadosTable({
                   >
                     <Eye aria-hidden="true" />
                   </button>
-                  {canManageEmpleados ? (
+                  {canEditEmpleados ? (
                     <button
                       className="empleados-row-action"
                       type="button"

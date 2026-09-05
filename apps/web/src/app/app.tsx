@@ -7,9 +7,13 @@ import {
   ADULTOS_MAYORES_NEW_PATH,
   ADULTOS_MAYORES_PATH,
   getAdultoMayorEditIdFromPath,
+  isAdultosMayoresImportPath,
   isAdultosMayoresPath,
 } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
-import { canManageAdultosMayores } from "@/features/adultos-mayores/lib/adultos-mayores-permissions";
+import {
+  canImportAdultosMayores,
+  canManageAdultosMayores,
+} from "@/features/adultos-mayores/lib/adultos-mayores-permissions";
 import {
   canManageAlimentacion,
   canOpenAlimentacion,
@@ -21,11 +25,15 @@ import {
   REGISTRO_ALIMENTACION_NEW_PATH,
   REGISTRO_ALIMENTACION_PATH,
 } from "@/features/alimentacion/lib/alimentacion-paths";
-import { canManageActividadesGrupales } from "@/features/actividades-grupales/lib/actividades-grupales-permissions";
+import {
+  canManageActividadesGrupales,
+  canViewActividadesGrupalesTrash,
+} from "@/features/actividades-grupales/lib/actividades-grupales-permissions";
 import {
   CREACION_ACTIVIDADES_NEW_PATH,
   CREACION_ACTIVIDADES_PATH,
-  getActividadGrupalDiligenciamientoIdFromPath,
+  getActividadGrupalEditIdFromPath,
+  isActividadesGrupalesTrashPath,
   isActividadesGrupalesPath,
 } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
 import { LoginPage } from "@/features/auth/pages/login-page";
@@ -38,8 +46,18 @@ import {
   getEmpleadoEditIdFromPath,
   isEmpleadosPath,
 } from "@/features/empleados/lib/empleados-paths";
-import { canManageEmpleados, canOpenEmpleados } from "@/features/empleados/lib/empleados-permissions";
+import {
+  canCreateEmpleados,
+  canEditEmpleados,
+  canOpenEmpleados,
+} from "@/features/empleados/lib/empleados-permissions";
 import { getAtencionIndividualCreateAdultoIdFromPath } from "@/features/atenciones-individuales/lib/atenciones-individuales-paths";
+import { canCreateAtencionIndividual } from "@/features/atenciones-individuales/lib/historia-clinica-permissions";
+import {
+  getAtencionesEnfermeriaHistoryAdultoIdFromPath,
+  isAtencionesEnfermeriaPath,
+} from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-paths";
+import { canReadAtencionesEnfermeria } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-permissions";
 
 export function App() {
   const currentUserQuery = useCurrentUserQuery();
@@ -74,6 +92,11 @@ export function App() {
       return;
     }
 
+    if (isActividadesGrupalesTrashPath(path) && !canViewActividadesGrupalesTrash(user)) {
+      navigate(HOME_PATH, { replace: true });
+      return;
+    }
+
     if (isAlimentacionPath(path)) {
       if (!canOpenAlimentacion(user)) {
         navigate(HOME_PATH, { replace: true });
@@ -96,10 +119,15 @@ export function App() {
       }
     }
 
+    if (isAtencionesEnfermeriaPath(path) && !canReadAtencionesEnfermeria(user)) {
+      navigate(HOME_PATH, { replace: true });
+      return;
+    }
+
     if (isActividadesGrupalesPath(path)) {
       const isActividadesWritePath =
         path === CREACION_ACTIVIDADES_NEW_PATH ||
-        getActividadGrupalDiligenciamientoIdFromPath(path) !== null;
+        getActividadGrupalEditIdFromPath(path) !== null;
 
       if (!canManageActividadesGrupales(user) && isActividadesWritePath) {
         navigate(CREACION_ACTIVIDADES_PATH, { replace: true });
@@ -108,20 +136,43 @@ export function App() {
     }
 
     if (isEmpleadosPath(path)) {
-      const isEmpleadosWritePath =
-        path === EMPLEADOS_NEW_PATH || getEmpleadoEditIdFromPath(path) !== null;
+      const isEmpleadoCreatePath = path === EMPLEADOS_NEW_PATH;
+      const isEmpleadoEditPath = getEmpleadoEditIdFromPath(path) !== null;
 
-      if (!canManageEmpleados(user) && isEmpleadosWritePath) {
+      if (isEmpleadoCreatePath && !canCreateEmpleados(user)) {
+        navigate(EMPLEADOS_PATH, { replace: true });
+        return;
+      }
+
+      if (isEmpleadoEditPath && !canEditEmpleados(user)) {
         navigate(EMPLEADOS_PATH, { replace: true });
         return;
       }
     }
 
     if (isAdultosMayoresPath(path)) {
+      if (isAdultosMayoresImportPath(path)) {
+        if (!canImportAdultosMayores(user)) {
+          navigate(HOME_PATH, { replace: true });
+          return;
+        }
+      } else if (user.role !== "super_admin" && user.tenantId === null) {
+        navigate(HOME_PATH, { replace: true });
+        return;
+      }
+
       const isAdultosWritePath =
         path === ADULTOS_MAYORES_NEW_PATH ||
         getAdultoMayorEditIdFromPath(path) !== null ||
         getAtencionIndividualCreateAdultoIdFromPath(path) !== null;
+
+      if (
+        getAtencionIndividualCreateAdultoIdFromPath(path) !== null &&
+        !canCreateAtencionIndividual(user)
+      ) {
+        navigate(ADULTOS_MAYORES_PATH, { replace: true });
+        return;
+      }
 
       if (!canManageAdultosMayores(user) && isAdultosWritePath) {
         navigate(ADULTOS_MAYORES_PATH, { replace: true });
@@ -134,6 +185,7 @@ export function App() {
       !isBackofficePath(path) &&
       !isAdultosMayoresPath(path) &&
       !isAlimentacionPath(path) &&
+      !isAtencionesEnfermeriaPath(path) &&
       !isActividadesGrupalesPath(path) &&
       !isEmpleadosPath(path)
     ) {
@@ -148,10 +200,18 @@ export function App() {
         : isBackofficePath(path)
           ? "BackOffice | CuidarTe"
           : isAdultosMayoresPath(path)
-            ? "Adultos mayores | CuidarTe"
+            ? isAdultosMayoresImportPath(path)
+              ? "Importar adultos mayores | CuidarTe"
+              : "Adultos mayores | CuidarTe"
             : isAlimentacionPath(path)
               ? "Registro de alimentacion | CuidarTe"
-              : isActividadesGrupalesPath(path)
+              : isAtencionesEnfermeriaPath(path)
+                ? getAtencionesEnfermeriaHistoryAdultoIdFromPath(path) !== null
+                  ? "Historia de enfermeria | CuidarTe"
+                  : "Atenciones de enfermeria | CuidarTe"
+              : isActividadesGrupalesTrashPath(path)
+                ? "Papelera de actas | CuidarTe"
+                : isActividadesGrupalesPath(path)
                 ? "Sesiones grupales | CuidarTe"
                 : isEmpleadosPath(path)
                   ? "Gestion de empleados | CuidarTe"

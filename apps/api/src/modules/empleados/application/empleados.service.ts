@@ -21,6 +21,7 @@ import {
 } from "@nestjs/common";
 
 import {
+  canCreateEmpleados,
   canAssignEmpleadoRole,
   canManageEmpleados,
   resolveEmpleadoTenantForCreate,
@@ -74,7 +75,7 @@ export class EmpleadosService {
     command: CreateEmpleadoRequest,
     actor: AuthUser,
   ): Promise<EmpleadoDetail> {
-    this.ensureCanManage(actor);
+    this.ensureCanCreate(actor);
     this.ensureCanAssignRole(actor, command.role);
 
     const tenantId = resolveEmpleadoTenantForCreate(actor, command.role, command.tenantId);
@@ -147,12 +148,9 @@ export class EmpleadosService {
       throw new BadRequestException("El propietario del centro debe conservar el rol Admin.");
     }
 
-    if (
-      currentRecord.currentDirectorSignatureAssignment !== null &&
-      command.role !== "director"
-    ) {
+    if (currentRecord.tenantActiveSigner?.employeeId === currentRecord.id && command.role !== "director") {
       throw new BadRequestException(
-        "No puedes cambiar el rol de un director que tiene una firma vigente asignada al centro.",
+        "No puedes cambiar el rol de un director que es el firmante activo del centro.",
       );
     }
 
@@ -160,9 +158,9 @@ export class EmpleadosService {
       throw new BadRequestException("No puedes inactivar tu propia cuenta.");
     }
 
-    if (currentRecord.currentDirectorSignatureAssignment !== null && !command.isActive) {
+    if (currentRecord.tenantActiveSigner?.employeeId === currentRecord.id && !command.isActive) {
       throw new BadRequestException(
-        "No puedes inactivar un director que tiene una firma vigente asignada al centro.",
+        "No puedes inactivar un director que es el firmante activo del centro.",
       );
     }
 
@@ -211,6 +209,12 @@ export class EmpleadosService {
   private ensureCanManage(actor: AuthUser) {
     if (!canManageEmpleados(actor)) {
       throw new ForbiddenException("No tienes permisos para gestionar empleados.");
+    }
+  }
+
+  private ensureCanCreate(actor: AuthUser) {
+    if (!canCreateEmpleados(actor)) {
+      throw new ForbiddenException("No tienes permisos para crear usuarios.");
     }
   }
 
@@ -331,6 +335,17 @@ export class EmpleadosService {
               mimeType: record.latestSignature.mimeType,
               sizeBytes: record.latestSignature.sizeBytes,
               createdAt: record.latestSignature.createdAt.toISOString(),
+            },
+      tenantActiveSigner:
+        record.tenantActiveSigner === null
+          ? null
+          : {
+              tenantId: record.tenantActiveSigner.tenantId,
+              employeeId: record.tenantActiveSigner.employeeId,
+              signatureVersionId: record.tenantActiveSigner.signatureVersionId,
+              activatedByUserId: record.tenantActiveSigner.activatedByUserId,
+              activatedAt: record.tenantActiveSigner.activatedAt.toISOString(),
+              updatedAt: record.tenantActiveSigner.updatedAt.toISOString(),
             },
       currentDirectorSignatureAssignment:
         record.currentDirectorSignatureAssignment === null

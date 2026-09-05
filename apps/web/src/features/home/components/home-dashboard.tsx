@@ -3,17 +3,20 @@ import {
   type HomeDashboardResponse,
   type HomeDashboardShortcutModuleId,
   type AuthUser,
+  homeDashboardShortcutModuleIdValues,
 } from "@cuidarte/contracts";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
 import { HomeDashboardIndicatorCard } from "./home-dashboard-indicator-card";
 import { HomeDashboardShortcutCard } from "./home-dashboard-shortcut-card";
-import { HOME_DASHBOARD_INDICATORS } from "../lib/home-dashboard-definitions";
+import {
+  HOME_DASHBOARD_INDICATORS,
+  type HomeDashboardIndicatorDefinition,
+} from "../lib/home-dashboard-definitions";
 import {
   canViewModule,
   HOME_MODULES,
-  isShortcutModule,
   type ShortcutHomeModule,
 } from "../lib/home-modules";
 import { useHomeDashboardQuery } from "../model/home-queries";
@@ -25,8 +28,12 @@ type HomeDashboardProps = {
 
 type ShortcutTotals = Partial<Record<HomeDashboardShortcutModuleId, number>>;
 type IndicatorTotals = Partial<Record<HomeDashboardIndicatorId, number>>;
+type HomeDashboardIndicatorTargetModuleId = HomeDashboardIndicatorDefinition["targetModuleId"];
 
-const HOME_SHORTCUT_MODULES = HOME_MODULES.filter(isShortcutModule) as readonly ShortcutHomeModule[];
+const HOME_SHORTCUT_MODULE_IDS = new Set(homeDashboardShortcutModuleIdValues);
+const HOME_SHORTCUT_MODULES = HOME_MODULES.filter(
+  (module) => HOME_SHORTCUT_MODULE_IDS.has(module.id as HomeDashboardShortcutModuleId),
+) as readonly ShortcutHomeModule[];
 
 export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
   const dashboardQuery = useHomeDashboardQuery();
@@ -61,7 +68,7 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
             <HomeDashboardShortcutCard
               key={module.id}
               module={module}
-              total={shortcutTotals[module.id]}
+              total={shortcutTotals[module.id as HomeDashboardShortcutModuleId]}
               onClick={() => {
                 navigate(module.path);
               }}
@@ -142,16 +149,12 @@ function buildIndicatorTotals(data: HomeDashboardResponse | undefined): Indicato
   return totals;
 }
 
-function resolveModulePath(moduleId: HomeDashboardShortcutModuleId): string {
-  return resolveShortcutModule(moduleId).path;
-}
-
-function resolveShortcutModule(moduleId: HomeDashboardShortcutModuleId): ShortcutHomeModule {
-  const module = HOME_SHORTCUT_MODULES.find((candidate) => candidate.id === moduleId);
+function resolveModulePath(moduleId: HomeDashboardIndicatorTargetModuleId): string {
+  const module = HOME_MODULES.find((candidate) => candidate.id === moduleId);
 
   if (module === undefined) {
     throw new Error(`Modulo no configurado para el dashboard: ${moduleId}`);
   }
 
-  return module;
+  return module.path;
 }

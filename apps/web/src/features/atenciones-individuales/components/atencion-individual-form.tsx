@@ -12,6 +12,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Download, FileText, Plus, Trash2, Upload } from "lucide-react";
 import { useEffect, useId, useState } from "react";
+import { toast } from "sonner";
 import {
   type FieldErrors,
   type Resolver,
@@ -26,6 +27,9 @@ import {
   type CreateAtencionIndividualWithSupportsRequest,
   type UpdateAtencionIndividualWithSupportsRequest,
 } from "../api/atenciones-individuales-api";
+import { AtencionesEnfermeriaHistoryTable } from "@/features/atenciones-enfermeria/components/atenciones-enfermeria-history-table";
+import { resolveAtencionesEnfermeriaApiError } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-formatters";
+import { useAtencionesEnfermeriaHistoryQuery } from "@/features/atenciones-enfermeria/model/atenciones-enfermeria-queries";
 import {
   CAUSA_EXTERNA_LABELS,
   DIAGNOSTICO_TIPO_LABELS,
@@ -93,11 +97,17 @@ const FORM_SECTIONS = [
   { id: "ordenes", label: "Ordenes medicas", fields: ["ordenesMedicas"] },
   { id: "diagnosticos", label: "Diagnosticos", fields: ["diagnosticos"] },
   { id: "soportes", label: "Soportes", fields: [] },
+  { id: "enfermeria", label: "Atenciones de enfermería", fields: [] },
 ] as const;
 
 const MAX_SUPPORT_FILES = 3;
+const CREATE_DRAFT_STORAGE_KEY_PREFIX = "atencion-individual-create-draft";
 
 type SectionId = (typeof FORM_SECTIONS)[number]["id"];
+type CreateDraftState = {
+  activeSection: SectionId;
+  values: AtencionIndividualFormValues;
+};
 
 type AtencionIndividualFormProps =
   | {
@@ -107,7 +117,8 @@ type AtencionIndividualFormProps =
       error: string | null;
       isPending: boolean;
       onCancel: () => void;
-      onSubmit: (values: CreateAtencionIndividualWithSupportsRequest) => void;
+      onOpenNursingAttention: (atencionId: string) => void;
+      onSubmit: (values: CreateAtencionIndividualWithSupportsRequest) => Promise<void> | void;
     }
   | {
       mode: "edit";
@@ -115,23 +126,28 @@ type AtencionIndividualFormProps =
       error: string | null;
       isPending: boolean;
       onCancel: () => void;
-      onSubmit: (values: UpdateAtencionIndividualWithSupportsRequest) => void;
+      onOpenNursingAttention: (atencionId: string) => void;
+      onSubmit: (values: UpdateAtencionIndividualWithSupportsRequest) => Promise<void> | void;
     }
   | {
       mode: "view";
       detail: AtencionIndividualDetail;
       onCancel: () => void;
+      onOpenNursingAttention: (atencionId: string) => void;
     };
 
 export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
   const [activeSection, setActiveSection] = useState<SectionId>("datos");
   const [newSupportFiles, setNewSupportFiles] = useState<File[]>([]);
   const [removedSupportFileIds, setRemovedSupportFileIds] = useState<string[]>([]);
-  const [supportUploadError, setSupportUploadError] = useState<string | null>(null);
   const tabPanelIdPrefix = useId();
   const isReadOnly = props.mode === "view";
   const adultoMayor = props.mode === "create" ? props.adultoMayor : props.detail.adultoMayor;
   const detail = props.mode === "create" ? null : props.detail;
+  const nursingHistoryQuery = useAtencionesEnfermeriaHistoryQuery(
+    adultoMayor.id,
+    activeSection === "enfermeria",
+  );
   const existingSupportFiles =
     props.mode !== "create"
       ? props.detail.supportFiles.filter((file) => !removedSupportFileIds.includes(file.id))
@@ -153,15 +169,62 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
   const { getValues, reset, setValue, watch } = form;
   const pesoKg = watch("pesoKg");
   const tallaCm = watch("tallaCm");
+  const activeSectionIndex = FORM_SECTIONS.findIndex((section) => section.id === activeSection);
+  const isLastSection = activeSectionIndex === FORM_SECTIONS.length - 1;
+  const createDraftStorageKey =
+    props.mode === "create" ? buildCreateDraftStorageKey(props.adultoMayor.id) : null;
+  const formError = "error" in props ? props.error ?? null : null;
 
   useEffect(() => {
     if (detail !== null) {
       reset(toAtencionIndividualFormValues(detail));
       setNewSupportFiles([]);
       setRemovedSupportFileIds([]);
-      setSupportUploadError(null);
     }
   }, [detail, reset]);
+
+  useEffect(() => {
+    if (props.mode !== "create" || createDraftStorageKey === null) {
+      return;
+    }
+
+    const savedDraft = readCreateDraft(
+      createDraftStorageKey,
+      createDefaultAtencionIndividualFormValues(props.suggestedConsecutive),
+    );
+
+    if (savedDraft === null) {
+      return;
+    }
+
+    reset(savedDraft.values);
+    setActiveSection(savedDraft.activeSection);
+  }, [createDraftStorageKey, props.mode, reset]);
+
+  useEffect(() => {
+    if (formError === null) {
+      return;
+    }
+
+    toast.error(formError);
+  }, [formError]);
+
+  useEffect(() => {
+    if (props.mode !== "create" || createDraftStorageKey === null) {
+      return;
+    }
+
+    const subscription = form.watch((values) => {
+      writeCreateDraft(createDraftStorageKey, {
+        activeSection,
+        values: values as AtencionIndividualFormValues,
+      });
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [activeSection, createDraftStorageKey, form, props.mode]);
 
   useEffect(() => {
     const nextImc = formatImcInput(pesoKg, tallaCm);
@@ -181,6 +244,65 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
     setActiveSection(findFirstSectionWithError(errors));
   }
 
+  async function submitCurrentSection() {
+    if (props.mode === "view") {
+      return;
+    }
+
+    const currentSection = FORM_SECTIONS[activeSectionIndex];
+
+    if (currentSection === undefined) {
+      return;
+    }
+
+    if (!isLastSection) {
+      const sectionFields: Array<keyof AtencionIndividualFormValues> = [...currentSection.fields];
+      const isSectionValid = await form.trigger(
+        sectionFields,
+        { shouldFocus: true },
+      );
+
+      if (!isSectionValid) {
+        return;
+      }
+
+      if (props.mode === "edit") {
+        const values = getValues();
+
+        await props.onSubmit({
+          payload: toUpdateAtencionIndividualRequest(values),
+          supportFiles: newSupportFiles,
+          removedSupportFileIds,
+        });
+      }
+
+      const nextSection = FORM_SECTIONS[activeSectionIndex + 1];
+
+      if (nextSection !== undefined) {
+        setActiveSection(nextSection.id);
+      }
+
+      return;
+    }
+
+    await form.handleSubmit(async (values) => {
+      if (props.mode === "create") {
+        await props.onSubmit({
+          payload: toCreateAtencionIndividualRequest(adultoMayor.id, values),
+          supportFiles: newSupportFiles,
+        });
+        clearCreateDraft(createDraftStorageKey);
+        return;
+      }
+
+      await props.onSubmit({
+        payload: toUpdateAtencionIndividualRequest(values),
+        supportFiles: newSupportFiles,
+        removedSupportFileIds,
+      });
+    }, handleInvalidSubmit)();
+  }
+
   function handleSupportFiles(files: FileList | null) {
     if (isReadOnly) {
       return;
@@ -194,17 +316,23 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
     const availableSlots = MAX_SUPPORT_FILES - supportItems.length;
 
     if (availableSlots <= 0) {
-      setSupportUploadError("Ya tienes el maximo de 3 soportes.");
+      toast.error("Ya tienes el maximo de 3 soportes PDF.");
       return;
     }
 
     if (selectedFiles.length > availableSlots) {
-      setSupportUploadError(`Solo puedes agregar ${availableSlots} soporte(s) mas.`);
+      toast.error(`Solo puedes agregar ${availableSlots} soporte(s) PDF mas.`);
+      return;
+    }
+
+    const firstInvalidFile = selectedFiles.find((file) => !isPdfFile(file));
+
+    if (firstInvalidFile !== undefined) {
+      toast.error(`"${firstInvalidFile.name}" no es un PDF valido.`);
       return;
     }
 
     setNewSupportFiles((current) => [...current, ...selectedFiles]);
-    setSupportUploadError(null);
   }
 
   function removeSupportItem(index: number) {
@@ -223,8 +351,6 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
     } else {
       setNewSupportFiles((current) => current.filter((file) => file !== item.file));
     }
-
-    setSupportUploadError(null);
   }
 
   return (
@@ -235,21 +361,8 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
         props.mode === "view"
           ? undefined
           : (event) => {
-              void form.handleSubmit((values) => {
-                if (props.mode === "create") {
-                  props.onSubmit({
-                    payload: toCreateAtencionIndividualRequest(adultoMayor.id, values),
-                    supportFiles: newSupportFiles,
-                  });
-                  return;
-                }
-
-                props.onSubmit({
-                  payload: toUpdateAtencionIndividualRequest(values),
-                  supportFiles: newSupportFiles,
-                  removedSupportFileIds,
-                });
-              }, handleInvalidSubmit)(event);
+              event.preventDefault();
+              void submitCurrentSection();
             }
       }
     >
@@ -603,7 +716,7 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
           <div>
             <span className="eyebrow">Soportes clinicos</span>
             <h3>Documentos adjuntos</h3>
-            <p>Adjunta hasta 3 archivos de cualquier tipo: PDF, Word, Excel, imagenes u otros.</p>
+            <p>Adjunta hasta 3 archivos en formato PDF de maximo 10 MB cada uno.</p>
           </div>
           {!isReadOnly ? (
             <label className="outline-action atencion-support-upload">
@@ -611,6 +724,7 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
               <span>Adjuntar</span>
               <input
                 type="file"
+                accept=".pdf,application/pdf"
                 multiple
                 aria-label="Adjuntar soportes"
                 disabled={supportItems.length >= MAX_SUPPORT_FILES}
@@ -623,12 +737,6 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
           ) : null}
         </div>
 
-        {supportUploadError !== null ? (
-          <p className="form-error" role="alert">
-            {supportUploadError}
-          </p>
-        ) : null}
-
         <SupportFilesList
           atencionId={props.mode === "create" ? null : props.detail.id}
           allowRemove={!isReadOnly}
@@ -637,11 +745,31 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
         />
       </section>
 
-      {props.mode !== "view" && props.error !== null ? (
-        <p className="form-error" role="alert">
-          {props.error}
-        </p>
-      ) : null}
+      <section
+        className="adulto-form-panel"
+        id={`${tabPanelIdPrefix}-enfermeria-panel`}
+        role="tabpanel"
+        aria-label="Contenido de atenciones de enfermería"
+        hidden={activeSection !== "enfermeria"}
+      >
+        <div className="atencion-cross-history-header">
+          <div>
+            <span className="eyebrow">Consulta cruzada</span>
+          </div>
+        </div>
+
+        {nursingHistoryQuery.isError ? (
+          <p className="form-error" role="alert">
+            {resolveAtencionesEnfermeriaApiError(nursingHistoryQuery.error)}
+          </p>
+        ) : (
+          <AtencionesEnfermeriaHistoryTable
+            atenciones={nursingHistoryQuery.data?.atenciones ?? []}
+            isLoading={nursingHistoryQuery.isLoading}
+            onOpenAtencion={props.onOpenNursingAttention}
+          />
+        )}
+      </section>
 
       {props.mode === "view" ? (
         <div className="adulto-form-actions">
@@ -655,7 +783,11 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
             Cancelar
           </button>
           <button className="primary-action" type="submit" disabled={props.isPending}>
-            {props.isPending ? "Guardando..." : "Guardar atencion"}
+            {props.isPending
+              ? "Guardando..."
+              : isLastSection
+                ? "Guardar atencion"
+                : "Guardar y continuar"}
           </button>
         </div>
       )}
@@ -744,6 +876,87 @@ function SupportFilesList({
 
 function formatSupportMimeType(mimeType: string): string {
   return mimeType.trim() === "" ? "Archivo" : mimeType;
+}
+
+function isPdfFile(file: File): boolean {
+  const mimeType = file.type.trim().toLowerCase();
+  const name = file.name.trim().toLowerCase();
+
+  return mimeType === "application/pdf" && name.endsWith(".pdf");
+}
+
+function buildCreateDraftStorageKey(adultoMayorId: string): string {
+  return `${CREATE_DRAFT_STORAGE_KEY_PREFIX}:${adultoMayorId}`;
+}
+
+function readCreateDraft(
+  storageKey: string,
+  fallbackValues: AtencionIndividualFormValues,
+): CreateDraftState | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const rawValue = window.localStorage.getItem(storageKey);
+
+  if (rawValue === null) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawValue) as Partial<CreateDraftState>;
+
+    if (parsed.activeSection === undefined || parsed.values === undefined) {
+      return null;
+    }
+
+    return {
+      activeSection: FORM_SECTIONS.some((section) => section.id === parsed.activeSection)
+        ? parsed.activeSection
+        : "datos",
+      values: hydrateCreateDraftValues(parsed.values, fallbackValues),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function hydrateCreateDraftValues(
+  draftValues: unknown,
+  fallbackValues: AtencionIndividualFormValues,
+): AtencionIndividualFormValues {
+  if (typeof draftValues !== "object" || draftValues === null) {
+    return fallbackValues;
+  }
+
+  const parsedValues = draftValues as Partial<AtencionIndividualFormValues>;
+
+  return {
+    ...fallbackValues,
+    ...parsedValues,
+    ordenesMedicas: Array.isArray(parsedValues.ordenesMedicas)
+      ? parsedValues.ordenesMedicas
+      : fallbackValues.ordenesMedicas,
+    diagnosticos: Array.isArray(parsedValues.diagnosticos)
+      ? parsedValues.diagnosticos
+      : fallbackValues.diagnosticos,
+  };
+}
+
+function writeCreateDraft(storageKey: string, draft: CreateDraftState): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(storageKey, JSON.stringify(draft));
+}
+
+function clearCreateDraft(storageKey: string | null): void {
+  if (typeof window === "undefined" || storageKey === null) {
+    return;
+  }
+
+  window.localStorage.removeItem(storageKey);
 }
 
 function formatSupportFileSize(sizeBytes: number): string {

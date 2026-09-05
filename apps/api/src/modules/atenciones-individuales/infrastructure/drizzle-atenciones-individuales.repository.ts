@@ -8,6 +8,7 @@ import {
   atencionIndividualSupportFiles,
   atencionesIndividuales,
   auditLogs,
+  epsCatalog,
   tenants,
   users,
 } from "../../../database/schema";
@@ -49,6 +50,7 @@ type AtencionIndividualRow = Omit<
   adultoSex: string;
   adultoEps: string | null;
   adultoHealthRegime: string | null;
+  createdByUserRole: AtencionIndividualHistoryItemRecord["createdByUserRole"];
 };
 
 type AtencionIndividualAdultoRow = {
@@ -98,6 +100,7 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
       .select(this.getAdultoSelection())
       .from(adultosMayores)
       .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
+      .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
       .where(and(...conditions))
       .limit(1);
 
@@ -115,6 +118,10 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
 
     if (query.createdByUserId !== undefined) {
       conditions.push(eq(atencionesIndividuales.createdByUserId, query.createdByUserId));
+    }
+
+    if (query.createdByUserRole !== undefined) {
+      conditions.push(eq(users.role, query.createdByUserRole));
     }
 
     const rows = await this.database.db
@@ -144,6 +151,8 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
       .from(atencionesIndividuales)
       .innerJoin(adultosMayores, eq(adultosMayores.id, atencionesIndividuales.adultoMayorId))
       .innerJoin(tenants, eq(tenants.id, atencionesIndividuales.tenantId))
+      .innerJoin(users, eq(users.id, atencionesIndividuales.createdByUserId))
+      .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
       .where(and(...conditions))
       .limit(1);
 
@@ -169,6 +178,8 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
       .from(atencionesIndividuales)
       .innerJoin(adultosMayores, eq(adultosMayores.id, atencionesIndividuales.adultoMayorId))
       .innerJoin(tenants, eq(tenants.id, atencionesIndividuales.tenantId))
+      .innerJoin(users, eq(users.id, atencionesIndividuales.createdByUserId))
+      .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
       .where(and(...conditions))
       .limit(1);
 
@@ -270,6 +281,8 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
         .from(atencionesIndividuales)
         .innerJoin(adultosMayores, eq(adultosMayores.id, atencionesIndividuales.adultoMayorId))
         .innerJoin(tenants, eq(tenants.id, atencionesIndividuales.tenantId))
+        .innerJoin(users, eq(users.id, atencionesIndividuales.createdByUserId))
+        .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
         .where(eq(atencionesIndividuales.id, created.id))
         .limit(1);
 
@@ -295,6 +308,8 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
         .from(atencionesIndividuales)
         .innerJoin(adultosMayores, eq(adultosMayores.id, atencionesIndividuales.adultoMayorId))
         .innerJoin(tenants, eq(tenants.id, atencionesIndividuales.tenantId))
+        .innerJoin(users, eq(users.id, atencionesIndividuales.createdByUserId))
+        .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
         .where(eq(atencionesIndividuales.id, command.id))
         .limit(1);
 
@@ -405,6 +420,8 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
         .from(atencionesIndividuales)
         .innerJoin(adultosMayores, eq(adultosMayores.id, atencionesIndividuales.adultoMayorId))
         .innerJoin(tenants, eq(tenants.id, atencionesIndividuales.tenantId))
+        .innerJoin(users, eq(users.id, atencionesIndividuales.createdByUserId))
+        .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
         .where(eq(atencionesIndividuales.id, command.id))
         .limit(1);
 
@@ -449,7 +466,7 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
       surnames: adultosMayores.surnames,
       birthDate: adultosMayores.birthDate,
       sex: adultosMayores.sex,
-      eps: adultosMayores.eps,
+      eps: sql<string | null>`coalesce(${epsCatalog.name}, ${adultosMayores.eps})`,
       healthRegime: adultosMayores.healthRegime,
     };
   }
@@ -487,6 +504,7 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
       ordenesMedicas: atencionesIndividuales.ordenesMedicas,
       diagnosticos: atencionesIndividuales.diagnosticos,
       createdByUserId: atencionesIndividuales.createdByUserId,
+      createdByUserRole: users.role,
       updatedByUserId: atencionesIndividuales.updatedByUserId,
       createdAt: atencionesIndividuales.createdAt,
       updatedAt: atencionesIndividuales.updatedAt,
@@ -494,7 +512,7 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
       adultoFullName: sql<string>`concat(${adultosMayores.names}, ' ', ${adultosMayores.surnames})`,
       adultoBirthDate: adultosMayores.birthDate,
       adultoSex: adultosMayores.sex,
-      adultoEps: adultosMayores.eps,
+      adultoEps: sql<string | null>`coalesce(${epsCatalog.name}, ${adultosMayores.eps})`,
       adultoHealthRegime: adultosMayores.healthRegime,
     };
   }
@@ -613,6 +631,7 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
         healthRegime: row.adultoHealthRegime,
       },
       supportFiles,
+      createdByUserRole: row.createdByUserRole,
     };
   }
 

@@ -19,22 +19,30 @@ import { DatabaseService } from "../../../database/database.service";
 import {
   adultosMayores,
   alimentacionFormatoEmissions,
+  alimentacionFormatoImportedVersions,
   alimentacionRegistros,
   auditLogs,
   tenants,
+  users,
 } from "../../../database/schema";
 import {
   type AlimentacionAdultoOptionRecord,
   type AlimentacionFormatoEmissionRecord,
   type AlimentacionFormatoEntregaRecord,
+  type AlimentacionImportedFormatoVersionRecord,
   type AlimentacionRecord,
   type AlimentacionTenantOptionRecord,
   type CreateAlimentacionFormatoEmissionCommand,
+  type CreateAlimentacionImportedFormatoVersionCommand,
   type CreateAlimentacionFormatoEntregaExportAuditCommand,
+  type CreateAlimentacionImportedFormatoDownloadAuditCommand,
   type CreateAlimentacionBatchRecordCommand,
+  type DeleteAlimentacionRecordCommand,
   type FindAlimentacionAdultoMayorByIdQuery,
   type FindLatestAlimentacionFormatoEmissionQuery,
   type FindAlimentacionFormatoEntregaByAdultoAndMonthQuery,
+  type FindAlimentacionImportedFormatoVersionByIdQuery,
+  type FindAlimentacionImportedFormatoVersionsQuery,
   type FindAlimentacionExistingRecordsByAdultosAndDateQuery,
   type FindAlimentacionRecordByAdultoMayorAndDateQuery,
   type FindAlimentacionRecordByIdQuery,
@@ -88,6 +96,7 @@ type AlimentacionFormatoEntregaRow = {
   almuerzo: AlimentacionRecord["almuerzo"];
   refrigerio2: AlimentacionRecord["refrigerio2"];
   auxilioTransporte: AlimentacionRecord["auxilioTransporte"];
+  updatedAt: Date;
 };
 
 type AlimentacionFormatoEmissionRow = {
@@ -110,6 +119,23 @@ type AlimentacionFormatoEmissionRow = {
   issuedAt: Date;
 };
 
+type AlimentacionImportedFormatoVersionRow = {
+  id: string;
+  tenantId: string;
+  adultoMayorId: string;
+  deliveryMonth: string;
+  version: number;
+  source: string;
+  originalName: string;
+  storedName: string;
+  pdfRelativePath: string;
+  mimeType: string;
+  sizeBytes: number;
+  importedByUserId: string;
+  importedByUserFullName: string;
+  importedAt: Date;
+};
+
 @Injectable()
 export class DrizzleAlimentacionRepository implements AlimentacionRepository {
   constructor(private readonly database: DatabaseService) {}
@@ -127,7 +153,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         asc(adultosMayores.names),
       );
 
-    return rows.map((row) => this.toRecord(row));
+    return await this.attachLatestImportedFormatos(rows.map((row) => this.toRecord(row)));
   }
 
   async findById(query: FindAlimentacionRecordByIdQuery): Promise<AlimentacionRecord | null> {
@@ -221,12 +247,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       })
       .from(adultosMayores)
       .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
-      .where(
-        and(
-          eq(adultosMayores.tenantId, tenantId),
-          inArray(adultosMayores.id, adultoMayorIds),
-        ),
-      )
+      .where(and(eq(adultosMayores.tenantId, tenantId), inArray(adultosMayores.id, adultoMayorIds)))
       .orderBy(asc(adultosMayores.surnames), asc(adultosMayores.names));
 
     return rows.map((row) => this.toAdultoOption(row));
@@ -285,6 +306,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         almuerzo: alimentacionRegistros.almuerzo,
         refrigerio2: alimentacionRegistros.refrigerio2,
         auxilioTransporte: alimentacionRegistros.auxilioTransporte,
+        updatedAt: alimentacionRegistros.updatedAt,
       })
       .from(alimentacionRegistros)
       .innerJoin(adultosMayores, eq(adultosMayores.id, alimentacionRegistros.adultoMayorId))
@@ -343,6 +365,47 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       .limit(1);
 
     return row === undefined ? null : this.toFormatoEmissionRecord(row);
+  }
+
+  async findImportedFormatoVersions(
+    query: FindAlimentacionImportedFormatoVersionsQuery,
+  ): Promise<AlimentacionImportedFormatoVersionRecord[]> {
+    const rows = await this.database.db
+      .select(this.getImportedFormatoVersionSelection())
+      .from(alimentacionFormatoImportedVersions)
+      .innerJoin(users, eq(users.id, alimentacionFormatoImportedVersions.importedByUserId))
+      .where(
+        and(
+          eq(alimentacionFormatoImportedVersions.tenantId, query.tenantId),
+          eq(alimentacionFormatoImportedVersions.adultoMayorId, query.adultoMayorId),
+          eq(alimentacionFormatoImportedVersions.deliveryMonth, query.deliveryMonth),
+        ),
+      )
+      .orderBy(
+        desc(alimentacionFormatoImportedVersions.version),
+        desc(alimentacionFormatoImportedVersions.importedAt),
+      );
+
+    return rows.map((row) => this.toImportedFormatoVersionRecord(row));
+  }
+
+  async findImportedFormatoVersionById(
+    query: FindAlimentacionImportedFormatoVersionByIdQuery,
+  ): Promise<AlimentacionImportedFormatoVersionRecord | null> {
+    const [row] = await this.database.db
+      .select(this.getImportedFormatoVersionSelection())
+      .from(alimentacionFormatoImportedVersions)
+      .innerJoin(users, eq(users.id, alimentacionFormatoImportedVersions.importedByUserId))
+      .where(
+        and(
+          eq(alimentacionFormatoImportedVersions.id, query.id),
+          eq(alimentacionFormatoImportedVersions.tenantId, query.tenantId),
+          eq(alimentacionFormatoImportedVersions.adultoMayorId, query.adultoMayorId),
+        ),
+      )
+      .limit(1);
+
+    return row === undefined ? null : this.toImportedFormatoVersionRecord(row);
   }
 
   async findExistingByAdultosAndDate(
@@ -501,6 +564,40 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
     });
   }
 
+  async delete(command: DeleteAlimentacionRecordCommand): Promise<AlimentacionRecord | null> {
+    return await this.database.db.transaction(async (tx) => {
+      const [row] = await tx
+        .select(this.getRecordSelection())
+        .from(alimentacionRegistros)
+        .innerJoin(adultosMayores, eq(adultosMayores.id, alimentacionRegistros.adultoMayorId))
+        .innerJoin(tenants, eq(tenants.id, alimentacionRegistros.tenantId))
+        .where(this.buildScopedWhere(command.scope, [eq(alimentacionRegistros.id, command.id)]))
+        .limit(1);
+
+      if (row === undefined) {
+        return null;
+      }
+
+      const deletedRecord = this.toRecord(row);
+
+      await tx.insert(auditLogs).values({
+        actorUserId: command.actorUserId,
+        action: "alimentacion.deleted",
+        targetTenantId: deletedRecord.tenantId,
+        summary: `Registro de alimentacion eliminado: ${deletedRecord.fullName} (${deletedRecord.deliveryDate})`,
+        metadata: {
+          record: this.toAuditRecordSnapshot(deletedRecord),
+        },
+      });
+
+      await tx
+        .delete(alimentacionRegistros)
+        .where(eq(alimentacionRegistros.id, command.id));
+
+      return deletedRecord;
+    });
+  }
+
   async createFormatoEntregaExportAudit(
     command: CreateAlimentacionFormatoEntregaExportAuditCommand,
   ): Promise<void> {
@@ -512,6 +609,24 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       metadata: {
         adultoMayorId: command.adultoMayorId,
         deliveryMonth: command.deliveryMonth,
+      },
+    });
+  }
+
+  async createImportedFormatoDownloadAudit(
+    command: CreateAlimentacionImportedFormatoDownloadAuditCommand,
+  ): Promise<void> {
+    await this.database.db.insert(auditLogs).values({
+      actorUserId: command.actorUserId,
+      action: "alimentacion.formato_imported_downloaded",
+      targetTenantId: command.targetTenantId,
+      summary: `Formato de alimentacion importado descargado (${command.deliveryMonth}) v${command.version}`,
+      metadata: {
+        adultoMayorId: command.adultoMayorId,
+        deliveryMonth: command.deliveryMonth,
+        versionId: command.versionId,
+        version: command.version,
+        source: "importado",
       },
     });
   }
@@ -595,6 +710,85 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
     return emission;
   }
 
+  async createImportedFormatoVersion(
+    command: CreateAlimentacionImportedFormatoVersionCommand,
+  ): Promise<AlimentacionImportedFormatoVersionRecord> {
+    const createdId = await this.database.db.transaction(async (tx) => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`alimentacion-import:${command.adultoMayorId}:${command.deliveryMonth}`}))`,
+      );
+
+      const [latestVersionRow] = await tx
+        .select({ version: alimentacionFormatoImportedVersions.version })
+        .from(alimentacionFormatoImportedVersions)
+        .where(
+          and(
+            eq(alimentacionFormatoImportedVersions.adultoMayorId, command.adultoMayorId),
+            eq(alimentacionFormatoImportedVersions.deliveryMonth, command.deliveryMonth),
+          ),
+        )
+        .orderBy(desc(alimentacionFormatoImportedVersions.version))
+        .limit(1);
+      const nextVersion = (latestVersionRow?.version ?? 0) + 1;
+      const [created] = await tx
+        .insert(alimentacionFormatoImportedVersions)
+        .values({
+          tenantId: command.tenantId,
+          adultoMayorId: command.adultoMayorId,
+          deliveryMonth: command.deliveryMonth,
+          version: nextVersion,
+          source: "importado",
+          originalName: command.originalName,
+          storedName: command.storedName,
+          pdfRelativePath: command.pdfRelativePath,
+          mimeType: command.mimeType,
+          sizeBytes: command.sizeBytes,
+          importedByUserId: command.importedByUserId,
+          importedAt: command.importedAt,
+        })
+        .returning({
+          id: alimentacionFormatoImportedVersions.id,
+          version: alimentacionFormatoImportedVersions.version,
+        });
+
+      if (created === undefined) {
+        throw new Error("No fue posible guardar la version importada del formato de alimentacion.");
+      }
+
+      await tx.insert(auditLogs).values({
+        actorUserId: command.importedByUserId,
+        action: "alimentacion.formato_imported",
+        targetTenantId: command.tenantId,
+        summary:
+          created.version === 1
+            ? `Formato de alimentacion importado (${command.deliveryMonth})`
+            : `Formato de alimentacion importado (${command.deliveryMonth}) v${created.version}`,
+        metadata: {
+          adultoMayorId: command.adultoMayorId,
+          deliveryMonth: command.deliveryMonth,
+          version: created.version,
+          originalName: command.originalName,
+          sizeBytes: command.sizeBytes,
+          source: "importado",
+        },
+      });
+
+      return created.id;
+    });
+
+    const importedVersion = await this.findImportedFormatoVersionById({
+      id: createdId,
+      tenantId: command.tenantId,
+      adultoMayorId: command.adultoMayorId,
+    });
+
+    if (importedVersion === null) {
+      throw new Error("No fue posible consultar la version importada del formato de alimentacion.");
+    }
+
+    return importedVersion;
+  }
+
   private getRecordSelection() {
     return {
       id: alimentacionRegistros.id,
@@ -612,6 +806,25 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       auxilioTransporte: alimentacionRegistros.auxilioTransporte,
       createdAt: alimentacionRegistros.createdAt,
       updatedAt: alimentacionRegistros.updatedAt,
+    };
+  }
+
+  private getImportedFormatoVersionSelection() {
+    return {
+      id: alimentacionFormatoImportedVersions.id,
+      tenantId: alimentacionFormatoImportedVersions.tenantId,
+      adultoMayorId: alimentacionFormatoImportedVersions.adultoMayorId,
+      deliveryMonth: alimentacionFormatoImportedVersions.deliveryMonth,
+      version: alimentacionFormatoImportedVersions.version,
+      source: alimentacionFormatoImportedVersions.source,
+      originalName: alimentacionFormatoImportedVersions.originalName,
+      storedName: alimentacionFormatoImportedVersions.storedName,
+      pdfRelativePath: alimentacionFormatoImportedVersions.pdfRelativePath,
+      mimeType: alimentacionFormatoImportedVersions.mimeType,
+      sizeBytes: alimentacionFormatoImportedVersions.sizeBytes,
+      importedByUserId: alimentacionFormatoImportedVersions.importedByUserId,
+      importedByUserFullName: users.fullName,
+      importedAt: alimentacionFormatoImportedVersions.importedAt,
     };
   }
 
@@ -688,7 +901,101 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       auxilioTransporte: row.auxilioTransporte,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      importedFormato: null,
     };
+  }
+
+  private toAuditRecordSnapshot(record: AlimentacionRecord) {
+    return {
+      id: record.id,
+      tenantId: record.tenantId,
+      tenantName: record.tenantName,
+      adultoMayorId: record.adultoMayorId,
+      documentNumber: record.documentNumber,
+      fullName: record.fullName,
+      deliveryDate: record.deliveryDate,
+      organizer: record.organizer,
+      refrigerio1: record.refrigerio1,
+      almuerzo: record.almuerzo,
+      refrigerio2: record.refrigerio2,
+      auxilioTransporte: record.auxilioTransporte,
+      createdAt: record.createdAt.toISOString(),
+      updatedAt: record.updatedAt.toISOString(),
+      importedFormato:
+        record.importedFormato === null
+          ? null
+          : {
+              id: record.importedFormato.id,
+              tenantId: record.importedFormato.tenantId,
+              adultoMayorId: record.importedFormato.adultoMayorId,
+              deliveryMonth: record.importedFormato.deliveryMonth,
+              version: record.importedFormato.version,
+              source: record.importedFormato.source,
+              originalName: record.importedFormato.originalName,
+              storedName: record.importedFormato.storedName,
+              pdfRelativePath: record.importedFormato.pdfRelativePath,
+              mimeType: record.importedFormato.mimeType,
+              sizeBytes: record.importedFormato.sizeBytes,
+              importedByUserId: record.importedFormato.importedByUserId,
+              importedByUserFullName: record.importedFormato.importedByUserFullName,
+              importedAt: record.importedFormato.importedAt.toISOString(),
+            },
+    };
+  }
+
+  private async attachLatestImportedFormatos(
+    records: AlimentacionRecord[],
+  ): Promise<AlimentacionRecord[]> {
+    if (records.length === 0) {
+      return records;
+    }
+
+    const uniqueScopes = Array.from(
+      new Map(
+        records.map((record) => [
+          `${record.tenantId}:${record.adultoMayorId}:${record.deliveryDate.slice(0, 7)}`,
+          {
+            tenantId: record.tenantId,
+            adultoMayorId: record.adultoMayorId,
+            deliveryMonth: record.deliveryDate.slice(0, 7),
+          },
+        ]),
+      ).values(),
+    );
+    const conditions = uniqueScopes.map((scope) =>
+      and(
+        eq(alimentacionFormatoImportedVersions.tenantId, scope.tenantId),
+        eq(alimentacionFormatoImportedVersions.adultoMayorId, scope.adultoMayorId),
+        eq(alimentacionFormatoImportedVersions.deliveryMonth, scope.deliveryMonth),
+      ),
+    );
+    const rows = await this.database.db
+      .select(this.getImportedFormatoVersionSelection())
+      .from(alimentacionFormatoImportedVersions)
+      .innerJoin(users, eq(users.id, alimentacionFormatoImportedVersions.importedByUserId))
+      .where(or(...conditions))
+      .orderBy(
+        desc(alimentacionFormatoImportedVersions.version),
+        desc(alimentacionFormatoImportedVersions.importedAt),
+      );
+    const latestByScope = new Map<string, AlimentacionImportedFormatoVersionRecord>();
+
+    for (const row of rows) {
+      const version = this.toImportedFormatoVersionRecord(row);
+      const key = `${version.tenantId}:${version.adultoMayorId}:${version.deliveryMonth}`;
+
+      if (!latestByScope.has(key)) {
+        latestByScope.set(key, version);
+      }
+    }
+
+    return records.map((record) => ({
+      ...record,
+      importedFormato:
+        latestByScope.get(
+          `${record.tenantId}:${record.adultoMayorId}:${record.deliveryDate.slice(0, 7)}`,
+        ) ?? null,
+    }));
   }
 
   private toFormatoEntregaRecord(
@@ -708,6 +1015,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       almuerzo: row.almuerzo,
       refrigerio2: row.refrigerio2,
       auxilioTransporte: row.auxilioTransporte,
+      updatedAt: row.updatedAt,
     };
   }
 
@@ -752,7 +1060,8 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       version: row.version,
       signerEmployeeIdSnapshot: row.signerEmployeeIdSnapshot,
       signerNameSnapshot: row.signerNameSnapshot,
-      signerRoleSnapshot: row.signerRoleSnapshot as AlimentacionFormatoEmissionRecord["signerRoleSnapshot"],
+      signerRoleSnapshot:
+        row.signerRoleSnapshot as AlimentacionFormatoEmissionRecord["signerRoleSnapshot"],
       signatureVersionIdSnapshot: row.signatureVersionIdSnapshot,
       tenantLogoVersionIdSnapshot: row.tenantLogoVersionIdSnapshot,
       filename: row.filename,
@@ -762,6 +1071,27 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       sourceDateTo: row.sourceDateTo,
       issuedByUserId: row.issuedByUserId,
       issuedAt: row.issuedAt,
+    };
+  }
+
+  private toImportedFormatoVersionRecord(
+    row: AlimentacionImportedFormatoVersionRow,
+  ): AlimentacionImportedFormatoVersionRecord {
+    return {
+      id: row.id,
+      tenantId: row.tenantId,
+      adultoMayorId: row.adultoMayorId,
+      deliveryMonth: row.deliveryMonth,
+      version: row.version,
+      source: "importado",
+      originalName: row.originalName,
+      storedName: row.storedName,
+      pdfRelativePath: row.pdfRelativePath,
+      mimeType: "application/pdf",
+      sizeBytes: row.sizeBytes,
+      importedByUserId: row.importedByUserId,
+      importedByUserFullName: row.importedByUserFullName,
+      importedAt: row.importedAt,
     };
   }
 }

@@ -8,7 +8,7 @@ import { EmpleadoDetailModal } from "../components/empleado-detail-modal";
 import { EmpleadosTable } from "../components/empleados-table";
 import { EmpleadosToolbar } from "../components/empleados-toolbar";
 import { buildEmpleadoEditPath, EMPLEADOS_NEW_PATH } from "../lib/empleados-paths";
-import { canManageEmpleados } from "../lib/empleados-permissions";
+import { canCreateEmpleados, canEditEmpleados } from "../lib/empleados-permissions";
 import { resolveEmpleadosApiError } from "../lib/empleados-formatters";
 import { useEmpleadosQuery } from "../model/empleados-queries";
 
@@ -23,7 +23,8 @@ export function EmpleadosIndexPage({ navigate, user }: EmpleadosIndexPageProps) 
   const empleadosQuery = useEmpleadosQuery({ search });
   const empleados = empleadosQuery.data?.empleados ?? [];
   const showTenantColumn = user.role === "super_admin";
-  const canManageUsers = canManageEmpleados(user);
+  const canCreateUsers = canCreateEmpleados(user);
+  const canEditUsers = canEditEmpleados(user);
 
   return (
     <section className="empleados-stack" aria-labelledby="empleados-title">
@@ -40,7 +41,7 @@ export function EmpleadosIndexPage({ navigate, user }: EmpleadosIndexPageProps) 
       ) : null}
 
       <EmpleadosTable
-        canManageEmpleados={canManageUsers}
+        canEditEmpleados={canEditUsers}
         empleados={empleados}
         isLoading={empleadosQuery.isLoading}
         showTenantColumn={showTenantColumn}
@@ -48,7 +49,7 @@ export function EmpleadosIndexPage({ navigate, user }: EmpleadosIndexPageProps) 
         onView={setSelectedEmpleadoId}
       />
 
-      {canManageUsers ? (
+      {canCreateUsers ? (
         <button
           className="empleados-floating-action"
           type="button"

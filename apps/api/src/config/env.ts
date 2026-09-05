@@ -10,8 +10,8 @@ const envSchema = z.object({
   SESSION_COOKIE_NAME: z.string().min(1).default("cuidarte_session"),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
   ACTIVIDADES_GRUPALES_UPLOADS_DIR: z.string().min(1).default("/tmp/cuidarte/actividades-grupales"),
-  EMPLEADOS_SIGNATURES_DIR: z.string().min(1).default("/tmp/cuidarte/empleados-signatures"),
-  ALIMENTACION_FORMATOS_DIR: z.string().min(1).default("/tmp/cuidarte/alimentacion-formatos"),
+  EMPLEADOS_SIGNATURES_DIR: z.string().min(1).default(".data/uploads/empleados-signatures"),
+  ALIMENTACION_FORMATOS_DIR: z.string().min(1).default(".data/uploads/alimentacion-formatos"),
   TENANT_ASSETS_DIR: z.string().min(1).default("/tmp/cuidarte/tenant-assets"),
   DOCUMENTS_UPLOADS_DIR: z.string().min(1).default(".data/uploads"),
 });

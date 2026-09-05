@@ -1,18 +1,28 @@
 import {
+  type ActividadGrupalEditDetail,
   type ActividadGrupalDiligenciamientoDetail,
+  type DeleteActividadGrupalResponse,
   type ActividadGrupalFormOptionsResponse,
   type ActividadGrupalIntegranteOptionsResponse,
   type ActividadGrupalListResponse,
+  type ActividadGrupalOrganizer,
+  type ActividadGrupalTrashListResponse,
   type ActividadGrupalTenantOptionsResponse,
   type ActividadGrupalType,
   type CreateActividadGrupalRequest,
   type SaveActividadGrupalDiligenciamiento,
+  type RestoreActividadGrupalResponse,
+  type UpdateActividadGrupalRequest,
+  actividadGrupalEditDetailSchema,
   actividadGrupalDiligenciamientoDetailSchema,
   actividadGrupalFormOptionsResponseSchema,
   actividadGrupalIntegranteOptionsResponseSchema,
   actividadGrupalListItemSchema,
   actividadGrupalListResponseSchema,
+  actividadGrupalTrashListResponseSchema,
   actividadGrupalTenantOptionsResponseSchema,
+  deleteActividadGrupalResponseSchema,
+  restoreActividadGrupalResponseSchema,
 } from "@cuidarte/contracts";
 
 import { getApiBaseUrl } from "@/shared/api/api-config";
@@ -21,8 +31,11 @@ import { fetchJson } from "@/shared/api/fetch-json";
 type ListActividadesGrupalesParams = {
   search: string;
   activityType: ActividadGrupalType | null;
+  organizer: ActividadGrupalOrganizer | null;
   tenantId: string | null;
 };
+
+type TrashActividadesGrupalesParams = ListActividadesGrupalesParams;
 
 type SaveActividadGrupalDiligenciamientoRequest = {
   payload: SaveActividadGrupalDiligenciamiento;
@@ -34,6 +47,15 @@ export function listActividadesGrupales(
   params: ListActividadesGrupalesParams,
 ): Promise<ActividadGrupalListResponse> {
   return fetchJson(buildActividadesGrupalesUrl(params), actividadGrupalListResponseSchema);
+}
+
+export function listActividadesGrupalesTrash(
+  params: TrashActividadesGrupalesParams,
+): Promise<ActividadGrupalTrashListResponse> {
+  return fetchJson(
+    buildActividadesGrupalesTrashUrl(params),
+    actividadGrupalTrashListResponseSchema,
+  );
 }
 
 export function listActividadGrupalTenantOptions(): Promise<ActividadGrupalTenantOptionsResponse> {
@@ -59,6 +81,46 @@ export function createActividadGrupal(request: CreateActividadGrupalRequest) {
     method: "POST",
     body: request,
   });
+}
+
+export function getActividadGrupalForEdit(activityId: string): Promise<ActividadGrupalEditDetail> {
+  return fetchJson(
+    `${getApiBaseUrl()}/actividades-grupales/${activityId}`,
+    actividadGrupalEditDetailSchema,
+  );
+}
+
+export function updateActividadGrupal(activityId: string, request: UpdateActividadGrupalRequest) {
+  return fetchJson(
+    `${getApiBaseUrl()}/actividades-grupales/${activityId}`,
+    actividadGrupalListItemSchema,
+    {
+      method: "PUT",
+      body: request,
+    },
+  );
+}
+
+export function deleteActividadGrupal(activityId: string): Promise<DeleteActividadGrupalResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/actividades-grupales/${activityId}`,
+    deleteActividadGrupalResponseSchema,
+    {
+      method: "DELETE",
+    },
+  );
+}
+
+export function restoreActividadGrupal(
+  activityId: string,
+): Promise<RestoreActividadGrupalResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/actividades-grupales/${activityId}/restaurar`,
+    restoreActividadGrupalResponseSchema,
+    {
+      method: "POST",
+    },
+  );
 }
 
 export function getActividadGrupalDiligenciamiento(
@@ -142,6 +204,10 @@ function buildActividadesGrupalesUrl(params: ListActividadesGrupalesParams): str
     searchParams.set("activityType", params.activityType);
   }
 
+  if (params.organizer !== null) {
+    searchParams.set("organizer", params.organizer);
+  }
+
   if (params.tenantId !== null) {
     searchParams.set("tenantId", params.tenantId);
   }
@@ -149,4 +215,28 @@ function buildActividadesGrupalesUrl(params: ListActividadesGrupalesParams): str
   const queryString = searchParams.toString();
 
   return `${getApiBaseUrl()}/actividades-grupales${queryString === "" ? "" : `?${queryString}`}`;
+}
+
+function buildActividadesGrupalesTrashUrl(params: TrashActividadesGrupalesParams): string {
+  const searchParams = new URLSearchParams();
+
+  if (params.search.trim() !== "") {
+    searchParams.set("search", params.search.trim());
+  }
+
+  if (params.activityType !== null) {
+    searchParams.set("activityType", params.activityType);
+  }
+
+  if (params.organizer !== null) {
+    searchParams.set("organizer", params.organizer);
+  }
+
+  if (params.tenantId !== null) {
+    searchParams.set("tenantId", params.tenantId);
+  }
+
+  const queryString = searchParams.toString();
+
+  return `${getApiBaseUrl()}/actividades-grupales/papelera${queryString === "" ? "" : `?${queryString}`}`;
 }

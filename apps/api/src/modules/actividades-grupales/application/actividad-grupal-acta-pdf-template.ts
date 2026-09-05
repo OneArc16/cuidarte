@@ -1,9 +1,22 @@
 import {
   type ActividadGrupalDiligenciamientoDetail,
-  type ActividadGrupalResponsibleDepartment,
   type ActividadGrupalType,
   type UserRole,
 } from "@cuidarte/contracts";
+
+import { type PreparedActividadGrupalActaPhotoAsset } from "./actividad-grupal-acta-photo-assets";
+
+export type ActividadGrupalActaPdfDetail = Omit<
+  ActividadGrupalDiligenciamientoDetail,
+  "assignedProfessionals"
+> & {
+  assignedProfessionals: ActividadGrupalActaPdfProfessional[];
+};
+
+export type ActividadGrupalActaPdfProfessional =
+  ActividadGrupalDiligenciamientoDetail["assignedProfessionals"][number] & {
+    signatureDataUrl: string | null;
+  };
 
 const EMPTY_FIELD_LABEL = "Pendiente de diligenciar.";
 const EMPTY_ATTENDEES_LABEL = "Sin asistentes registrados.";
@@ -21,17 +34,6 @@ const TYPE_LABELS = {
   actividades_recreacion: "Actividades de recreacion",
 } satisfies Record<ActividadGrupalType, string>;
 
-const RESPONSIBLE_DEPARTMENT_LABELS = {
-  direccion: "Direccion",
-  medicina: "Medicina",
-  enfermeria: "Enfermeria",
-  psicologia: "Psicologia",
-  trabajo_social: "Trabajo Social",
-  nutricion: "Nutricion",
-  fisioterapia: "Fisioterapia",
-  recreacion: "Recreacion",
-} satisfies Record<ActividadGrupalResponsibleDepartment, string>;
-
 const ROLE_LABELS = {
   super_admin: "SuperAdmin",
   admin: "Admin",
@@ -47,46 +49,30 @@ const ROLE_LABELS = {
 } satisfies Record<UserRole, string>;
 
 type ActaTableRow = {
-  cells: string[];
+  cells: ActaTableCell[];
   key: string;
 };
 
+type ActaTableCell =
+  | {
+      kind: "text";
+      value: string;
+    }
+  | {
+      kind: "html";
+      value: string;
+    };
+
 type BuildActividadGrupalActaPdfHtmlOptions = {
-  detail: ActividadGrupalDiligenciamientoDetail;
+  detail: ActividadGrupalActaPdfDetail;
   logoDataUrl: string | null;
+  photoAssets: PreparedActividadGrupalActaPhotoAsset[];
 };
 
-export function buildActividadGrupalActaPdfHtml({
-  detail,
-  logoDataUrl,
-}: BuildActividadGrupalActaPdfHtmlOptions): string {
-  const actaDate = formatActaDate(detail.activityDate);
-  const responsibleDepartment =
-    detail.responsibleDepartment === null
-      ? ""
-      : RESPONSIBLE_DEPARTMENT_LABELS[detail.responsibleDepartment];
-  const professionalRows = detail.assignedProfessionals.map((professional) => ({
-    key: professional.id,
-    cells: [
-      professional.fullName,
-      responsibleDepartment === "" ? ROLE_LABELS[professional.role] : responsibleDepartment,
-      "",
-    ],
-  }));
-  const attendeeRows = detail.integrantes.map((integrante) => ({
-    key: integrante.id,
-    cells: [integrante.fullName, integrante.documentNumber, ""],
-  }));
-
-  return `<!doctype html>
-<html lang="es">
-  <head>
-    <meta charset="utf-8" />
-    <title>Acta No. ${detail.actaNumber}</title>
-    <style>
+const ACTA_DOCUMENT_BASE_STYLES = `
       @page {
         size: 216mm 279mm;
-        margin: 0;
+        margin: 12mm;
       }
 
       html,
@@ -107,14 +93,90 @@ export function buildActividadGrupalActaPdfHtml({
       }
 
       .acta-document {
-        width: 216mm;
-        min-height: 279mm;
-        padding: 12mm;
+        width: 100%;
+        min-height: 100%;
+        padding: 0;
         color: #000;
         font-family: Arial, Helvetica, sans-serif;
         font-size: 7.4pt;
         line-height: 1.24;
+      }`;
+
+const ACTA_SECTION_TITLE_STYLES = `
+      .acta-document__section-title {
+        margin: 0;
+        padding: 3px 5px;
+        border: 1px solid #111;
+        background: #f4f4f4;
+        color: #000;
+        font-size: 7pt;
+        font-weight: 700;
+        line-height: 1.2;
+      }`;
+
+const ACTA_PHOTO_EVIDENCE_STYLES = `
+      .acta-document__photo-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 4mm;
       }
+
+      .acta-document__photo-card {
+        margin: 0;
+        padding: 4mm;
+        border: 1px solid #111;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .acta-document__photo-image {
+        display: block;
+        width: 100%;
+        height: 52mm;
+        border: 1px solid #555;
+        background: #f8f8f8;
+        object-fit: contain;
+      }
+
+      .acta-document__photo-caption {
+        margin-top: 2.5mm;
+        color: #000;
+        font-size: 6.4pt;
+        font-weight: 600;
+        line-height: 1.25;
+        overflow-wrap: anywhere;
+      }`;
+
+export function buildActividadGrupalActaPdfHtml({
+  detail,
+  logoDataUrl,
+  photoAssets,
+}: BuildActividadGrupalActaPdfHtmlOptions): string {
+  const actaDate = formatActaDate(detail.activityDate);
+  const professionalRows = detail.assignedProfessionals.map((professional) => ({
+    key: professional.id,
+    cells: [
+      textCell(professional.fullName),
+      textCell(ROLE_LABELS[professional.role]),
+      htmlCell(
+        professional.signatureDataUrl === null
+          ? ""
+          : renderProfessionalSignature(professional.signatureDataUrl, professional.fullName),
+      ),
+    ],
+  }));
+  const attendeeRows = detail.integrantes.map((integrante) => ({
+    key: integrante.id,
+    cells: [textCell(integrante.fullName), textCell(integrante.documentNumber), textCell("")],
+  }));
+
+  return `<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Acta No. ${detail.actaNumber}</title>
+    <style>
+      ${ACTA_DOCUMENT_BASE_STYLES}
 
       .acta-document table {
         width: 100%;
@@ -204,16 +266,7 @@ export function buildActividadGrupalActaPdfHtml({
         margin-bottom: 3mm;
       }
 
-      .acta-document__section-title {
-        margin: 0;
-        padding: 3px 5px;
-        border: 1px solid #111;
-        background: #f4f4f4;
-        color: #000;
-        font-size: 7pt;
-        font-weight: 700;
-        line-height: 1.2;
-      }
+      ${ACTA_SECTION_TITLE_STYLES}
 
       .acta-document__section-body {
         min-height: 17mm;
@@ -254,6 +307,10 @@ export function buildActividadGrupalActaPdfHtml({
         vertical-align: middle;
       }
 
+      .acta-document__people-table--professionals td {
+        height: 11mm;
+      }
+
       .acta-document__people-table th:nth-child(2),
       .acta-document__people-table td:nth-child(2) {
         width: 30mm;
@@ -264,6 +321,22 @@ export function buildActividadGrupalActaPdfHtml({
       .acta-document__people-table td:nth-child(3) {
         width: 38mm;
       }
+
+      .acta-document__signature-image {
+        display: block;
+        width: 100%;
+        max-width: 34mm;
+        max-height: 9mm;
+        margin: 0 auto;
+        object-fit: contain;
+      }
+
+      .acta-document__section--photo-evidence {
+        break-before: page;
+        page-break-before: always;
+      }
+
+      ${ACTA_PHOTO_EVIDENCE_STYLES}
     </style>
   </head>
   <body>
@@ -304,9 +377,7 @@ export function buildActividadGrupalActaPdfHtml({
           </tr>
           <tr>
             <th scope="row">TIPO ACTIVIDAD:</th>
-            <td colspan="5">${escapeHtml(
-              formatUpper(TYPE_LABELS[detail.activityType]),
-            )}</td>
+            <td colspan="5">${escapeHtml(formatUpper(TYPE_LABELS[detail.activityType]))}</td>
           </tr>
           <tr>
             <th scope="row">ACTIVIDAD:</th>
@@ -324,23 +395,67 @@ export function buildActividadGrupalActaPdfHtml({
         ["NOMBRE PROFESIONAL", "AREA", "FIRMA"],
         professionalRows,
         EMPTY_PROFESSIONALS_LABEL,
+        "professionals",
       )}
 
-      ${renderPeopleSection(
-        "LISTADO DE ASISTENTES",
-        ["NOMBRE COMPLETO", "CEDULA", "FIRMA"],
-        attendeeRows,
-        EMPTY_ATTENDEES_LABEL,
-      )}
+      ${
+        attendeeRows.length === 0
+          ? ""
+          : renderPeopleSection(
+              "LISTADO DE ASISTENTES",
+              ["NOMBRE COMPLETO", "CEDULA", "FIRMA"],
+              attendeeRows,
+              EMPTY_ATTENDEES_LABEL,
+              "attendees",
+            )
+      }
+
+      ${renderPhotoEvidenceSection(photoAssets)}
+    </article>
+  </body>
+</html>`;
+}
+
+export function buildActividadGrupalActaPhotoEvidencePdfHtml(
+  photoAssets: PreparedActividadGrupalActaPhotoAsset[],
+): string {
+  return `<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <title>Evidencia fotografica</title>
+    <style>
+      ${ACTA_DOCUMENT_BASE_STYLES}
+      ${ACTA_SECTION_TITLE_STYLES}
+      ${ACTA_PHOTO_EVIDENCE_STYLES}
+    </style>
+  </head>
+  <body>
+    <article class="acta-document" aria-label="Evidencia fotografica del acta">
+      ${renderPhotoEvidenceSection(photoAssets, { forcePageBreak: false })}
     </article>
   </body>
 </html>`;
 }
 
 export function buildActividadGrupalActaPdfFilename(
-  detail: ActividadGrupalDiligenciamientoDetail,
+  detail: Pick<ActividadGrupalDiligenciamientoDetail, "actaNumber">,
 ): string {
   return `acta-sesion-grupal-${formatActaNumber(detail.actaNumber)}.pdf`;
+}
+
+function textCell(value: string): ActaTableCell {
+  return {
+    kind: "text",
+    value,
+  };
+}
+
+function htmlCell(value: string): ActaTableCell {
+  return {
+    kind: "html",
+    value,
+  };
 }
 
 function renderLogo(logoDataUrl: string | null): string {
@@ -369,25 +484,74 @@ function renderPeopleSection(
   headers: [string, string, string],
   rows: ActaTableRow[],
   emptyLabel: string,
+  variant: "attendees" | "professionals",
 ): string {
   const bodyRows =
     rows.length === 0
       ? `<tr><td colspan="${headers.length}">${escapeHtml(emptyLabel)}</td></tr>`
       : rows
           .map(
-            (row) => `<tr>${row.cells.map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`,
+            (row) =>
+              `<tr>${row.cells
+                .map(
+                  (cell) =>
+                    `<td>${cell.kind === "html" ? cell.value : escapeHtml(cell.value)}</td>`,
+                )
+                .join("")}</tr>`,
           )
           .join("");
 
   return `<section class="acta-document__section">
     <h2 class="acta-document__section-title">${escapeHtml(title)}</h2>
-    <table class="acta-document__people-table">
+    <table class="acta-document__people-table acta-document__people-table--${variant}">
       <thead>
         <tr>${headers.map((header) => `<th scope="col">${escapeHtml(header)}</th>`).join("")}</tr>
       </thead>
       <tbody>${bodyRows}</tbody>
     </table>
   </section>`;
+}
+
+function renderProfessionalSignature(
+  signatureDataUrl: string,
+  professionalFullName: string,
+): string {
+  return `<img
+    class="acta-document__signature-image"
+    src="${escapeHtml(signatureDataUrl)}"
+    alt="Firma de ${escapeHtml(professionalFullName)}"
+  />`;
+}
+
+function renderPhotoEvidenceSection(
+  photoAssets: PreparedActividadGrupalActaPhotoAsset[],
+  options: { forcePageBreak: boolean } = { forcePageBreak: true },
+): string {
+  if (photoAssets.length === 0) {
+    return "";
+  }
+
+  const className = options.forcePageBreak
+    ? "acta-document__section acta-document__section--photo-evidence"
+    : "acta-document__section";
+
+  return `<section class="${className}">
+    <h2 class="acta-document__section-title">EVIDENCIA FOTOGRAFICA</h2>
+    <div class="acta-document__photo-grid" aria-label="Evidencia fotografica">
+      ${photoAssets.map((photo) => renderPhotoCard(photo)).join("")}
+    </div>
+  </section>`;
+}
+
+function renderPhotoCard(photo: PreparedActividadGrupalActaPhotoAsset): string {
+  return `<figure class="acta-document__photo-card">
+    <img
+      class="acta-document__photo-image"
+      src="${escapeHtml(photo.dataUrl)}"
+      alt="Fotografia adjunta: ${escapeHtml(photo.originalName)}"
+    />
+    <figcaption class="acta-document__photo-caption">${escapeHtml(photo.originalName)}</figcaption>
+  </figure>`;
 }
 
 function formatActaDate(date: string): string {
@@ -400,8 +564,14 @@ function formatActaDate(date: string): string {
   return `${day}/${month}/${year}`;
 }
 
-function formatActaNumber(value: number): string {
-  return String(value).padStart(4, "0");
+function formatActaNumber(value: string): string {
+  const normalizedValue = value.trim();
+
+  if (/^\d+$/.test(normalizedValue)) {
+    return normalizedValue.padStart(4, "0");
+  }
+
+  return normalizedValue.replace(/\s+/g, "-").replace(/[^A-Za-z0-9_-]/g, "-");
 }
 
 function formatActaTime(time: string): string {

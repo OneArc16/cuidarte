@@ -1,5 +1,17 @@
 import { Injectable } from "@nestjs/common";
-import { and, asc, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNotNull,
+  isNull,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
 import {
@@ -19,14 +31,19 @@ import {
   type ActividadGrupalEmpleadoOptionRecord,
   type ActividadGrupalIntegranteOptionRecord,
   type ActividadGrupalRecord,
+  type ActividadGrupalTrashRecord,
   type ActividadGrupalSupportFileRecord,
   type ActividadGrupalTenantOptionRecord,
   type CreateActividadGrupalRecordCommand,
+  type DeleteActividadGrupalRecordCommand,
   type FindActividadesGrupalesQuery,
+  type FindActividadesGrupalesTrashQuery,
   type FindActividadGrupalByIdQuery,
+  type RestoreActividadGrupalRecordCommand,
   type SaveActividadGrupalDiligenciamientoRecordCommand,
   type SavedActividadGrupalDiligenciamientoRecord,
   type SearchActividadGrupalIntegrantesOptionsQuery,
+  type UpdateActividadGrupalRecordCommand,
 } from "../domain/actividad-grupal.types";
 import { type ActividadesGrupalesRepository } from "../domain/actividades-grupales.repository";
 
@@ -34,7 +51,8 @@ type ActividadGrupalSelectionRow = {
   id: string;
   tenantId: string;
   tenantName: string;
-  actaNumber: number;
+  createdByUserId: string;
+  actaNumber: string;
   activityName: string;
   activityType: ActividadGrupalRecord["activityType"];
   activityDate: string;
@@ -61,6 +79,40 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
 
     return rows.map((row) => ({
       ...row,
+      involvedEmployeesCount: countByActivityId.get(row.id) ?? 0,
+    }));
+  }
+
+  async findTrashMany(
+    query: FindActividadesGrupalesTrashQuery,
+  ): Promise<ActividadGrupalTrashRecord[]> {
+    const rows = await this.database.db
+      .select(this.getTrashActivitySelection())
+      .from(actividadesGrupales)
+      .innerJoin(tenants, eq(tenants.id, actividadesGrupales.tenantId))
+      .innerJoin(users, eq(users.id, actividadesGrupales.deletedByUserId))
+      .where(this.buildTrashWhere(query))
+      .orderBy(desc(actividadesGrupales.deletedAt), desc(actividadesGrupales.activityDate));
+
+    const countByActivityId = await this.findInvolvedEmployeeCounts(rows.map((row) => row.id));
+
+    return rows.map((row) => ({
+      id: row.id,
+      tenantId: row.tenantId,
+      tenantName: row.tenantName,
+      createdByUserId: row.createdByUserId,
+      actaNumber: row.actaNumber,
+      activityName: row.activityName,
+      activityType: row.activityType,
+      activityDate: row.activityDate,
+      startTime: row.startTime,
+      endTime: row.endTime,
+      organizer: row.organizer,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      deletedAt: row.deletedAt!,
+      deletedByUserId: row.deletedByUserId!,
+      deletedByUserFullName: row.deletedByUserFullName,
       involvedEmployeesCount: countByActivityId.get(row.id) ?? 0,
     }));
   }
@@ -108,6 +160,36 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       pdfFile,
       diligenciamientoCreatedAt: diligenciamientoRow?.createdAt ?? null,
       diligenciamientoUpdatedAt: diligenciamientoRow?.updatedAt ?? null,
+    };
+  }
+
+  async findTrashById(
+    query: FindActividadGrupalByIdQuery,
+  ): Promise<ActividadGrupalTrashRecord | null> {
+    const [activityRow] = await this.database.db
+      .select(this.getTrashActivitySelection())
+      .from(actividadesGrupales)
+      .innerJoin(tenants, eq(tenants.id, actividadesGrupales.tenantId))
+      .innerJoin(users, eq(users.id, actividadesGrupales.deletedByUserId))
+      .where(
+        this.buildTrashActivityScopedWhere(query.scope, [
+          eq(actividadesGrupales.id, query.activityId),
+        ]),
+      )
+      .limit(1);
+
+    if (activityRow === undefined) {
+      return null;
+    }
+
+    const involvedEmployeesCount = await this.findInvolvedEmployeeCounts([query.activityId]);
+
+    return {
+      ...activityRow,
+      deletedAt: activityRow.deletedAt!,
+      deletedByUserId: activityRow.deletedByUserId!,
+      deletedByUserFullName: activityRow.deletedByUserFullName,
+      involvedEmployeesCount: involvedEmployeesCount.get(query.activityId) ?? 0,
     };
   }
 
@@ -238,7 +320,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .insert(actividadesGrupales)
         .values({
           tenantId: command.tenantId,
-          actaNumber: counter.lastValue,
+          actaNumber: command.actaNumber.trim(),
           activityName: command.activityName,
           activityType: command.activityType,
           activityDate: command.activityDate,
@@ -266,9 +348,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         actorUserId: command.actorUserId,
         action: "actividades-grupales.created",
         targetTenantId: command.tenantId,
-        summary: `Actividad grupal creada #${counter.lastValue}: ${command.activityName}`,
+        summary: `Actividad grupal creada #${command.actaNumber.trim()}: ${command.activityName}`,
         metadata: {
-          actaNumber: counter.lastValue,
+          actaNumber: command.actaNumber.trim(),
+          suggestedActaNumber: counter.lastValue,
           activityType: command.activityType,
           organizer: command.organizer,
           involvedEmployeesCount: command.employeeIds.length,
@@ -290,6 +373,164 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         ...row,
         involvedEmployeesCount: command.employeeIds.length,
       };
+    });
+  }
+
+  async update(command: UpdateActividadGrupalRecordCommand): Promise<ActividadGrupalRecord> {
+    return await this.database.db.transaction(async (tx) => {
+      const now = new Date();
+
+      const [updated] = await tx
+        .update(actividadesGrupales)
+        .set({
+          actaNumber: command.actaNumber.trim(),
+          activityName: command.activityName,
+          activityType: command.activityType,
+          activityDate: command.activityDate,
+          startTime: command.startTime,
+          endTime: command.endTime,
+          organizer: command.organizer,
+          updatedAt: now,
+        })
+        .where(eq(actividadesGrupales.id, command.activityId))
+        .returning({ id: actividadesGrupales.id, tenantId: actividadesGrupales.tenantId });
+
+      if (updated === undefined) {
+        throw new Error("No fue posible actualizar la actividad grupal.");
+      }
+
+      await tx
+        .delete(actividadGrupalEmpleados)
+        .where(eq(actividadGrupalEmpleados.activityId, command.activityId));
+
+      await tx.insert(actividadGrupalEmpleados).values(
+        command.employeeIds.map((employeeId) => ({
+          activityId: command.activityId,
+          employeeId,
+        })),
+      );
+
+      await tx.insert(auditLogs).values({
+        actorUserId: command.actorUserId,
+        action: "actividades-grupales.updated",
+        targetTenantId: updated.tenantId,
+        summary: `Actividad grupal actualizada #${command.actaNumber.trim()}: ${command.activityName}`,
+        metadata: {
+          activityId: command.activityId,
+          actaNumber: command.actaNumber.trim(),
+          activityType: command.activityType,
+          organizer: command.organizer,
+          involvedEmployeesCount: command.employeeIds.length,
+        },
+      });
+
+      const [row] = await tx
+        .select(this.getActivitySelection())
+        .from(actividadesGrupales)
+        .innerJoin(tenants, eq(tenants.id, actividadesGrupales.tenantId))
+        .where(eq(actividadesGrupales.id, command.activityId))
+        .limit(1);
+
+      if (row === undefined) {
+        throw new Error("No fue posible consultar la actividad actualizada.");
+      }
+
+      return {
+        ...row,
+        involvedEmployeesCount: command.employeeIds.length,
+      };
+    });
+  }
+
+  async delete(command: DeleteActividadGrupalRecordCommand): Promise<void> {
+    return await this.database.db.transaction(async (tx) => {
+      const now = new Date();
+
+      const [activity] = await tx
+        .select({
+          id: actividadesGrupales.id,
+          tenantId: actividadesGrupales.tenantId,
+          actaNumber: actividadesGrupales.actaNumber,
+          activityName: actividadesGrupales.activityName,
+        })
+        .from(actividadesGrupales)
+        .where(
+          and(
+            eq(actividadesGrupales.id, command.activityId),
+            isNull(actividadesGrupales.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      if (activity === undefined) {
+        throw new Error("No fue posible eliminar la actividad grupal.");
+      }
+
+      await tx.insert(auditLogs).values({
+        actorUserId: command.actorUserId,
+        action: "actividades-grupales.moved-to-trash",
+        targetTenantId: activity.tenantId,
+        summary: `Acta enviada a la papelera #${activity.actaNumber}: ${activity.activityName}`,
+        metadata: {
+          activityId: command.activityId,
+          actaNumber: activity.actaNumber,
+        },
+      });
+
+      await tx
+        .update(actividadesGrupales)
+        .set({
+          deletedAt: now,
+          deletedByUserId: command.actorUserId,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(actividadesGrupales.id, command.activityId),
+            isNull(actividadesGrupales.deletedAt),
+          ),
+        );
+    });
+  }
+
+  async restore(command: RestoreActividadGrupalRecordCommand): Promise<boolean> {
+    return await this.database.db.transaction(async (tx) => {
+      const now = new Date();
+      const [restored] = await tx
+        .update(actividadesGrupales)
+        .set({
+          deletedAt: null,
+          deletedByUserId: null,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(actividadesGrupales.id, command.activityId),
+            isNotNull(actividadesGrupales.deletedAt),
+          ),
+        )
+        .returning({
+          tenantId: actividadesGrupales.tenantId,
+          actaNumber: actividadesGrupales.actaNumber,
+          activityName: actividadesGrupales.activityName,
+        });
+
+      if (restored === undefined) {
+        return false;
+      }
+
+      await tx.insert(auditLogs).values({
+        actorUserId: command.actorUserId,
+        action: "actividades-grupales.restored",
+        targetTenantId: restored.tenantId,
+        summary: `Acta restaurada #${restored.actaNumber}: ${restored.activityName}`,
+        metadata: {
+          activityId: command.activityId,
+          actaNumber: restored.actaNumber,
+        },
+      });
+
+      return true;
     });
   }
 
@@ -350,12 +591,14 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .delete(actividadGrupalDiligenciamientoIntegrantes)
         .where(eq(actividadGrupalDiligenciamientoIntegrantes.activityId, command.activityId));
 
-      await tx.insert(actividadGrupalDiligenciamientoIntegrantes).values(
-        command.integranteIds.map((integranteId) => ({
-          activityId: command.activityId,
-          adultoMayorId: integranteId,
-        })),
-      );
+      if (command.integranteIds.length > 0) {
+        await tx.insert(actividadGrupalDiligenciamientoIntegrantes).values(
+          command.integranteIds.map((integranteId) => ({
+            activityId: command.activityId,
+            adultoMayorId: integranteId,
+          })),
+        );
+      }
 
       if (removedFileIds.length > 0) {
         await tx
@@ -501,6 +744,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       id: actividadesGrupales.id,
       tenantId: actividadesGrupales.tenantId,
       tenantName: tenants.name,
+      createdByUserId: actividadesGrupales.createdByUserId,
       actaNumber: actividadesGrupales.actaNumber,
       activityName: actividadesGrupales.activityName,
       activityType: actividadesGrupales.activityType,
@@ -510,6 +754,15 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       organizer: actividadesGrupales.organizer,
       createdAt: actividadesGrupales.createdAt,
       updatedAt: actividadesGrupales.updatedAt,
+    };
+  }
+
+  private getTrashActivitySelection() {
+    return {
+      ...this.getActivitySelection(),
+      deletedAt: actividadesGrupales.deletedAt,
+      deletedByUserId: actividadesGrupales.deletedByUserId,
+      deletedByUserFullName: users.fullName,
     };
   }
 
@@ -535,7 +788,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
   }
 
   private buildWhere(query: FindActividadesGrupalesQuery): SQL | undefined {
-    const conditions: SQL[] = [];
+    const conditions: SQL[] = [isNull(actividadesGrupales.deletedAt)];
 
     if (query.scope.type === "tenant") {
       conditions.push(eq(actividadesGrupales.tenantId, query.scope.tenantId));
@@ -545,6 +798,44 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
 
     if (query.activityType !== null) {
       conditions.push(eq(actividadesGrupales.activityType, query.activityType));
+    }
+
+    if (query.organizer !== null) {
+      conditions.push(eq(actividadesGrupales.organizer, query.organizer));
+    }
+
+    if (query.search !== null) {
+      const searchPattern = `%${escapeLikePattern(query.search)}%`;
+
+      conditions.push(
+        or(
+          ilike(actividadesGrupales.activityName, searchPattern),
+          ilike(tenants.name, searchPattern),
+          sql`${actividadesGrupales.actaNumber}::text ilike ${searchPattern}`,
+          sql`${actividadesGrupales.activityType}::text ilike ${searchPattern}`,
+          sql`${actividadesGrupales.organizer}::text ilike ${searchPattern}`,
+        )!,
+      );
+    }
+
+    return conditions.length === 0 ? undefined : and(...conditions);
+  }
+
+  private buildTrashWhere(query: FindActividadesGrupalesTrashQuery): SQL | undefined {
+    const conditions: SQL[] = [isNotNull(actividadesGrupales.deletedAt)];
+
+    if (query.scope.type === "tenant") {
+      conditions.push(eq(actividadesGrupales.tenantId, query.scope.tenantId));
+    } else if (query.tenantId !== null) {
+      conditions.push(eq(actividadesGrupales.tenantId, query.tenantId));
+    }
+
+    if (query.activityType !== null) {
+      conditions.push(eq(actividadesGrupales.activityType, query.activityType));
+    }
+
+    if (query.organizer !== null) {
+      conditions.push(eq(actividadesGrupales.organizer, query.organizer));
     }
 
     if (query.search !== null) {
@@ -565,7 +856,20 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
   }
 
   private buildActivityScopedWhere(scope: FindActividadGrupalByIdQuery["scope"], extra: SQL[]) {
-    const conditions = [...extra];
+    const conditions = [...extra, isNull(actividadesGrupales.deletedAt)];
+
+    if (scope.type === "tenant") {
+      conditions.push(eq(actividadesGrupales.tenantId, scope.tenantId));
+    }
+
+    return and(...conditions);
+  }
+
+  private buildTrashActivityScopedWhere(
+    scope: FindActividadGrupalByIdQuery["scope"],
+    extra: SQL[],
+  ) {
+    const conditions = [...extra, isNotNull(actividadesGrupales.deletedAt)];
 
     if (scope.type === "tenant") {
       conditions.push(eq(actividadesGrupales.tenantId, scope.tenantId));

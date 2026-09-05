@@ -1,18 +1,19 @@
 import {
   type AdultoMayorBloodType,
   type AdultoMayorDetail,
-  type AdultoMayorHealthRegime,
   type CreateAdultoMayorRequest,
   type UpdateAdultoMayorRequest,
   adultoMayorBloodTypeSchema,
   adultoMayorDocumentTypeSchema,
-  adultoMayorHealthRegimeSchema,
   adultoMayorSexSchema,
+  adultoMayorStatusSchema,
   adultoMayorZoneSchema,
   createAdultoMayorRequestSchema,
   updateAdultoMayorRequestSchema,
 } from "@cuidarte/contracts";
 import { z } from "zod";
+
+import { resolveHealthRegimeFormValue } from "../lib/health-regime-options";
 
 type AdultoMayorCommandInput = z.input<typeof updateAdultoMayorRequestSchema>;
 const requiredFormTextSchema = (maxLength: number) => z.string().trim().min(1).max(maxLength);
@@ -23,6 +24,7 @@ export const adultoMayorFormSchema = z.object({
   documentType: adultoMayorDocumentTypeSchema,
   documentNumber: requiredFormTextSchema(80),
   sex: adultoMayorSexSchema,
+  status: adultoMayorStatusSchema,
   firstName: requiredFormTextSchema(80),
   middleName: optionalFormTextSchema(80),
   firstSurname: requiredFormTextSchema(80),
@@ -32,8 +34,8 @@ export const adultoMayorFormSchema = z.object({
   disability: optionalFormTextSchema(120),
   populationGroup: optionalFormTextSchema(120),
   address: requiredFormTextSchema(220),
-  department: requiredFormTextSchema(100),
-  municipality: requiredFormTextSchema(100),
+  departmentId: z.uuid({ message: "Selecciona un departamento de la lista." }),
+  municipalityId: z.uuid({ message: "Selecciona un municipio de la lista." }),
   zone: adultoMayorZoneSchema,
   country: requiredFormTextSchema(80),
   phone: optionalFormTextSchema(40),
@@ -45,8 +47,8 @@ export const adultoMayorFormSchema = z.object({
   emergencyContactAddress: optionalFormTextSchema(220),
   bloodType: z.union([adultoMayorBloodTypeSchema, z.literal("")]),
   sisben: optionalFormTextSchema(40),
-  healthRegime: z.union([adultoMayorHealthRegimeSchema, z.literal("")]),
-  eps: optionalFormTextSchema(160),
+  healthRegime: optionalFormTextSchema(120),
+  epsId: z.union([z.literal(""), z.uuid({ message: "Selecciona una EPS de la lista." })]),
   livesWithSomeone: z.boolean(),
   companion: optionalFormTextSchema(160),
   economicIncome: z
@@ -60,12 +62,13 @@ export const adultoMayorFormSchema = z.object({
 
 export type AdultoMayorFormValues = Omit<
   AdultoMayorCommandInput,
-  "bloodType" | "economicIncome" | "healthRegime"
+  "bloodType" | "economicIncome" | "epsId" | "healthRegime"
 > & {
   tenantId: string;
   bloodType: AdultoMayorBloodType | "";
   economicIncome: string;
-  healthRegime: AdultoMayorHealthRegime | "";
+  epsId: string;
+  healthRegime: string;
 };
 
 export function createDefaultAdultoMayorFormValues(): AdultoMayorFormValues {
@@ -74,6 +77,7 @@ export function createDefaultAdultoMayorFormValues(): AdultoMayorFormValues {
     documentType: "cc",
     documentNumber: "",
     sex: "female",
+    status: "alive",
     firstName: "",
     middleName: "",
     firstSurname: "",
@@ -83,8 +87,8 @@ export function createDefaultAdultoMayorFormValues(): AdultoMayorFormValues {
     disability: "",
     populationGroup: "",
     address: "",
-    department: "",
-    municipality: "",
+    departmentId: "",
+    municipalityId: "",
     zone: "urban",
     country: "Colombia",
     phone: "",
@@ -97,7 +101,7 @@ export function createDefaultAdultoMayorFormValues(): AdultoMayorFormValues {
     bloodType: "",
     sisben: "",
     healthRegime: "",
-    eps: "",
+    epsId: "",
     livesWithSomeone: false,
     companion: "",
     economicIncome: "",
@@ -111,6 +115,7 @@ export function toAdultoMayorFormValues(detail: AdultoMayorDetail): AdultoMayorF
     documentType: detail.documentType,
     documentNumber: detail.documentNumber,
     sex: detail.sex,
+    status: detail.status,
     firstName: detail.firstName,
     middleName: detail.middleName ?? "",
     firstSurname: detail.firstSurname,
@@ -120,8 +125,8 @@ export function toAdultoMayorFormValues(detail: AdultoMayorDetail): AdultoMayorF
     disability: detail.disability ?? "",
     populationGroup: detail.populationGroup ?? "",
     address: detail.address,
-    department: detail.department,
-    municipality: detail.municipality,
+    departmentId: detail.departmentId ?? "",
+    municipalityId: detail.municipalityId ?? "",
     zone: detail.zone,
     country: detail.country,
     phone: detail.phone ?? "",
@@ -133,8 +138,8 @@ export function toAdultoMayorFormValues(detail: AdultoMayorDetail): AdultoMayorF
     emergencyContactAddress: detail.emergencyContactAddress ?? "",
     bloodType: detail.bloodType ?? "",
     sisben: detail.sisben ?? "",
-    healthRegime: detail.healthRegime ?? "",
-    eps: detail.eps ?? "",
+    healthRegime: resolveHealthRegimeFormValue(detail.healthRegime),
+    epsId: detail.epsId ?? "",
     livesWithSomeone: detail.livesWithSomeone,
     companion: detail.companion ?? "",
     economicIncome: detail.economicIncome === null ? "" : String(detail.economicIncome),
@@ -150,6 +155,7 @@ export function toCreateAdultoMayorRequest(
     tenantId: toNullableValue(values.tenantId),
     bloodType: toNullableValue(values.bloodType),
     healthRegime: toNullableValue(values.healthRegime),
+    epsId: toNullableValue(values.epsId),
   });
 }
 
@@ -162,6 +168,7 @@ export function toUpdateAdultoMayorRequest(
     ...commandValues,
     bloodType: toNullableValue(values.bloodType),
     healthRegime: toNullableValue(values.healthRegime),
+    epsId: toNullableValue(values.epsId),
   });
 }
 

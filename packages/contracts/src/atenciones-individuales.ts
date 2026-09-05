@@ -234,6 +234,7 @@ export const atencionIndividualDetailSchema = atencionIndividualCommandSchema.ex
   tenantId: z.uuid(),
   tenantName: z.string().min(1),
   adultoMayor: atencionIndividualAdultoResumenSchema,
+  access: atencionIndividualHistoryAccessSchema,
   createdByUserId: z.uuid(),
   updatedByUserId: z.uuid(),
   createdAt: z.string().min(1),
@@ -271,6 +272,13 @@ export const atencionIndividualHistoryResponseSchema = z.object({
   atenciones: z.array(atencionIndividualHistoryItemSchema),
 });
 
+export const medicalAttentionHistoryItemSchema = atencionIndividualHistoryItemSchema;
+
+export const medicalAttentionHistoryResponseSchema = z.object({
+  adultoMayor: atencionIndividualAdultoResumenSchema,
+  atenciones: z.array(medicalAttentionHistoryItemSchema),
+});
+
 export const createAtencionIndividualResponseSchema = atencionIndividualDetailSchema;
 export const updateAtencionIndividualResponseSchema = atencionIndividualDetailSchema;
 
@@ -303,4 +311,8 @@ export type AtencionIndividualLookupResponse = z.infer<
 >;
 export type AtencionIndividualHistoryResponse = z.infer<
   typeof atencionIndividualHistoryResponseSchema
+>;
+export type MedicalAttentionHistoryItem = z.infer<typeof medicalAttentionHistoryItemSchema>;
+export type MedicalAttentionHistoryResponse = z.infer<
+  typeof medicalAttentionHistoryResponseSchema
 >;

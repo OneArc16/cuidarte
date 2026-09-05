@@ -6,6 +6,7 @@ import { type AuthUser } from "@cuidarte/contracts";
 import {
   canAccessAtencionIndividualHistory,
   canCreateAtencionIndividual,
+  canEditAtencionIndividual,
   canEditOwnedAtencionIndividual,
   canViewAtencionIndividual,
   resolveAtencionIndividualHistoryAccess,
@@ -21,6 +22,14 @@ const medicoUser: AuthUser = {
   fullName: "Medico Centro Demo",
   role: "medico",
   passwordSetByAdmin: true,
+};
+
+const enfermeriaUser: AuthUser = {
+  ...medicoUser,
+  id: "bdeba5d1-ef43-4e7d-8c53-9b86c0dc9d53",
+  email: "enfermeria@centro-demo.test",
+  fullName: "Enfermera Centro Demo",
+  role: "enfermeria",
 };
 
 const psicologoUser: AuthUser = {
@@ -76,22 +85,63 @@ describe("atencion-individual policy", () => {
     assert.equal(canCreateAtencionIndividual(medicoUser), true);
     assert.equal(canCreateAtencionIndividual(psicologoUser), true);
     assert.equal(canCreateAtencionIndividual(fisioterapeutaUser), true);
+    assert.equal(canCreateAtencionIndividual(enfermeriaUser), false);
     assert.equal(canCreateAtencionIndividual(adminUser), false);
     assert.equal(canCreateAtencionIndividual(directorUser), false);
   });
 
+  it("blocks enfermeria from editing individual attention records", () => {
+    assert.equal(canEditAtencionIndividual(medicoUser), true);
+    assert.equal(canEditAtencionIndividual(enfermeriaUser), false);
+    assert.equal(canEditAtencionIndividual(adminUser), false);
+  });
+
   it("shows edit access only to the professional owner of the record", () => {
-    const ownAtencion = { createdByUserId: medicoUser.id };
-    const otherProfessionalAtencion = { createdByUserId: psicologoUser.id };
+    const ownAtencion = { createdByUserId: medicoUser.id, createdByUserRole: medicoUser.role };
+    const otherProfessionalAtencion = {
+      createdByUserId: psicologoUser.id,
+      createdByUserRole: psicologoUser.role,
+    };
 
     assert.equal(resolveAtencionIndividualHistoryAccess(medicoUser, ownAtencion), "edit");
     assert.equal(canEditOwnedAtencionIndividual(medicoUser, ownAtencion), true);
     assert.equal(resolveAtencionIndividualHistoryAccess(medicoUser, otherProfessionalAtencion), null);
     assert.equal(canViewAtencionIndividual(medicoUser, otherProfessionalAtencion), false);
+    assert.equal(
+      resolveAtencionIndividualHistoryAccess(enfermeriaUser, {
+        createdByUserId: enfermeriaUser.id,
+        createdByUserRole: enfermeriaUser.role,
+      }),
+      "view",
+    );
+    assert.equal(
+      resolveAtencionIndividualHistoryAccess(enfermeriaUser, {
+        createdByUserId: medicoUser.id,
+        createdByUserRole: medicoUser.role,
+      }),
+      "view",
+    );
+    assert.equal(
+      resolveAtencionIndividualHistoryAccess(medicoUser, {
+        createdByUserId: enfermeriaUser.id,
+        createdByUserRole: enfermeriaUser.role,
+      }),
+      "view",
+    );
+    assert.equal(
+      canEditOwnedAtencionIndividual(enfermeriaUser, {
+        createdByUserId: enfermeriaUser.id,
+        createdByUserRole: enfermeriaUser.role,
+      }),
+      false,
+    );
   });
 
   it("shows view access to admin and director without edit permissions", () => {
-    const atencion = { createdByUserId: psicologoUser.id };
+    const atencion = {
+      createdByUserId: psicologoUser.id,
+      createdByUserRole: psicologoUser.role,
+    };
 
     assert.equal(resolveAtencionIndividualHistoryAccess(adminUser, atencion), "view");
     assert.equal(resolveAtencionIndividualHistoryAccess(auditorUser, atencion), "view");
@@ -106,6 +156,7 @@ describe("atencion-individual policy", () => {
     assert.equal(
       resolveAtencionIndividualHistoryAccess(recreacionistaUser, {
         createdByUserId: recreacionistaUser.id,
+        createdByUserRole: recreacionistaUser.role,
       }),
       null,
     );

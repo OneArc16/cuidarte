@@ -1,6 +1,10 @@
 import { type AlimentacionFormatoEntregaExportData } from "./alimentacion-formato-export.types";
+import {
+  buildFormatoEntregaVisitBlocks,
+  type AlimentacionFormatoEntregaVisitBlock,
+  type AlimentacionFormatoEntregaVisitSlot,
+} from "./alimentacion-formato-visit-slots";
 
-const DAYS_PER_BLOCK = 12;
 const STUBS_PER_PAGE = 2;
 const FIXED_LUGAR_LABEL = "CENTRO DE VIDA DEL ADULTO MAYOR";
 const HEADER_TITLE = "Formato de Entrega de Alimentos y Auxilio de Transporte";
@@ -9,15 +13,9 @@ const ACTIVITY_DESCRIPTION_VALUE = "Entrega de alimentos";
 
 type BuildFormatoEntregaPdfHtmlParams = {
   data: AlimentacionFormatoEntregaExportData;
-  generatedAt: Date;
   institutionalLogoDataUrl: string | null;
   tenantLogoDataUrl: string;
-  directorSignatureDataUrl: string;
-};
-
-type DayBlock = {
-  startDay: number;
-  slots: Array<number | null>;
+  directorSignatureDataUrl: string | null;
 };
 
 export function buildFormatoEntregaPdfFilename(
@@ -31,30 +29,22 @@ export function buildFormatoEntregaPdfFilename(
 
 export function buildFormatoEntregaPdfHtml({
   data,
-  generatedAt,
   institutionalLogoDataUrl,
   tenantLogoDataUrl,
   directorSignatureDataUrl,
 }: BuildFormatoEntregaPdfHtmlParams): string {
-  const dayBlocks = resolveDayBlocks(data.deliveryMonth);
-  const generatedDateLabel = formatBogotaDate(generatedAt);
+  const visitBlocks = buildFormatoEntregaVisitBlocks(data.records);
   const cityLabel = formatTenantCityLabel(data.tenantCity, data.tenantDepartment);
-  const stubSections = dayBlocks
-    .map((dayBlock, blockIndex) =>
-      buildPageHtml({
-        blockIndex,
-        dayBlock,
-        generatedDateLabel,
-        cityLabel,
-        directorSignatureDataUrl,
-        fullName: data.fullName,
-        documentNumber: data.documentNumber,
-        institutionalLogoDataUrl,
-        tenantLogoDataUrl,
-        tenantName: data.tenantName,
-      }),
-    )
-    .join("");
+  const stubSections = buildPageHtml({
+    visitBlocks,
+    cityLabel,
+    directorSignatureDataUrl,
+    fullName: data.fullName,
+    documentNumber: data.documentNumber,
+    institutionalLogoDataUrl,
+    tenantLogoDataUrl,
+    tenantName: data.tenantName,
+  });
 
   return `<!doctype html>
     <html lang="es">
@@ -139,6 +129,10 @@ export function buildFormatoEntregaPdfHtml({
           .meta-table td:last-child {
             text-align: center;
           }
+          .meta-table .delivery-dates {
+            font-size: 9px;
+            white-space: nowrap;
+          }
           .products-table {
             margin-top: 4px;
             table-layout: fixed;
@@ -218,9 +212,7 @@ export function buildFormatoEntregaPdfHtml({
 }
 
 function buildPageHtml({
-  blockIndex,
-  dayBlock,
-  generatedDateLabel,
+  visitBlocks,
   cityLabel,
   directorSignatureDataUrl,
   fullName,
@@ -229,39 +221,38 @@ function buildPageHtml({
   tenantLogoDataUrl,
   tenantName,
 }: {
-  blockIndex: number;
-  dayBlock: DayBlock;
-  generatedDateLabel: string;
+  visitBlocks: AlimentacionFormatoEntregaVisitBlock[];
   cityLabel: string;
-  directorSignatureDataUrl: string;
+  directorSignatureDataUrl: string | null;
   fullName: string;
   documentNumber: string;
   institutionalLogoDataUrl: string | null;
   tenantLogoDataUrl: string;
   tenantName: string;
 }): string {
-  const stubs = Array.from({ length: STUBS_PER_PAGE }, (_, stubIndex) =>
-    buildStubHtml({
-      dayBlock,
-      generatedDateLabel,
-      cityLabel,
-      directorSignatureDataUrl,
-      fullName,
-      documentNumber,
-      institutionalLogoDataUrl,
-      tenantLogoDataUrl,
-      tenantName,
-      blockIndex,
-      stubIndex,
-    }),
-  ).join("");
+  const stubs = visitBlocks
+    .slice(0, STUBS_PER_PAGE)
+    .map((visitBlock, stubIndex) =>
+      buildStubHtml({
+        visitBlock,
+        cityLabel,
+        directorSignatureDataUrl,
+        fullName,
+        documentNumber,
+        institutionalLogoDataUrl,
+        tenantLogoDataUrl,
+        tenantName,
+        blockIndex: visitBlock.blockIndex,
+        stubIndex,
+      }),
+    )
+    .join("");
 
   return `<section class="page">${stubs}</section>`;
 }
 
 function buildStubHtml({
-  dayBlock,
-  generatedDateLabel,
+  visitBlock,
   cityLabel,
   directorSignatureDataUrl,
   fullName,
@@ -272,10 +263,9 @@ function buildStubHtml({
   blockIndex,
   stubIndex,
 }: {
-  dayBlock: DayBlock;
-  generatedDateLabel: string;
+  visitBlock: AlimentacionFormatoEntregaVisitBlock;
   cityLabel: string;
-  directorSignatureDataUrl: string;
+  directorSignatureDataUrl: string | null;
   fullName: string;
   documentNumber: string;
   institutionalLogoDataUrl: string | null;
@@ -284,36 +274,39 @@ function buildStubHtml({
   blockIndex: number;
   stubIndex: number;
 }): string {
-  const dayHeaders = dayBlock.slots
-    .map((day) => {
-      if (day === null) {
-        return `<th class="day-label">&nbsp;</th>`;
-      }
-
-      return `<th class="day-label">Dia<br>${day}</th>`;
-    })
+  const deliveryDatesLabel = buildMarkedDeliveryDatesLabel(visitBlock.slots);
+  const dayHeaders = visitBlock.slots
+    .map((slot) => `<th class="day-label">Dia<br>${slot.columnLabel}</th>`)
     .join("");
   const rowRefrigerio1 = buildProductRow(
     "Refrigerio 1",
-    dayBlock.slots,
+    visitBlock.slots,
+    (slot) => slot.refrigerio1Mark,
   );
-  const rowAlmuerzo = buildProductRow(
-    "Almuerzo",
-    dayBlock.slots,
-  );
+  const rowAlmuerzo = buildProductRow("Almuerzo", visitBlock.slots, (slot) => slot.almuerzoMark);
   const rowRefrigerio2 = buildProductRow(
     "Refrigerio 2",
-    dayBlock.slots,
+    visitBlock.slots,
+    (slot) => slot.refrigerio2Mark,
   );
   const rowAuxilio = buildProductRow(
     "Auxilio de transporte",
-    dayBlock.slots,
+    visitBlock.slots,
+    (slot) => slot.auxilioTransporteMark,
   );
   const institutionalLogoHtml =
     institutionalLogoDataUrl === null
       ? `<div class="stub-logo-fallback">Gobernacion del Magdalena</div>`
       : `<img src="${escapeHtml(institutionalLogoDataUrl)}" alt="Gobernacion del Magdalena" />`;
   const tenantLogoHtml = `<img src="${escapeHtml(tenantLogoDataUrl)}" alt="Logo de ${escapeHtml(tenantName)}" />`;
+  const directorSignatureHtml =
+    directorSignatureDataUrl === null
+      ? ""
+      : `<img
+            class="signature-cell__image"
+            src="${directorSignatureDataUrl}"
+            alt="Firma del Director o quien entrega"
+          />`;
 
   return `<section class="stub" data-block-index="${blockIndex}" data-stub-index="${stubIndex}">
     <header class="stub-header">
@@ -329,7 +322,7 @@ function buildStubHtml({
       </tr>
       <tr>
         <td>Fecha:</td>
-        <td>${escapeHtml(generatedDateLabel)}</td>
+        <td class="delivery-dates">${escapeHtml(deliveryDatesLabel)}</td>
       </tr>
       <tr>
         <td>Lugar:</td>
@@ -367,11 +360,7 @@ function buildStubHtml({
       </div>
       <div class="signature-cell">
         <div class="signature-cell__image-wrap">
-          <img
-            class="signature-cell__image"
-            src="${directorSignatureDataUrl}"
-            alt="Firma del Director o quien entrega"
-          />
+          ${directorSignatureHtml}
         </div>
         <span class="signature-cell__label">Firma del Director o quien entrega</span>
       </div>
@@ -381,45 +370,36 @@ function buildStubHtml({
 
 function buildProductRow(
   label: string,
-  daySlots: Array<number | null>,
+  visitSlots: AlimentacionFormatoEntregaVisitSlot[],
+  resolveMark: (slot: AlimentacionFormatoEntregaVisitSlot) => string,
 ): string {
-  const cells = daySlots
-    .map((day) => {
-      if (day === null) {
-        return '<td class="status-cell"></td>';
-      }
-
-      return '<td class="status-cell"></td>';
-    })
+  const cells = visitSlots
+    .map((slot) => `<td class="status-cell">${resolveMark(slot)}</td>`)
     .join("");
 
   return `<tr><td class="product-label">${escapeHtml(label)}</td>${cells}</tr>`;
 }
 
-function resolveDayBlocks(deliveryMonth: string): DayBlock[] {
-  const [yearValue, monthValue] = deliveryMonth.split("-");
-  const year = Number.parseInt(yearValue ?? "", 10);
-  const month = Number.parseInt(monthValue ?? "", 10);
-
-  if (!Number.isInteger(year) || !Number.isInteger(month) || month < 1 || month > 12) {
-    throw new Error("deliveryMonth invalido para construir el formato.");
-  }
-
-  return [
-    {
-      startDay: 1,
-      slots: Array.from({ length: DAYS_PER_BLOCK }, (_, index) => index + 1),
-    },
-  ];
+function buildMarkedDeliveryDatesLabel(visitSlots: AlimentacionFormatoEntregaVisitSlot[]): string {
+  return visitSlots
+    .filter(hasDeliveryMark)
+    .flatMap((slot) => (slot.deliveryDate === null ? [] : [formatDeliveryDate(slot.deliveryDate)]))
+    .join(", ");
 }
 
-function formatBogotaDate(value: Date): string {
-  return new Intl.DateTimeFormat("es-CO", {
-    timeZone: "America/Bogota",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(value);
+function hasDeliveryMark(slot: AlimentacionFormatoEntregaVisitSlot): boolean {
+  return (
+    slot.refrigerio1Mark === "X" ||
+    slot.almuerzoMark === "X" ||
+    slot.refrigerio2Mark === "X" ||
+    slot.auxilioTransporteMark === "X"
+  );
+}
+
+function formatDeliveryDate(deliveryDate: string): string {
+  const [year, month, day] = deliveryDate.split("-");
+
+  return `${day}-${month}-${year}`;
 }
 
 function formatTenantCityLabel(city: string | null, department: string | null): string {

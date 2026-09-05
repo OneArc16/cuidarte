@@ -31,6 +31,15 @@ const medicoUser: AuthUser = {
   passwordSetByAdmin: true,
 };
 
+const enfermeriaUser: AuthUser = {
+  id: enfermeriaUserId,
+  tenantId,
+  email: "enfermeria@centro-demo.test",
+  fullName: "Enfermera Centro Demo",
+  role: "enfermeria",
+  passwordSetByAdmin: true,
+};
+
 const superAdminUser: AuthUser = {
   id: "4c5b84e6-d88e-4f8a-93de-af2916d62f40",
   tenantId: null,
@@ -63,7 +72,8 @@ const records: ActividadGrupalRecord[] = [
     id: "bd962778-117e-4275-aa07-1ea2f7a1d6f8",
     tenantId,
     tenantName: "Centro de Vida Demo",
-    actaNumber: 3,
+    createdByUserId: medicoUserId,
+    actaNumber: "0003",
     activityName: "Encuentro de bienestar",
     activityType: "centro_vida",
     activityDate: "2026-04-22",
@@ -78,7 +88,8 @@ const records: ActividadGrupalRecord[] = [
     id: "79124572-44a5-45be-b5d6-7069cb4fca29",
     tenantId: otherTenantId,
     tenantName: "Centro Norte",
-    actaNumber: 5,
+    createdByUserId: directorUserId,
+    actaNumber: "0005",
     activityName: "Actividad externa",
     activityType: "actividad_campo",
     activityDate: "2026-04-21",
@@ -97,7 +108,7 @@ describe("ActividadesGrupalesService", () => {
     const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.listActividadesGrupales(
-      { search: "bienestar", activityType: null, tenantId: null },
+      { search: "bienestar", activityType: null, organizer: null, tenantId: null },
       medicoUser,
     );
 
@@ -106,6 +117,7 @@ describe("ActividadesGrupalesService", () => {
     assert.deepEqual(repository.queries[0], {
       search: "bienestar",
       activityType: null,
+      organizer: null,
       tenantId,
       scope: { type: "tenant", tenantId },
     });
@@ -116,7 +128,7 @@ describe("ActividadesGrupalesService", () => {
     const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.listActividadesGrupales(
-      { search: null, activityType: null, tenantId: otherTenantId },
+      { search: null, activityType: null, organizer: null, tenantId: otherTenantId },
       superAdminUser,
     );
 
@@ -125,6 +137,7 @@ describe("ActividadesGrupalesService", () => {
     assert.deepEqual(repository.queries[0], {
       search: null,
       activityType: null,
+      organizer: null,
       tenantId: otherTenantId,
       scope: { type: "all" },
     });
@@ -135,7 +148,7 @@ describe("ActividadesGrupalesService", () => {
     const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.listActividadesGrupales(
-      { search: null, activityType: null, tenantId: null },
+      { search: null, activityType: null, organizer: null, tenantId: null },
       auditorUser,
     );
 
@@ -143,6 +156,7 @@ describe("ActividadesGrupalesService", () => {
     assert.deepEqual(repository.queries[0], {
       search: null,
       activityType: null,
+      organizer: null,
       tenantId,
       scope: { type: "tenant", tenantId },
     });
@@ -153,7 +167,7 @@ describe("ActividadesGrupalesService", () => {
     const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.listActividadesGrupales(
-      { search: null, activityType: "actividad_campo", tenantId: null },
+      { search: null, activityType: "actividad_campo", organizer: null, tenantId: null },
       superAdminUser,
     );
 
@@ -162,6 +176,27 @@ describe("ActividadesGrupalesService", () => {
     assert.deepEqual(repository.queries[0], {
       search: null,
       activityType: "actividad_campo",
+      organizer: null,
+      tenantId: null,
+      scope: { type: "all" },
+    });
+  });
+
+  it("filters the list by organizer", async () => {
+    const repository = createRepository();
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+
+    const result = await service.listActividadesGrupales(
+      { search: null, activityType: null, organizer: "trabajadora_social", tenantId: null },
+      superAdminUser,
+    );
+
+    assert.equal(result.length, 1);
+    assert.equal(result[0]?.organizer, "trabajadora_social");
+    assert.deepEqual(repository.queries[0], {
+      search: null,
+      activityType: null,
+      organizer: "trabajadora_social",
       tenantId: null,
       scope: { type: "all" },
     });
@@ -174,7 +209,7 @@ describe("ActividadesGrupalesService", () => {
     await assert.rejects(
       () =>
         service.listActividadesGrupales(
-          { search: null, activityType: null, tenantId: otherTenantId },
+          { search: null, activityType: null, organizer: null, tenantId: otherTenantId },
           medicoUser,
         ),
       { constructor: ForbiddenException },
@@ -197,6 +232,7 @@ describe("ActividadesGrupalesService", () => {
     const result = await service.createActividadGrupal(
       {
         tenantId: null,
+        actaNumber: "0004",
         activityName: "Jornada psicomotriz",
         activityType: "fisioterapia",
         activityDate: "2026-04-23",
@@ -209,8 +245,9 @@ describe("ActividadesGrupalesService", () => {
     );
 
     assert.equal(result.tenantId, tenantId);
-    assert.equal(result.actaNumber, 4);
+    assert.equal(result.actaNumber, "0004");
     assert.equal(repository.created[0]?.tenantId, tenantId);
+    assert.equal(repository.created[0]?.actaNumber, "0004");
     assert.deepEqual(repository.created[0]?.employeeIds, [medicoUserId, enfermeriaUserId]);
   });
 
@@ -223,6 +260,7 @@ describe("ActividadesGrupalesService", () => {
         service.createActividadGrupal(
           {
             tenantId: null,
+            actaNumber: "0004-A",
             activityName: "Jornada nutricional",
             activityType: "nutricion",
             activityDate: "2026-04-23",
@@ -244,7 +282,7 @@ describe("ActividadesGrupalesService", () => {
     await assert.rejects(
       () =>
         service.listActividadesGrupales(
-          { search: null, activityType: null, tenantId: null },
+          { search: null, activityType: null, organizer: null, tenantId: null },
           tenantlessDirectorUser,
         ),
       { constructor: ForbiddenException },
@@ -260,6 +298,21 @@ describe("ActividadesGrupalesService", () => {
 
     assert.equal(result.id, targetRecord.id);
     assert.equal(result.assignedProfessionals[0]?.id, medicoUser.id);
+  });
+
+  it("enables edit mode for assigned professionals that did not create the activity", async () => {
+    const repository = createRepository();
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+    const targetRecord = records[0]!;
+
+    const result = await service.getActividadGrupalDiligenciamiento(
+      targetRecord.id,
+      enfermeriaUser,
+    );
+
+    assert.equal(result.id, targetRecord.id);
+    assert.equal(result.canEdit, true);
+    assert.equal(result.canDelete, false);
   });
 
   it("allows auditor users to open diligenciamiento details in read-only mode", async () => {
@@ -301,20 +354,46 @@ describe("ActividadesGrupalesService", () => {
     );
   });
 
+  it("allows saving diligenciamiento without integrantes", async () => {
+    const repository = createRepository();
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+    const targetRecord = records[0]!;
+
+    const result = await service.saveActividadGrupalDiligenciamiento(
+      {
+        activityId: targetRecord.id,
+        payload: {
+          objectives: "Objetivos",
+          development: "Desarrollo",
+          conclusion: "Conclusion",
+          responsibleDepartment: "nutricion",
+          integranteIds: [],
+          removedPhotoFileIds: [],
+          removePdfFile: false,
+        },
+        newPhotos: [],
+        newPdf: null,
+      },
+      medicoUser,
+    );
+
+    assert.deepEqual(result.integrantes, []);
+  });
+
   it("forbids auditor users from create and diligenciamiento actions", async () => {
     const repository = createRepository();
     const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
-    await assert.rejects(
-      () => service.getFormOptions({ tenantId }, auditorUser),
-      { constructor: ForbiddenException },
-    );
+    await assert.rejects(() => service.getFormOptions({ tenantId }, auditorUser), {
+      constructor: ForbiddenException,
+    });
 
     await assert.rejects(
       () =>
         service.createActividadGrupal(
           {
             tenantId: null,
+            actaNumber: "ACTA-LECTURA-01",
             activityName: "Actividad en lectura",
             activityType: "centro_vida",
             activityDate: "2026-04-23",
@@ -353,11 +432,11 @@ describe("ActividadesGrupalesService", () => {
 });
 
 function createRepository(): ActividadesGrupalesRepository & {
-  created: { tenantId: string; employeeIds: string[] }[];
+  created: { tenantId: string; actaNumber: string; employeeIds: string[] }[];
   queries: FindActividadesGrupalesQuery[];
 } {
   const queries: FindActividadesGrupalesQuery[] = [];
-  const created: { tenantId: string; employeeIds: string[] }[] = [];
+  const created: { tenantId: string; actaNumber: string; employeeIds: string[] }[] = [];
   const employeesByTenant = new Map<string, ActividadGrupalEmpleadoOptionRecord[]>([
     [
       tenantId,
@@ -404,12 +483,16 @@ function createRepository(): ActividadesGrupalesRepository & {
             : query.tenantId === null || record.tenantId === query.tenantId;
         const matchesActivityType =
           query.activityType === null || record.activityType === query.activityType;
+        const matchesOrganizer = query.organizer === null || record.organizer === query.organizer;
         const matchesSearch =
           query.search === null ||
           record.activityName.toLowerCase().includes(query.search.toLowerCase());
 
-        return matchesTenant && matchesActivityType && matchesSearch;
+        return matchesTenant && matchesActivityType && matchesOrganizer && matchesSearch;
       });
+    },
+    async findTrashMany() {
+      return [];
     },
     async findTenantOptions() {
       return [
@@ -432,6 +515,9 @@ function createRepository(): ActividadesGrupalesRepository & {
       }
 
       return toDiligenciamientoDetail(record, employeesByTenant, integrantesByTenant);
+    },
+    async findTrashById() {
+      return null;
     },
     async searchIntegranteOptions({ tenantId: requestedTenantId, search }) {
       const integrantes = integrantesByTenant.get(requestedTenantId) ?? [];
@@ -458,6 +544,7 @@ function createRepository(): ActividadesGrupalesRepository & {
     async create(command) {
       created.push({
         tenantId: command.tenantId,
+        actaNumber: command.actaNumber,
         employeeIds: command.employeeIds,
       });
 
@@ -465,7 +552,8 @@ function createRepository(): ActividadesGrupalesRepository & {
         id: "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
         tenantId: command.tenantId,
         tenantName: command.tenantId === tenantId ? "Centro de Vida Demo" : "Centro Norte",
-        actaNumber: 4,
+        createdByUserId: command.actorUserId,
+        actaNumber: command.actaNumber,
         activityName: command.activityName,
         activityType: command.activityType,
         activityDate: command.activityDate,
@@ -476,6 +564,38 @@ function createRepository(): ActividadesGrupalesRepository & {
         createdAt: new Date("2026-04-23T12:00:00.000Z"),
         updatedAt: new Date("2026-04-23T12:00:00.000Z"),
       };
+    },
+    async update(command) {
+      const record = records.find((item) => item.id === command.activityId);
+
+      if (record === undefined) {
+        throw new Error("Activity not found in test repository.");
+      }
+
+      return {
+        ...record,
+        actaNumber: command.actaNumber,
+        activityName: command.activityName,
+        activityType: command.activityType,
+        activityDate: command.activityDate,
+        startTime: command.startTime,
+        endTime: command.endTime,
+        organizer: command.organizer,
+        involvedEmployeesCount: command.employeeIds.length,
+        updatedAt: new Date("2026-04-23T12:00:00.000Z"),
+      };
+    },
+    async delete(command) {
+      const record = records.find((item) => item.id === command.activityId);
+
+      if (record === undefined) {
+        return;
+      }
+
+      return;
+    },
+    async restore() {
+      return true;
     },
     async saveDiligenciamiento(command) {
       const record = records.find((item) => item.id === command.activityId);

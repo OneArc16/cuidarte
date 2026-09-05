@@ -5,6 +5,7 @@ import { type AuthUser } from "@cuidarte/contracts";
 
 import {
   canAccessAlimentacion,
+  canDeleteAlimentacion,
   canManageAlimentacion,
   resolveAlimentacionScope,
 } from "./alimentacion.policy";
@@ -66,6 +67,12 @@ describe("alimentacion policy", () => {
     assert.equal(canManageAlimentacion(auditorUser), false);
     assert.equal(canManageAlimentacion(directorUser), true);
     assert.equal(canManageAlimentacion(medicoUser), false);
+
+    assert.equal(canDeleteAlimentacion(superAdminUser), true);
+    assert.equal(canDeleteAlimentacion(adminUser), true);
+    assert.equal(canDeleteAlimentacion(auditorUser), false);
+    assert.equal(canDeleteAlimentacion(directorUser), true);
+    assert.equal(canDeleteAlimentacion(medicoUser), false);
   });
 
   it("scopes supported roles by tenant and keeps super admin global", () => {

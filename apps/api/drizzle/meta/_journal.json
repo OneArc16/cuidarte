@@ -120,6 +120,111 @@
       "when": 1786032000000,
       "tag": "0016_pdf_document_storage",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1786077211480,
+      "tag": "0017_strong_vance_astro",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1786147200000,
+      "tag": "0018_ubicaciones_departments_municipalities",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1786200000000,
+      "tag": "0019_ubicaciones_codes",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1786203600000,
+      "tag": "0020_tenants_ubicaciones",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1786207200000,
+      "tag": "0021_eps_catalog",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1786210800000,
+      "tag": "0022_eps_nit_non_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1786214400000,
+      "tag": "0023_health_regime_text_labels",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1786295552217,
+      "tag": "0024_tenant_active_signers",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1786422644379,
+      "tag": "0025_adulto_mayor_import_batches",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1786422644380,
+      "tag": "0026_actividad_grupal_acta_text",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1786454130248,
+      "tag": "0027_adulto_mayor_import_updates",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1786838400000,
+      "tag": "0028_actividades_grupales_soft_delete",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1786905183572,
+      "tag": "0029_atenciones_enfermeria",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1786995183572,
+      "tag": "0030_adulto_mayor_import_legacy_backfill",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1788291293824,
+      "tag": "0031_adulto_mayor_status",
+      "breakpoints": true
     }
   ]
 }

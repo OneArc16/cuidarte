@@ -7,12 +7,14 @@ services:
   postgres:
     image: postgres:18-alpine
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_DB: cuidarte
       POSTGRES_USER: cuidarte
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env.vps}
     volumes:
-      - cuidarte_postgres_data:/var/lib/postgresql/data
+      - cuidarte_postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cuidarte -d cuidarte"]
       interval: 10s
@@ -43,9 +45,23 @@ services:
     volumes:
       - /var/lib/cuidarte/uploads:/data/uploads
     depends_on:
+      database-bootstrap:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+
+  database-bootstrap:
+    image: ${CUIDARTE_API_IMAGE:?Define CUIDARTE_API_IMAGE en .env.vps}
+    restart: "no"
+    env_file:
+      - ${CUIDARTE_ENV_FILE:-.env.vps}
+    environment:
+      NODE_ENV: production
+    command: ["pnpm", "db:bootstrap"]
+    depends_on:
+      postgres:
         condition: service_healthy
 
 volumes:

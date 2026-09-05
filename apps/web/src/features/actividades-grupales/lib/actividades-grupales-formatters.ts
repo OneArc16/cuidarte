@@ -69,12 +69,25 @@ export function formatActividadGrupalResponsibleDepartment(
   return RESPONSIBLE_DEPARTMENT_LABELS[value];
 }
 
-export function formatActaNumber(value: number): string {
-  return String(value).padStart(4, "0");
+export function formatActaNumber(value: number | string): string {
+  const normalizedValue = String(value).trim();
+
+  if (/^\d+$/.test(normalizedValue)) {
+    return normalizedValue.padStart(4, "0");
+  }
+
+  return normalizedValue;
 }
 
 export function formatActivitySchedule(startTime: string, endTime: string): string {
   return `${startTime} - ${endTime}`;
+}
+
+export function formatActividadGrupalTrashTimestamp(value: string): string {
+  return new Intl.DateTimeFormat("es-CO", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 
 export function formatActividadGrupalFileSize(sizeBytes: number): string {

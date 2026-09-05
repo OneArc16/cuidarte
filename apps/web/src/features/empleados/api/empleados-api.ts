@@ -1,13 +1,15 @@
 import {
-  type AssignEmpleadoDirectorSignatureRequest,
   type CreateEmpleadoRequest,
   type EmpleadoDetailResponse,
   type EmpleadoListResponse,
   type EmpleadoTenantOptionsResponse,
+  type SetTenantActiveSignerRequest,
+  type TenantActiveSignerResponse,
   type UpdateEmpleadoRequest,
   empleadoDetailResponseSchema,
   empleadoListResponseSchema,
   empleadoTenantOptionsResponseSchema,
+  tenantActiveSignerResponseSchema,
 } from "@cuidarte/contracts";
 
 import { getApiBaseUrl } from "@/shared/api/api-config";
@@ -60,16 +62,33 @@ export async function uploadEmpleadoSignature(
   });
 }
 
-export function assignEmpleadoDirectorSignature(
-  empleadoId: string,
-  request: AssignEmpleadoDirectorSignatureRequest,
-): Promise<EmpleadoDetailResponse> {
+export function getTenantActiveSigner(tenantId: string): Promise<TenantActiveSignerResponse> {
   return fetchJson(
-    `${getApiBaseUrl()}/empleados/${empleadoId}/director-signature-assignment`,
-    empleadoDetailResponseSchema,
+    `${getApiBaseUrl()}/tenants/${tenantId}/active-signer`,
+    tenantActiveSignerResponseSchema,
+  );
+}
+
+export function setTenantActiveSigner(
+  tenantId: string,
+  request: SetTenantActiveSignerRequest,
+): Promise<TenantActiveSignerResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/tenants/${tenantId}/active-signer`,
+    tenantActiveSignerResponseSchema,
     {
-      method: "POST",
+      method: "PUT",
       body: request,
+    },
+  );
+}
+
+export function clearTenantActiveSigner(tenantId: string): Promise<TenantActiveSignerResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/tenants/${tenantId}/active-signer`,
+    tenantActiveSignerResponseSchema,
+    {
+      method: "DELETE",
     },
   );
 }

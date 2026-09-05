@@ -3,6 +3,7 @@ import {
   type AtencionIndividualHistoryResponse,
   type AtencionIndividualLookupResponse,
   type CreateAtencionIndividualRequest,
+  medicalAttentionHistoryResponseSchema,
   type UpdateAtencionIndividualRequest,
   atencionIndividualDetailSchema,
   atencionIndividualHistoryResponseSchema,
@@ -38,6 +39,15 @@ export function getHistoriaClinica(
   return fetchJson(
     `${getApiBaseUrl()}/atenciones-individuales/adultos-mayores/${adultoMayorId}/history`,
     atencionIndividualHistoryResponseSchema,
+  );
+}
+
+export function getMedicalHistoriaClinica(
+  adultoMayorId: string,
+): Promise<AtencionIndividualHistoryResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/atenciones-individuales/adultos-mayores/${adultoMayorId}/medical-history`,
+    medicalAttentionHistoryResponseSchema,
   );
 }
 

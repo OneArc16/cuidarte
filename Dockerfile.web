@@ -1,0 +1,31 @@
+# syntax=docker/dockerfile:1
+
+FROM node:24.15.0-bookworm-slim AS build
+
+WORKDIR /app
+
+RUN npm install -g pnpm@10.10.0
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+
+COPY apps/web/package.json apps/web/package.json
+COPY apps/api/package.json apps/api/package.json
+
+# Estos paquetes deben existir completos antes de pnpm install
+# porque el postinstall compila @cuidarte/contracts.
+COPY packages/config packages/config
+COPY packages/contracts packages/contracts
+
+RUN pnpm install --frozen-lockfile --filter @cuidarte/web...
+
+COPY apps/web apps/web
+
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=${VITE_API_URL}
+
+RUN pnpm --filter @cuidarte/contracts build \
+    && pnpm --filter @cuidarte/web build
+
+FROM nginx:alpine
+
+COPY --from=build /app/apps/web/dist /usr/share/nginx/html

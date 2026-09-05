@@ -1,6 +1,6 @@
 import { type AuthUser } from "@cuidarte/contracts";
 
-import { type ActividadesGrupalesScope } from "./actividad-grupal.types";
+import { type ActividadGrupalRecord, type ActividadesGrupalesScope } from "./actividad-grupal.types";
 
 export function resolveActividadesGrupalesScope(user: AuthUser): ActividadesGrupalesScope | null {
   if (user.role === "super_admin") {
@@ -15,6 +15,43 @@ export function resolveActividadesGrupalesScope(user: AuthUser): ActividadesGrup
     type: "tenant",
     tenantId: user.tenantId,
   };
+}
+
+export function canManageActividadesGrupales(user: Pick<AuthUser, "role">): boolean {
+  return user.role !== "auditor";
+}
+
+export function canListTrashActividadesGrupales(user: Pick<AuthUser, "role" | "tenantId">): boolean {
+  if (user.role === "super_admin") {
+    return true;
+  }
+
+  return user.role !== "auditor" && user.tenantId !== null;
+}
+
+export function canTrashActividadGrupal(
+  activity: Pick<ActividadGrupalRecord, "createdByUserId" | "tenantId">,
+  actor: AuthUser,
+): boolean {
+  if (actor.role === "super_admin") {
+    return true;
+  }
+
+  if (activity.createdByUserId === actor.id) {
+    return true;
+  }
+
+  return (
+    (actor.role === "admin" || actor.role === "director") &&
+    actor.tenantId === activity.tenantId
+  );
+}
+
+export function canRestoreActividadGrupal(
+  activity: Pick<ActividadGrupalRecord, "createdByUserId" | "tenantId">,
+  actor: AuthUser,
+): boolean {
+  return canTrashActividadGrupal(activity, actor);
 }
 
 export function resolveActividadGrupalTenantForCreate(

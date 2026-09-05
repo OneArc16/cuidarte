@@ -7,7 +7,7 @@ import {
 import { and, asc, eq, ilike, ne, or, type SQL } from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
-import { adultosMayores, auditLogs, tenants } from "../../../database/schema";
+import { adultosMayores, auditLogs, epsCatalog, tenants } from "../../../database/schema";
 import {
   type AdultoMayorAuditCommand,
   type AdultoMayorCommandRecord,
@@ -38,10 +38,13 @@ type AdultoMayorSelectionRow = {
   email: string | null;
   birthDate: string;
   sex: AdultoMayorRecord["sex"];
+  status: AdultoMayorRecord["status"];
   educationLevel: string | null;
   disability: string | null;
   populationGroup: string | null;
   address: string;
+  departmentId: string | null;
+  municipalityId: string | null;
   department: string;
   municipality: string;
   zone: string;
@@ -53,7 +56,9 @@ type AdultoMayorSelectionRow = {
   bloodType: string | null;
   sisben: string | null;
   healthRegime: string | null;
-  eps: string | null;
+  epsId: string | null;
+  epsName: string | null;
+  legacyEps: string | null;
   livesWithSomeone: boolean;
   companion: string | null;
   economicIncome: number | null;
@@ -71,6 +76,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       .select(this.getAdultoMayorSelection())
       .from(adultosMayores)
       .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
+      .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
       .where(this.buildWhere(query))
       .orderBy(asc(adultosMayores.surnames), asc(adultosMayores.names));
 
@@ -82,6 +88,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       .select(this.getAdultoMayorSelection())
       .from(adultosMayores)
       .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
+      .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
       .where(this.buildScopedWhere(query.scope, [eq(adultosMayores.id, query.id)]))
       .limit(1);
 
@@ -103,6 +110,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       .select(this.getAdultoMayorSelection())
       .from(adultosMayores)
       .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
+      .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
       .where(and(...conditions))
       .limit(1);
 
@@ -146,6 +154,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
         .select(this.getAdultoMayorSelection())
         .from(adultosMayores)
         .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
+        .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
         .where(eq(adultosMayores.id, created.id))
         .limit(1);
 
@@ -181,6 +190,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
         .select(this.getAdultoMayorSelection())
         .from(adultosMayores)
         .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
+        .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
         .where(eq(adultosMayores.id, updated.id))
         .limit(1);
 
@@ -250,10 +260,13 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       email: adultosMayores.email,
       birthDate: adultosMayores.birthDate,
       sex: adultosMayores.sex,
+      status: adultosMayores.status,
       educationLevel: adultosMayores.educationLevel,
       disability: adultosMayores.disability,
       populationGroup: adultosMayores.populationGroup,
       address: adultosMayores.address,
+      departmentId: adultosMayores.departmentId,
+      municipalityId: adultosMayores.municipalityId,
       department: adultosMayores.department,
       municipality: adultosMayores.municipality,
       zone: adultosMayores.zone,
@@ -265,7 +278,9 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       bloodType: adultosMayores.bloodType,
       sisben: adultosMayores.sisben,
       healthRegime: adultosMayores.healthRegime,
-      eps: adultosMayores.eps,
+      epsId: adultosMayores.epsId,
+      epsName: epsCatalog.name,
+      legacyEps: adultosMayores.eps,
       livesWithSomeone: adultosMayores.livesWithSomeone,
       companion: adultosMayores.companion,
       economicIncome: adultosMayores.economicIncome,
@@ -290,10 +305,13 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       email: command.email,
       birthDate: command.birthDate,
       sex: command.sex,
+      status: command.status,
       educationLevel: command.educationLevel,
       disability: command.disability,
       populationGroup: command.populationGroup,
       address: command.address,
+      departmentId: command.departmentId,
+      municipalityId: command.municipalityId,
       department: command.department,
       municipality: command.municipality,
       zone: command.zone,
@@ -305,7 +323,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       bloodType: command.bloodType,
       sisben: command.sisben,
       healthRegime: command.healthRegime,
-      eps: command.eps,
+      epsId: command.epsId,
       livesWithSomeone: command.livesWithSomeone,
       companion: command.companion,
       economicIncome: command.economicIncome,
@@ -324,8 +342,11 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
   }
 
   private toRecord(row: AdultoMayorSelectionRow): AdultoMayorRecord {
+    const { legacyEps, ...record } = row;
+
     return {
-      ...row,
+      ...record,
+      eps: row.epsName ?? legacyEps,
       zone: adultoMayorZoneSchema.parse(row.zone),
       bloodType: row.bloodType === null ? null : adultoMayorBloodTypeSchema.parse(row.bloodType),
       healthRegime:

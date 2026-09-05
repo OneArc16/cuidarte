@@ -16,6 +16,7 @@ const CLINICAL_READER_ROLES: ReadonlySet<AuthUser["role"]> = new Set(
 
 type AtencionOwnership = {
   createdByUserId: string;
+  createdByUserRole: AuthUser["role"];
 };
 
 export function resolveAtencionIndividualScope(user: AuthUser): AtencionIndividualScope | null {
@@ -31,11 +32,11 @@ export function resolveAtencionIndividualScope(user: AuthUser): AtencionIndividu
 }
 
 export function canEditAtencionIndividual(user: AuthUser): boolean {
-  return CLINICAL_EDITOR_ROLES.has(user.role);
+  return user.role !== "enfermeria" && CLINICAL_EDITOR_ROLES.has(user.role);
 }
 
 export function canCreateAtencionIndividual(user: Pick<AuthUser, "role">): boolean {
-  return CLINICAL_EDITOR_ROLES.has(user.role);
+  return user.role !== "enfermeria" && CLINICAL_EDITOR_ROLES.has(user.role);
 }
 
 export function canAccessAtencionIndividualHistory(user: Pick<AuthUser, "role">): boolean {
@@ -50,7 +51,19 @@ export function resolveAtencionIndividualHistoryAccess(
     return "view";
   }
 
-  if (CLINICAL_EDITOR_ROLES.has(user.role) && atencion.createdByUserId === user.id) {
+  if (user.role === "enfermeria" && atencion.createdByUserRole === "medico") {
+    return "view";
+  }
+
+  if (user.role === "medico" && atencion.createdByUserRole === "enfermeria") {
+    return "view";
+  }
+
+  if (atencion.createdByUserRole === "enfermeria") {
+    return "view";
+  }
+
+  if (user.role !== "enfermeria" && CLINICAL_EDITOR_ROLES.has(user.role) && atencion.createdByUserId === user.id) {
     return "edit";
   }
 

@@ -62,6 +62,7 @@ export type AtencionIndividualRecord = {
   ordenesMedicas: AtencionOrdenMedica[];
   diagnosticos: AtencionDiagnostico[];
   createdByUserId: string;
+  createdByUserRole: UserRole;
   updatedByUserId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -113,6 +114,7 @@ export type FindAtencionIndividualHistoryByAdultoMayorQuery = {
   adultoMayorId: string;
   scope: AtencionIndividualScope;
   createdByUserId?: string;
+  createdByUserRole?: UserRole;
 };
 
 export type FindAtencionIndividualByConsecutiveQuery = {

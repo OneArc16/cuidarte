@@ -7,6 +7,7 @@ import {
   buildAtencionIndividualDetailPath,
   buildHistoriaClinicaPath,
 } from "../lib/atenciones-individuales-paths";
+import { buildAtencionEnfermeriaDetailPath } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-paths";
 import { resolveAtencionIndividualApiError } from "../lib/atenciones-individuales-formatters";
 import {
   useAtencionIndividualAdultoLookupQuery,
@@ -82,13 +83,12 @@ export function AtencionIndividualCreatePage({
             : resolveAtencionIndividualApiError(createMutation.error)
         }
         onCancel={() => navigate(historyPath)}
-        onSubmit={(values) => {
-          createMutation.mutate(values, {
-            onSuccess: (detail) => {
-              navigate(buildAtencionIndividualDetailPath(detail.adultoMayorId, detail.id), {
-                replace: true,
-              });
-            },
+        onOpenNursingAttention={(atencionId) => navigate(buildAtencionEnfermeriaDetailPath(atencionId))}
+        onSubmit={async (values) => {
+          const detail = await createMutation.mutateAsync(values);
+
+          navigate(buildAtencionIndividualDetailPath(detail.adultoMayorId, detail.id), {
+            replace: true,
           });
         }}
       />

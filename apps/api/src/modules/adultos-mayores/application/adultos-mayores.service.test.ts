@@ -8,9 +8,14 @@ import { calculateAgeFromBirthDate } from "./age";
 import { AdultosMayoresService } from "./adultos-mayores.service";
 import { type AdultoMayorRecord, type FindAdultosMayoresQuery } from "../domain/adulto-mayor.types";
 import { type AdultosMayoresRepository } from "../domain/adultos-mayores.repository";
+import { type UbicacionesService } from "../../ubicaciones/application/ubicaciones.service";
+import { type EpsService } from "../../eps/application/eps.service";
 
 const tenantId = "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054";
 const otherTenantId = "3436e34e-05b3-4da7-9895-5c4ef847d23a";
+const departmentId = "11111111-1111-1111-8111-111111111111";
+const municipalityId = "22222222-2222-2222-8222-222222222222";
+const epsId = "33333333-3333-4333-8333-333333333333";
 
 const tenantAdminUser: AuthUser = {
   id: "9f75c51f-74ab-40b7-84ef-9e4a93d14af1",
@@ -56,10 +61,13 @@ const records: AdultoMayorRecord[] = [
     email: "rosa.martinez@example.test",
     birthDate: "1948-03-12",
     sex: "female",
+    status: "alive",
     educationLevel: "Primaria",
     disability: null,
     populationGroup: "Persona mayor",
     address: "Calle 45 # 18-20",
+    departmentId,
+    municipalityId,
     department: "Cundinamarca",
     municipality: "Bogota",
     zone: "urban",
@@ -71,6 +79,8 @@ const records: AdultoMayorRecord[] = [
     bloodType: "o_positive",
     sisben: "B2",
     healthRegime: "subsidized",
+    epsId,
+    epsName: "Salud Demo",
     eps: "Salud Demo",
     livesWithSomeone: true,
     companion: "Mariana Rojas",
@@ -96,10 +106,13 @@ const records: AdultoMayorRecord[] = [
     email: null,
     birthDate: "1951-06-04",
     sex: "female",
+    status: "alive",
     educationLevel: null,
     disability: null,
     populationGroup: "Persona mayor",
     address: "Vereda El Jardin",
+    departmentId,
+    municipalityId,
     department: "Cundinamarca",
     municipality: "Soacha",
     zone: "rural",
@@ -111,6 +124,8 @@ const records: AdultoMayorRecord[] = [
     bloodType: "unknown",
     sisben: null,
     healthRegime: "unknown",
+    epsId: null,
+    epsName: null,
     eps: null,
     livesWithSomeone: true,
     companion: "Vecina cuidadora",
@@ -124,7 +139,7 @@ const records: AdultoMayorRecord[] = [
 describe("AdultosMayoresService", () => {
   it("scopes tenant users to their own tenant", async () => {
     const repository = createRepository();
-    const service = new AdultosMayoresService(repository);
+    const service = createService(repository);
 
     const result = await service.listAdultosMayores({ search: "rosa" }, tenantAdminUser);
 
@@ -138,7 +153,7 @@ describe("AdultosMayoresService", () => {
 
   it("allows SuperAdmin users to list all tenants", async () => {
     const repository = createRepository();
-    const service = new AdultosMayoresService(repository);
+    const service = createService(repository);
 
     const result = await service.listAdultosMayores({ search: null }, superAdminUser);
 
@@ -151,7 +166,7 @@ describe("AdultosMayoresService", () => {
 
   it("allows auditor users to list records from their tenant", async () => {
     const repository = createRepository();
-    const service = new AdultosMayoresService(repository);
+    const service = createService(repository);
 
     const result = await service.listAdultosMayores({ search: null }, tenantAuditorUser);
 
@@ -164,7 +179,7 @@ describe("AdultosMayoresService", () => {
 
   it("throws when a non SuperAdmin user has no tenant", async () => {
     const repository = createRepository();
-    const service = new AdultosMayoresService(repository);
+    const service = createService(repository);
 
     await assert.rejects(
       () =>
@@ -181,7 +196,7 @@ describe("AdultosMayoresService", () => {
 
   it("creates adultos mayores in the actor tenant", async () => {
     const repository = createRepository();
-    const service = new AdultosMayoresService(repository);
+    const service = createService(repository);
 
     const result = await service.createAdultoMayor(createCommand(), tenantAdminUser);
 
@@ -193,7 +208,7 @@ describe("AdultosMayoresService", () => {
 
   it("updates adultos mayores scoped to the actor tenant", async () => {
     const repository = createRepository();
-    const service = new AdultosMayoresService(repository);
+    const service = createService(repository);
     const currentRecord = records[0];
 
     assert.ok(currentRecord);
@@ -218,15 +233,14 @@ describe("AdultosMayoresService", () => {
 
   it("forbids auditor users from creating or updating adults records", async () => {
     const repository = createRepository();
-    const service = new AdultosMayoresService(repository);
+    const service = createService(repository);
     const currentRecord = records[0];
 
     assert.ok(currentRecord);
 
-    await assert.rejects(
-      () => service.createAdultoMayor(createCommand(), tenantAuditorUser),
-      { constructor: ForbiddenException },
-    );
+    await assert.rejects(() => service.createAdultoMayor(createCommand(), tenantAuditorUser), {
+      constructor: ForbiddenException,
+    });
 
     await assert.rejects(
       () => service.updateAdultoMayor(currentRecord.id, createCommand(), tenantAuditorUser),
@@ -246,6 +260,7 @@ function createCommand() {
     documentType: "cc" as const,
     documentNumber: "1099887766",
     sex: "female" as const,
+    status: "alive" as const,
     firstName: "Julia",
     middleName: "Mercedes",
     firstSurname: "Lopez",
@@ -255,6 +270,8 @@ function createCommand() {
     disability: null,
     populationGroup: "Persona mayor",
     address: "Calle 70 # 10-20",
+    departmentId,
+    municipalityId,
     department: "Cundinamarca",
     municipality: "Bogota",
     zone: "urban" as const,
@@ -269,7 +286,7 @@ function createCommand() {
     bloodType: "unknown" as const,
     sisben: null,
     healthRegime: "subsidized" as const,
-    eps: "Salud Demo",
+    epsId,
     livesWithSomeone: true,
     companion: "Ana Cano",
     economicIncome: 300000,
@@ -326,6 +343,8 @@ function createRepository(): AdultosMayoresRepository & { queries: FindAdultosMa
         createdAt: new Date("2026-04-22T12:00:00.000Z"),
         updatedAt: new Date("2026-04-22T12:00:00.000Z"),
         ...command,
+        epsName: command.epsId === null ? null : "Salud Demo",
+        eps: command.epsId === null ? null : "Salud Demo",
       };
 
       storedRecords.push(record);
@@ -345,11 +364,62 @@ function createRepository(): AdultosMayoresRepository & { queries: FindAdultosMa
         names: [command.firstName, command.middleName].filter(Boolean).join(" "),
         surnames: [command.firstSurname, command.secondSurname].filter(Boolean).join(" "),
         updatedAt: new Date("2026-04-22T12:00:00.000Z"),
+        epsName: command.epsId === null ? null : "Salud Demo",
+        eps: command.epsId === null ? null : "Salud Demo",
       };
 
       storedRecords.splice(storedRecords.indexOf(currentRecord), 1, updatedRecord);
 
       return updatedRecord;
+    },
+  };
+}
+
+function createService(repository: AdultosMayoresRepository): AdultosMayoresService {
+  return new AdultosMayoresService(
+    repository,
+    createUbicacionesService() as UbicacionesService,
+    createEpsService() as EpsService,
+  );
+}
+
+function createEpsService(): Pick<EpsService, "resolveForWrite"> {
+  return {
+    async resolveForWrite(requestedEpsId: string | null) {
+      if (requestedEpsId === null) {
+        return null;
+      }
+
+      if (requestedEpsId !== epsId) {
+        throw new Error("EPS invalida en el test.");
+      }
+
+      return { id: epsId, name: "Salud Demo" };
+    },
+  };
+}
+
+function createUbicacionesService(): Pick<UbicacionesService, "resolveDepartmentMunicipalityPair"> {
+  return {
+    async resolveDepartmentMunicipalityPair(
+      requestedDepartmentId: string,
+      requestedMunicipalityId: string,
+    ) {
+      if (requestedDepartmentId !== departmentId || requestedMunicipalityId !== municipalityId) {
+        throw new Error("Ubicacion invalida en el test.");
+      }
+
+      return {
+        department: {
+          id: departmentId,
+          name: "Cundinamarca",
+        },
+        municipality: {
+          id: municipalityId,
+          departmentId,
+          name: "Bogota",
+        },
+      };
     },
   };
 }

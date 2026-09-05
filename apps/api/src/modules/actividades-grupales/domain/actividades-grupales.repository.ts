@@ -3,22 +3,30 @@ import {
   type ActividadGrupalEmpleadoOptionRecord,
   type ActividadGrupalIntegranteOptionRecord,
   type ActividadGrupalRecord,
+  type ActividadGrupalTrashRecord,
+  type ActividadGrupalSupportFileRecord,
   type ActividadGrupalTenantOptionRecord,
   type CreateActividadGrupalRecordCommand,
+  type DeleteActividadGrupalRecordCommand,
   type FindActividadesGrupalesQuery,
+  type FindActividadesGrupalesTrashQuery,
   type FindActividadGrupalByIdQuery,
+  type RestoreActividadGrupalRecordCommand,
   type SaveActividadGrupalDiligenciamientoRecordCommand,
   type SavedActividadGrupalDiligenciamientoRecord,
   type SearchActividadGrupalIntegrantesOptionsQuery,
+  type UpdateActividadGrupalRecordCommand,
 } from "./actividad-grupal.types";
 
 export const ACTIVIDADES_GRUPALES_REPOSITORY = Symbol("ACTIVIDADES_GRUPALES_REPOSITORY");
 
 export type ActividadesGrupalesRepository = {
   findMany(query: FindActividadesGrupalesQuery): Promise<ActividadGrupalRecord[]>;
+  findTrashMany(query: FindActividadesGrupalesTrashQuery): Promise<ActividadGrupalTrashRecord[]>;
   findById(
     query: FindActividadGrupalByIdQuery,
   ): Promise<ActividadGrupalDiligenciamientoDetailRecord | null>;
+  findTrashById(query: FindActividadGrupalByIdQuery): Promise<ActividadGrupalTrashRecord | null>;
   findTenantOptions(): Promise<ActividadGrupalTenantOptionRecord[]>;
   findActiveEmpleadoOptions(tenantId: string): Promise<ActividadGrupalEmpleadoOptionRecord[]>;
   searchIntegranteOptions(
@@ -30,6 +38,9 @@ export type ActividadesGrupalesRepository = {
   ): Promise<ActividadGrupalIntegranteOptionRecord[]>;
   getNextActaNumber(tenantId: string): Promise<number>;
   create(command: CreateActividadGrupalRecordCommand): Promise<ActividadGrupalRecord>;
+  update(command: UpdateActividadGrupalRecordCommand): Promise<ActividadGrupalRecord>;
+  delete(command: DeleteActividadGrupalRecordCommand): Promise<void>;
+  restore(command: RestoreActividadGrupalRecordCommand): Promise<boolean>;
   saveDiligenciamiento(
     command: SaveActividadGrupalDiligenciamientoRecordCommand,
   ): Promise<SavedActividadGrupalDiligenciamientoRecord>;

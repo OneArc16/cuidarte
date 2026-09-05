@@ -5,7 +5,9 @@
 @import "../features/backoffice/backoffice.css";
 @import "../features/adultos-mayores/adultos-mayores.css";
 @import "../features/atenciones-individuales/atenciones-individuales.css";
+@import "../features/atenciones-enfermeria/atenciones-enfermeria.css";
 @import "../features/alimentacion/alimentacion.css";
 @import "../features/actividades-grupales/actividades-grupales.css";
 @import "../features/empleados/empleados.css";
+@import "../shared/components/searchable-combobox.css";
 @import "./responsive.css";

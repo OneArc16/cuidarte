@@ -23,6 +23,7 @@ import {
   atencionIndividualDetailSchema,
   atencionIndividualHistoryResponseSchema,
   atencionIndividualLookupResponseSchema,
+  medicalAttentionHistoryResponseSchema,
   createAtencionIndividualRequestSchema,
   updateAtencionIndividualRequestSchema,
   updateAtencionIndividualMultipartPayloadSchema,
@@ -84,6 +85,26 @@ export class AtencionesIndividualesController {
     );
 
     return atencionIndividualHistoryResponseSchema.parse(result);
+  }
+
+  @Get("adultos-mayores/:adultoMayorId/medical-history")
+  @ApiOkResponse({
+    description: "Proyeccion de atenciones medicas del adulto mayor segun permisos del usuario.",
+  })
+  @ApiNotFoundResponse({ description: "Adulto mayor no encontrado." })
+  @ApiForbiddenResponse({ description: "El usuario no puede consultar esta historia clinica." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async getMedicalHistoriaClinica(
+    @Param("adultoMayorId") adultoMayorIdParam: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const adultoMayorId = parseZodSchema(idParamSchema, adultoMayorIdParam);
+    const result = await this.atencionesService.getMedicalHistoriaClinica(
+      adultoMayorId,
+      request.currentUser,
+    );
+
+    return medicalAttentionHistoryResponseSchema.parse(result);
   }
 
   @Post()

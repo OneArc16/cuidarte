@@ -2,7 +2,12 @@ import { type AuthUser, type UserRole } from "@cuidarte/contracts";
 
 import { type EmpleadosScope } from "./empleado.types";
 
-const MANAGER_ROLES: readonly UserRole[] = ["super_admin", "admin"];
+const CREATOR_ROLES: readonly UserRole[] = ["super_admin", "admin", "director"];
+const MANAGER_ROLES: readonly UserRole[] = ["super_admin", "admin", "director"];
+
+export function canCreateEmpleados(user: AuthUser): boolean {
+  return CREATOR_ROLES.includes(user.role);
+}
 
 export function canManageEmpleados(user: AuthUser): boolean {
   return MANAGER_ROLES.includes(user.role);
@@ -13,7 +18,10 @@ export function resolveEmpleadosScope(user: AuthUser): EmpleadosScope | null {
     return { type: "all" };
   }
 
-  if ((user.role === "admin" || user.role === "auditor") && user.tenantId !== null) {
+  if (
+    (user.role === "admin" || user.role === "auditor" || user.role === "director") &&
+    user.tenantId !== null
+  ) {
     return {
       type: "tenant",
       tenantId: user.tenantId,
@@ -28,7 +36,15 @@ export function canAssignEmpleadoRole(actor: AuthUser, role: UserRole): boolean 
     return true;
   }
 
-  return actor.role === "admin" && role !== "super_admin";
+  if (actor.role === "admin") {
+    return role !== "super_admin";
+  }
+
+  if (actor.role === "director") {
+    return role !== "super_admin" && role !== "admin";
+  }
+
+  return false;
 }
 
 export function resolveEmpleadoTenantForCreate(
@@ -40,7 +56,7 @@ export function resolveEmpleadoTenantForCreate(
     return role === "super_admin" ? null : requestedTenantId;
   }
 
-  if (actor.role === "admin") {
+  if (actor.role === "admin" || actor.role === "director") {
     return actor.tenantId;
   }
 

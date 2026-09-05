@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { type AuthUser } from "@cuidarte/contracts";
-import { BadRequestException, ConflictException } from "@nestjs/common";
+import { NotFoundException } from "@nestjs/common";
 
+import { EmpleadoSignatureStoredFileNotFoundError } from "../domain/empleados-signature-files.storage";
 import {
-  type DirectorSignatureDateResolutionRecord,
   type EmpleadoRecord,
   type EmpleadoSignatureVersionRecord,
 } from "../domain/empleado.types";
@@ -36,76 +36,67 @@ const signature: EmpleadoSignatureVersionRecord = {
   createdAt: new Date("2026-07-22T19:20:34.531Z"),
 };
 
-const resolution: DirectorSignatureDateResolutionRecord = {
-  assignment: {
-    id: "8f41c6e2-6c19-42c4-821d-5e0eb5bd784f",
-    tenantId,
-    employeeId,
-    signatureVersionId,
-    effectiveFrom: "2026-07-22",
-    effectiveTo: null,
-    createdAt: new Date("2026-07-22T19:21:01.907Z"),
-  },
-  employeeFullName: "Director Centro Demo",
-  employeeRole: "director",
-  signature,
-};
-
 describe("EmpleadosSignatureService", () => {
-  it("resolves the director signature for the exact emission date", async () => {
-    let receivedQuery: unknown;
+  it("uploads an optional signature for a tenant employee", async () => {
+    let savedScope: unknown;
+    let createdCommand: unknown;
+    let createdAudit: unknown;
     const service = new EmpleadosSignatureService(
       {
-        async resolveDirectorSignatureForDate(query: unknown) {
-          receivedQuery = query;
-          return [resolution];
+        async findById() {
+          return employeeRecord("medico");
+        },
+        async createSignatureVersion(command: unknown, audit: unknown) {
+          createdCommand = command;
+          createdAudit = audit;
+          return signature;
         },
       } as never,
-      {} as never,
+      {
+        async saveFile(scope: unknown) {
+          savedScope = scope;
+          return {
+            originalName: "firma.jpeg",
+            mimeType: "image/jpeg",
+            sizeBytes: 2048,
+            relativePath: `${tenantId}/${employeeId}/firma.jpeg`,
+          };
+        },
+      } as never,
     );
 
-    const result = await service.resolveDirectorSignatureForDate(tenantId, "2026-07-25");
+    const result = await service.uploadSignature(
+      employeeId,
+      {
+        originalName: "firma.jpeg",
+        mimeType: "image/jpeg",
+        sizeBytes: 2048,
+        buffer: Buffer.from("firma"),
+      },
+      actor,
+    );
 
-    assert.equal(result.signature.id, signatureVersionId);
-    assert.deepEqual(receivedQuery, {
+    assert.equal(result.id, signature.id);
+    assert.deepEqual(savedScope, {
       tenantId,
-      effectiveDate: "2026-07-25",
+      employeeId,
     });
+    assert.deepEqual(createdCommand, {
+      employeeId,
+      tenantId,
+      originalName: "firma.jpeg",
+      mimeType: "image/jpeg",
+      sizeBytes: 2048,
+      checksum: "c3b73a718e2971292c9101fb1b3ea3445754c49261c8ecf513427d84a47bf03c",
+      relativePath: `${tenantId}/${employeeId}/firma.jpeg`,
+      uploadedByUserId: actor.id,
+    });
+    assert.equal((createdAudit as { action?: string } | undefined)?.action, "empleados.signature_uploaded");
   });
 
-  it("reports when no signature is valid on the emission date", async () => {
-    const service = new EmpleadosSignatureService(
-      {
-        async resolveDirectorSignatureForDate() {
-          return [];
-        },
-      } as never,
-      {} as never,
-    );
-
-    await assert.rejects(() => service.resolveDirectorSignatureForDate(tenantId, "2026-07-25"), {
-      constructor: BadRequestException,
-      message: /fecha de emision/i,
-    });
-  });
-
-  it("reports multiple assignment ranges instead of multiple active directors", async () => {
-    const service = new EmpleadosSignatureService(
-      {
-        async resolveDirectorSignatureForDate() {
-          return [resolution, resolution];
-        },
-      } as never,
-      {} as never,
-    );
-
-    await assert.rejects(() => service.resolveDirectorSignatureForDate(tenantId, "2026-07-25"), {
-      constructor: ConflictException,
-      message: /mas de una vigencia de firma/i,
-    });
-  });
-
-  it("returns a functional conflict when the database rejects an overlapping range", async () => {
+  it("activates the selected director signature for the tenant", async () => {
+    let receivedCommand: unknown;
+    let receivedAudit: unknown;
     const service = new EmpleadosSignatureService(
       {
         async findById() {
@@ -114,57 +105,156 @@ describe("EmpleadosSignatureService", () => {
         async findSignatureVersionById() {
           return signature;
         },
-        async findLatestDirectorSignatureAssignmentByTenantId() {
+        async findTenantActiveSignerByTenantId() {
           return null;
         },
-        async assignDirectorSignature() {
-          throw Object.assign(new Error("conflicting key value"), {
-            code: "23P01",
-            constraint: "tenant_director_signature_assignments_no_overlap",
-          });
+        async resolveTenantActiveDirectorSignatureByTenantId() {
+          return null;
+        },
+        async setTenantActiveSigner(command: unknown, audit: unknown) {
+          receivedCommand = command;
+          receivedAudit = audit;
+
+          return {
+            tenantId,
+            employeeId,
+            signatureVersionId,
+            activatedByUserId: actor.id,
+            activatedAt: new Date("2026-08-09T12:00:00.000Z"),
+            updatedAt: new Date("2026-08-09T12:00:00.000Z"),
+          };
         },
       } as never,
       {} as never,
     );
 
-    await assert.rejects(
-      () =>
-        service.assignDirectorSignature(
-          employeeId,
-          {
-            effectiveFrom: "2026-07-22",
-            signatureVersionId,
-          },
-          actor,
-        ),
+    const result = await service.setTenantActiveSigner(
+      tenantId,
       {
-        constructor: ConflictException,
-        message: /se cruza con otra vigencia/i,
+        employeeId,
+        signatureVersionId,
       },
+      actor,
+    );
+
+    assert.equal(result.employeeId, employeeId);
+    assert.deepEqual(receivedCommand, {
+      tenantId,
+      employeeId,
+      signatureVersionId,
+      activatedByUserId: actor.id,
+    });
+    assert.equal((receivedAudit as { action?: string } | undefined)?.action, "empleados.active_signer_updated");
+  });
+
+  it("clears the active signer for a tenant", async () => {
+    let receivedCommand: unknown;
+    let receivedAudit: unknown;
+    const service = new EmpleadosSignatureService(
+      {
+        async clearTenantActiveSigner(command: unknown, audit: unknown) {
+          receivedCommand = command;
+          receivedAudit = audit;
+
+          return {
+            tenantId,
+            employeeId,
+            signatureVersionId,
+            activatedByUserId: actor.id,
+            activatedAt: new Date("2026-08-09T12:00:00.000Z"),
+            updatedAt: new Date("2026-08-09T12:00:00.000Z"),
+          };
+        },
+      } as never,
+      {} as never,
+    );
+
+    const result = await service.clearTenantActiveSigner(tenantId, actor);
+
+    assert.equal(result?.tenantId, tenantId);
+    assert.deepEqual(receivedCommand, {
+      tenantId,
+      deactivatedByUserId: actor.id,
+    });
+    assert.equal((receivedAudit as { action?: string } | undefined)?.action, "empleados.active_signer_cleared");
+  });
+
+  it("resolves the active signer signature for a tenant", async () => {
+    const service = new EmpleadosSignatureService(
+      {
+        async resolveTenantActiveDirectorSignatureByTenantId() {
+          return {
+            activeSigner: {
+              tenantId,
+              employeeId,
+              signatureVersionId,
+              activatedByUserId: actor.id,
+              activatedAt: new Date("2026-08-09T12:00:00.000Z"),
+              updatedAt: new Date("2026-08-09T12:00:00.000Z"),
+            },
+            employeeFullName: "Director Centro Demo",
+            employeeRole: "director",
+            signature,
+          };
+        },
+      } as never,
+      {} as never,
+    );
+
+    const result = await service.resolveTenantActiveDirectorSignature(tenantId);
+
+    assert.equal(result.signature.id, signature.id);
+    assert.equal(result.activeSigner.employeeId, employeeId);
+  });
+
+  it("maps a missing stored signature file to not found", async () => {
+    const service = new EmpleadosSignatureService(
+      {
+        async findById() {
+          return employeeRecord("medico");
+        },
+      } as never,
+      {
+        async readFile() {
+          throw new EmpleadoSignatureStoredFileNotFoundError();
+        },
+      } as never,
+    );
+
+    await assert.rejects(
+      service.downloadLatestSignatureFile(employeeId, actor),
+      (error: unknown) =>
+        error instanceof NotFoundException &&
+        error.message === "No fue posible encontrar el archivo de firma cargado.",
     );
   });
 });
 
-function directorRecord(): EmpleadoRecord {
+function employeeRecord(role: EmpleadoRecord["role"]): EmpleadoRecord {
   return {
     id: employeeId,
     tenantId,
     tenantName: "Centro Demo",
-    email: "director@centro-demo.test",
-    fullName: "Director Centro Demo",
-    firstName: "Director",
+    email: `${role}@centro-demo.test`,
+    fullName: role === "director" ? "Director Centro Demo" : "Laura Perez",
+    firstName: role === "director" ? "Director" : "Laura",
     middleName: null,
-    firstSurname: "Centro",
-    secondSurname: "Demo",
+    firstSurname: role === "director" ? "Centro" : "Perez",
+    secondSurname: role === "director" ? "Demo" : null,
     documentNumber: "1000000000",
     phone: null,
-    role: "director",
+    role,
     isActive: true,
     isTenantOwner: false,
     latestSignature: signature,
     currentDirectorSignatureAssignment: null,
     directorSignatureAssignmentHistory: [],
+    tenantActiveSigner: null,
     createdAt: new Date("2026-06-20T12:00:00.000Z"),
     updatedAt: new Date("2026-07-22T19:20:34.531Z"),
   };
+}
+
+function directorRecord(): EmpleadoRecord {
+  return employeeRecord("director");
 }

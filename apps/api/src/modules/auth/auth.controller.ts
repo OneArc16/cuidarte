@@ -89,7 +89,10 @@ export class AuthController {
       `Expires=${expiresAt.toUTCString()}`,
     ];
 
-    if (getEnv().NODE_ENV === "production") {
+    if (
+      getEnv().NODE_ENV === "production" &&
+      getEnv().WEB_ORIGIN.startsWith("https://")
+    ) {
       parts.push("Secure");
     }
 
@@ -106,7 +109,10 @@ export class AuthController {
       "Max-Age=0",
     ];
 
-    if (getEnv().NODE_ENV === "production") {
+    if (
+      getEnv().NODE_ENV === "production" &&
+      getEnv().WEB_ORIGIN.startsWith("https://")
+    ) {
       parts.push("Secure");
     }
 

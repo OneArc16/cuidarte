@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import {
@@ -51,6 +51,90 @@ function mockAlimentacionListForTests() {
 
     return HttpResponse.json({ registros });
   });
+}
+
+function mockAlimentacionDeleteFlow() {
+  let registros = [{ ...alimentacionFixture, canDelete: true }];
+  let deletedRecordId: string | null = null;
+
+  return {
+    listHandler: http.get(ALIMENTACION_LIST_ENDPOINT, ({ request }) => {
+      const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? "";
+      const filteredRecords = registros.filter((registro) =>
+        [registro.documentNumber, registro.fullName, registro.organizer]
+          .join(" ")
+          .toLowerCase()
+          .includes(search),
+      );
+
+      return HttpResponse.json({ registros: filteredRecords });
+    }),
+    deleteHandler: http.delete(
+      "http://localhost:3001/api/registro-alimentacion/:recordId",
+      ({ params }) => {
+        deletedRecordId = params.recordId as string;
+        registros = registros.filter((registro) => registro.id !== params.recordId);
+
+        return HttpResponse.json({ success: true });
+      },
+    ),
+    getDeletedRecordId: () => deletedRecordId,
+  };
+}
+
+function mockAlimentacionImportFlow() {
+  let registros = [{ ...alimentacionFixture }];
+
+  return {
+    listHandler: http.get(ALIMENTACION_LIST_ENDPOINT, ({ request }) => {
+      const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? "";
+      const filteredRecords = registros.filter((registro) =>
+        [registro.documentNumber, registro.fullName, registro.organizer]
+          .join(" ")
+          .toLowerCase()
+          .includes(search),
+      );
+
+      return HttpResponse.json({ registros: filteredRecords });
+    }),
+    importHandler: http.post(
+      "http://localhost:3001/api/registro-alimentacion/adultos-mayores/:adultoMayorId/formato-entrega/imported-pdfs",
+      async ({ request }) => {
+        const uploadedDeliveryMonth = new URL(request.url).searchParams.get("deliveryMonth");
+        const uploadedContentType = request.headers.get("content-type");
+
+        if (uploadedDeliveryMonth !== "2026-04") {
+          return HttpResponse.json({ message: "deliveryMonth inválido" }, { status: 400 });
+        }
+
+        if (uploadedContentType === null || !uploadedContentType.includes("multipart/form-data")) {
+          return HttpResponse.json({ message: "content-type inválido" }, { status: 400 });
+        }
+
+        const version = {
+          id: "1a3782f0-b999-412c-a0f4-31ed47cb8f3f",
+          version: 1,
+          originalName: "formato-diligenciado.pdf",
+          mimeType: "application/pdf",
+          sizeBytes: 16,
+          importedByUserId: authUserFixture.id,
+          importedByUserFullName: authUserFixture.fullName,
+          importedAt: "2026-04-24T12:00:00.000Z",
+        } as const;
+
+        registros = registros.map((registro) =>
+          registro.id === alimentacionFixture.id
+            ? {
+                ...registro,
+                importedFormato: version,
+              }
+            : registro,
+        );
+
+        return HttpResponse.json({ version });
+      },
+    ),
+  };
 }
 
 describe("App alimentacion flow", () => {
@@ -139,28 +223,38 @@ describe("App alimentacion flow", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows the delete confirmation dialog for a daily feeding record", async () => {
+    server.use(mockAuthMe(authUserFixture));
+    const { listHandler, deleteHandler } = mockAlimentacionDeleteFlow();
+    server.use(listHandler, deleteHandler);
+    const user = userEvent.setup();
+    renderAppAtPath("/registro-alimentacion");
+
+    const expandButton = await screen.findByRole("button", {
+      name: `Mostrar registros de ${alimentacionFixture.fullName}`,
+    });
+    await user.click(expandButton);
+
+    const deleteButton = await screen.findByRole("button", {
+      name: `Eliminar alimentación de ${alimentacionFixture.fullName} del día ${alimentacionFixture.deliveryDate}`,
+    });
+    await user.click(deleteButton);
+
+    const dialog = await screen.findByRole("dialog", { name: "Eliminar alimentación" });
+
+    expect(dialog).toHaveTextContent(alimentacionFixture.fullName);
+    expect(dialog).toHaveTextContent(alimentacionFixture.deliveryDate);
+    expect(within(dialog).getByRole("button", { name: "Eliminar registro" })).toBeInTheDocument();
+  });
+
   it("exports individual feeding format from the grouped row", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-04-24T12:00:00.000Z"));
 
-    let receivedAdultoMayorId: string | null = null;
-    let receivedDeliveryMonth: string | null = null;
+    const openSpy = vi.spyOn(window, "open").mockReturnValue({} as Window);
     server.use(
       mockAuthMe(authUserFixture),
       mockAlimentacionListForTests(),
-      http.get(
-        "http://localhost:3001/api/registro-alimentacion/adultos-mayores/:adultoMayorId/formato-entrega/pdf",
-        ({ params, request }) => {
-          receivedAdultoMayorId = params.adultoMayorId as string;
-          receivedDeliveryMonth = new URL(request.url).searchParams.get("deliveryMonth");
-
-          return new HttpResponse(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
-            headers: {
-              "Content-Type": "application/pdf",
-            },
-          });
-        },
-      ),
     );
     const user = userEvent.setup();
     renderAppAtPath("/registro-alimentacion");
@@ -171,10 +265,125 @@ describe("App alimentacion flow", () => {
       }),
     );
 
+    expect(openSpy).toHaveBeenCalledWith(
+      `http://localhost:3001/api/registro-alimentacion/adultos-mayores/${adultoMayorFixture.id}/formato-entrega/pdf?deliveryMonth=2026-04`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  });
+
+  it("imports a PDF after showing the beneficiary, month and file details", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-04-24T12:00:00.000Z"));
+
+    server.use(mockAuthMe(authUserFixture));
+    const { listHandler, importHandler } = mockAlimentacionImportFlow();
+    server.use(listHandler, importHandler);
+    const user = userEvent.setup();
+    renderAppAtPath("/registro-alimentacion");
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: `Importar formato diligenciado de ${alimentacionFixture.fullName}`,
+      }),
+    );
+
+    const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]');
+
+    expect(fileInput).not.toBeNull();
+    await user.upload(
+      fileInput!,
+      new File(["%PDF-1.7\ncontenido"], "formato-diligenciado.pdf", {
+        type: "application/pdf",
+      }),
+    );
+
+    const importDialog = await screen.findByRole("dialog", { name: "Confirmar importacion" });
+
+    expect(importDialog).toBeInTheDocument();
+    expect(within(importDialog).getByText(alimentacionFixture.fullName)).toBeInTheDocument();
+    expect(within(importDialog).getByText("2026-04")).toBeInTheDocument();
+    expect(within(importDialog).getByText("formato-diligenciado.pdf")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Confirmar importacion" }));
+
     await waitFor(() => {
-      expect(receivedAdultoMayorId).toBe(alimentacionFixture.adultoMayorId);
+      expect(
+        screen.getByRole("button", {
+          name: /Descargar PDF importado v1 de Rosa Elena Martinez Rojas/i,
+        }),
+      ).toBeInTheDocument();
     });
-    expect(receivedDeliveryMonth).toBe("2026-04");
+  });
+
+  it("downloads the imported PDF from the row action", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-04-24T12:00:00.000Z"));
+
+    const openSpy = vi.spyOn(window, "open").mockReturnValue({} as Window);
+    server.use(
+      mockAuthMe(authUserFixture),
+      http.get(ALIMENTACION_LIST_ENDPOINT, () =>
+        HttpResponse.json({
+          registros: [
+            {
+              ...alimentacionFixture,
+              importedFormato: {
+                id: "6d0e0f91-d9f9-4cb7-bb08-08af2d5ac1f9",
+                version: 1,
+                originalName: "formato-importado.pdf",
+                mimeType: "application/pdf",
+                sizeBytes: 16,
+                importedByUserId: authUserFixture.id,
+                importedByUserFullName: authUserFixture.fullName,
+                importedAt: "2026-04-24T12:00:00.000Z",
+              },
+            },
+          ],
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderAppAtPath("/registro-alimentacion");
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /Descargar PDF importado v1 de Rosa Elena Martinez Rojas/i,
+      }),
+    );
+
+    expect(openSpy).toHaveBeenCalledWith(
+      `http://localhost:3001/api/registro-alimentacion/adultos-mayores/${adultoMayorFixture.id}/formato-entrega/imported-pdfs/6d0e0f91-d9f9-4cb7-bb08-08af2d5ac1f9/download`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  });
+
+  it("rejects a non-PDF before opening the import confirmation", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-04-24T12:00:00.000Z"));
+
+    server.use(mockAuthMe(authUserFixture), mockAlimentacionListForTests());
+    const user = userEvent.setup();
+    renderAppAtPath("/registro-alimentacion");
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: `Importar formato diligenciado de ${alimentacionFixture.fullName}`,
+      }),
+    );
+
+    const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]');
+
+    expect(fileInput).not.toBeNull();
+    fireEvent.change(fileInput!, {
+      target: {
+        files: [new File(["not a pdf"], "formato.txt", { type: "text/plain" })],
+      },
+    });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Selecciona un archivo PDF válido.");
+    expect(screen.queryByRole("dialog", { name: "Confirmar importacion" })).not.toBeInTheDocument();
   });
 
   it("creates a feeding batch and returns to the list", async () => {
@@ -290,15 +499,15 @@ describe("App alimentacion flow", () => {
       screen.getByRole("button", { name: /Marcar entregado Rosa Elena Martinez Rojas/i }),
     );
 
-    expect(
-      screen.getByLabelText(/Refrigerio 1 de Rosa Elena Martinez Rojas/i),
-    ).toHaveValue("entregado");
+    expect(screen.getByLabelText(/Refrigerio 1 de Rosa Elena Martinez Rojas/i)).toHaveValue(
+      "entregado",
+    );
     expect(screen.getByLabelText(/^Almuerzo de Rosa Elena Martinez Rojas$/i)).toHaveValue(
       "entregado",
     );
-    expect(
-      screen.getByLabelText(/Refrigerio 2 de Rosa Elena Martinez Rojas/i),
-    ).toHaveValue("entregado");
+    expect(screen.getByLabelText(/Refrigerio 2 de Rosa Elena Martinez Rojas/i)).toHaveValue(
+      "entregado",
+    );
     expect(
       screen.getByLabelText(/Auxilio de transporte de Rosa Elena Martinez Rojas/i),
     ).toHaveValue("entregado");
@@ -308,9 +517,9 @@ describe("App alimentacion flow", () => {
     expect(screen.getByLabelText(/Refrigerio 1 de Rosa Elena Martinez Rojas/i)).toHaveValue("");
     expect(screen.getByLabelText(/^Almuerzo de Rosa Elena Martinez Rojas$/i)).toHaveValue("");
     expect(screen.getByLabelText(/Refrigerio 2 de Rosa Elena Martinez Rojas/i)).toHaveValue("");
-    expect(screen.getByLabelText(/Auxilio de transporte de Rosa Elena Martinez Rojas/i)).toHaveValue(
-      "",
-    );
+    expect(
+      screen.getByLabelText(/Auxilio de transporte de Rosa Elena Martinez Rojas/i),
+    ).toHaveValue("");
   });
 
   it("marks and clears all rows with global actions", async () => {
@@ -338,28 +547,28 @@ describe("App alimentacion flow", () => {
     await user.click(screen.getByRole("button", { name: /Daniel Andres Castano Navarro/i }));
     await user.click(screen.getByRole("button", { name: /Marcar todos como entregados/i }));
 
-    expect(
-      screen.getByLabelText(/Refrigerio 1 de Rosa Elena Martinez Rojas/i),
-    ).toHaveValue("entregado");
+    expect(screen.getByLabelText(/Refrigerio 1 de Rosa Elena Martinez Rojas/i)).toHaveValue(
+      "entregado",
+    );
     expect(screen.getByLabelText(/^Almuerzo de Rosa Elena Martinez Rojas$/i)).toHaveValue(
       "entregado",
     );
-    expect(
-      screen.getByLabelText(/Refrigerio 2 de Rosa Elena Martinez Rojas/i),
-    ).toHaveValue("entregado");
+    expect(screen.getByLabelText(/Refrigerio 2 de Rosa Elena Martinez Rojas/i)).toHaveValue(
+      "entregado",
+    );
     expect(
       screen.getByLabelText(/Auxilio de transporte de Rosa Elena Martinez Rojas/i),
     ).toHaveValue("entregado");
 
-    expect(
-      screen.getByLabelText(/Refrigerio 1 de Daniel Andres Castano Navarro/i),
-    ).toHaveValue("entregado");
+    expect(screen.getByLabelText(/Refrigerio 1 de Daniel Andres Castano Navarro/i)).toHaveValue(
+      "entregado",
+    );
     expect(screen.getByLabelText(/^Almuerzo de Daniel Andres Castano Navarro$/i)).toHaveValue(
       "entregado",
     );
-    expect(
-      screen.getByLabelText(/Refrigerio 2 de Daniel Andres Castano Navarro/i),
-    ).toHaveValue("entregado");
+    expect(screen.getByLabelText(/Refrigerio 2 de Daniel Andres Castano Navarro/i)).toHaveValue(
+      "entregado",
+    );
     expect(
       screen.getByLabelText(/Auxilio de transporte de Daniel Andres Castano Navarro/i),
     ).toHaveValue("entregado");
@@ -369,9 +578,9 @@ describe("App alimentacion flow", () => {
     expect(screen.getByLabelText(/Refrigerio 1 de Rosa Elena Martinez Rojas/i)).toHaveValue("");
     expect(screen.getByLabelText(/^Almuerzo de Rosa Elena Martinez Rojas$/i)).toHaveValue("");
     expect(screen.getByLabelText(/Refrigerio 2 de Rosa Elena Martinez Rojas/i)).toHaveValue("");
-    expect(screen.getByLabelText(/Auxilio de transporte de Rosa Elena Martinez Rojas/i)).toHaveValue(
-      "",
-    );
+    expect(
+      screen.getByLabelText(/Auxilio de transporte de Rosa Elena Martinez Rojas/i),
+    ).toHaveValue("");
 
     expect(screen.getByLabelText(/Refrigerio 1 de Daniel Andres Castano Navarro/i)).toHaveValue("");
     expect(screen.getByLabelText(/^Almuerzo de Daniel Andres Castano Navarro$/i)).toHaveValue("");
