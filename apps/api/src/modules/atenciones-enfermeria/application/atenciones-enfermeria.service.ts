@@ -31,6 +31,7 @@ import {
   canOpenAtencionEnfermeriaModule,
   canReadAtencionEnfermeriaModule,
   canEditAtencionEnfermeria,
+  canManageAtencionEnfermeriaTrash,
   resolveAtencionEnfermeriaAccess,
   resolveAtencionEnfermeriaScope,
 } from "../domain/atencion-enfermeria.policy";
@@ -126,6 +127,40 @@ export class AtencionesEnfermeriaService {
     return this.toDetail(record, actor);
   }
 
+  async getPapelera(adultoMayorId: string, actor: AuthUser): Promise<AtencionEnfermeriaHistoryResponse> {
+    this.ensureTrashAccess(actor);
+    const scope = this.resolveScopeOrThrow(actor);
+    const adultoMayor = await this.atencionesRepository.findAdultoMayorById({ adultoMayorId, scope });
+    if (adultoMayor === null) throw new NotFoundException("Adulto mayor no encontrado.");
+    const records = await this.atencionesRepository.findTrashByAdultoMayor({ adultoMayorId, scope });
+    return atencionEnfermeriaHistoryResponseSchema.parse({
+      adultoMayor: this.toAdultoResumen(adultoMayor),
+      atenciones: records.map((record) => this.toListItem(record, actor)),
+    });
+  }
+
+  async deleteAtencion(id: string, actor: AuthUser): Promise<{ success: true }> {
+    this.ensureTrashAccess(actor);
+    const scope = this.resolveScopeOrThrow(actor);
+    const record = await this.atencionesRepository.findById({ id, scope });
+    if (record === null) throw new NotFoundException("Atencion de enfermeria no encontrada.");
+    await this.runGuarded(() =>
+      this.atencionesRepository.softDelete({ id, tenantId: record.tenantId, actorUserId: actor.id }),
+    );
+    return { success: true };
+  }
+
+  async restoreAtencion(id: string, actor: AuthUser): Promise<{ success: true }> {
+    this.ensureTrashAccess(actor);
+    const scope = this.resolveScopeOrThrow(actor);
+    const record = await this.atencionesRepository.findById({ id, scope, includeDeleted: true });
+    if (record === null || record.deletedAt === null) throw new NotFoundException("Atencion en papelera no encontrada.");
+    await this.runGuarded(() =>
+      this.atencionesRepository.restore({ id, tenantId: record.tenantId, actorUserId: actor.id }),
+    );
+    return { success: true };
+  }
+
   async createAtencion(
     command: CreateAtencionEnfermeriaRequest,
     actor: AuthUser,
@@ -170,7 +205,9 @@ export class AtencionesEnfermeriaService {
     }
 
     if (!canEditAtencionEnfermeria(actor, currentRecord)) {
-      throw new ForbiddenException("Solo puedes editar atenciones de enfermeria registradas por ti.");
+      throw new ForbiddenException(
+        "Solo puedes editar atenciones de enfermeria registradas por ti.",
+      );
     }
 
     const updated = await this.runGuarded(async () =>
@@ -200,6 +237,12 @@ export class AtencionesEnfermeriaService {
   private ensureCanCreate(actor: AuthUser) {
     if (!canCreateAtencionEnfermeria(actor)) {
       throw new ForbiddenException("Solo una enfermera puede gestionar atenciones de enfermeria.");
+    }
+  }
+
+  private ensureTrashAccess(actor: AuthUser) {
+    if (!canManageAtencionEnfermeriaTrash(actor)) {
+      throw new ForbiddenException("No tienes permisos para gestionar la papelera de enfermeria.");
     }
   }
 
@@ -253,7 +296,12 @@ export class AtencionesEnfermeriaService {
         throw new ConflictException(error.message);
       }
 
-      if (error instanceof BadRequestException || error instanceof ForbiddenException || error instanceof NotFoundException || error instanceof ConflictException) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException ||
+        error instanceof NotFoundException ||
+        error instanceof ConflictException
+      ) {
         throw error;
       }
 
@@ -286,6 +334,8 @@ export class AtencionesEnfermeriaService {
       professional: record.professional,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
+      deletedAt: record.deletedAt?.toISOString() ?? null,
+      deletedByUserId: record.deletedByUserId ?? null,
     };
   }
 
@@ -302,6 +352,8 @@ export class AtencionesEnfermeriaService {
       access,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
+      deletedAt: record.deletedAt?.toISOString() ?? null,
+      deletedByUserId: record.deletedByUserId ?? null,
     });
   }
 

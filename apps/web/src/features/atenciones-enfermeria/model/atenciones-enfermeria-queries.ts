@@ -11,12 +11,22 @@ export const atencionesEnfermeriaQueryKeys = {
   adultoLookup: (adultoMayorId: string) =>
     ["atenciones-enfermeria", "adulto-lookup", adultoMayorId] as const,
   history: (adultoMayorId: string) => ["atenciones-enfermeria", "history", adultoMayorId] as const,
+  trash: (adultoMayorId: string) => ["atenciones-enfermeria", "trash", adultoMayorId] as const,
 };
 
 export function useAtencionesEnfermeriaListQuery(params: AtencionEnfermeriaListQuery) {
   return useQuery({
     queryKey: atencionesEnfermeriaQueryKeys.list(params),
     queryFn: () => atencionesEnfermeriaApi.listAtencionesEnfermeria(params),
+    retry: false,
+  });
+}
+
+export function useAtencionesEnfermeriaTrashQuery(adultoMayorId: string, enabled = true) {
+  return useQuery({
+    queryKey: atencionesEnfermeriaQueryKeys.trash(adultoMayorId),
+    queryFn: () => atencionesEnfermeriaApi.getAtencionesEnfermeriaTrash(adultoMayorId),
+    enabled,
     retry: false,
   });
 }
@@ -75,6 +85,26 @@ export function useUpdateAtencionEnfermeriaMutation(atencionId: string) {
       atencionesEnfermeriaApi.updateAtencionEnfermeria(atencionId, request),
     onSuccess: async (detail) => {
       queryClient.setQueryData(atencionesEnfermeriaQueryKeys.detail(atencionId), detail);
+      await queryClient.invalidateQueries({ queryKey: ["atenciones-enfermeria"] });
+    },
+  });
+}
+
+export function useDeleteAtencionEnfermeriaMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: atencionesEnfermeriaApi.deleteAtencionEnfermeria,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["atenciones-enfermeria"] });
+    },
+  });
+}
+
+export function useRestoreAtencionEnfermeriaMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: atencionesEnfermeriaApi.restoreAtencionEnfermeria,
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["atenciones-enfermeria"] });
     },
   });

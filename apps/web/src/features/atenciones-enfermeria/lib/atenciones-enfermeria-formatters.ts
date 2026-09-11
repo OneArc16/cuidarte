@@ -49,7 +49,10 @@ export function formatAtencionEnfermeriaGlucometria(value: {
   return `${value.glucometriaMgDl} mg/dL · ${contextLabel}`;
 }
 
-export function formatAtencionEnfermeriaTimestamp(attentionDate: string, attentionTime: string): string {
+export function formatAtencionEnfermeriaTimestamp(
+  attentionDate: string,
+  attentionTime: string,
+): string {
   const formattedDate = new Intl.DateTimeFormat("es-CO", {
     dateStyle: "medium",
     timeZone: "UTC",

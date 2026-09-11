@@ -268,6 +268,8 @@ export const atencionEnfermeriaListItemSchema = z.object({
   professional: atencionEnfermeriaProfessionalSchema,
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
+  deletedAt: z.string().datetime().nullable().optional(),
+  deletedByUserId: z.uuid().nullable().optional(),
 });
 
 export const atencionEnfermeriaDetailSchema = refineAtencionEnfermeriaCommand(
@@ -284,6 +286,8 @@ export const atencionEnfermeriaDetailSchema = refineAtencionEnfermeriaCommand(
     version: z.number().int().min(1),
     createdAt: z.string().min(1),
     updatedAt: z.string().min(1),
+    deletedAt: z.string().datetime().nullable().optional(),
+    deletedByUserId: z.uuid().nullable().optional(),
   }),
 );
 
@@ -296,6 +300,10 @@ export const atencionEnfermeriaListResponseSchema = z.object({
 export const atencionEnfermeriaHistoryResponseSchema = z.object({
   adultoMayor: atencionEnfermeriaAdultoResumenSchema,
   atenciones: z.array(atencionEnfermeriaHistoryItemSchema),
+});
+
+export const atencionEnfermeriaTrashMutationResponseSchema = z.object({
+  success: z.literal(true),
 });
 
 export const createAtencionEnfermeriaResponseSchema = atencionEnfermeriaDetailSchema;
@@ -321,4 +329,7 @@ export type AtencionEnfermeriaHistoryItem = z.infer<typeof atencionEnfermeriaHis
 export type AtencionEnfermeriaListResponse = z.infer<typeof atencionEnfermeriaListResponseSchema>;
 export type AtencionEnfermeriaHistoryResponse = z.infer<
   typeof atencionEnfermeriaHistoryResponseSchema
+>;
+export type AtencionEnfermeriaTrashMutationResponse = z.infer<
+  typeof atencionEnfermeriaTrashMutationResponseSchema
 >;

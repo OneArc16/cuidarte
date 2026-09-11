@@ -22,6 +22,7 @@ type AtencionEnfermeriaOwnership = {
 const MODULE_ROLES: ReadonlySet<AuthUser["role"]> = new Set(atencionEnfermeriaModuleRoleValues);
 const VIEW_ROLES: ReadonlySet<AuthUser["role"]> = new Set(atencionEnfermeriaCrossReadRoleValues);
 const CREATE_ROLES: ReadonlySet<AuthUser["role"]> = new Set(["enfermeria"]);
+const TRASH_ROLES: ReadonlySet<AuthUser["role"]> = new Set(["super_admin", "admin", "director"]);
 
 export function resolveAtencionEnfermeriaScope(user: AuthUser): AtencionEnfermeriaScope | null {
   if (user.role === "super_admin") {
@@ -45,6 +46,10 @@ export function canReadAtencionEnfermeriaModule(user: Pick<AuthUser, "role">): b
 
 export function canCreateAtencionEnfermeria(user: Pick<AuthUser, "role">): boolean {
   return CREATE_ROLES.has(user.role);
+}
+
+export function canManageAtencionEnfermeriaTrash(user: Pick<AuthUser, "role">): boolean {
+  return TRASH_ROLES.has(user.role);
 }
 
 export function resolveAtencionEnfermeriaAccess(

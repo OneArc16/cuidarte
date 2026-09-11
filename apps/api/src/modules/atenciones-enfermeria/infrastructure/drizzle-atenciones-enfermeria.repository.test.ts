@@ -93,7 +93,9 @@ describe("DrizzleAtencionesEnfermeriaRepository", () => {
   });
 
   it("rejects updates from another nurse and keeps the record untouched", async () => {
-    const { repository, state } = createRepositoryStub([[createDetailRow({ createdByUserId: nurseUserId })]]);
+    const { repository, state } = createRepositoryStub([
+      [createDetailRow({ createdByUserId: nurseUserId })],
+    ]);
 
     await assert.rejects(
       repository.update({
@@ -126,7 +128,9 @@ describe("DrizzleAtencionesEnfermeriaRepository", () => {
   });
 
   it("raises a version conflict when the expected version has changed", async () => {
-    const { repository, state } = createRepositoryStub([[createDetailRow({ createdByUserId: nurseUserId })]]);
+    const { repository, state } = createRepositoryStub([
+      [createDetailRow({ createdByUserId: nurseUserId })],
+    ]);
     state.updateResults.push([]);
 
     await assert.rejects(

@@ -24,7 +24,10 @@ export const reportStatusValues = [
 
 export const reportTypeSchema = z.enum(reportTypeValues);
 export const reportStatusSchema = z.enum(reportStatusValues);
-export const reportPeriodSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
+export const reportPeriodSchema = z.union([
+  z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/),
+  z.literal("ALL"),
+]);
 export const nullableReportTenantIdSchema = z.uuid().nullable();
 
 export const reportAvailabilityQuerySchema = z.object({

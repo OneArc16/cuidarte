@@ -1,4 +1,7 @@
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, RotateCcw, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import { type AuthUser } from "@cuidarte/contracts";
+import { useState } from "react";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
@@ -8,18 +11,25 @@ import {
   ATENCIONES_ENFERMERIA_PATH,
   buildAtencionEnfermeriaDetailPath,
 } from "../lib/atenciones-enfermeria-paths";
-import { useAtencionesEnfermeriaHistoryQuery } from "../model/atenciones-enfermeria-queries";
+import { useAtencionesEnfermeriaHistoryQuery, useAtencionesEnfermeriaTrashQuery, useDeleteAtencionEnfermeriaMutation, useRestoreAtencionEnfermeriaMutation } from "../model/atenciones-enfermeria-queries";
 
 type AtencionesEnfermeriaHistoryPageProps = {
   adultoMayorId: string;
   navigate: Navigate;
+  user: AuthUser;
 };
 
 export function AtencionesEnfermeriaHistoryPage({
   adultoMayorId,
   navigate,
+  user,
 }: AtencionesEnfermeriaHistoryPageProps) {
+  const canManageTrash = ["super_admin", "admin", "director"].includes(user.role);
+  const [showTrash, setShowTrash] = useState(false);
   const historyQuery = useAtencionesEnfermeriaHistoryQuery(adultoMayorId);
+  const trashQuery = useAtencionesEnfermeriaTrashQuery(adultoMayorId, canManageTrash && showTrash);
+  const deleteMutation = useDeleteAtencionEnfermeriaMutation();
+  const restoreMutation = useRestoreAtencionEnfermeriaMutation();
 
   if (historyQuery.isLoading) {
     return (
@@ -32,11 +42,18 @@ export function AtencionesEnfermeriaHistoryPage({
 
   if (historyQuery.isError || historyQuery.data === undefined) {
     return (
-      <section className="adultos-empty" aria-labelledby="atenciones-enfermeria-history-error-title">
+      <section
+        className="adultos-empty"
+        aria-labelledby="atenciones-enfermeria-history-error-title"
+      >
         <p className="eyebrow">Historia de enfermería</p>
         <h2 id="atenciones-enfermeria-history-error-title">No fue posible cargar la historia</h2>
         <p>{resolveAtencionesEnfermeriaApiError(historyQuery.error)}</p>
-        <button className="outline-action" type="button" onClick={() => navigate(ATENCIONES_ENFERMERIA_PATH)}>
+        <button
+          className="outline-action"
+          type="button"
+          onClick={() => navigate(ATENCIONES_ENFERMERIA_PATH)}
+        >
           <ChevronLeft aria-hidden="true" />
           <span>Volver</span>
         </button>
@@ -44,7 +61,8 @@ export function AtencionesEnfermeriaHistoryPage({
     );
   }
 
-  const { adultoMayor, atenciones } = historyQuery.data;
+  const { adultoMayor } = historyQuery.data;
+  const atenciones = showTrash ? (trashQuery.data?.atenciones ?? []) : historyQuery.data.atenciones;
 
   return (
     <section className="adultos-form-stack" aria-labelledby="atenciones-enfermeria-history-title">
@@ -94,11 +112,28 @@ export function AtencionesEnfermeriaHistoryPage({
         <div>
           <span className="eyebrow">Atenciones registradas</span>
         </div>
+        {canManageTrash ? (
+          <button className="outline-action" type="button" onClick={() => setShowTrash((value) => !value)}>
+            {showTrash ? <RotateCcw aria-hidden="true" /> : <Trash2 aria-hidden="true" />}
+            <span>{showTrash ? "Ver activas" : "Papelera"}</span>
+          </button>
+        ) : null}
       </div>
 
       <AtencionesEnfermeriaHistoryTable
         atenciones={atenciones}
-        isLoading={false}
+        isLoading={showTrash ? trashQuery.isLoading : false}
+        isTrash={showTrash}
+        canManageTrash={canManageTrash}
+        onDelete={async (atencionId) => {
+          if (!window.confirm("¿Enviar esta atención a la papelera?")) return;
+          await deleteMutation.mutateAsync(atencionId);
+          toast.success("Atención enviada a la papelera.");
+        }}
+        onRestore={async (atencionId) => {
+          await restoreMutation.mutateAsync(atencionId);
+          toast.success("Atención restaurada.");
+        }}
         onOpenAtencion={(atencionId) => {
           navigate(buildAtencionEnfermeriaDetailPath(atencionId));
         }}

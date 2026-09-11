@@ -325,7 +325,10 @@ function createRepository(seed: {
   return {
     adulto: seed.adulto,
     listItems: seed.listItems,
-    findAdultoMayorCalls: [] as Array<{ adultoMayorId: string; scope: { type: "all" } | { type: "tenant"; tenantId: string } }>,
+    findAdultoMayorCalls: [] as Array<{
+      adultoMayorId: string;
+      scope: { type: "all" } | { type: "tenant"; tenantId: string };
+    }>,
     findManyCalls: [] as Array<Record<string, unknown>>,
     findByIdCalls: [] as Array<Record<string, unknown>>,
     historyCalls: [] as Array<Record<string, unknown>>,
@@ -373,7 +376,10 @@ function createRepository(seed: {
 type RepositoryStub = AtencionesEnfermeriaRepository & {
   adulto: AtencionEnfermeriaAdultoRecord | null;
   listItems: AtencionEnfermeriaListItemRecord[];
-  findAdultoMayorCalls: Array<{ adultoMayorId: string; scope: { type: "all" } | { type: "tenant"; tenantId: string } }>;
+  findAdultoMayorCalls: Array<{
+    adultoMayorId: string;
+    scope: { type: "all" } | { type: "tenant"; tenantId: string };
+  }>;
   findManyCalls: Array<Record<string, unknown>>;
   findByIdCalls: Array<Record<string, unknown>>;
   historyCalls: Array<Record<string, unknown>>;

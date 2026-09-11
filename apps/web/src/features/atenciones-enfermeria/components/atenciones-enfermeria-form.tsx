@@ -112,10 +112,12 @@ export function AtencionesEnfermeriaForm(props: AtencionesEnfermeriaFormProps) {
     adultSummary.id,
     activeSection === "medicas",
   );
-  const formError = "error" in props ? props.error ?? null : null;
+  const formError = "error" in props ? (props.error ?? null) : null;
 
   const form = useForm<AtencionesEnfermeriaFormValues>({
-    resolver: zodResolver(atencionesEnfermeriaFormSchema) as Resolver<AtencionesEnfermeriaFormValues>,
+    resolver: zodResolver(
+      atencionesEnfermeriaFormSchema,
+    ) as Resolver<AtencionesEnfermeriaFormValues>,
     defaultValues:
       props.mode === "create"
         ? createDefaultAtencionesEnfermeriaFormValues()
@@ -200,7 +202,9 @@ export function AtencionesEnfermeriaForm(props: AtencionesEnfermeriaFormProps) {
       return;
     }
 
-    const sectionFields = [...currentSection.fields] as Array<FieldPath<AtencionesEnfermeriaFormValues>>;
+    const sectionFields = [...currentSection.fields] as Array<
+      FieldPath<AtencionesEnfermeriaFormValues>
+    >;
     const isSectionValid = await form.trigger(sectionFields, { shouldFocus: true });
 
     if (!isSectionValid) {
@@ -245,11 +249,7 @@ export function AtencionesEnfermeriaForm(props: AtencionesEnfermeriaFormProps) {
   }
 
   return (
-    <form
-      className="atenciones-enfermeria-form"
-      noValidate
-      onSubmit={handleFormSubmit}
-    >
+    <form className="atenciones-enfermeria-form" noValidate onSubmit={handleFormSubmit}>
       <section
         className="atenciones-enfermeria-summary atenciones-enfermeria-summary--adulto"
         aria-label="Resumen del adulto mayor"
@@ -275,13 +275,15 @@ export function AtencionesEnfermeriaForm(props: AtencionesEnfermeriaFormProps) {
             <dt>EPS</dt>
             <dd>{adultSummary.eps ?? "Sin dato"}</dd>
           </div>
-        {detail !== null ? (
+          {detail !== null ? (
             <>
               <div>
                 <dt>Profesional</dt>
                 <dd>
                   {detail.professional.fullName}
-                  <small>{formatAtencionEnfermeriaProfessionalRole(detail.professional.role)}</small>
+                  <small>
+                    {formatAtencionEnfermeriaProfessionalRole(detail.professional.role)}
+                  </small>
                 </dd>
               </div>
               <div>
@@ -320,7 +322,10 @@ export function AtencionesEnfermeriaForm(props: AtencionesEnfermeriaFormProps) {
         <input type="hidden" {...register("attentionTime")} />
 
         <div className="atenciones-enfermeria-grid atenciones-enfermeria-grid--three">
-          <AtencionesEnfermeriaFieldGroup label="Fecha" error={getError(formState.errors, "attentionDate")}>
+          <AtencionesEnfermeriaFieldGroup
+            label="Fecha"
+            error={getError(formState.errors, "attentionDate")}
+          >
             <input type="date" readOnly={isReadOnly} {...register("attentionDate")} />
           </AtencionesEnfermeriaFieldGroup>
 
@@ -349,8 +354,12 @@ export function AtencionesEnfermeriaForm(props: AtencionesEnfermeriaFormProps) {
             <option value="control_signos_vitales">
               {ATENCIONES_ENFERMERIA_CARE_TYPE_LABELS.control_signos_vitales}
             </option>
-            <option value="seguimiento">{ATENCIONES_ENFERMERIA_CARE_TYPE_LABELS.seguimiento}</option>
-            <option value="procedimiento">{ATENCIONES_ENFERMERIA_CARE_TYPE_LABELS.procedimiento}</option>
+            <option value="seguimiento">
+              {ATENCIONES_ENFERMERIA_CARE_TYPE_LABELS.seguimiento}
+            </option>
+            <option value="procedimiento">
+              {ATENCIONES_ENFERMERIA_CARE_TYPE_LABELS.procedimiento}
+            </option>
             <option value="otro">{ATENCIONES_ENFERMERIA_CARE_TYPE_LABELS.otro}</option>
           </SelectField>
 
@@ -372,14 +381,54 @@ export function AtencionesEnfermeriaForm(props: AtencionesEnfermeriaFormProps) {
         hidden={activeSection !== "signos"}
       >
         <div className="atenciones-enfermeria-grid atenciones-enfermeria-grid--three">
-          <NumberField label="Tension sistolica" error={getError(formState.errors, "tensionSistolica")} readOnly={isReadOnly} register={register("tensionSistolica")} />
-          <NumberField label="Tension diastolica" error={getError(formState.errors, "tensionDiastolica")} readOnly={isReadOnly} register={register("tensionDiastolica")} />
-          <NumberField label="Frecuencia cardiaca" error={getError(formState.errors, "frecuenciaCardiaca")} readOnly={isReadOnly} register={register("frecuenciaCardiaca")} />
-          <NumberField label="Frecuencia respiratoria" error={getError(formState.errors, "frecuenciaRespiratoria")} readOnly={isReadOnly} register={register("frecuenciaRespiratoria")} />
-          <NumberField label="Temperatura" error={getError(formState.errors, "temperatura")} readOnly={isReadOnly} register={register("temperatura")} />
-          <NumberField label="Saturacion de oxigeno" error={getError(formState.errors, "saturacionOxigeno")} readOnly={isReadOnly} register={register("saturacionOxigeno")} />
-          <NumberField label="Peso (kg)" error={getError(formState.errors, "pesoKg")} readOnly={isReadOnly} register={register("pesoKg")} />
-          <NumberField label="Talla (cm)" error={getError(formState.errors, "tallaCm")} readOnly={isReadOnly} register={register("tallaCm")} />
+          <NumberField
+            label="Tension sistolica"
+            error={getError(formState.errors, "tensionSistolica")}
+            readOnly={isReadOnly}
+            register={register("tensionSistolica")}
+          />
+          <NumberField
+            label="Tension diastolica"
+            error={getError(formState.errors, "tensionDiastolica")}
+            readOnly={isReadOnly}
+            register={register("tensionDiastolica")}
+          />
+          <NumberField
+            label="Frecuencia cardiaca"
+            error={getError(formState.errors, "frecuenciaCardiaca")}
+            readOnly={isReadOnly}
+            register={register("frecuenciaCardiaca")}
+          />
+          <NumberField
+            label="Frecuencia respiratoria"
+            error={getError(formState.errors, "frecuenciaRespiratoria")}
+            readOnly={isReadOnly}
+            register={register("frecuenciaRespiratoria")}
+          />
+          <NumberField
+            label="Temperatura"
+            error={getError(formState.errors, "temperatura")}
+            readOnly={isReadOnly}
+            register={register("temperatura")}
+          />
+          <NumberField
+            label="Saturacion de oxigeno"
+            error={getError(formState.errors, "saturacionOxigeno")}
+            readOnly={isReadOnly}
+            register={register("saturacionOxigeno")}
+          />
+          <NumberField
+            label="Peso (kg)"
+            error={getError(formState.errors, "pesoKg")}
+            readOnly={isReadOnly}
+            register={register("pesoKg")}
+          />
+          <NumberField
+            label="Talla (cm)"
+            error={getError(formState.errors, "tallaCm")}
+            readOnly={isReadOnly}
+            register={register("tallaCm")}
+          />
           <AtencionesEnfermeriaFieldGroup label="IMC calculado">
             <input value={imc === "" ? "Sin calculo" : imc} readOnly />
           </AtencionesEnfermeriaFieldGroup>
@@ -405,14 +454,18 @@ export function AtencionesEnfermeriaForm(props: AtencionesEnfermeriaFormProps) {
             register={register("glucometriaContext")}
           >
             <option value="">Selecciona una opcion</option>
-            <option value="ayunas">{ATENCIONES_ENFERMERIA_GLUCOMETRIA_CONTEXT_LABELS.ayunas}</option>
+            <option value="ayunas">
+              {ATENCIONES_ENFERMERIA_GLUCOMETRIA_CONTEXT_LABELS.ayunas}
+            </option>
             <option value="antes_de_comida">
               {ATENCIONES_ENFERMERIA_GLUCOMETRIA_CONTEXT_LABELS.antes_de_comida}
             </option>
             <option value="despues_de_comida">
               {ATENCIONES_ENFERMERIA_GLUCOMETRIA_CONTEXT_LABELS.despues_de_comida}
             </option>
-            <option value="aleatoria">{ATENCIONES_ENFERMERIA_GLUCOMETRIA_CONTEXT_LABELS.aleatoria}</option>
+            <option value="aleatoria">
+              {ATENCIONES_ENFERMERIA_GLUCOMETRIA_CONTEXT_LABELS.aleatoria}
+            </option>
           </SelectField>
         </div>
       </section>
@@ -434,7 +487,11 @@ export function AtencionesEnfermeriaForm(props: AtencionesEnfermeriaFormProps) {
 
         {isReadOnly ? null : (
           <div className="atenciones-enfermeria-panel-actions">
-            <button className="primary-action" type="submit" disabled={"isPending" in props ? props.isPending : false}>
+            <button
+              className="primary-action"
+              type="submit"
+              disabled={"isPending" in props ? props.isPending : false}
+            >
               <span>{props.mode === "create" ? "Crear atencion" : "Guardar cambios"}</span>
             </button>
           </div>
@@ -511,7 +568,11 @@ function findFirstSectionWithError(
   errors: Partial<Record<keyof AtencionesEnfermeriaFormValues, unknown>>,
 ): SectionId | null {
   for (const section of FORM_SECTIONS) {
-    if (section.fields.some((field) => errors[field as keyof AtencionesEnfermeriaFormValues] !== undefined)) {
+    if (
+      section.fields.some(
+        (field) => errors[field as keyof AtencionesEnfermeriaFormValues] !== undefined,
+      )
+    ) {
       return section.id;
     }
   }

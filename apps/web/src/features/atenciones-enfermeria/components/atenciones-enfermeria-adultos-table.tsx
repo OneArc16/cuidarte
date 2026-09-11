@@ -58,7 +58,9 @@ export function AtencionesEnfermeriaAdultosTable({
 
           {adultosMayores.map((adultoMayor) => (
             <tr key={adultoMayor.id}>
-              <td>{formatAdultoMayorDocument(adultoMayor.documentType, adultoMayor.documentNumber)}</td>
+              <td>
+                {formatAdultoMayorDocument(adultoMayor.documentType, adultoMayor.documentNumber)}
+              </td>
               <td>
                 <strong>{adultoMayor.names}</strong>
               </td>

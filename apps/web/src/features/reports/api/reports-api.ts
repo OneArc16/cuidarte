@@ -9,6 +9,7 @@ import {
   createReportResponseSchema,
   reportAvailabilityResponseSchema,
   reportListResponseSchema,
+  reportStatusResponseSchema,
 } from "@cuidarte/contracts";
 
 import { ApiError } from "@/shared/api/api-error";
@@ -67,6 +68,10 @@ export function createReport(request: CreateReportRequest): Promise<CreateReport
     method: "POST",
     body: request,
   });
+}
+
+export function getReport(reportId: string) {
+  return fetchJson(`${getApiBaseUrl()}/reports/${reportId}`, reportStatusResponseSchema);
 }
 
 export function cancelReport(reportId: string): Promise<CancelReportResponse> {

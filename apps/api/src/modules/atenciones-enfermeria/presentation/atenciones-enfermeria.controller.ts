@@ -1,14 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-  Req,
-  UseGuards,
-} from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
@@ -107,6 +97,29 @@ export class AtencionesEnfermeriaController {
     const record = await this.atencionesService.getAtencion(id, request.currentUser);
 
     return atencionEnfermeriaDetailSchema.parse(record);
+  }
+
+  @Get("adultos-mayores/:adultoMayorId/trash")
+  @RequireRoles("super_admin", "admin", "director")
+  async getPapelera(@Param("adultoMayorId") adultoMayorIdParam: string, @Req() request: AuthenticatedRequest) {
+    const adultoMayorId = parseZodSchema(idParamSchema, adultoMayorIdParam);
+    return atencionEnfermeriaHistoryResponseSchema.parse(
+      await this.atencionesService.getPapelera(adultoMayorId, request.currentUser),
+    );
+  }
+
+  @Post(":id/trash")
+  @RequireRoles("super_admin", "admin", "director")
+  async deleteAtencion(@Param("id") idParam: string, @Req() request: AuthenticatedRequest) {
+    const id = parseZodSchema(idParamSchema, idParam);
+    return this.atencionesService.deleteAtencion(id, request.currentUser);
+  }
+
+  @Post(":id/restore")
+  @RequireRoles("super_admin", "admin", "director")
+  async restoreAtencion(@Param("id") idParam: string, @Req() request: AuthenticatedRequest) {
+    const id = parseZodSchema(idParamSchema, idParam);
+    return this.atencionesService.restoreAtencion(id, request.currentUser);
   }
 
   @Post()

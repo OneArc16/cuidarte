@@ -169,3 +169,132 @@ Push realizado:
 ```text
 origin/main
 ```
+
+## Cambios posteriores: PDF de Adultos Mayores
+
+Se agregó en crear/editar Adultos Mayores un campo compacto para cargar un documento PDF asociado a cada persona.
+
+- Se permite un único PDF por adulto mayor.
+- Al cargar otro PDF, se reemplaza el anterior.
+- El límite es de 10 MB y solo se acepta `application/pdf`.
+- El archivo se almacena separado de la tabla principal de adultos mayores.
+- En edición se muestra una tarjeta con icono, nombre y tamaño del archivo.
+- Se agregó una acción para visualizar/descargar el PDF y otra para eliminarlo.
+- Después de guardar, el documento se actualiza automáticamente en la misma pantalla, sin salir y volver a entrar.
+- La carga se ejecuta automáticamente junto con el guardado del formulario.
+
+### Backend del documento
+
+Se agregaron:
+
+```text
+apps/api/drizzle/0033_adulto_mayor_documents.sql
+apps/api/src/modules/adultos-mayores/domain/adultos-mayores-files.storage.ts
+apps/api/src/modules/adultos-mayores/infrastructure/local-adultos-mayores-files.storage.ts
+```
+
+También se actualizaron contratos, repositorio, servicio y controlador de Adultos Mayores. La migración `0033_adulto_mayor_documents` fue aplicada correctamente en PostgreSQL.
+
+Durante la generación de migraciones, Drizzle creó temporalmente una migración duplicada `0034`; fue eliminada del working tree para conservar únicamente la migración real `0033`.
+
+### Corrección relacionada con reportes
+
+Se corrigió la deduplicación de reportes mensuales: un reporte en estado `ready` ya no impide generar uno nuevo para el mismo centro, tipo y periodo. Solo se reutilizan trabajos `pending` o `processing`. Esto permite regenerar los ZIP con la plantilla actualizada de actas.
+
+### Corrección de nombres en imágenes de actas
+
+Las imágenes de evidencia fotográfica de las actas ya no muestran ni incluyen el nombre original del archivo. Se eliminó la leyenda visible y se dejó un texto alternativo genérico.
+
+### Validaciones adicionales
+
+Pasaron correctamente:
+
+```bash
+pnpm --filter @cuidarte/contracts build
+pnpm --filter @cuidarte/api build
+pnpm --filter @cuidarte/web typecheck
+pnpm --filter @cuidarte/web build
+pnpm --filter @cuidarte/api db:migrate
+git diff --check
+```
+
+Las pruebas específicas de las plantillas de actas y nombres de reportes también pasaron.
+
+### Commit y push final
+
+Los cambios se publicaron con:
+
+```text
+f43e9c2 feat: add adult PDF documents
+```
+
+Destino:
+
+```text
+origin/main
+```
+
+## Cambios recientes: papelera de atenciones de Enfermería
+
+Se implementó una papelera para las atenciones de Enfermería con eliminación lógica y restauración segura. Las atenciones no se eliminan físicamente de la base de datos.
+
+### Permisos y alcance
+
+- `super_admin`, `admin` y `director` pueden enviar atenciones a la papelera y restaurarlas.
+- `admin` y `director` solo pueden operar sobre atenciones de su centro.
+- `super_admin` puede operar sobre cualquier centro.
+- Los demás cargos no ven ni pueden invocar las acciones de papelera.
+- El listado normal excluye automáticamente las atenciones eliminadas.
+
+### Funcionalidad en la interfaz
+
+En la historia clínica de cada adulto mayor se agregó:
+
+- Botón `Papelera`, visible únicamente para los cargos autorizados.
+- Listado independiente de atenciones eliminadas.
+- Confirmación antes de enviar una atención a la papelera.
+- Acción `Restaurar` para recuperar una atención.
+- Actualización automática de los listados después de eliminar o restaurar.
+- Botón `Ver activas` para volver al historial normal.
+
+### Backend y auditoría
+
+Se agregaron los campos:
+
+```text
+deleted_at
+deleted_by_user_id
+```
+
+La eliminación y restauración se ejecutan dentro de una transacción y registran auditoría con las acciones:
+
+```text
+atenciones-enfermeria.deleted
+atenciones-enfermeria.restored
+```
+
+Al restaurar también se actualiza el usuario responsable de la modificación.
+
+### Migración
+
+Se creó y aplicó correctamente:
+
+```text
+apps/api/drizzle/0035_atenciones_enfermeria_trash.sql
+```
+
+La migración agrega las columnas de papelera, la relación con usuarios y el índice por centro y fecha de eliminación.
+
+### Validaciones finales
+
+Pasaron correctamente:
+
+```bash
+pnpm --filter @cuidarte/contracts build
+pnpm --filter @cuidarte/api build
+pnpm --filter @cuidarte/web typecheck
+pnpm --filter @cuidarte/api db:migrate
+git diff --check
+```
+
+No se realizó un nuevo commit ni push después de estos cambios.

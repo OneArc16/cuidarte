@@ -49,11 +49,18 @@ export function AtencionesEnfermeriaDetailPage({
 
   if (detailQuery.isError || detailQuery.data === undefined) {
     return (
-      <section className="atenciones-enfermeria-empty" aria-labelledby="atenciones-enfermeria-detail-error-title">
+      <section
+        className="atenciones-enfermeria-empty"
+        aria-labelledby="atenciones-enfermeria-detail-error-title"
+      >
         <p className="eyebrow">Enfermería</p>
         <h2 id="atenciones-enfermeria-detail-error-title">No fue posible cargar la atencion</h2>
         <p>{resolveAtencionesEnfermeriaApiError(detailQuery.error)}</p>
-        <button className="outline-action" type="button" onClick={() => navigate(ATENCIONES_ENFERMERIA_PATH)}>
+        <button
+          className="outline-action"
+          type="button"
+          onClick={() => navigate(ATENCIONES_ENFERMERIA_PATH)}
+        >
           <ChevronLeft aria-hidden="true" />
           <span>Volver</span>
         </button>
@@ -65,13 +72,20 @@ export function AtencionesEnfermeriaDetailPage({
   const isEditable = detail.access === "edit";
 
   return (
-    <section className="atenciones-enfermeria-form-stack" aria-labelledby="atenciones-enfermeria-detail-title">
+    <section
+      className="atenciones-enfermeria-form-stack"
+      aria-labelledby="atenciones-enfermeria-detail-title"
+    >
       <h1 className="visually-hidden" id="atenciones-enfermeria-detail-title">
         Atencion de enfermeria
       </h1>
 
       <div className="atenciones-enfermeria-form-nav">
-        <button className="outline-action" type="button" onClick={() => navigate(ATENCIONES_ENFERMERIA_PATH)}>
+        <button
+          className="outline-action"
+          type="button"
+          onClick={() => navigate(ATENCIONES_ENFERMERIA_PATH)}
+        >
           <ChevronLeft aria-hidden="true" />
           <span>Volver</span>
         </button>
@@ -83,7 +97,9 @@ export function AtencionesEnfermeriaDetailPage({
           <HeartPulse aria-hidden="true" />
           <span>Historial del adulto</span>
         </button>
-        <span className="atenciones-enfermeria-form-nav__context">Atencion #{detail.id.slice(0, 8)}</span>
+        <span className="atenciones-enfermeria-form-nav__context">
+          Atencion #{detail.id.slice(0, 8)}
+        </span>
       </div>
 
       {!isEditable ? (
@@ -97,7 +113,11 @@ export function AtencionesEnfermeriaDetailPage({
           mode="edit"
           detail={detail}
           isPending={updateMutation.isPending}
-          error={updateMutation.error === null ? null : resolveAtencionesEnfermeriaApiError(updateMutation.error)}
+          error={
+            updateMutation.error === null
+              ? null
+              : resolveAtencionesEnfermeriaApiError(updateMutation.error)
+          }
           onCancel={() => navigate(ATENCIONES_ENFERMERIA_PATH)}
           onOpenMedicalAttention={(atencionId) =>
             navigate(buildAtencionIndividualDetailPath(detail.adultoMayor.id, atencionId))

@@ -60,7 +60,7 @@ export class AlimentacionReportSource implements ReportSource {
         documentNumber: candidate.documentNumber,
         names: candidate.names,
         surnames: candidate.surnames,
-        period,
+        period: candidate.deliveryMonth,
         ...(candidate.importedVersion === null
           ? {}
           : { importedVersion: candidate.importedVersion.version }),
@@ -87,7 +87,7 @@ export class AlimentacionReportSource implements ReportSource {
 
       const file = await this.formatoExportService.exportPdf(
         candidate.adultoMayorId,
-        { deliveryMonth: period },
+        { deliveryMonth: candidate.deliveryMonth },
         actor,
       );
 

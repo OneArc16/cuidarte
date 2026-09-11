@@ -9,6 +9,8 @@ import {
   atencionEnfermeriaHistoryResponseSchema,
   atencionEnfermeriaLookupResponseSchema,
   atencionEnfermeriaDetailSchema,
+  atencionEnfermeriaTrashMutationResponseSchema,
+  type AtencionEnfermeriaTrashMutationResponse,
   type UpdateAtencionEnfermeriaRequest,
 } from "@cuidarte/contracts";
 
@@ -68,6 +70,27 @@ export function getAtencionesEnfermeriaHistory(
     `${getApiBaseUrl()}/atenciones-enfermeria/adultos-mayores/${adultoMayorId}/history`,
     atencionEnfermeriaHistoryResponseSchema,
   );
+}
+
+export function getAtencionesEnfermeriaTrash(
+  adultoMayorId: string,
+): Promise<AtencionEnfermeriaHistoryResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/atenciones-enfermeria/adultos-mayores/${adultoMayorId}/trash`,
+    atencionEnfermeriaHistoryResponseSchema,
+  );
+}
+
+export function deleteAtencionEnfermeria(atencionId: string): Promise<AtencionEnfermeriaTrashMutationResponse> {
+  return fetchJson(`${getApiBaseUrl()}/atenciones-enfermeria/${atencionId}/trash`, atencionEnfermeriaTrashMutationResponseSchema, {
+    method: "POST",
+  });
+}
+
+export function restoreAtencionEnfermeria(atencionId: string): Promise<AtencionEnfermeriaTrashMutationResponse> {
+  return fetchJson(`${getApiBaseUrl()}/atenciones-enfermeria/${atencionId}/restore`, atencionEnfermeriaTrashMutationResponseSchema, {
+    method: "POST",
+  });
 }
 
 export function getAtencionEnfermeria(atencionId: string): Promise<AtencionEnfermeriaDetail> {

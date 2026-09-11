@@ -239,6 +239,20 @@
       "when": 1789150271371,
       "tag": "0033_adulto_mayor_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1789153871371,
+      "tag": "0034_report_jobs_all_period",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1789157471371,
+      "tag": "0035_atenciones_enfermeria_trash",
+      "breakpoints": true
     }
   ]
 }

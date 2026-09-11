@@ -1,14 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  ilike,
-  or,
-  sql,
-  type SQL,
-} from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNotNull, isNull, or, sql, type SQL } from "drizzle-orm";
 
 import { DatabaseService, type AppDatabase } from "../../../database/database.service";
 import {
@@ -75,6 +66,8 @@ type AtencionEnfermeriaRow = {
   version: number;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt: Date | null;
+  deletedByUserId: string | null;
   professionalUserId: string;
   professionalFullName: string;
   professionalRole: AtencionEnfermeriaListItemRecord["professional"]["role"];
@@ -124,16 +117,59 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
     return row === undefined ? null : this.toAdultoRecord(row);
   }
 
-  async findMany(query: FindAtencionEnfermeriaListQuery): Promise<AtencionEnfermeriaListItemRecord[]> {
+  async findMany(
+    query: FindAtencionEnfermeriaListQuery,
+  ): Promise<AtencionEnfermeriaListItemRecord[]> {
     const rows = await this.selectMany(this.database.db, query, false);
     return rows.map((row: AtencionEnfermeriaRow) => this.toListItem(row));
   }
 
-  async findById(query: FindAtencionEnfermeriaByIdQuery): Promise<AtencionEnfermeriaDetailRecord | null> {
-    const [row] = await this.selectRows(this.database.db, query.scope, [eq(atencionesEnfermeria.id, query.id)], {
-      includeNote: true,
-      orderByAdultFields: false,
-    }).limit(1);
+  async findTrashByAdultoMayor(query: FindAtencionEnfermeriaHistoryByAdultoMayorQuery) {
+    const rows = await this.selectMany(
+      this.database.db,
+      { scope: query.scope, adultoMayorId: query.adultoMayorId },
+      false,
+      true,
+      true,
+    );
+    return rows.map((row: AtencionEnfermeriaRow) => this.toListItem(row));
+  }
+
+  async softDelete(command: { id: string; actorUserId: string; tenantId: string }): Promise<void> {
+    const now = new Date();
+    await this.database.db.transaction(async (tx) => {
+      const result = await tx.update(atencionesEnfermeria).set({
+        deletedAt: now,
+        deletedByUserId: command.actorUserId,
+        updatedAt: now,
+      }).where(and(eq(atencionesEnfermeria.id, command.id), eq(atencionesEnfermeria.tenantId, command.tenantId), isNull(atencionesEnfermeria.deletedAt))).returning({ id: atencionesEnfermeria.id });
+      if (result.length === 0) throw new AtencionEnfermeriaNotFoundError();
+      await tx.insert(auditLogs).values({ actorUserId: command.actorUserId, targetTenantId: command.tenantId, action: "atenciones-enfermeria.deleted", summary: "Atencion enviada a papelera.", metadata: { atencionId: command.id } });
+    });
+  }
+
+  async restore(command: { id: string; actorUserId: string; tenantId: string }): Promise<void> {
+    const now = new Date();
+    await this.database.db.transaction(async (tx) => {
+      const result = await tx.update(atencionesEnfermeria).set({ deletedAt: null, deletedByUserId: null, updatedByUserId: command.actorUserId, updatedAt: now }).where(and(eq(atencionesEnfermeria.id, command.id), eq(atencionesEnfermeria.tenantId, command.tenantId), isNotNull(atencionesEnfermeria.deletedAt))).returning({ id: atencionesEnfermeria.id });
+      if (result.length === 0) throw new AtencionEnfermeriaNotFoundError();
+      await tx.insert(auditLogs).values({ actorUserId: command.actorUserId, targetTenantId: command.tenantId, action: "atenciones-enfermeria.restored", summary: "Atencion restaurada.", metadata: { atencionId: command.id } });
+    });
+  }
+
+  async findById(
+    query: FindAtencionEnfermeriaByIdQuery,
+  ): Promise<AtencionEnfermeriaDetailRecord | null> {
+    const [row] = await this.selectRows(
+      this.database.db,
+      query.scope,
+      [eq(atencionesEnfermeria.id, query.id)],
+      {
+        includeNote: true,
+        orderByAdultFields: false,
+      },
+      query.includeDeleted ?? false,
+    ).limit(1);
 
     return row === undefined ? null : this.toDetail(row);
   }
@@ -176,7 +212,9 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
     return row === undefined ? null : row;
   }
 
-  async create(command: CreateAtencionEnfermeriaRecordCommand): Promise<AtencionEnfermeriaDetailRecord> {
+  async create(
+    command: CreateAtencionEnfermeriaRecordCommand,
+  ): Promise<AtencionEnfermeriaDetailRecord> {
     return await this.database.db.transaction(async (tx) => {
       await this.ensureAdultoMayorExists(tx, command.tenantId, command.adultoMayorId);
       await this.ensureAuthorIsTenantNurse(tx, command.tenantId, command.actorUserId);
@@ -246,7 +284,9 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
     });
   }
 
-  async update(command: UpdateAtencionEnfermeriaRecordCommand): Promise<AtencionEnfermeriaDetailRecord> {
+  async update(
+    command: UpdateAtencionEnfermeriaRecordCommand,
+  ): Promise<AtencionEnfermeriaDetailRecord> {
     return await this.database.db.transaction(async (tx) => {
       const currentRecord = await this.findByIdWithinTx(tx, {
         id: command.id,
@@ -336,6 +376,8 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
     db: EnfermeriaDb,
     query: FindAtencionEnfermeriaListQuery,
     includeNote: boolean,
+    includeDeleted = false,
+    onlyDeleted = false,
   ) {
     const options: {
       includeNote: boolean;
@@ -355,7 +397,11 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
       options.offset = query.offset;
     }
 
-    return await this.selectRows(db, query.scope, this.buildListConditions(query), options);
+    const conditions = this.buildListConditions(query);
+    if (onlyDeleted) {
+      conditions.push(isNotNull(atencionesEnfermeria.deletedAt));
+    }
+    return await this.selectRows(db, query.scope, conditions, options, includeDeleted);
   }
 
   private buildListConditions(query: FindAtencionEnfermeriaListQuery): SQL[] {
@@ -416,6 +462,7 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
       limit?: number;
       offset?: number;
     },
+    includeDeleted = false,
   ): any {
     const selection = options.includeNote ? this.getDetailSelection() : this.getListSelection();
     let query: any = db
@@ -425,13 +472,15 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
       .innerJoin(tenants, eq(tenants.id, atencionesEnfermeria.tenantId))
       .innerJoin(users, eq(users.id, atencionesEnfermeria.createdByUserId))
       .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
-      .where(this.buildScopedWhere(scope, extraConditions));
+      .where(this.buildScopedWhere(scope, extraConditions, includeDeleted));
 
     query = query.orderBy(
       desc(atencionesEnfermeria.attentionDate),
       desc(atencionesEnfermeria.attentionTime),
       desc(atencionesEnfermeria.updatedAt),
-      ...(options.orderByAdultFields ? [asc(adultosMayores.surnames), asc(adultosMayores.names)] : []),
+      ...(options.orderByAdultFields
+        ? [asc(adultosMayores.surnames), asc(adultosMayores.names)]
+        : []),
     );
 
     if (options.limit !== undefined) {
@@ -445,8 +494,12 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
     return query;
   }
 
-  private buildScopedWhere(scope: AtencionEnfermeriaScope, extra: SQL[]) {
+  private buildScopedWhere(scope: AtencionEnfermeriaScope, extra: SQL[], includeDeleted = false) {
     const conditions = [...extra];
+
+    if (!includeDeleted) {
+      conditions.push(isNull(atencionesEnfermeria.deletedAt));
+    }
 
     if (scope.type === "tenant") {
       conditions.push(eq(atencionesEnfermeria.tenantId, scope.tenantId));
@@ -489,6 +542,8 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
       version: atencionesEnfermeria.version,
       createdAt: atencionesEnfermeria.createdAt,
       updatedAt: atencionesEnfermeria.updatedAt,
+      deletedAt: atencionesEnfermeria.deletedAt,
+      deletedByUserId: atencionesEnfermeria.deletedByUserId,
       professionalUserId: users.id,
       professionalFullName: users.fullName,
       professionalRole: users.role,
@@ -550,6 +605,8 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
       version: row.version,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      deletedAt: row.deletedAt,
+      deletedByUserId: row.deletedByUserId,
     };
   }
 
@@ -607,7 +664,7 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
       includeNote: true,
       orderByAdultFields: false,
       limit: 1,
-    });
+    }, query.includeDeleted ?? false);
 
     return row === undefined ? null : this.toDetail(row);
   }

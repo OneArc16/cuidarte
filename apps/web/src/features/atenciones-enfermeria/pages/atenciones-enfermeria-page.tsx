@@ -34,12 +34,7 @@ export function AtencionesEnfermeriaPage({ navigate, path, user }: AtencionesEnf
   const historyAdultoId = getAtencionesEnfermeriaHistoryAdultoIdFromPath(path);
 
   if (historyAdultoId !== null) {
-    return (
-      <AtencionesEnfermeriaHistoryPage
-        adultoMayorId={historyAdultoId}
-        navigate={navigate}
-      />
-    );
+    return <AtencionesEnfermeriaHistoryPage adultoMayorId={historyAdultoId} navigate={navigate} user={user} />;
   }
 
   const atencionId = getAtencionEnfermeriaDetailIdFromPath(path);

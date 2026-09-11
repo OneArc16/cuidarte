@@ -1,5 +1,4 @@
 import { type AuthUser } from "@cuidarte/contracts";
-import { useState } from "react";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
@@ -13,6 +12,7 @@ import {
 import { canCreateAtencionesEnfermeria } from "../lib/atenciones-enfermeria-permissions";
 import { useAtencionesEnfermeriaAdultosMayoresQuery } from "../model/atenciones-enfermeria-queries";
 import { resolveAdultosMayoresApiError } from "@/features/adultos-mayores/lib/adultos-mayores-formatters";
+import { useSessionStorageState } from "@/shared/hooks/use-session-storage-state";
 
 type AtencionesEnfermeriaIndexPageProps = {
   navigate: Navigate;
@@ -23,7 +23,9 @@ export function AtencionesEnfermeriaIndexPage({
   navigate,
   user,
 }: AtencionesEnfermeriaIndexPageProps) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useSessionStorageState(
+    `cuidarte:atenciones-enfermeria:search:${user.id}`,
+  );
 
   const query = useAtencionesEnfermeriaAdultosMayoresQuery(search);
   const adultosMayores = query.data?.adultosMayores ?? [];
@@ -48,7 +50,8 @@ export function AtencionesEnfermeriaIndexPage({
 
       {query.isError ? (
         <p className="form-error" role="alert">
-          {resolveAdultosMayoresApiError(query.error) ?? resolveAtencionesEnfermeriaApiError(query.error)}
+          {resolveAdultosMayoresApiError(query.error) ??
+            resolveAtencionesEnfermeriaApiError(query.error)}
         </p>
       ) : null}
 

@@ -55,6 +55,8 @@ export type AtencionEnfermeriaRecordBase = {
   version: number;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt: Date | null;
+  deletedByUserId: string | null;
 };
 
 export type AtencionEnfermeriaListItemRecord = AtencionEnfermeriaRecordBase;
@@ -68,6 +70,7 @@ export type AtencionEnfermeriaDetailRecord = AtencionEnfermeriaRecordBase & {
 export type FindAtencionEnfermeriaByIdQuery = {
   id: string;
   scope: AtencionEnfermeriaScope;
+  includeDeleted?: boolean;
 };
 
 export type FindAtencionEnfermeriaListQuery = {
@@ -124,4 +127,3 @@ export type UpdateAtencionEnfermeriaRecordCommand = AtencionEnfermeriaMutableCom
 export type AtencionEnfermeriaAuditMetadata = Record<string, unknown>;
 
 export type AtencionEnfermeriaAccess = AtencionEnfermeriaHistoryAccess;
-

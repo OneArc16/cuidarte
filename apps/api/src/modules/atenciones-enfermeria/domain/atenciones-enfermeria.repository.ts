@@ -44,6 +44,9 @@ export type AtencionesEnfermeriaRepository = {
   findHistoryByAdultoMayor(
     query: FindAtencionEnfermeriaHistoryByAdultoMayorQuery,
   ): Promise<AtencionEnfermeriaHistoryItemRecord[]>;
+  findTrashByAdultoMayor(query: FindAtencionEnfermeriaHistoryByAdultoMayorQuery): Promise<AtencionEnfermeriaHistoryItemRecord[]>;
+  softDelete(command: { id: string; actorUserId: string; tenantId: string }): Promise<void>;
+  restore(command: { id: string; actorUserId: string; tenantId: string }): Promise<void>;
   create(command: CreateAtencionEnfermeriaRecordCommand): Promise<AtencionEnfermeriaDetailRecord>;
   update(command: UpdateAtencionEnfermeriaRecordCommand): Promise<AtencionEnfermeriaDetailRecord>;
   findAdultoMayorScopeById(query: {

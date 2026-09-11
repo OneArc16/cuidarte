@@ -70,11 +70,17 @@ export function AtencionesEnfermeriaTable({
               </td>
               <td className="atenciones-enfermeria-cell-measurements">
                 <span>{formatAtencionEnfermeriaGlucometria(atencion)}</span>
-                {atencion.reason !== null ? <small>{atencion.reason}</small> : <small>Sin nota</small>}
+                {atencion.reason !== null ? (
+                  <small>{atencion.reason}</small>
+                ) : (
+                  <small>Sin nota</small>
+                )}
               </td>
               <td>
                 <strong>{atencion.professional.fullName}</strong>
-                <small>{formatAtencionEnfermeriaProfessionalRole(atencion.professional.role)}</small>
+                <small>
+                  {formatAtencionEnfermeriaProfessionalRole(atencion.professional.role)}
+                </small>
               </td>
               {showTenantColumn ? <td>{atencion.tenantName}</td> : null}
               <td>

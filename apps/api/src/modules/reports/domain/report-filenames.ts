@@ -30,7 +30,7 @@ export function buildAlimentacionReportPdfFilename(input: {
       normalizeReportFilenamePart(input.documentNumber),
       normalizeReportFilenamePart(input.surnames),
       normalizeReportFilenamePart(input.names),
-      normalizeReportFilenamePart(input.period),
+      normalizeReportFilenamePart(input.period === "ALL" ? "TODOS" : input.period),
     ].join("_") + suffix,
   );
 }
@@ -64,7 +64,7 @@ export function buildReportZipFilename(input: {
     [
       prefix,
       normalizeReportFilenamePart(input.tenantName),
-      normalizeReportFilenamePart(input.period),
+      normalizeReportFilenamePart(input.period === "ALL" ? "TODOS" : input.period),
     ].join("_"),
   );
 }

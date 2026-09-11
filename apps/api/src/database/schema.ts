@@ -513,9 +513,7 @@ export const adultoMayorDocuments = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [
-    index("adulto_mayor_documents_uploaded_by_user_idx").on(table.uploadedByUserId),
-  ],
+  (table) => [index("adulto_mayor_documents_uploaded_by_user_idx").on(table.uploadedByUserId)],
 );
 
 export const adultoMayorImportBatches = pgTable(
@@ -990,6 +988,8 @@ export const atencionesEnfermeria = pgTable(
     version: integer("version").notNull().default(1),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedByUserId: uuid("deleted_by_user_id").references(() => users.id, { onDelete: "restrict" }),
   },
   (table) => [
     index("atenciones_enfermeria_tenant_date_idx").on(table.tenantId, table.attentionDate),
@@ -999,6 +999,7 @@ export const atencionesEnfermeria = pgTable(
       table.attentionDate,
     ),
     index("atenciones_enfermeria_tenant_updated_at_idx").on(table.tenantId, table.updatedAt),
+    index("atenciones_enfermeria_tenant_deleted_at_idx").on(table.tenantId, table.deletedAt),
     check(
       "atenciones_enfermeria_has_measurement",
       sql`${table.tensionSistolica} is not null
@@ -1127,7 +1128,10 @@ export const reportJobs = pgTable(
     uniqueIndex("report_jobs_active_unique")
       .on(table.tenantId, table.type, table.period)
       .where(sql`${table.status} in ('pending', 'processing')`),
-    check("report_jobs_period_format", sql`${table.period} ~ '^\\d{4}-(0[1-9]|1[0-2])$'`),
+    check(
+      "report_jobs_period_format",
+      sql`${table.period} = 'ALL' or ${table.period} ~ '^\\d{4}-(0[1-9]|1[0-2])$'`,
+    ),
     check(
       "report_jobs_total_documents_non_negative",
       sql`${table.totalDocuments} is null or ${table.totalDocuments} >= 0`,

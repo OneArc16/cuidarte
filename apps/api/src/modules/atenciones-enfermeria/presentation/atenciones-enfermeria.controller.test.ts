@@ -40,7 +40,10 @@ describe("AtencionesEnfermeriaController", () => {
       atencionEnfermeriaCrossReadRoleValues,
     );
     assert.deepEqual(
-      Reflect.getMetadata(REQUIRED_ROLES_KEY, AtencionesEnfermeriaController.prototype.getHistoriaClinica),
+      Reflect.getMetadata(
+        REQUIRED_ROLES_KEY,
+        AtencionesEnfermeriaController.prototype.getHistoriaClinica,
+      ),
       atencionEnfermeriaCrossReadRoleValues,
     );
     assert.deepEqual(
@@ -151,12 +154,9 @@ describe("AtencionesEnfermeriaController", () => {
     };
     const controller = new AtencionesEnfermeriaController(service as never);
 
-    const result = await controller.getHistoriaClinica(
-      "0b17e370-8f81-48c0-b707-c7046f497855",
-      {
-        currentUser,
-      } as never,
-    );
+    const result = await controller.getHistoriaClinica("0b17e370-8f81-48c0-b707-c7046f497855", {
+      currentUser,
+    } as never);
 
     assert.equal(receivedAdultoId, "0b17e370-8f81-48c0-b707-c7046f497855");
     assert.equal(receivedActorId, currentUser.id);

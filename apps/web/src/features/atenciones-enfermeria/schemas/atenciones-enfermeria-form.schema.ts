@@ -40,7 +40,10 @@ export const atencionesEnfermeriaFormSchema = z
     tallaCm: optionalNumberTextSchema,
     perimetroAbdominalCm: optionalNumberTextSchema,
     glucometriaMgDl: optionalNumberTextSchema,
-    glucometriaContext: z.union([z.enum(atencionEnfermeriaGlucometriaContextValues), z.literal("")]),
+    glucometriaContext: z.union([
+      z.enum(atencionEnfermeriaGlucometriaContextValues),
+      z.literal(""),
+    ]),
     nursingNote: noteSchema,
   })
   .superRefine((value, context) => {
@@ -147,7 +150,9 @@ export function toUpdateAtencionEnfermeriaRequest(
   });
 }
 
-export function getAtencionesEnfermeriaImc(values: Pick<AtencionesEnfermeriaFormValues, "pesoKg" | "tallaCm">): string {
+export function getAtencionesEnfermeriaImc(
+  values: Pick<AtencionesEnfermeriaFormValues, "pesoKg" | "tallaCm">,
+): string {
   return formatImcInput(values.pesoKg, values.tallaCm);
 }
 

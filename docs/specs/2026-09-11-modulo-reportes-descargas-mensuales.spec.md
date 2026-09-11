@@ -94,13 +94,13 @@ entrada valida, no un texto arbitrario.
 
 ### 4.3 Permisos
 
-| Rol | Ver modulo | Seleccionar centro | Crear reporte | Ver historial | Descargar |
-| --- | --- | --- | --- | --- | --- |
-| `super_admin` | Si | Si, dentro de su alcance | Si | Si | Si |
-| `admin` | Si | No, usa su centro | Si | Si, su centro | Si |
-| `director` | Si | No, usa su centro | Si | Si, su centro | Si |
-| `auditor` | No | No | No | No | No |
-| Otros roles | No | No | No | No | No |
+| Rol           | Ver modulo | Seleccionar centro       | Crear reporte | Ver historial | Descargar |
+| ------------- | ---------- | ------------------------ | ------------- | ------------- | --------- |
+| `super_admin` | Si         | Si, dentro de su alcance | Si            | Si            | Si        |
+| `admin`       | Si         | No, usa su centro        | Si            | Si, su centro | Si        |
+| `director`    | Si         | No, usa su centro        | Si            | Si, su centro | Si        |
+| `auditor`     | No         | No                       | No            | No            | No        |
+| Otros roles   | No         | No                       | No            | No            | No        |
 
 La API debe validar el rol y el alcance del tenant en cada caso de uso. Ocultar el modulo o
 deshabilitar un boton en React no reemplaza la autorizacion backend.
@@ -339,25 +339,25 @@ componentes.
 
 Se recomienda una entidad `report_jobs` para el historial y el seguimiento, con al menos:
 
-| Campo | Regla |
-| --- | --- |
-| `id` | UUID, PK |
-| `tenantId` | FK o alcance global controlado |
-| `requestedByUserId` | usuario que solicito |
-| `type` | enum de actas o alimentacion |
-| `period` | `YYYY-MM` |
-| `status` | estado del ciclo de vida |
-| `totalDocuments` | nullable hasta contar |
-| `processedDocuments` | entero no negativo |
-| `failedDocuments` | entero no negativo |
-| `storageKey` | nullable hasta finalizar |
-| `downloadFilename` | nombre seguro del ZIP |
-| `errorCode` | nullable, estable para UI |
-| `expiresAt` | fecha obligatoria al quedar listo |
-| `startedAt` | nullable |
-| `completedAt` | nullable |
-| `createdAt` | fecha de solicitud |
-| `updatedAt` | fecha de cambio |
+| Campo                | Regla                             |
+| -------------------- | --------------------------------- |
+| `id`                 | UUID, PK                          |
+| `tenantId`           | FK o alcance global controlado    |
+| `requestedByUserId`  | usuario que solicito              |
+| `type`               | enum de actas o alimentacion      |
+| `period`             | `YYYY-MM`                         |
+| `status`             | estado del ciclo de vida          |
+| `totalDocuments`     | nullable hasta contar             |
+| `processedDocuments` | entero no negativo                |
+| `failedDocuments`    | entero no negativo                |
+| `storageKey`         | nullable hasta finalizar          |
+| `downloadFilename`   | nombre seguro del ZIP             |
+| `errorCode`          | nullable, estable para UI         |
+| `expiresAt`          | fecha obligatoria al quedar listo |
+| `startedAt`          | nullable                          |
+| `completedAt`        | nullable                          |
+| `createdAt`          | fecha de solicitud                |
+| `updatedAt`          | fecha de cambio                   |
 
 Restricciones recomendadas:
 
@@ -450,10 +450,7 @@ Debe depender de contratos internos de lectura, por ejemplo:
 ```ts
 interface AlimentacionReportSource {
   countMonthlyFormats(scope: ReportScope, period: string): Promise<number>;
-  streamMonthlyFormats(
-    scope: ReportScope,
-    period: string,
-  ): AsyncIterable<MonthlyFormatReportItem>;
+  streamMonthlyFormats(scope: ReportScope, period: string): AsyncIterable<MonthlyFormatReportItem>;
 }
 ```
 
@@ -590,20 +587,20 @@ almacenamiento fuente de PDFs individuales.
 ## 16. Checklist de implementacion incremental
 
 - [ ] Paso 1: cerrar contratos, permisos, normalizador de nombres y fuentes de lectura, con
-  pruebas unitarias sin cambiar UI ni persistencia.
+      pruebas unitarias sin cambiar UI ni persistencia.
 - [ ] Paso 2: agregar persistencia de `report_jobs`, migracion aditiva y repositorio con
-  transiciones protegidas.
+      transiciones protegidas.
 - [ ] Paso 3: implementar conteo y creacion de tareas para un tipo de reporte, con autorizacion
-  por tenant e idempotencia.
+      por tenant e idempotencia.
 - [ ] Paso 4: implementar worker, cola Redis, almacenamiento temporal y ZIP por streaming.
 - [ ] Paso 5: integrar primero reportes de formatos de alimentacion, respetando emisiones,
-  versiones importadas y nombres descriptivos.
+      versiones importadas y nombres descriptivos.
 - [ ] Paso 6: integrar reportes de actas de sesiones grupales con sus nombres y fuentes actuales.
 - [ ] Paso 7: agregar endpoints de estado, historial, descarga y cancelacion con auditoria.
 - [ ] Paso 8: construir la pantalla web de Reportes con las dos secciones independientes.
 - [ ] Paso 9: agregar limpieza de expirados, observabilidad y limites operativos.
 - [ ] Paso 10: ejecutar pruebas completas, typecheck, build y prueba manual de descarga por
-  `super_admin`, `admin` y `director`.
+      `super_admin`, `admin` y `director`.
 
 ## 17. Criterios de aceptacion
 
@@ -622,7 +619,7 @@ almacenamiento fuente de PDFs individuales.
 
 ## 18. Registro de implementacion
 
-| Fecha | Paso | Archivos cambiados | Pruebas | Decisiones o desviaciones |
-| --- | --- | --- | --- | --- |
-| 2026-09-11 | Spec | `docs/specs/2026-09-11-modulo-reportes-descargas-mensuales.spec.md` | Revision documental | Se recomienda ZIP como formato predeterminado; RAR queda aislado detras de un adaptador si es obligatorio. |
+| Fecha      | Paso              | Archivos cambiados                                                                                                                                                                     | Pruebas                                                                                                                                                                                                                                                                                                       | Decisiones o desviaciones                                                                                                                                                                         |
+| ---------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-11 | Spec              | `docs/specs/2026-09-11-modulo-reportes-descargas-mensuales.spec.md`                                                                                                                    | Revision documental                                                                                                                                                                                                                                                                                           | Se recomienda ZIP como formato predeterminado; RAR queda aislado detras de un adaptador si es obligatorio.                                                                                        |
 | 2026-09-11 | Implementacion v1 | `packages/contracts/src/reports.ts`, `apps/api/src/modules/reports/**`, `apps/api/drizzle/0032_report_jobs.sql`, `apps/web/src/features/reports/**` y conexiones de navegacion/modulos | `pnpm --filter @cuidarte/api build`; `pnpm --filter @cuidarte/web typecheck`; `pnpm --filter @cuidarte/contracts typecheck`; `node --import tsx --test src/modules/reports/domain/report-filenames.test.ts src/modules/reports/domain/report-status.test.ts src/modules/reports/domain/report.policy.test.ts` | Se implemento cola diferida local detras de `LocalReportsQueue` porque el repo no trae `bullmq`/`ioredis`; el contrato queda aislado para reemplazar por BullMQ/Redis sin tocar controller ni UI. |
