@@ -268,6 +268,14 @@ export const adultoMayorListItemSchema = z.object({
   updatedAt: z.string().min(1),
 });
 
+export const adultoMayorDocumentSchema = z.object({
+  id: z.uuid(),
+  originalName: z.string().min(1).max(260),
+  mimeType: z.literal("application/pdf"),
+  sizeBytes: z.number().int().positive(),
+  createdAt: z.string().min(1),
+});
+
 export const adultoMayorDetailSchema = adultoMayorListItemSchema.extend({
   firstName: z.string().min(1).max(80),
   middleName: z.string().max(80).nullable(),
@@ -299,6 +307,7 @@ export const adultoMayorDetailSchema = adultoMayorListItemSchema.extend({
   companion: z.string().max(160).nullable(),
   economicIncome: z.number().int().min(0).max(999_999_999).nullable(),
   socialProgramBeneficiary: z.boolean(),
+  documentFile: adultoMayorDocumentSchema.nullable(),
 });
 
 export const adultoMayorCommandSchema = z.object({
@@ -348,6 +357,7 @@ export const adultoMayorListResponseSchema = z.object({
 });
 
 export const adultoMayorDetailResponseSchema = adultoMayorDetailSchema;
+export const adultoMayorDocumentResponseSchema = z.object({ document: adultoMayorDocumentSchema });
 
 export const adultoMayorTenantOptionsResponseSchema = z.object({
   tenants: z.array(adultoMayorTenantOptionSchema),
@@ -396,6 +406,7 @@ export type AdultoMayorImportValidateQuery = z.infer<typeof adultoMayorImportVal
 export type AdultoMayorListQuery = z.infer<typeof adultoMayorListQuerySchema>;
 export type AdultoMayorListItem = z.infer<typeof adultoMayorListItemSchema>;
 export type AdultoMayorDetail = z.infer<typeof adultoMayorDetailSchema>;
+export type AdultoMayorDocument = z.infer<typeof adultoMayorDocumentSchema>;
 export type CreateAdultoMayorRequest = z.infer<typeof createAdultoMayorRequestSchema>;
 export type UpdateAdultoMayorRequest = z.infer<typeof updateAdultoMayorRequestSchema>;
 export type AdultoMayorListResponse = z.infer<typeof adultoMayorListResponseSchema>;

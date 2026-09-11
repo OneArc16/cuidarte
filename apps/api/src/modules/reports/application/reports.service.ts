@@ -134,7 +134,6 @@ export class ReportsService implements OnModuleInit {
       tenantId: scope.tenantId,
       type: command.type,
       period: command.period,
-      now: new Date(),
     });
 
     if (duplicate !== null) {

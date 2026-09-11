@@ -332,6 +332,201 @@
   gap: 12px 18px;
 }
 
+.adulto-document-field {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 6px;
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid rgb(8 80 65 / 10%);
+}
+
+.adulto-document-field__label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--color-deep);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.adulto-document-field__label small,
+.adulto-document-field__current small {
+  color: var(--color-muted);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.adulto-document-field__control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.adulto-document-field__picker,
+.adulto-document-field__current {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  max-width: min(100%, 420px);
+  padding: 0 11px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 88%);
+  color: var(--color-deep);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.adulto-document-field__picker:hover,
+.adulto-document-field__picker:focus-within,
+.adulto-document-field__current:hover {
+  border-color: rgb(29 158 117 / 35%);
+  background: var(--color-soft);
+}
+
+.adulto-document-field__picker svg,
+.adulto-document-field__current svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  color: var(--color-care);
+}
+
+.adulto-document-field__picker span,
+.adulto-document-field__current span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adulto-document-field__picker input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.adulto-document-field__current {
+  display: inline-grid;
+  align-items: center;
+  gap: 0;
+  cursor: pointer;
+}
+
+.adulto-document-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: min(100%, 620px);
+  min-height: 76px;
+  margin-top: 2px;
+  padding: 12px 14px;
+  border: 1px solid rgb(8 80 65 / 11%);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 8px 20px rgb(8 80 65 / 5%);
+}
+
+.adulto-document-card > svg {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  color: var(--color-care);
+}
+
+.adulto-document-card__details {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 3px;
+}
+
+.adulto-document-card__details strong {
+  overflow: hidden;
+  color: var(--color-deep);
+  font-size: 0.83rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adulto-document-card__details small {
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.adulto-document-card__actions {
+  display: inline-flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.adulto-document-card__action {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: white;
+  color: var(--color-deep);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.adulto-document-card__action svg {
+  width: 16px;
+  height: 16px;
+}
+
+.adulto-document-card__action--view:hover,
+.adulto-document-card__action--view:focus-visible {
+  border-color: rgb(29 158 117 / 35%);
+  background: var(--color-soft);
+}
+
+.adulto-document-card__action--delete {
+  border-color: rgb(180 74 62 / 25%);
+  color: #b44a3e;
+}
+
+.adulto-document-card__action--delete:hover,
+.adulto-document-card__action--delete:focus-visible {
+  background: #fff4f1;
+  border-color: rgb(180 74 62 / 42%);
+}
+
+.adulto-document-field__clear {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid rgb(8 80 65 / 13%);
+  border-radius: 8px;
+  background: white;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.adulto-document-field__clear:hover,
+.adulto-document-field__clear:focus-visible {
+  color: #b44a3e;
+  border-color: rgb(180 74 62 / 30%);
+  background: #fff4f1;
+}
+
+.adulto-document-field__clear svg {
+  width: 16px;
+  height: 16px;
+}
+
 .adulto-switch-field {
   display: inline-flex;
   align-items: center;

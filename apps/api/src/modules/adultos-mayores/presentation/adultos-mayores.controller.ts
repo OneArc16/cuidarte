@@ -1,6 +1,8 @@
 import {
   Body,
+  BadRequestException,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -18,6 +20,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
+import { type Multipart, type MultipartFile } from "@fastify/multipart";
 import {
   adultoMayorDetailResponseSchema,
   adultoMayorListQuerySchema,
@@ -34,6 +37,12 @@ import { type AuthenticatedRequest } from "../../auth/authenticated-request";
 import { SessionGuard } from "../../auth/session.guard";
 import { AdultosMayoresExportService } from "../application/adultos-mayores-export.service";
 import { AdultosMayoresService } from "../application/adultos-mayores.service";
+import { type AdultoMayorPdfUpload } from "../domain/adultos-mayores-files.storage";
+
+type MultipartAuthenticatedRequest = AuthenticatedRequest & {
+  isMultipart(): boolean;
+  parts(): AsyncIterableIterator<Multipart>;
+};
 
 const adultoMayorIdParamSchema = z.uuid();
 
@@ -101,6 +110,46 @@ export class AdultosMayoresController {
     return adultoMayorDetailResponseSchema.parse(detail);
   }
 
+  @Post(":id/document")
+  @ApiOkResponse({ description: "PDF del adulto mayor cargado." })
+  @ApiBadRequestResponse({ description: "Solo se permite un PDF de hasta 10 MB." })
+  async uploadDocument(
+    @Param("id") id: string,
+    @Req() request: MultipartAuthenticatedRequest,
+  ) {
+    const adultoMayorId = parseZodSchema(adultoMayorIdParamSchema, id);
+    const file = await parsePdfMultipartRequest(request);
+    const document = await this.adultosMayoresService.uploadDocument(
+      adultoMayorId,
+      file,
+      request.currentUser,
+    );
+
+    return { document };
+  }
+
+  @Get(":id/document")
+  @ApiOkResponse({ description: "PDF del adulto mayor." })
+  async downloadDocument(
+    @Param("id") id: string,
+    @Req() request: AuthenticatedRequest,
+    @Res() reply: FastifyReply,
+  ) {
+    const adultoMayorId = parseZodSchema(adultoMayorIdParamSchema, id);
+    const file = await this.adultosMayoresService.downloadDocument(adultoMayorId, request.currentUser);
+    reply.header("Content-Type", file.contentType);
+    reply.header("Content-Disposition", `inline; filename="${file.filename}"`);
+    return reply.send(file.buffer);
+  }
+
+  @Delete(":id/document")
+  @ApiOkResponse({ description: "PDF del adulto mayor eliminado." })
+  async deleteDocument(@Param("id") id: string, @Req() request: AuthenticatedRequest) {
+    const adultoMayorId = parseZodSchema(adultoMayorIdParamSchema, id);
+    await this.adultosMayoresService.deleteDocument(adultoMayorId, request.currentUser);
+    return { success: true };
+  }
+
   @Get("export/excel")
   @ApiOkResponse({ description: "Archivo Excel con el listado de adultos mayores." })
   @ApiUnauthorizedResponse({ description: "Sesion requerida." })
@@ -145,6 +194,33 @@ export class AdultosMayoresController {
 
     return adultoMayorDetailResponseSchema.parse(detail);
   }
+}
+
+async function parsePdfMultipartRequest(
+  request: MultipartAuthenticatedRequest,
+): Promise<AdultoMayorPdfUpload> {
+  if (!request.isMultipart()) {
+    throw new BadRequestException("La solicitud debe enviarse como multipart/form-data.");
+  }
+
+  let upload: AdultoMayorPdfUpload | null = null;
+
+  for await (const part of request.parts()) {
+    if (part.type === "field" || part.fieldname !== "document") {
+      throw new BadRequestException("El formulario solo admite un campo PDF llamado document.");
+    }
+    if (upload !== null) throw new BadRequestException("Solo puedes adjuntar un PDF.");
+    const buffer = await (part as MultipartFile).toBuffer();
+    upload = {
+      originalName: part.filename.trim() === "" ? "documento.pdf" : part.filename,
+      mimeType: part.mimetype,
+      sizeBytes: buffer.byteLength,
+      buffer,
+    };
+  }
+
+  if (upload === null) throw new BadRequestException("Selecciona un archivo PDF.");
+  return upload;
 }
 
 function sendFile(

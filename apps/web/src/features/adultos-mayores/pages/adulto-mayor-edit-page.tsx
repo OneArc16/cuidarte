@@ -9,6 +9,8 @@ import { ADULTOS_MAYORES_PATH } from "../lib/adultos-mayores-paths";
 import {
   useAdultoMayorQuery,
   useUpdateAdultoMayorMutation,
+  useDeleteAdultoMayorDocumentMutation,
+  useUploadAdultoMayorDocumentMutation,
 } from "../model/adultos-mayores-queries";
 
 type AdultoMayorEditPageProps = {
@@ -19,6 +21,8 @@ type AdultoMayorEditPageProps = {
 export function AdultoMayorEditPage({ adultoMayorId, navigate }: AdultoMayorEditPageProps) {
   const adultoMayorQuery = useAdultoMayorQuery(adultoMayorId);
   const updateMutation = useUpdateAdultoMayorMutation(adultoMayorId);
+  const uploadDocumentMutation = useUploadAdultoMayorDocumentMutation(adultoMayorId);
+  const deleteDocumentMutation = useDeleteAdultoMayorDocumentMutation(adultoMayorId);
 
   if (adultoMayorQuery.isLoading) {
     return (
@@ -75,8 +79,15 @@ export function AdultoMayorEditPage({ adultoMayorId, navigate }: AdultoMayorEdit
         isPending={updateMutation.isPending}
         error={resolveAdultosMayoresApiError(updateMutation.error)}
         onCancel={() => navigate(ADULTOS_MAYORES_PATH)}
-        onSubmit={async (values) => {
+        onDeleteDocument={async () => {
+          await deleteDocumentMutation.mutateAsync();
+          toast.success("PDF eliminado.");
+        }}
+        onSubmit={async (values, documentFile) => {
           await updateMutation.mutateAsync(values);
+          if (documentFile !== null) {
+            await uploadDocumentMutation.mutateAsync(documentFile);
+          }
           toast.success("Cambios guardados.");
         }}
       />

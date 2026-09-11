@@ -134,4 +134,19 @@ export type AdultoMayorRecord = {
   socialProgramBeneficiary: boolean;
   createdAt: Date;
   updatedAt: Date;
+  documentFile: AdultoMayorDocumentRecord | null;
 };
+
+export type AdultoMayorDocumentRecord = {
+  id: string;
+  adultoMayorId: string;
+  originalName: string;
+  mimeType: "application/pdf";
+  sizeBytes: number;
+  relativePath: string;
+  uploadedByUserId: string;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export type PersistAdultoMayorDocumentCommand = AdultoMayorDocumentRecord;

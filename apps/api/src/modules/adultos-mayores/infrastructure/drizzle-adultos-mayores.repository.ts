@@ -7,7 +7,7 @@ import {
 import { and, asc, eq, ilike, ne, or, type SQL } from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
-import { adultosMayores, auditLogs, epsCatalog, tenants } from "../../../database/schema";
+import { adultoMayorDocuments, adultosMayores, auditLogs, epsCatalog, tenants } from "../../../database/schema";
 import {
   type AdultoMayorAuditCommand,
   type AdultoMayorCommandRecord,
@@ -18,6 +18,7 @@ import {
   type FindAdultoMayorByIdQuery,
   type FindAdultosMayoresQuery,
   type UpdateAdultoMayorRecordCommand,
+  type AdultoMayorDocumentRecord,
 } from "../domain/adulto-mayor.types";
 import { type AdultosMayoresRepository } from "../domain/adultos-mayores.repository";
 
@@ -126,6 +127,57 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       .from(tenants)
       .where(eq(tenants.isActive, true))
       .orderBy(asc(tenants.name));
+  }
+
+  async findDocumentByAdultoId(adultoMayorId: string): Promise<AdultoMayorDocumentRecord | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(adultoMayorDocuments)
+      .where(eq(adultoMayorDocuments.adultoMayorId, adultoMayorId))
+      .limit(1);
+
+    return row === undefined ? null : this.toDocumentRecord(row);
+  }
+
+  async saveDocument(document: AdultoMayorDocumentRecord): Promise<AdultoMayorDocumentRecord> {
+    const [row] = await this.database.db
+      .insert(adultoMayorDocuments)
+      .values({
+        id: document.id,
+        adultoMayorId: document.adultoMayorId,
+        originalName: document.originalName,
+        mimeType: document.mimeType,
+        sizeBytes: document.sizeBytes,
+        relativePath: document.relativePath,
+        uploadedByUserId: document.uploadedByUserId,
+        createdAt: document.createdAt,
+        updatedAt: document.updatedAt,
+      })
+      .onConflictDoUpdate({
+        target: adultoMayorDocuments.adultoMayorId,
+        set: {
+          id: document.id,
+          originalName: document.originalName,
+          mimeType: document.mimeType,
+          sizeBytes: document.sizeBytes,
+          relativePath: document.relativePath,
+          uploadedByUserId: document.uploadedByUserId,
+          updatedAt: document.updatedAt,
+        },
+      })
+      .returning();
+
+    if (row === undefined) throw new Error("No fue posible guardar el documento del adulto mayor.");
+    return this.toDocumentRecord(row);
+  }
+
+  async deleteDocument(adultoMayorId: string): Promise<AdultoMayorDocumentRecord | null> {
+    const [row] = await this.database.db
+      .delete(adultoMayorDocuments)
+      .where(eq(adultoMayorDocuments.adultoMayorId, adultoMayorId))
+      .returning();
+
+    return row === undefined ? null : this.toDocumentRecord(row);
   }
 
   async create(
@@ -351,7 +403,12 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       bloodType: row.bloodType === null ? null : adultoMayorBloodTypeSchema.parse(row.bloodType),
       healthRegime:
         row.healthRegime === null ? null : adultoMayorHealthRegimeSchema.parse(row.healthRegime),
+      documentFile: null,
     };
+  }
+
+  private toDocumentRecord(row: typeof adultoMayorDocuments.$inferSelect): AdultoMayorDocumentRecord {
+    return { ...row, mimeType: "application/pdf" };
   }
 }
 

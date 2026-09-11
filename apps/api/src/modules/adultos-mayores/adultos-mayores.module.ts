@@ -9,10 +9,12 @@ import { AdultosMayoresExportService } from "./application/adultos-mayores-expor
 import { AdultosMayoresService } from "./application/adultos-mayores.service";
 import { ADULTOS_MAYORES_IMPORT_REPOSITORY } from "./domain/adultos-mayores-import.repository";
 import { ADULTOS_MAYORES_REPOSITORY } from "./domain/adultos-mayores.repository";
+import { ADULTOS_MAYORES_FILES_STORAGE } from "./domain/adultos-mayores-files.storage";
 import { AdultosMayoresImportParser } from "./domain/adultos-mayores-import-parser";
 import { AdultosMayoresImportValidator } from "./domain/adultos-mayores-import-validator";
 import { DrizzleAdultosMayoresRepository } from "./infrastructure/drizzle-adultos-mayores.repository";
 import { DrizzleAdultosMayoresImportRepository } from "./infrastructure/drizzle-adultos-mayores-import.repository";
+import { LocalAdultosMayoresFilesStorage } from "./infrastructure/local-adultos-mayores-files.storage";
 import { AdultosMayoresImportController } from "./presentation/adultos-mayores-import.controller";
 import { AdultosMayoresController } from "./presentation/adultos-mayores.controller";
 import { UbicacionesModule } from "../ubicaciones/ubicaciones.module";
@@ -34,6 +36,10 @@ import { UbicacionesModule } from "../ubicaciones/ubicaciones.module";
     {
       provide: ADULTOS_MAYORES_IMPORT_REPOSITORY,
       useClass: DrizzleAdultosMayoresImportRepository,
+    },
+    {
+      provide: ADULTOS_MAYORES_FILES_STORAGE,
+      useClass: LocalAdultosMayoresFilesStorage,
     },
   ],
 })

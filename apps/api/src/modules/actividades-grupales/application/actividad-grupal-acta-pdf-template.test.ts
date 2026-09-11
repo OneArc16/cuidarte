@@ -40,11 +40,9 @@ describe("actividad-grupal-acta-pdf-template", () => {
     assert.match(htmlWithPhotos, /EVIDENCIA FOTOGRAFICA/);
     assert.match(htmlWithPhotos, /break-before: page/);
     assert.match(htmlWithPhotos, /object-fit: contain/);
-    assert.match(
-      htmlWithPhotos,
-      /alt="Fotografia adjunta: foto &lt;1&gt; &quot;prueba&quot;\.png"/,
-    );
-    assert.ok(htmlWithPhotos.indexOf("foto &lt;1&gt;") < htmlWithPhotos.indexOf("foto 2.png"));
+    assert.match(htmlWithPhotos, /alt="Fotografia adjunta"/);
+    assert.doesNotMatch(htmlWithPhotos, /foto &lt;1&gt;/);
+    assert.doesNotMatch(htmlWithPhotos, /foto 2\.png/);
   });
 
   it("renders a standalone photo evidence document without forcing a page break", () => {
@@ -57,7 +55,8 @@ describe("actividad-grupal-acta-pdf-template", () => {
     ]);
 
     assert.match(html, /EVIDENCIA FOTOGRAFICA/);
-    assert.match(html, /foto cierre\.png/);
+    assert.match(html, /alt="Fotografia adjunta"/);
+    assert.doesNotMatch(html, /foto cierre\.png/);
     assert.doesNotMatch(
       html,
       /<section class="acta-document__section acta-document__section--photo-evidence">/,

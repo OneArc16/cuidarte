@@ -7,6 +7,7 @@ import {
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, type Resolver, type FieldErrors, useForm, useWatch } from "react-hook-form";
 import { useEffect, useId, useRef, useState } from "react";
+import { Eye, FileText, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -18,6 +19,7 @@ import {
   toUpdateAdultoMayorRequest,
 } from "../schemas/adulto-mayor-form.schema";
 import { AdultoMayorFieldGroup } from "./adulto-mayor-field-group";
+import { getApiBaseUrl } from "@/shared/api/api-config";
 import { SearchableCatalogCombobox } from "@/shared/components/searchable-catalog-combobox";
 import { SearchableCombobox } from "@/shared/components/searchable-combobox";
 import { findNamedOptionByName, getNamedOptionLabel } from "@/shared/lib/named-options";
@@ -110,7 +112,8 @@ type AdultoMayorFormProps =
       shouldSelectTenant: boolean;
       tenantOptions: AdultoMayorTenantOption[];
       onCancel: () => void;
-      onSubmit: (values: CreateAdultoMayorRequest) => Promise<void> | void;
+      onDeleteDocument?: () => Promise<void>;
+      onSubmit: (values: CreateAdultoMayorRequest, documentFile: File | null) => Promise<void> | void;
     }
   | {
       mode: "edit";
@@ -118,11 +121,13 @@ type AdultoMayorFormProps =
       error: string | null;
       isPending: boolean;
       onCancel: () => void;
-      onSubmit: (values: UpdateAdultoMayorRequest) => Promise<void> | void;
+      onDeleteDocument: () => Promise<void>;
+      onSubmit: (values: UpdateAdultoMayorRequest, documentFile: File | null) => Promise<void> | void;
     };
 
 export function AdultoMayorForm(props: AdultoMayorFormProps) {
   const [activeSection, setActiveSection] = useState<AdultoMayorFormSectionId>("personal");
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
   const tabPanelIdPrefix = useId();
   const detail = props.mode === "edit" ? props.detail : null;
   const shouldShowTenantSelect = props.mode === "create" && props.shouldSelectTenant;
@@ -360,12 +365,14 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
 
     await form.handleSubmit(async (values) => {
       if (props.mode === "create") {
-        await props.onSubmit(toCreateAdultoMayorRequest(values));
+        await props.onSubmit(toCreateAdultoMayorRequest(values), documentFile);
         clearCreateDraft();
+        setDocumentFile(null);
         return;
       }
 
-      await props.onSubmit(toUpdateAdultoMayorRequest(values));
+      await props.onSubmit(toUpdateAdultoMayorRequest(values), documentFile);
+      setDocumentFile(null);
     }, handleInvalidSubmit)();
   }
 
@@ -846,6 +853,70 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
           </AdultoMayorFieldGroup>
         </div>
 
+        <div className="adulto-document-field">
+          <div className="adulto-document-field__label">
+            <span>Documento PDF</span>
+            <small>Opcional · máximo 10 MB</small>
+          </div>
+          <div className="adulto-document-field__control">
+            <label className="adulto-document-field__picker">
+              <FileText aria-hidden="true" />
+              <span>{documentFile?.name ?? "Seleccionar PDF"}</span>
+              <input
+                type="file"
+                accept="application/pdf,.pdf"
+                onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  setDocumentFile(file);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+            {documentFile !== null ? (
+              <button
+                className="adulto-document-field__clear"
+                type="button"
+                aria-label="Quitar PDF seleccionado"
+                onClick={() => setDocumentFile(null)}
+              >
+                <X aria-hidden="true" />
+              </button>
+            ) : null}
+          </div>
+          {detail?.documentFile !== null && detail?.documentFile !== undefined && documentFile === null ? (
+            <div className="adulto-document-card">
+              <FileText aria-hidden="true" />
+              <div className="adulto-document-card__details">
+                <strong>{detail.documentFile.originalName}</strong>
+                <small>{formatFileSize(detail.documentFile.sizeBytes)}</small>
+              </div>
+              <div className="adulto-document-card__actions">
+                <a
+                  className="adulto-document-card__action adulto-document-card__action--view"
+                  href={`${getApiBaseUrl()}/adultos-mayores/${detail.id}/document`}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Ver PDF actual"
+                  title="Ver PDF"
+                >
+                  <Eye aria-hidden="true" />
+                </a>
+                <button
+                  className="adulto-document-card__action adulto-document-card__action--delete"
+                  type="button"
+                  aria-label="Eliminar PDF actual"
+                  title="Eliminar PDF"
+                  onClick={() => {
+                    void props.onDeleteDocument?.();
+                  }}
+                >
+                  <Trash2 aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+
         <div className="adulto-form-switches">
           <label className="adulto-switch-field">
             <input type="checkbox" {...form.register("livesWithSomeone")} />
@@ -883,6 +954,14 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
       </div>
     </form>
   );
+}
+
+function formatFileSize(sizeBytes: number): string {
+  if (sizeBytes < 1024 * 1024) {
+    return `${Math.max(1, Math.round(sizeBytes / 1024))} KB`;
+  }
+
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function findFirstSectionWithError(

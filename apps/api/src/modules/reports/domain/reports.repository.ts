@@ -14,7 +14,6 @@ export type ReportsRepository = {
     tenantId: string;
     type: CreateReportJobCommand["type"];
     period: string;
-    now: Date;
   }): Promise<ReportJobRecord | null>;
   createJob(command: CreateReportJobCommand): Promise<ReportJobRecord>;
   findJobById(reportId: string): Promise<ReportJobRecord | null>;

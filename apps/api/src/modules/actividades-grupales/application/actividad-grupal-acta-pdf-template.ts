@@ -137,15 +137,7 @@ const ACTA_PHOTO_EVIDENCE_STYLES = `
         background: #f8f8f8;
         object-fit: contain;
       }
-
-      .acta-document__photo-caption {
-        margin-top: 2.5mm;
-        color: #000;
-        font-size: 6.4pt;
-        font-weight: 600;
-        line-height: 1.25;
-        overflow-wrap: anywhere;
-      }`;
+    `;
 
 export function buildActividadGrupalActaPdfHtml({
   detail,
@@ -548,9 +540,8 @@ function renderPhotoCard(photo: PreparedActividadGrupalActaPhotoAsset): string {
     <img
       class="acta-document__photo-image"
       src="${escapeHtml(photo.dataUrl)}"
-      alt="Fotografia adjunta: ${escapeHtml(photo.originalName)}"
+      alt="Fotografia adjunta"
     />
-    <figcaption class="acta-document__photo-caption">${escapeHtml(photo.originalName)}</figcaption>
   </figure>`;
 }
 

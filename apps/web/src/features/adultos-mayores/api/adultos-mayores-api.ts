@@ -4,10 +4,12 @@ import {
   type AdultoMayorTenantOptionsResponse,
   type CreateAdultoMayorRequest,
   type UpdateAdultoMayorRequest,
+  adultoMayorDocumentResponseSchema,
   adultoMayorDetailResponseSchema,
   adultoMayorListResponseSchema,
   adultoMayorTenantOptionsResponseSchema,
 } from "@cuidarte/contracts";
+import { z } from "zod";
 
 import { getApiBaseUrl } from "@/shared/api/api-config";
 import { fetchBlob } from "@/shared/api/fetch-blob";
@@ -58,6 +60,27 @@ export function updateAdultoMayor(
       body: request,
     },
   );
+}
+
+export function uploadAdultoMayorDocument(adultoMayorId: string, file: File) {
+  const formData = new FormData();
+  formData.append("document", file, file.name);
+
+  return fetchJson(
+    `${getApiBaseUrl()}/adultos-mayores/${adultoMayorId}/document`,
+    adultoMayorDocumentResponseSchema,
+    { method: "POST", body: formData },
+  );
+}
+
+export function deleteAdultoMayorDocument(adultoMayorId: string): Promise<{ success: boolean }> {
+  return fetchJson(`${getApiBaseUrl()}/adultos-mayores/${adultoMayorId}/document`, z.object({ success: z.boolean() }), {
+    method: "DELETE",
+  });
+}
+
+export function getAdultoMayorDocumentUrl(adultoMayorId: string): string {
+  return `${getApiBaseUrl()}/adultos-mayores/${adultoMayorId}/document`;
 }
 
 export function exportAdultosMayoresExcel(search: string): Promise<Blob> {

@@ -58,3 +58,29 @@ export function useUpdateAdultoMayorMutation(adultoMayorId: string) {
     },
   });
 }
+
+export function useUploadAdultoMayorDocumentMutation(adultoMayorId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (file: File) => adultosMayoresApi.uploadAdultoMayorDocument(adultoMayorId, file),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: adultosMayoresQueryKeys.detail(adultoMayorId),
+      });
+    },
+  });
+}
+
+export function useDeleteAdultoMayorDocumentMutation(adultoMayorId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => adultosMayoresApi.deleteAdultoMayorDocument(adultoMayorId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: adultosMayoresQueryKeys.detail(adultoMayorId),
+      });
+    },
+  });
+}

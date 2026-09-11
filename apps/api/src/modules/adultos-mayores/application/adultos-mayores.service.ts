@@ -18,6 +18,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { randomUUID } from "node:crypto";
 
 import { calculateAgeFromBirthDate } from "./age";
 import {
@@ -32,6 +33,14 @@ import {
 import { type AdultoMayorRecord } from "../domain/adulto-mayor.types";
 import { UbicacionesService } from "../../ubicaciones/application/ubicaciones.service";
 import { EpsService } from "../../eps/application/eps.service";
+import {
+  ADULTOS_MAYORES_FILES_STORAGE,
+  type AdultoMayorPdfUpload,
+  type AdultosMayoresFilesStorage,
+} from "../domain/adultos-mayores-files.storage";
+import { type AdultoMayorDocumentRecord } from "../domain/adulto-mayor.types";
+
+const MAX_ADULTO_MAYOR_PDF_SIZE_BYTES = 10 * 1024 * 1024;
 
 @Injectable()
 export class AdultosMayoresService {
@@ -40,6 +49,8 @@ export class AdultosMayoresService {
     private readonly adultosMayoresRepository: AdultosMayoresRepository,
     private readonly ubicacionesService: UbicacionesService,
     private readonly epsService: EpsService,
+    @Inject(ADULTOS_MAYORES_FILES_STORAGE)
+    private readonly filesStorage: AdultosMayoresFilesStorage,
   ) {}
 
   async listAdultosMayores(
@@ -81,7 +92,59 @@ export class AdultosMayoresService {
       throw new NotFoundException("Adulto mayor no encontrado.");
     }
 
-    return this.toDetail(record);
+    const documentFile = await this.adultosMayoresRepository.findDocumentByAdultoId(record.id);
+
+    return this.toDetail(record, documentFile);
+  }
+
+  async uploadDocument(adultoMayorId: string, file: AdultoMayorPdfUpload, actor: AuthUser) {
+    this.ensureCanManage(actor);
+    const scope = this.resolveScopeOrThrow(actor);
+    const record = await this.adultosMayoresRepository.findById({ id: adultoMayorId, scope });
+
+    if (record === null) throw new NotFoundException("Adulto mayor no encontrado.");
+    this.validatePdf(file);
+
+    const previous = await this.adultosMayoresRepository.findDocumentByAdultoId(adultoMayorId);
+    const stored = await this.filesStorage.savePdf(adultoMayorId, file);
+    const document: AdultoMayorDocumentRecord = {
+      id: randomUUID(),
+      adultoMayorId,
+      ...stored,
+      uploadedByUserId: actor.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const saved = await this.adultosMayoresRepository.saveDocument(document);
+
+    if (previous !== null && previous.relativePath !== saved.relativePath) {
+      await this.filesStorage.deleteFile(previous.relativePath);
+    }
+
+    return this.toDocumentResponse(saved);
+  }
+
+  async downloadDocument(adultoMayorId: string, actor: AuthUser) {
+    const scope = this.resolveScopeOrThrow(actor);
+    const record = await this.adultosMayoresRepository.findById({ id: adultoMayorId, scope });
+    if (record === null) throw new NotFoundException("Adulto mayor no encontrado.");
+    const document = await this.adultosMayoresRepository.findDocumentByAdultoId(adultoMayorId);
+    if (document === null) throw new NotFoundException("Este adulto mayor no tiene un PDF cargado.");
+
+    return {
+      buffer: await this.filesStorage.readFile(document.relativePath),
+      contentType: document.mimeType,
+      filename: document.originalName,
+    };
+  }
+
+  async deleteDocument(adultoMayorId: string, actor: AuthUser): Promise<void> {
+    this.ensureCanManage(actor);
+    const scope = this.resolveScopeOrThrow(actor);
+    const record = await this.adultosMayoresRepository.findById({ id: adultoMayorId, scope });
+    if (record === null) throw new NotFoundException("Adulto mayor no encontrado.");
+    const deleted = await this.adultosMayoresRepository.deleteDocument(adultoMayorId);
+    if (deleted !== null) await this.filesStorage.deleteFile(deleted.relativePath);
   }
 
   async createAdultoMayor(
@@ -272,7 +335,7 @@ export class AdultosMayoresService {
     });
   }
 
-  private toDetail(record: AdultoMayorRecord): AdultoMayorDetail {
+  private toDetail(record: AdultoMayorRecord, documentFile = record.documentFile): AdultoMayorDetail {
     return adultoMayorDetailSchema.parse({
       ...this.toListItem(record),
       firstName: record.firstName,
@@ -305,7 +368,27 @@ export class AdultosMayoresService {
       companion: record.companion,
       economicIncome: record.economicIncome,
       socialProgramBeneficiary: record.socialProgramBeneficiary,
+      documentFile: documentFile === null ? null : this.toDocumentResponse(documentFile),
     });
+  }
+
+  private validatePdf(file: AdultoMayorPdfUpload): void {
+    if (file.mimeType !== "application/pdf") {
+      throw new BadRequestException("Solo se permiten archivos PDF.");
+    }
+    if (file.sizeBytes <= 0 || file.sizeBytes > MAX_ADULTO_MAYOR_PDF_SIZE_BYTES) {
+      throw new BadRequestException("El PDF no puede superar 10 MB.");
+    }
+  }
+
+  private toDocumentResponse(document: AdultoMayorDocumentRecord) {
+    return {
+      id: document.id,
+      originalName: document.originalName,
+      mimeType: document.mimeType,
+      sizeBytes: document.sizeBytes,
+      createdAt: document.createdAt.toISOString(),
+    };
   }
 
   private throwConflictForUniqueViolation(error: unknown): never | void {

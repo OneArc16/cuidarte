@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
 import { AdultoMayorForm } from "../components/adulto-mayor-form";
+import { uploadAdultoMayorDocument } from "../api/adultos-mayores-api";
 import { resolveAdultosMayoresApiError } from "../lib/adultos-mayores-formatters";
 import { ADULTOS_MAYORES_PATH, buildAdultoMayorEditPath } from "../lib/adultos-mayores-paths";
 import {
@@ -53,8 +54,12 @@ export function AdultoMayorCreatePage({ navigate, user }: AdultoMayorCreatePageP
         isPending={createMutation.isPending}
         error={mutationError ?? queryError}
         onCancel={() => navigate(ADULTOS_MAYORES_PATH)}
-        onSubmit={async (values) => {
+        onSubmit={async (values, documentFile) => {
           const detail = await createMutation.mutateAsync(values);
+
+          if (documentFile !== null) {
+            await uploadAdultoMayorDocument(detail.id, documentFile);
+          }
 
           toast.success("Adulto mayor creado.");
           navigate(buildAdultoMayorEditPath(detail.id));

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { and, desc, eq, gt, inArray, lt, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, type SQL } from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
 import { auditLogs, reportJobs, tenants } from "../../../database/schema";
@@ -29,7 +29,6 @@ export class DrizzleReportsRepository implements ReportsRepository {
     tenantId: string;
     type: CreateReportJobCommand["type"];
     period: string;
-    now: Date;
   }): Promise<ReportJobRecord | null> {
     const [row] = await this.database.db
       .select()
@@ -39,10 +38,7 @@ export class DrizzleReportsRepository implements ReportsRepository {
           eq(reportJobs.tenantId, command.tenantId),
           eq(reportJobs.type, command.type),
           eq(reportJobs.period, command.period),
-          or(
-            inArray(reportJobs.status, ["pending", "processing"]),
-            and(eq(reportJobs.status, "ready"), gt(reportJobs.expiresAt, command.now)),
-          ),
+          inArray(reportJobs.status, ["pending", "processing"]),
         ),
       )
       .orderBy(desc(reportJobs.createdAt))

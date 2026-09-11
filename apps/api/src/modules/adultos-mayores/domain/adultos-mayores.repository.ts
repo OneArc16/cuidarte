@@ -7,6 +7,7 @@ import {
   type FindAdultoMayorByIdQuery,
   type FindAdultosMayoresQuery,
   type UpdateAdultoMayorRecordCommand,
+  type AdultoMayorDocumentRecord,
 } from "./adulto-mayor.types";
 
 export const ADULTOS_MAYORES_REPOSITORY = Symbol("ADULTOS_MAYORES_REPOSITORY");
@@ -24,4 +25,7 @@ export type AdultosMayoresRepository = {
     command: UpdateAdultoMayorRecordCommand,
     audit: AdultoMayorAuditCommand,
   ): Promise<AdultoMayorRecord>;
+  findDocumentByAdultoId(adultoMayorId: string): Promise<AdultoMayorDocumentRecord | null>;
+  saveDocument(document: AdultoMayorDocumentRecord): Promise<AdultoMayorDocumentRecord>;
+  deleteDocument(adultoMayorId: string): Promise<AdultoMayorDocumentRecord | null>;
 };

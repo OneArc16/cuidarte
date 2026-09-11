@@ -8,6 +8,7 @@ import { calculateAgeFromBirthDate } from "./age";
 import { AdultosMayoresService } from "./adultos-mayores.service";
 import { type AdultoMayorRecord, type FindAdultosMayoresQuery } from "../domain/adulto-mayor.types";
 import { type AdultosMayoresRepository } from "../domain/adultos-mayores.repository";
+import { type AdultosMayoresFilesStorage } from "../domain/adultos-mayores-files.storage";
 import { type UbicacionesService } from "../../ubicaciones/application/ubicaciones.service";
 import { type EpsService } from "../../eps/application/eps.service";
 
@@ -86,6 +87,7 @@ const records: AdultoMayorRecord[] = [
     companion: "Mariana Rojas",
     economicIncome: 450000,
     socialProgramBeneficiary: true,
+    documentFile: null,
     createdAt: new Date("2026-04-21T12:00:00.000Z"),
     updatedAt: new Date("2026-04-21T12:00:00.000Z"),
   },
@@ -131,6 +133,7 @@ const records: AdultoMayorRecord[] = [
     companion: "Vecina cuidadora",
     economicIncome: null,
     socialProgramBeneficiary: true,
+    documentFile: null,
     createdAt: new Date("2026-04-21T12:00:00.000Z"),
     updatedAt: new Date("2026-04-21T12:00:00.000Z"),
   },
@@ -291,6 +294,7 @@ function createCommand() {
     companion: "Ana Cano",
     economicIncome: 300000,
     socialProgramBeneficiary: false,
+    documentFile: null,
   };
 }
 
@@ -345,6 +349,7 @@ function createRepository(): AdultosMayoresRepository & { queries: FindAdultosMa
         ...command,
         epsName: command.epsId === null ? null : "Salud Demo",
         eps: command.epsId === null ? null : "Salud Demo",
+        documentFile: null,
       };
 
       storedRecords.push(record);
@@ -372,6 +377,15 @@ function createRepository(): AdultosMayoresRepository & { queries: FindAdultosMa
 
       return updatedRecord;
     },
+    async findDocumentByAdultoId() {
+      return null;
+    },
+    async saveDocument(document) {
+      return document;
+    },
+    async deleteDocument() {
+      return null;
+    },
   };
 }
 
@@ -380,7 +394,25 @@ function createService(repository: AdultosMayoresRepository): AdultosMayoresServ
     repository,
     createUbicacionesService() as UbicacionesService,
     createEpsService() as EpsService,
+    createFilesStorage() as AdultosMayoresFilesStorage,
   );
+}
+
+function createFilesStorage(): Pick<AdultosMayoresFilesStorage, "savePdf" | "readFile" | "deleteFile"> {
+  return {
+    async savePdf(_adultoMayorId, file) {
+      return {
+        originalName: file.originalName,
+        mimeType: "application/pdf",
+        sizeBytes: file.sizeBytes,
+        relativePath: "test/document.pdf",
+      };
+    },
+    async readFile() {
+      return Buffer.from("pdf");
+    },
+    async deleteFile() {},
+  };
 }
 
 function createEpsService(): Pick<EpsService, "resolveForWrite"> {

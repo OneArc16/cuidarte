@@ -495,6 +495,29 @@ export const adultosMayores = pgTable(
   ],
 );
 
+export const adultoMayorDocuments = pgTable(
+  "adulto_mayor_documents",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    adultoMayorId: uuid("adulto_mayor_id")
+      .notNull()
+      .unique()
+      .references(() => adultosMayores.id, { onDelete: "cascade" }),
+    originalName: varchar("original_name", { length: 260 }).notNull(),
+    mimeType: varchar("mime_type", { length: 160 }).notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    relativePath: varchar("relative_path", { length: 500 }).notNull(),
+    uploadedByUserId: uuid("uploaded_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("adulto_mayor_documents_uploaded_by_user_idx").on(table.uploadedByUserId),
+  ],
+);
+
 export const adultoMayorImportBatches = pgTable(
   "adulto_mayor_import_batches",
   {
