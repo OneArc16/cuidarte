@@ -90,6 +90,7 @@ export class AlimentacionService {
       tenantId,
       deliveryDate: query.deliveryDate,
       search: query.search,
+      limit: query.limit,
     });
 
     return records.map((record) => alimentacionAdultoOptionSchema.parse(record));
@@ -356,9 +357,7 @@ export class AlimentacionService {
 
   private ensureCanDelete(actor: Pick<AuthUser, "role">) {
     if (!canDeleteAlimentacion(actor)) {
-      throw new ForbiddenException(
-        "No tienes permisos para eliminar registros de alimentacion.",
-      );
+      throw new ForbiddenException("No tienes permisos para eliminar registros de alimentacion.");
     }
   }
 
@@ -420,7 +419,10 @@ export class AlimentacionService {
     return tenantId;
   }
 
-  private toListItem(record: AlimentacionRecord, actor: Pick<AuthUser, "role">): AlimentacionListItem {
+  private toListItem(
+    record: AlimentacionRecord,
+    actor: Pick<AuthUser, "role">,
+  ): AlimentacionListItem {
     return alimentacionListItemSchema.parse({
       id: record.id,
       tenantId: record.tenantId,

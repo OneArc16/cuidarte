@@ -12,8 +12,12 @@ export const alimentacionQueryKeys = {
     ["alimentacion", params] as const,
   detail: (recordId: string) => ["alimentacion", recordId] as const,
   tenantOptions: () => ["alimentacion", "tenant-options"] as const,
-  adultoOptions: (params: { search: string; deliveryDate: string; tenantId: string | null }) =>
-    ["alimentacion", "adultos-mayores-options", params] as const,
+  adultoOptions: (params: {
+    search: string;
+    deliveryDate: string;
+    limit?: "suggestions" | "all";
+    tenantId: string | null;
+  }) => ["alimentacion", "adultos-mayores-options", params] as const,
   adultoLookup: (adultoMayorId: string, deliveryDate: string) =>
     ["alimentacion", "adulto-lookup", adultoMayorId, deliveryDate] as const,
   importedVersions: (adultoMayorId: string, deliveryMonth: string) =>
@@ -45,6 +49,7 @@ export function useAlimentacionAdultosMayoresOptionsQuery(
   params: {
     search: string;
     deliveryDate: string;
+    limit?: "suggestions" | "all";
     tenantId: string | null;
   },
   enabled: boolean,

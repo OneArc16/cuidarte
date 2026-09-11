@@ -10,4 +10,5 @@ export * from "./empleados.js";
 export * from "./eps.js";
 export * from "./health.js";
 export * from "./home.js";
+export * from "./reports.js";
 export * from "./ubicaciones.js";

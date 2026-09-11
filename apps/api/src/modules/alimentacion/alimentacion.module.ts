@@ -29,5 +29,10 @@ import { AlimentacionController } from "./presentation/alimentacion.controller";
       useClass: LocalAlimentacionFormatoFilesStorage,
     },
   ],
+  exports: [
+    AlimentacionFormatoExportService,
+    ALIMENTACION_FORMATO_FILES_STORAGE,
+    ALIMENTACION_REPOSITORY,
+  ],
 })
 export class AlimentacionModule {}

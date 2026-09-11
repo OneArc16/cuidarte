@@ -12,6 +12,7 @@ import { EmpleadosModule } from "./modules/empleados/empleados.module";
 import { EpsModule } from "./modules/eps/eps.module";
 import { HealthModule } from "./modules/health/health.module";
 import { HomeModule } from "./modules/home/home.module";
+import { ReportsModule } from "./modules/reports/reports.module";
 import { UbicacionesModule } from "./modules/ubicaciones/ubicaciones.module";
 
 @Module({
@@ -28,6 +29,7 @@ import { UbicacionesModule } from "./modules/ubicaciones/ubicaciones.module";
     EpsModule,
     HealthModule,
     HomeModule,
+    ReportsModule,
     UbicacionesModule,
   ],
 })

@@ -90,6 +90,7 @@ export const alimentacionListQuerySchema = z.object({
 export const alimentacionAdultoOptionsQuerySchema = z.object({
   search: nullableSearchSchema.optional().default(null),
   deliveryDate: dateSchema,
+  limit: z.enum(["suggestions", "all"]).optional().default("suggestions"),
   tenantId: nullableTenantIdSchema.optional().default(null),
 });
 

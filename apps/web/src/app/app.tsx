@@ -58,6 +58,8 @@ import {
   isAtencionesEnfermeriaPath,
 } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-paths";
 import { canReadAtencionesEnfermeria } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-permissions";
+import { canOpenReports } from "@/features/reports/lib/reports-permissions";
+import { isReportsPath } from "@/features/reports/lib/reports-paths";
 
 export function App() {
   const currentUserQuery = useCurrentUserQuery();
@@ -124,10 +126,14 @@ export function App() {
       return;
     }
 
+    if (isReportsPath(path) && !canOpenReports(user)) {
+      navigate(HOME_PATH, { replace: true });
+      return;
+    }
+
     if (isActividadesGrupalesPath(path)) {
       const isActividadesWritePath =
-        path === CREACION_ACTIVIDADES_NEW_PATH ||
-        getActividadGrupalEditIdFromPath(path) !== null;
+        path === CREACION_ACTIVIDADES_NEW_PATH || getActividadGrupalEditIdFromPath(path) !== null;
 
       if (!canManageActividadesGrupales(user) && isActividadesWritePath) {
         navigate(CREACION_ACTIVIDADES_PATH, { replace: true });
@@ -187,6 +193,7 @@ export function App() {
       !isAlimentacionPath(path) &&
       !isAtencionesEnfermeriaPath(path) &&
       !isActividadesGrupalesPath(path) &&
+      !isReportsPath(path) &&
       !isEmpleadosPath(path)
     ) {
       navigate(HOME_PATH, { replace: true });
@@ -209,13 +216,15 @@ export function App() {
                 ? getAtencionesEnfermeriaHistoryAdultoIdFromPath(path) !== null
                   ? "Historia de enfermeria | CuidarTe"
                   : "Atenciones de enfermeria | CuidarTe"
-              : isActividadesGrupalesTrashPath(path)
-                ? "Papelera de actas | CuidarTe"
-                : isActividadesGrupalesPath(path)
-                ? "Sesiones grupales | CuidarTe"
-                : isEmpleadosPath(path)
-                  ? "Gestion de empleados | CuidarTe"
-                  : "Inicio | CuidarTe";
+                : isActividadesGrupalesTrashPath(path)
+                  ? "Papelera de actas | CuidarTe"
+                  : isActividadesGrupalesPath(path)
+                    ? "Sesiones grupales | CuidarTe"
+                    : isReportsPath(path)
+                      ? "Reportes | CuidarTe"
+                      : isEmpleadosPath(path)
+                        ? "Gestion de empleados | CuidarTe"
+                        : "Inicio | CuidarTe";
   }, [path, user]);
 
   if (currentUserQuery.isLoading) {

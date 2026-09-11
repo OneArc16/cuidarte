@@ -16,6 +16,8 @@ import { isAtencionesEnfermeriaPath } from "@/features/atenciones-enfermeria/lib
 import { AtencionesEnfermeriaPage } from "@/features/atenciones-enfermeria/pages/atenciones-enfermeria-page";
 import { EmpleadosPage } from "@/features/empleados/pages/empleados-page";
 import { isEmpleadosPath } from "@/features/empleados/lib/empleados-paths";
+import { ReportsPage } from "@/features/reports/pages/reports-page";
+import { isReportsPath } from "@/features/reports/lib/reports-paths";
 
 import { HomeDashboard } from "../components/home-dashboard";
 import { HomeDirectAccess } from "../components/home-direct-access";
@@ -47,11 +49,13 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
           ? "registro-alimentacion"
           : isAtencionesEnfermeriaPath(path)
             ? "atenciones-enfermeria"
-          : isActividadesGrupalesPath(path)
-            ? "sesiones-grupales"
-            : isEmpleadosPath(path)
-              ? "gestion-empleados"
-              : "inicio";
+            : isActividadesGrupalesPath(path)
+              ? "sesiones-grupales"
+              : isReportsPath(path)
+                ? "reportes"
+                : isEmpleadosPath(path)
+                  ? "gestion-empleados"
+                  : "inicio";
 
   return (
     <main className="home-shell">
@@ -75,11 +79,13 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
                 ? "alimentacion-title"
                 : isAtencionesEnfermeriaPath(path)
                   ? "atenciones-enfermeria-title"
-                : isActividadesGrupalesPath(path)
-                  ? "actividades-title"
-                  : isEmpleadosPath(path)
-                    ? "empleados-title"
-                    : "home-title"
+                  : isActividadesGrupalesPath(path)
+                    ? "actividades-title"
+                    : isReportsPath(path)
+                      ? "reports-title"
+                      : isEmpleadosPath(path)
+                        ? "empleados-title"
+                        : "home-title"
         }
       >
         {isBackofficePath(path) ? (
@@ -92,6 +98,8 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
           <AtencionesEnfermeriaPage path={path} navigate={navigate} user={user} />
         ) : isActividadesGrupalesPath(path) ? (
           <ActividadesGrupalesPage path={path} navigate={navigate} user={user} />
+        ) : isReportsPath(path) ? (
+          <ReportsPage user={user} />
         ) : isEmpleadosPath(path) ? (
           <EmpleadosPage path={path} navigate={navigate} user={user} />
         ) : canViewDashboard ? (

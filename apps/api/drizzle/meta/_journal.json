@@ -225,6 +225,13 @@
       "when": 1788291293824,
       "tag": "0031_adulto_mayor_status",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1789137600000,
+      "tag": "0032_report_jobs",
+      "breakpoints": true
     }
   ]
 }

@@ -4,10 +4,12 @@ import {
   asc,
   desc,
   eq,
+  gte,
   ilike,
   inArray,
   isNotNull,
   isNull,
+  lt,
   or,
   sql,
   type SQL,
@@ -31,6 +33,7 @@ import {
   type ActividadGrupalEmpleadoOptionRecord,
   type ActividadGrupalIntegranteOptionRecord,
   type ActividadGrupalRecord,
+  type ActividadGrupalReportCandidateRecord,
   type ActividadGrupalTrashRecord,
   type ActividadGrupalSupportFileRecord,
   type ActividadGrupalTenantOptionRecord,
@@ -202,6 +205,39 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       .from(tenants)
       .where(eq(tenants.isActive, true))
       .orderBy(asc(tenants.name));
+  }
+
+  async findActaReportCandidates(query: {
+    tenantId: string;
+    period: string;
+  }): Promise<ActividadGrupalReportCandidateRecord[]> {
+    const monthRange = resolveMonthRange(query.period);
+    const rows = await this.database.db
+      .select({
+        id: actividadesGrupales.id,
+        tenantId: actividadesGrupales.tenantId,
+        tenantName: tenants.name,
+        actaNumber: actividadesGrupales.actaNumber,
+        activityName: actividadesGrupales.activityName,
+        activityDate: actividadesGrupales.activityDate,
+      })
+      .from(actividadesGrupales)
+      .innerJoin(tenants, eq(tenants.id, actividadesGrupales.tenantId))
+      .innerJoin(
+        actividadGrupalDiligenciamientos,
+        eq(actividadGrupalDiligenciamientos.activityId, actividadesGrupales.id),
+      )
+      .where(
+        and(
+          eq(actividadesGrupales.tenantId, query.tenantId),
+          isNull(actividadesGrupales.deletedAt),
+          gte(actividadesGrupales.activityDate, monthRange.startDate),
+          lt(actividadesGrupales.activityDate, monthRange.endDateExclusive),
+        ),
+      )
+      .orderBy(asc(actividadesGrupales.activityDate), asc(actividadesGrupales.actaNumber));
+
+    return rows;
   }
 
   async findActiveEmpleadoOptions(
@@ -881,4 +917,25 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
 
 function escapeLikePattern(value: string): string {
   return value.replace(/[\\%_]/g, (character) => `\\${character}`);
+}
+
+function resolveMonthRange(period: string): {
+  startDate: string;
+  endDateExclusive: string;
+} {
+  const [yearValue, monthValue] = period.split("-");
+
+  if (yearValue === undefined || monthValue === undefined) {
+    throw new Error("period invalido.");
+  }
+
+  const year = Number.parseInt(yearValue, 10);
+  const month = Number.parseInt(monthValue, 10);
+  const nextYear = month === 12 ? year + 1 : year;
+  const nextMonth = month === 12 ? 1 : month + 1;
+
+  return {
+    startDate: `${yearValue}-${monthValue}-01`,
+    endDateExclusive: `${String(nextYear).padStart(4, "0")}-${String(nextMonth).padStart(2, "0")}-01`,
+  };
 }

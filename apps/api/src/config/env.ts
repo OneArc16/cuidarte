@@ -12,6 +12,7 @@ const envSchema = z.object({
   ACTIVIDADES_GRUPALES_UPLOADS_DIR: z.string().min(1).default("/tmp/cuidarte/actividades-grupales"),
   EMPLEADOS_SIGNATURES_DIR: z.string().min(1).default(".data/uploads/empleados-signatures"),
   ALIMENTACION_FORMATOS_DIR: z.string().min(1).default(".data/uploads/alimentacion-formatos"),
+  REPORTS_DIR: z.string().min(1).default(".data/reports"),
   TENANT_ASSETS_DIR: z.string().min(1).default("/tmp/cuidarte/tenant-assets"),
   DOCUMENTS_UPLOADS_DIR: z.string().min(1).default(".data/uploads"),
 });

@@ -1,12 +1,14 @@
 import {
   alimentacionAccessRoleValues,
   atencionEnfermeriaModuleRoleValues,
+  reportAccessRoleValues,
   type AuthUser,
   type HomeDashboardShortcutModuleId,
 } from "@cuidarte/contracts";
 import {
   BriefcaseBusiness,
   CalendarPlus,
+  Download,
   HeartPulse,
   Home,
   Upload,
@@ -24,8 +26,13 @@ import { REGISTRO_ALIMENTACION_PATH } from "@/features/alimentacion/lib/alimenta
 import { CREACION_ACTIVIDADES_PATH } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
 import { BACKOFFICE_PATH } from "@/features/backoffice/lib/backoffice-paths";
 import { EMPLEADOS_PATH } from "@/features/empleados/lib/empleados-paths";
+import { REPORTS_PATH } from "@/features/reports/lib/reports-paths";
 
-export type HomeModuleId = "inicio" | HomeDashboardShortcutModuleId | "atenciones-enfermeria";
+export type HomeModuleId =
+  | "inicio"
+  | HomeDashboardShortcutModuleId
+  | "atenciones-enfermeria"
+  | "reportes";
 
 export type HomeModule = {
   id: HomeModuleId;
@@ -94,6 +101,15 @@ export const HOME_MODULES = [
     directAccessDescription: "Registro diario",
   },
   {
+    id: "reportes",
+    label: "Reportes",
+    icon: Download,
+    path: REPORTS_PATH,
+    roles: reportAccessRoleValues,
+    summaryLabel: "Reportes",
+    directAccessDescription: "Descargas mensuales",
+  },
+  {
     id: "gestion-empleados",
     label: "Gestión de empleados",
     icon: UserRoundCog,
@@ -126,5 +142,7 @@ export function isMobilePrimaryModule(module: HomeModule): boolean {
 }
 
 export function isShortcutModule(module: HomeModule): module is ShortcutHomeModule {
-  return module.id !== "inicio" && module.id !== "atenciones-enfermeria";
+  return (
+    module.id !== "inicio" && module.id !== "atenciones-enfermeria" && module.id !== "reportes"
+  );
 }

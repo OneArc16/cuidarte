@@ -6,12 +6,10 @@ import {
 } from "@cuidarte/contracts";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, CheckCheck, Eraser, Search, Trash2, UsersRound } from "lucide-react";
-import { useDeferredValue, useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { type Resolver, useForm } from "react-hook-form";
 
-import {
-  useAlimentacionAdultosMayoresOptionsQuery,
-} from "../model/alimentacion-queries";
+import { useAlimentacionAdultosMayoresOptionsQuery } from "../model/alimentacion-queries";
 import {
   resolveAlimentacionApiError,
   formatAlimentacionOrganizer,
@@ -74,9 +72,11 @@ export function AlimentacionBatchForm({
   tenantOptions,
 }: AlimentacionBatchFormProps) {
   const [adultoSearch, setAdultoSearch] = useState("");
+  const [selectedAdultoSearch, setSelectedAdultoSearch] = useState("");
   const [selectedRows, setSelectedRows] = useState<AlimentacionBatchRowValues[]>([]);
   const [selectedRowsError, setSelectedRowsError] = useState<string | null>(null);
   const deferredAdultoSearch = useDeferredValue(adultoSearch.trim());
+  const deferredSelectedAdultoSearch = useDeferredValue(selectedAdultoSearch.trim());
   const form = useForm<AlimentacionBatchFormValues>({
     resolver: zodResolver(alimentacionBatchFormSchema) as Resolver<AlimentacionBatchFormValues>,
     defaultValues: createDefaultAlimentacionBatchFormValues(),
@@ -90,14 +90,36 @@ export function AlimentacionBatchForm({
     {
       search: deferredAdultoSearch,
       deliveryDate,
+      limit: "suggestions",
       tenantId: selectedTenantId.trim() === "" ? null : selectedTenantId,
     },
     canSearchAdults && deferredAdultoSearch !== "",
   );
-  const suggestionOptions = (adultosOptionsQuery.data?.adultosMayores ?? []).filter(
-    (adultoMayor) =>
-      !selectedRows.some((row) => row.adultoMayor.id === adultoMayor.id),
+  const allAdultosOptionsQuery = useAlimentacionAdultosMayoresOptionsQuery(
+    {
+      search: "",
+      deliveryDate,
+      limit: "all",
+      tenantId: selectedTenantId.trim() === "" ? null : selectedTenantId,
+    },
+    false,
   );
+  const suggestionOptions = (adultosOptionsQuery.data?.adultosMayores ?? []).filter(
+    (adultoMayor) => !selectedRows.some((row) => row.adultoMayor.id === adultoMayor.id),
+  );
+  const filteredSelectedRows = useMemo(() => {
+    const search = normalizeSearchValue(deferredSelectedAdultoSearch);
+
+    if (search === "") {
+      return selectedRows;
+    }
+
+    return selectedRows.filter((row) =>
+      [row.adultoMayor.fullName, row.adultoMayor.documentNumber].some((value) =>
+        normalizeSearchValue(value).includes(search),
+      ),
+    );
+  }, [deferredSelectedAdultoSearch, selectedRows]);
 
   useEffect(() => {
     setValue("tenantId", selectedTenantId, { shouldDirty: false });
@@ -132,7 +154,26 @@ export function AlimentacionBatchForm({
   }
 
   function addAdultoMayor(adultoMayor: AlimentacionAdultoOption) {
-    setSelectedRows((currentRows) => [...currentRows, createDefaultAlimentacionBatchRow(adultoMayor)]);
+    setSelectedRows((currentRows) => [
+      ...currentRows,
+      createDefaultAlimentacionBatchRow(adultoMayor),
+    ]);
+    setSelectedRowsError(null);
+    setAdultoSearch("");
+  }
+
+  async function addAllAdultosMayores() {
+    const result = await allAdultosOptionsQuery.refetch();
+    const adultosMayores = result.data?.adultosMayores ?? [];
+
+    setSelectedRows((currentRows) => {
+      const selectedIds = new Set(currentRows.map((row) => row.adultoMayor.id));
+      const newRows = adultosMayores
+        .filter((adultoMayor) => !selectedIds.has(adultoMayor.id))
+        .map((adultoMayor) => createDefaultAlimentacionBatchRow(adultoMayor));
+
+      return newRows.length === 0 ? currentRows : [...currentRows, ...newRows];
+    });
     setSelectedRowsError(null);
     setAdultoSearch("");
   }
@@ -287,7 +328,20 @@ export function AlimentacionBatchForm({
               Busca por nombre o documento y arma el lote del día con la tabla de alimentación.
             </p>
           </div>
-          <span>{selectedRows.length} agregados</span>
+          <div className="alimentacion-add-adults-actions">
+            <span>{selectedRows.length} agregados</span>
+            <button
+              className="alimentacion-soft-action"
+              type="button"
+              disabled={!canSearchAdults || allAdultosOptionsQuery.isFetching}
+              onClick={() => {
+                void addAllAdultosMayores();
+              }}
+            >
+              <UsersRound aria-hidden="true" />
+              <span>{allAdultosOptionsQuery.isFetching ? "Agregando..." : "Agregar todos"}</span>
+            </button>
+          </div>
         </div>
 
         <label className="alimentacion-search-input">
@@ -349,9 +403,6 @@ export function AlimentacionBatchForm({
         <div className="alimentacion-form-panel__header">
           <div>
             <h2>Tabla de alimentación</h2>
-            <p className="muted-copy">
-              Define el estado de cada entrega antes de guardar el lote completo.
-            </p>
           </div>
           <div className="alimentacion-batch-table-actions">
             <span>Refrigerios + Almuerzo + Transporte</span>
@@ -386,6 +437,17 @@ export function AlimentacionBatchForm({
           </p>
         ) : null}
 
+        <label className="alimentacion-search-input alimentacion-selected-search-input">
+          <Search aria-hidden="true" />
+          <input
+            type="search"
+            aria-label="Buscar adulto mayor agregado para quitarlo"
+            placeholder="Buscar agregado por nombre o documento para quitarlo"
+            value={selectedAdultoSearch}
+            onChange={(event) => setSelectedAdultoSearch(event.target.value)}
+          />
+        </label>
+
         <div className="alimentacion-batch-table-wrap">
           <table className="alimentacion-batch-table">
             <thead>
@@ -404,8 +466,14 @@ export function AlimentacionBatchForm({
                 <tr>
                   <td colSpan={7}>Aun no has agregado adultos mayores al lote.</td>
                 </tr>
+              ) : filteredSelectedRows.length === 0 ? (
+                <tr>
+                  <td colSpan={7}>
+                    No hay adultos mayores agregados que coincidan con la busqueda.
+                  </td>
+                </tr>
               ) : (
-                selectedRows.map((row) => (
+                filteredSelectedRows.map((row) => (
                   <tr key={row.adultoMayor.id}>
                     <td>{row.adultoMayor.documentNumber}</td>
                     <td>
@@ -541,9 +609,17 @@ export function AlimentacionBatchForm({
           Cancelar
         </button>
         <button className="primary-action" type="submit" disabled={isPending}>
-          {isPending ? "Guardando..." : "Guardar alimentación"}
+          {isPending ? "Guardando..." : "Guardar"}
         </button>
       </div>
     </form>
   );
+}
+
+function normalizeSearchValue(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }

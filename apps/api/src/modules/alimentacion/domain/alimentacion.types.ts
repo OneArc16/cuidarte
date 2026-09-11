@@ -29,6 +29,7 @@ export type SearchAlimentacionAdultosMayoresOptionsQuery = {
   tenantId: string;
   deliveryDate: string;
   search: string | null;
+  limit: "suggestions" | "all";
 };
 
 export type FindAlimentacionAdultoMayorByIdQuery = {
@@ -165,6 +166,17 @@ export type AlimentacionFormatoEmissionRecord = {
   sourceDateTo: string | null;
   issuedByUserId: string;
   issuedAt: Date;
+};
+
+export type AlimentacionFormatoReportCandidateRecord = {
+  tenantId: string;
+  tenantName: string;
+  adultoMayorId: string;
+  documentNumber: string;
+  names: string;
+  surnames: string;
+  deliveryMonth: string;
+  importedVersion: AlimentacionImportedFormatoVersionRecord | null;
 };
 
 export type CreateAlimentacionFormatoEntregaExportAuditCommand = {

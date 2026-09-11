@@ -112,6 +112,19 @@ export const alimentacionOrganizer = pgEnum("alimentacion_organizer", [
   "fisioterapeuta",
   "recreacionista",
 ]);
+export const reportType = pgEnum("report_type", [
+  "ACTAS_SESIONES_GRUPALES",
+  "FORMATOS_ENTREGA_ALIMENTACION",
+]);
+export const reportStatus = pgEnum("report_status", [
+  "pending",
+  "processing",
+  "ready",
+  "empty",
+  "failed",
+  "cancelled",
+  "expired",
+]);
 export const atencionEnfermeriaCareType = pgEnum("atencion_enfermeria_care_type", [
   "control_signos_vitales",
   "seguimiento",
@@ -524,11 +537,20 @@ export const adultoMayorImportBatches = pgTable(
     check("adulto_mayor_import_batches_update_rows_non_negative", sql`${table.updateRows} >= 0`),
     check("adulto_mayor_import_batches_invalid_rows_non_negative", sql`${table.invalidRows} >= 0`),
     check("adulto_mayor_import_batches_warning_rows_non_negative", sql`${table.warningRows} >= 0`),
-    check("adulto_mayor_import_batches_unchanged_rows_non_negative", sql`${table.unchangedRows} >= 0`),
-    check("adulto_mayor_import_batches_existing_rows_non_negative", sql`${table.existingRows} >= 0`),
+    check(
+      "adulto_mayor_import_batches_unchanged_rows_non_negative",
+      sql`${table.unchangedRows} >= 0`,
+    ),
+    check(
+      "adulto_mayor_import_batches_existing_rows_non_negative",
+      sql`${table.existingRows} >= 0`,
+    ),
     check("adulto_mayor_import_batches_created_rows_non_negative", sql`${table.createdRows} >= 0`),
     check("adulto_mayor_import_batches_updated_rows_non_negative", sql`${table.updatedRows} >= 0`),
-    check("adulto_mayor_import_batches_template_version_positive", sql`${table.templateVersion} > 0`),
+    check(
+      "adulto_mayor_import_batches_template_version_positive",
+      sql`${table.templateVersion} > 0`,
+    ),
   ],
 );
 
@@ -1045,6 +1067,54 @@ export const userSessions = pgTable(
     uniqueIndex("user_sessions_token_hash_unique").on(table.tokenHash),
     index("user_sessions_user_id_idx").on(table.userId),
     index("user_sessions_expires_at_idx").on(table.expiresAt),
+  ],
+);
+
+export const reportJobs = pgTable(
+  "report_jobs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    tenantName: varchar("tenant_name", { length: 160 }).notNull(),
+    requestedByUserId: uuid("requested_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    requestedByRole: userRole("requested_by_role").notNull(),
+    type: reportType("type").notNull(),
+    period: varchar("period", { length: 7 }).notNull(),
+    status: reportStatus("status").notNull().default("pending"),
+    totalDocuments: integer("total_documents"),
+    processedDocuments: integer("processed_documents").notNull().default(0),
+    failedDocuments: integer("failed_documents").notNull().default(0),
+    storageKey: varchar("storage_key", { length: 500 }),
+    downloadFilename: varchar("download_filename", { length: 260 }),
+    errorCode: varchar("error_code", { length: 80 }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("report_jobs_tenant_created_at_idx").on(table.tenantId, table.createdAt),
+    index("report_jobs_status_expires_at_idx").on(table.status, table.expiresAt),
+    index("report_jobs_requested_by_user_idx").on(table.requestedByUserId, table.createdAt),
+    uniqueIndex("report_jobs_active_unique")
+      .on(table.tenantId, table.type, table.period)
+      .where(sql`${table.status} in ('pending', 'processing')`),
+    check("report_jobs_period_format", sql`${table.period} ~ '^\\d{4}-(0[1-9]|1[0-2])$'`),
+    check(
+      "report_jobs_total_documents_non_negative",
+      sql`${table.totalDocuments} is null or ${table.totalDocuments} >= 0`,
+    ),
+    check("report_jobs_processed_documents_non_negative", sql`${table.processedDocuments} >= 0`),
+    check("report_jobs_failed_documents_non_negative", sql`${table.failedDocuments} >= 0`),
+    check(
+      "report_jobs_processed_not_greater_than_total",
+      sql`${table.totalDocuments} is null or ${table.processedDocuments} <= ${table.totalDocuments}`,
+    ),
   ],
 );
 

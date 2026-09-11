@@ -162,6 +162,15 @@ export type ActividadGrupalDiligenciamientoDetailRecord = {
   diligenciamientoUpdatedAt: Date | null;
 };
 
+export type ActividadGrupalReportCandidateRecord = {
+  id: string;
+  tenantId: string;
+  tenantName: string;
+  actaNumber: string;
+  activityName: string;
+  activityDate: string;
+};
+
 export type BufferedActividadGrupalUpload = {
   originalName: string;
   mimeType: string;

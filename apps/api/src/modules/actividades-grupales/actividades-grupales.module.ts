@@ -28,5 +28,6 @@ import { ActividadesGrupalesController } from "./presentation/actividades-grupal
       useClass: LocalActividadesGrupalesFilesStorage,
     },
   ],
+  exports: [ActividadesGrupalesActaExportService, ACTIVIDADES_GRUPALES_REPOSITORY],
 })
 export class ActividadesGrupalesModule {}

@@ -29,6 +29,7 @@ import {
   type AlimentacionAdultoOptionRecord,
   type AlimentacionFormatoEmissionRecord,
   type AlimentacionFormatoEntregaRecord,
+  type AlimentacionFormatoReportCandidateRecord,
   type AlimentacionImportedFormatoVersionRecord,
   type AlimentacionRecord,
   type AlimentacionTenantOptionRecord,
@@ -221,7 +222,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       )
       .where(and(...conditions))
       .orderBy(asc(adultosMayores.surnames), asc(adultosMayores.names))
-      .limit(12);
+      .limit(query.limit === "all" ? 1_000 : 12);
 
     return rows.map((row) => this.toAdultoOption(row));
   }
@@ -365,6 +366,69 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       .limit(1);
 
     return row === undefined ? null : this.toFormatoEmissionRecord(row);
+  }
+
+  async findFormatoEntregaReportCandidates(query: {
+    tenantId: string;
+    deliveryMonth: string;
+  }): Promise<AlimentacionFormatoReportCandidateRecord[]> {
+    const monthRange = resolveMonthRange(query.deliveryMonth);
+    const rows = await this.database.db
+      .select({
+        tenantId: adultosMayores.tenantId,
+        tenantName: tenants.name,
+        adultoMayorId: adultosMayores.id,
+        documentNumber: adultosMayores.documentNumber,
+        names: adultosMayores.names,
+        surnames: adultosMayores.surnames,
+      })
+      .from(adultosMayores)
+      .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
+      .leftJoin(
+        alimentacionRegistros,
+        and(
+          eq(alimentacionRegistros.adultoMayorId, adultosMayores.id),
+          gte(alimentacionRegistros.deliveryDate, monthRange.startDate),
+          lt(alimentacionRegistros.deliveryDate, monthRange.endDateExclusive),
+        ),
+      )
+      .leftJoin(
+        alimentacionFormatoImportedVersions,
+        and(
+          eq(alimentacionFormatoImportedVersions.adultoMayorId, adultosMayores.id),
+          eq(alimentacionFormatoImportedVersions.deliveryMonth, query.deliveryMonth),
+        ),
+      )
+      .where(
+        and(
+          eq(adultosMayores.tenantId, query.tenantId),
+          or(
+            eq(alimentacionRegistros.tenantId, query.tenantId),
+            eq(alimentacionFormatoImportedVersions.tenantId, query.tenantId),
+          ),
+        ),
+      )
+      .groupBy(
+        adultosMayores.tenantId,
+        tenants.name,
+        adultosMayores.id,
+        adultosMayores.documentNumber,
+        adultosMayores.names,
+        adultosMayores.surnames,
+      )
+      .orderBy(asc(adultosMayores.surnames), asc(adultosMayores.names));
+
+    const importedVersions = await this.findLatestImportedFormatoByAdultoIds(
+      query.tenantId,
+      query.deliveryMonth,
+      rows.map((row) => row.adultoMayorId),
+    );
+
+    return rows.map((row) => ({
+      ...row,
+      deliveryMonth: query.deliveryMonth,
+      importedVersion: importedVersions.get(row.adultoMayorId) ?? null,
+    }));
   }
 
   async findImportedFormatoVersions(
@@ -590,9 +654,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         },
       });
 
-      await tx
-        .delete(alimentacionRegistros)
-        .where(eq(alimentacionRegistros.id, command.id));
+      await tx.delete(alimentacionRegistros).where(eq(alimentacionRegistros.id, command.id));
 
       return deletedRecord;
     });
@@ -996,6 +1058,41 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
           `${record.tenantId}:${record.adultoMayorId}:${record.deliveryDate.slice(0, 7)}`,
         ) ?? null,
     }));
+  }
+
+  private async findLatestImportedFormatoByAdultoIds(
+    tenantId: string,
+    deliveryMonth: string,
+    adultoMayorIds: string[],
+  ): Promise<Map<string, AlimentacionImportedFormatoVersionRecord>> {
+    if (adultoMayorIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.database.db
+      .select(this.getImportedFormatoVersionSelection())
+      .from(alimentacionFormatoImportedVersions)
+      .innerJoin(users, eq(users.id, alimentacionFormatoImportedVersions.importedByUserId))
+      .where(
+        and(
+          eq(alimentacionFormatoImportedVersions.tenantId, tenantId),
+          eq(alimentacionFormatoImportedVersions.deliveryMonth, deliveryMonth),
+          inArray(alimentacionFormatoImportedVersions.adultoMayorId, adultoMayorIds),
+        ),
+      )
+      .orderBy(
+        asc(alimentacionFormatoImportedVersions.adultoMayorId),
+        desc(alimentacionFormatoImportedVersions.version),
+      );
+    const latestByAdultoMayorId = new Map<string, AlimentacionImportedFormatoVersionRecord>();
+
+    for (const row of rows) {
+      if (!latestByAdultoMayorId.has(row.adultoMayorId)) {
+        latestByAdultoMayorId.set(row.adultoMayorId, this.toImportedFormatoVersionRecord(row));
+      }
+    }
+
+    return latestByAdultoMayorId;
   }
 
   private toFormatoEntregaRecord(

@@ -2,6 +2,7 @@ import {
   type AlimentacionAdultoOptionRecord,
   type AlimentacionFormatoEmissionRecord,
   type AlimentacionFormatoEntregaRecord,
+  type AlimentacionFormatoReportCandidateRecord,
   type AlimentacionImportedFormatoVersionRecord,
   type AlimentacionRecord,
   type AlimentacionTenantOptionRecord,
@@ -46,6 +47,10 @@ export type AlimentacionRepository = {
   findLatestFormatoEntregaEmission(
     query: FindLatestAlimentacionFormatoEmissionQuery,
   ): Promise<AlimentacionFormatoEmissionRecord | null>;
+  findFormatoEntregaReportCandidates?(query: {
+    tenantId: string;
+    deliveryMonth: string;
+  }): Promise<AlimentacionFormatoReportCandidateRecord[]>;
   findImportedFormatoVersions(
     query: FindAlimentacionImportedFormatoVersionsQuery,
   ): Promise<AlimentacionImportedFormatoVersionRecord[]>;

@@ -34,6 +34,7 @@ type ListAlimentacionParams = {
 type SearchAlimentacionAdultosParams = {
   search: string;
   deliveryDate: string;
+  limit?: "suggestions" | "all";
   tenantId: string | null;
 };
 
@@ -59,6 +60,10 @@ export function searchAlimentacionAdultosMayoresOptions(
 
   if (params.search.trim() !== "") {
     searchParams.set("search", params.search.trim());
+  }
+
+  if (params.limit !== undefined) {
+    searchParams.set("limit", params.limit);
   }
 
   if (params.tenantId !== null) {

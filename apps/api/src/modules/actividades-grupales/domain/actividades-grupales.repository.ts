@@ -3,6 +3,7 @@ import {
   type ActividadGrupalEmpleadoOptionRecord,
   type ActividadGrupalIntegranteOptionRecord,
   type ActividadGrupalRecord,
+  type ActividadGrupalReportCandidateRecord,
   type ActividadGrupalTrashRecord,
   type ActividadGrupalSupportFileRecord,
   type ActividadGrupalTenantOptionRecord,
@@ -28,6 +29,10 @@ export type ActividadesGrupalesRepository = {
   ): Promise<ActividadGrupalDiligenciamientoDetailRecord | null>;
   findTrashById(query: FindActividadGrupalByIdQuery): Promise<ActividadGrupalTrashRecord | null>;
   findTenantOptions(): Promise<ActividadGrupalTenantOptionRecord[]>;
+  findActaReportCandidates?(query: {
+    tenantId: string;
+    period: string;
+  }): Promise<ActividadGrupalReportCandidateRecord[]>;
   findActiveEmpleadoOptions(tenantId: string): Promise<ActividadGrupalEmpleadoOptionRecord[]>;
   searchIntegranteOptions(
     query: SearchActividadGrupalIntegrantesOptionsQuery,
