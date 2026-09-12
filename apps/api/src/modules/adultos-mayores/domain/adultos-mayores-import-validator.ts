@@ -45,6 +45,7 @@ const COLUMN_BY_PATH: Record<string, string> = {
   birthDate: "fecha_nacimiento",
   sex: "sexo",
   status: "estado",
+  deathDate: "fecha_defuncion",
   educationLevel: "nivel_academico",
   disability: "discapacidad",
   populationGroup: "grupo_poblacional",
@@ -319,6 +320,7 @@ export class AdultosMayoresImportValidator {
         birthDate: existingAdult.birthDate,
         sex: existingAdult.sex,
         status: existingAdult.status,
+        deathDate: existingAdult.deathDate,
         educationLevel: existingAdult.educationLevel,
         disability: existingAdult.disability,
         populationGroup: existingAdult.populationGroup,
@@ -361,6 +363,8 @@ export class AdultosMayoresImportValidator {
     const eps = this.mapEps(row, catalogs, issues);
     const department = this.mapDepartment(row, catalogs, issues);
     const municipality = this.mapMunicipality(row, catalogs, issues);
+    const status = this.mapStatus(row, issues);
+    const birthDate = this.mapBirthDate(row, issues);
     const payload = {
       documentType: this.mapDocumentType(row, issues),
       documentNumber: this.requiredText(row, "numero_documento", 80, issues),
@@ -368,9 +372,10 @@ export class AdultosMayoresImportValidator {
       middleName: this.optionalText(row, "segundo_nombre", 80, issues),
       firstSurname: this.requiredText(row, "primer_apellido", 80, issues),
       secondSurname: this.optionalText(row, "segundo_apellido", 80, issues),
-      birthDate: this.mapBirthDate(row, issues),
+      birthDate,
       sex: this.mapSex(row, issues),
-      status: this.mapStatus(row, issues),
+      status,
+      deathDate: this.mapDeathDate(row, birthDate, status, issues),
       educationLevel: this.catalogText(row, "nivel_academico", 80, issues),
       disability: this.catalogText(row, "discapacidad", 120, issues),
       populationGroup: this.catalogText(row, "grupo_poblacional", 120, issues),
@@ -544,6 +549,89 @@ export class AdultosMayoresImportValidator {
 
     adultoMayorStatusSchema.parse(status);
     return status;
+  }
+
+  private mapDeathDate(
+    row: AdultoMayorImportRowInput,
+    birthDate: string,
+    status: AdultoMayorImportNormalizedRow["status"],
+    issues: AdultoMayorImportIssue[],
+  ): string | null {
+    const raw = this.optionalText(row, "fecha_defuncion", 20, issues);
+
+    if (raw === null) {
+      return null;
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          "fecha_defuncion",
+          "invalid_format",
+          "error",
+          "La fecha debe tener formato YYYY-MM-DD.",
+          raw,
+        ),
+      );
+      return null;
+    }
+
+    const parsed = new Date(`${raw}T00:00:00.000Z`);
+    const today = new Date();
+    const todayIso = new Date(
+      Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
+    );
+
+    if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== raw) {
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          "fecha_defuncion",
+          "invalid_format",
+          "error",
+          "La fecha de defuncion no es valida.",
+          raw,
+        ),
+      );
+    } else if (raw < birthDate) {
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          "fecha_defuncion",
+          "invalid_format",
+          "error",
+          "La fecha de defuncion no puede ser anterior a la fecha de nacimiento.",
+          raw,
+        ),
+      );
+    } else if (parsed > todayIso) {
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          "fecha_defuncion",
+          "invalid_format",
+          "error",
+          "La fecha de defuncion no puede ser futura.",
+          raw,
+        ),
+      );
+    }
+
+    if (status === "alive") {
+      issues.push(
+        this.issue(
+          row.rowNumber,
+          "fecha_defuncion",
+          "invalid_format",
+          "error",
+          "Un adulto mayor vivo no puede tener fecha de defuncion.",
+          raw,
+        ),
+      );
+    }
+
+    return raw;
   }
 
   private mapZone(row: AdultoMayorImportRowInput, issues: AdultoMayorImportIssue[]) {

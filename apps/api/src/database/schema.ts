@@ -477,6 +477,7 @@ export const adultosMayores = pgTable(
     birthDate: date("birth_date", { mode: "string" }).notNull(),
     sex: adultoMayorSex("sex").notNull(),
     status: adultoMayorStatus("status").notNull().default("alive"),
+    deathDate: date("death_date", { mode: "string" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -499,6 +500,43 @@ export const adultosMayores = pgTable(
     index("adultos_mayores_surnames_idx").on(table.surnames),
     index("adultos_mayores_deleted_at_idx").on(table.deletedAt),
     index("adultos_mayores_tenant_deleted_at_idx").on(table.tenantId, table.deletedAt),
+    index("adultos_mayores_tenant_status_death_date_idx").on(
+      table.tenantId,
+      table.status,
+      table.deathDate,
+    ),
+  ],
+);
+
+export const adultoMayorStatusHistory = pgTable(
+  "adulto_mayor_historial_estados",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    adultoMayorId: uuid("adulto_mayor_id")
+      .notNull()
+      .references(() => adultosMayores.id, { onDelete: "restrict" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    previousStatus: adultoMayorStatus("previous_status"),
+    newStatus: adultoMayorStatus("new_status").notNull(),
+    previousDeathDate: date("previous_death_date", { mode: "string" }),
+    newDeathDate: date("new_death_date", { mode: "string" }),
+    reason: varchar("reason", { length: 500 }),
+    changedByUserId: uuid("changed_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("adulto_mayor_historial_estados_adulto_created_at_idx").on(
+      table.adultoMayorId,
+      table.createdAt,
+    ),
+    index("adulto_mayor_historial_estados_tenant_created_at_idx").on(
+      table.tenantId,
+      table.createdAt,
+    ),
   ],
 );
 

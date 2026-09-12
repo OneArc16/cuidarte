@@ -4,6 +4,7 @@ import {
   type AdultoMayorTenantOptionsResponse,
   type AdultoMayorTrashListResponse,
   type AdultoMayorTrashMutationResponse,
+  type AdultoMayorStatusHistoryResponse,
   type CreateAdultoMayorRequest,
   type UpdateAdultoMayorRequest,
   adultoMayorDocumentResponseSchema,
@@ -12,6 +13,7 @@ import {
   adultoMayorTenantOptionsResponseSchema,
   adultoMayorTrashListResponseSchema,
   adultoMayorTrashMutationResponseSchema,
+  adultoMayorStatusHistoryResponseSchema,
 } from "@cuidarte/contracts";
 import { z } from "zod";
 
@@ -36,8 +38,13 @@ export function listAdultoMayorTenantOptions(): Promise<AdultoMayorTenantOptions
   );
 }
 
-export function listAdultosMayoresTrash(params: ListAdultosMayoresParams): Promise<AdultoMayorTrashListResponse> {
-  return fetchJson(buildAdultosMayoresUrl(params.search, "/trash"), adultoMayorTrashListResponseSchema);
+export function listAdultosMayoresTrash(
+  params: ListAdultosMayoresParams,
+): Promise<AdultoMayorTrashListResponse> {
+  return fetchJson(
+    buildAdultosMayoresUrl(params.search, "/trash"),
+    adultoMayorTrashListResponseSchema,
+  );
 }
 
 export function sendAdultoMayorToTrash(
@@ -65,6 +72,21 @@ export function getAdultoMayor(adultoMayorId: string): Promise<AdultoMayorDetail
   return fetchJson(
     `${getApiBaseUrl()}/adultos-mayores/${adultoMayorId}`,
     adultoMayorDetailResponseSchema,
+  );
+}
+
+export function getAdultoMayorStatusHistory(
+  adultoMayorId: string,
+  params: { cursor?: string | null; limit?: number } = {},
+): Promise<AdultoMayorStatusHistoryResponse> {
+  const searchParams = new URLSearchParams();
+  if (params.cursor) searchParams.set("cursor", params.cursor);
+  if (params.limit) searchParams.set("limit", String(params.limit));
+  const query = searchParams.toString();
+
+  return fetchJson(
+    `${getApiBaseUrl()}/adultos-mayores/${adultoMayorId}/historial-estados${query ? `?${query}` : ""}`,
+    adultoMayorStatusHistoryResponseSchema,
   );
 }
 
@@ -103,9 +125,13 @@ export function uploadAdultoMayorDocument(adultoMayorId: string, file: File) {
 }
 
 export function deleteAdultoMayorDocument(adultoMayorId: string): Promise<{ success: boolean }> {
-  return fetchJson(`${getApiBaseUrl()}/adultos-mayores/${adultoMayorId}/document`, z.object({ success: z.boolean() }), {
-    method: "DELETE",
-  });
+  return fetchJson(
+    `${getApiBaseUrl()}/adultos-mayores/${adultoMayorId}/document`,
+    z.object({ success: z.boolean() }),
+    {
+      method: "DELETE",
+    },
+  );
 }
 
 export function getAdultoMayorDocumentUrl(adultoMayorId: string): string {

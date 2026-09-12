@@ -12,7 +12,7 @@ import {
 } from "./adulto-mayor-import.types";
 
 const TEMPLATE_KEY = "adultos-mayores-import";
-const TEMPLATE_VERSION = 2;
+const TEMPLATE_VERSION = 3;
 const DATA_SHEET_NAME = "Adultos mayores";
 const METADATA_SHEET_NAME = "_metadata";
 const MAX_ROWS = 1_000;
@@ -27,6 +27,7 @@ const EXPECTED_HEADERS = [
   "fecha_nacimiento",
   "sexo",
   "estado",
+  "fecha_defuncion",
   "nivel_academico",
   "discapacidad",
   "grupo_poblacional",

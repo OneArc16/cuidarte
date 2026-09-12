@@ -32,6 +32,7 @@ const existingAdult: AdultoMayorImportExistingRecord = {
   birthDate: "1950-01-01",
   sex: "female",
   status: "alive",
+  deathDate: null,
   educationLevel: null,
   disability: null,
   populationGroup: null,
@@ -130,6 +131,7 @@ describe("AdultosMayoresImportValidator", () => {
     const row = buildRow({
       numero_documento: "20000001",
       estado: "Fallecido",
+      fecha_defuncion: "2026-01-15",
       telefono: "3001112233",
     });
 
@@ -144,6 +146,7 @@ describe("AdultosMayoresImportValidator", () => {
   it("marks existing rows as update_ready when status changes", () => {
     const row = buildRow({
       estado: "Fallecido",
+      fecha_defuncion: "2026-01-15",
     });
 
     const result = validator.validateRows([row], catalogs, [existingAdult]);

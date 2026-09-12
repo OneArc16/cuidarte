@@ -42,6 +42,7 @@ import {
   type AlimentacionScope,
   type CreateAlimentacionFormatoEmissionCommand,
 } from "../domain/alimentacion.types";
+import { assertAdultoMayorRecordDateAllowed } from "../../adultos-mayores/domain/adulto-mayor-status-policy";
 import { type AlimentacionFormatoEntregaExportData } from "./alimentacion-formato-export.types";
 
 @Injectable()
@@ -112,6 +113,12 @@ export class AlimentacionService {
       throw new NotFoundException("Adulto mayor no encontrado.");
     }
 
+    assertAdultoMayorRecordDateAllowed({
+      status: adultoMayor.status,
+      deathDate: adultoMayor.deathDate,
+      recordDate: query.deliveryDate,
+    });
+
     const existingRecord = await this.alimentacionRepository.findByAdultoMayorAndDate({
       tenantId: adultoMayor.tenantId,
       adultoMayorId,
@@ -140,6 +147,14 @@ export class AlimentacionService {
       throw new BadRequestException(
         "Selecciona adultos mayores validos del centro para registrar la alimentacion.",
       );
+    }
+
+    for (const adultoMayor of adultosMayores) {
+      assertAdultoMayorRecordDateAllowed({
+        status: adultoMayor.status,
+        deathDate: adultoMayor.deathDate,
+        recordDate: command.deliveryDate,
+      });
     }
 
     const existingRecords = await this.alimentacionRepository.findExistingByAdultosAndDate({
@@ -194,6 +209,19 @@ export class AlimentacionService {
     if (currentRecord === null) {
       throw new NotFoundException("Registro de alimentacion no encontrado.");
     }
+
+    const adultoMayor = await this.alimentacionRepository.findAdultoMayorById({
+      adultoMayorId: currentRecord.adultoMayorId,
+      scope,
+    });
+    if (adultoMayor === null) {
+      throw new NotFoundException("Adulto mayor no encontrado.");
+    }
+    assertAdultoMayorRecordDateAllowed({
+      status: adultoMayor.status,
+      deathDate: adultoMayor.deathDate,
+      recordDate: command.deliveryDate,
+    });
 
     const conflictingRecord = await this.alimentacionRepository.findByAdultoMayorAndDate({
       tenantId: currentRecord.tenantId,

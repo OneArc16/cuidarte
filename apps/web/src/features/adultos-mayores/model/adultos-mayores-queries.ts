@@ -8,6 +8,8 @@ export const adultosMayoresQueryKeys = {
   detail: (adultoMayorId: string) => ["adultos-mayores", adultoMayorId] as const,
   tenantOptions: () => ["adultos-mayores", "tenant-options"] as const,
   trashList: (params: { search: string }) => ["adultos-mayores", "papelera", params] as const,
+  statusHistory: (adultoMayorId: string) =>
+    ["adultos-mayores", adultoMayorId, "status-history"] as const,
 };
 
 async function invalidateAdultoMayorDependencies(queryClient: QueryClient) {
@@ -47,6 +49,15 @@ export function useAdultoMayorQuery(adultoMayorId: string) {
   });
 }
 
+export function useAdultoMayorStatusHistoryQuery(adultoMayorId: string, enabled = true) {
+  return useQuery({
+    queryKey: adultosMayoresQueryKeys.statusHistory(adultoMayorId),
+    queryFn: () => adultosMayoresApi.getAdultoMayorStatusHistory(adultoMayorId, { limit: 100 }),
+    enabled,
+    retry: false,
+  });
+}
+
 export function useAdultosMayoresTrashQuery(params: { search: string }, enabled: boolean) {
   return useQuery({
     queryKey: adultosMayoresQueryKeys.trashList(params),
@@ -63,7 +74,9 @@ export function useSendAdultoMayorToTrashMutation() {
     mutationFn: (request: { adultoMayorId: string; reason: string }) =>
       adultosMayoresApi.sendAdultoMayorToTrash(request.adultoMayorId, request.reason),
     onSuccess: async (_, request) => {
-      queryClient.removeQueries({ queryKey: adultosMayoresQueryKeys.detail(request.adultoMayorId) });
+      queryClient.removeQueries({
+        queryKey: adultosMayoresQueryKeys.detail(request.adultoMayorId),
+      });
       await invalidateAdultoMayorDependencies(queryClient);
     },
   });

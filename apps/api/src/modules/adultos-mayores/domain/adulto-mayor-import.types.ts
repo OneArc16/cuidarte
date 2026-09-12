@@ -41,6 +41,7 @@ export type AdultoMayorImportNormalizedRow = {
   birthDate: string;
   sex: "female" | "male" | "other";
   status: AdultoMayorStatus;
+  deathDate: string | null;
   educationLevel: string | null;
   disability: string | null;
   populationGroup: string | null;

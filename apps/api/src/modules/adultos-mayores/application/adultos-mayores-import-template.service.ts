@@ -6,7 +6,7 @@ import { DatabaseService } from "../../../database/database.service";
 import { departments, epsCatalog, municipalities } from "../../../database/schema";
 import { AdultosMayoresImportParser } from "../domain/adultos-mayores-import-parser";
 
-const TEMPLATE_FILENAME = "plantilla-importacion-adultos-mayores-v2.xlsx";
+const TEMPLATE_FILENAME = "plantilla-importacion-adultos-mayores-v3.xlsx";
 
 @Injectable()
 export class AdultosMayoresImportTemplateService {
@@ -89,6 +89,7 @@ export class AdultosMayoresImportTemplateService {
     exampleRow.fecha_nacimiento = "1950-01-01";
     exampleRow.sexo = "Femenino";
     exampleRow.estado = "Vivo";
+    exampleRow.fecha_defuncion = "";
     exampleRow.direccion = "Calle 1 # 2-3";
     exampleRow.codigo_departamento = exampleDepartment?.code ?? "05";
     exampleRow.codigo_municipio = exampleMunicipality?.code ?? "05001";
@@ -117,6 +118,7 @@ export class AdultosMayoresImportTemplateService {
       [
         "10. Para estado usa Vivo o Fallecido. Si lo dejas vacio en un adulto nuevo, se crea como Vivo.",
       ],
+      ["11. Si el estado es Fallecido, diligencia fecha_defuncion con formato YYYY-MM-DD."],
     ]);
     instructionsSheet.getColumn(1).width = 96;
 

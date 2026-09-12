@@ -119,6 +119,7 @@ export class AdultosMayoresExportService {
       { header: "Edad", key: "edad", width: 10 },
       { header: "Sexo", key: "sexo", width: 14 },
       { header: "Estado", key: "estado", width: 14 },
+      { header: "Fecha de defunción", key: "fechaDefuncion", width: 20 },
     ];
 
     if (includeTenant) {
@@ -141,6 +142,7 @@ export class AdultosMayoresExportService {
       edad: adultoMayor.age,
       sexo: formatSex(adultoMayor.sex),
       estado: formatStatus(adultoMayor.status),
+      fechaDefuncion: formatDeathDate(adultoMayor.deathDate),
     };
 
     if (!includeTenant) {
@@ -169,6 +171,7 @@ export class AdultosMayoresExportService {
           <td>${adultoMayor.age}</td>
           <td>${escapeHtml(formatSex(adultoMayor.sex))}</td>
           <td>${escapeHtml(formatStatus(adultoMayor.status))}</td>
+          <td>${escapeHtml(formatDeathDate(adultoMayor.deathDate))}</td>
         </tr>`;
       })
       .join("");
@@ -245,6 +248,7 @@ export class AdultosMayoresExportService {
                 <th>Edad</th>
                 <th>Sexo</th>
                 <th>Estado</th>
+                <th>Fecha de defunción</th>
               </tr>
             </thead>
             <tbody>
@@ -281,6 +285,15 @@ function formatStatus(status: AdultoMayorListItem["status"]): string {
   return status === "alive" ? "Vivo" : "Fallecido";
 }
 
+function formatDeathDate(deathDate: AdultoMayorListItem["deathDate"]): string {
+  if (deathDate === null) {
+    return "";
+  }
+
+  const [year, month, day] = deathDate.split("-");
+  return `${day}/${month}/${year}`;
+}
+
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => {
     const entities: Record<string, string> = {
@@ -312,6 +325,7 @@ function buildBasicPdf(adultosMayores: AdultoMayorListItem[], includeTenant: boo
         "Edad",
         "Sexo",
         "Estado",
+        "Fecha de defunción",
       ]
     : [
         "Tipo de documento",
@@ -322,10 +336,11 @@ function buildBasicPdf(adultosMayores: AdultoMayorListItem[], includeTenant: boo
         "Edad",
         "Sexo",
         "Estado",
+        "Fecha de defunción",
       ];
   const columns = includeTenant
-    ? [105, 75, 90, 105, 105, 82, 40, 65, 60]
-    : [70, 90, 125, 125, 100, 45, 75, 65];
+    ? [90, 70, 80, 95, 95, 72, 38, 60, 55, 70]
+    : [65, 80, 110, 110, 85, 38, 65, 55, 70];
   const pages: string[] = [];
   let cursor = 0;
 
@@ -368,6 +383,7 @@ function toPdfRow(adultoMayor: AdultoMayorListItem, includeTenant: boolean): str
     String(adultoMayor.age),
     formatSex(adultoMayor.sex),
     formatStatus(adultoMayor.status),
+    formatDeathDate(adultoMayor.deathDate),
   ];
 
   return includeTenant ? [adultoMayor.tenantName, ...row] : row;

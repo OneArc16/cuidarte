@@ -63,6 +63,7 @@ const records: AdultoMayorRecord[] = [
     birthDate: "1948-03-12",
     sex: "female",
     status: "alive",
+    deathDate: null,
     educationLevel: "Primaria",
     disability: null,
     populationGroup: "Persona mayor",
@@ -109,6 +110,7 @@ const records: AdultoMayorRecord[] = [
     birthDate: "1951-06-04",
     sex: "female",
     status: "alive",
+    deathDate: null,
     educationLevel: null,
     disability: null,
     populationGroup: "Persona mayor",
@@ -298,6 +300,7 @@ function createCommand() {
     documentNumber: "1099887766",
     sex: "female" as const,
     status: "alive" as const,
+    deathDate: null,
     firstName: "Julia",
     middleName: "Mercedes",
     firstSurname: "Lopez",
@@ -360,6 +363,9 @@ function createRepository(): AdultosMayoresRepository & { queries: FindAdultosMa
       }
 
       return record.tenantId === query.scope.tenantId ? record : null;
+    },
+    async findStatusHistory() {
+      return { entries: [], nextCursor: null };
     },
     async findByDocument(query) {
       return (
@@ -441,7 +447,10 @@ function createService(repository: AdultosMayoresRepository): AdultosMayoresServ
   );
 }
 
-function createFilesStorage(): Pick<AdultosMayoresFilesStorage, "savePdf" | "readFile" | "deleteFile"> {
+function createFilesStorage(): Pick<
+  AdultosMayoresFilesStorage,
+  "savePdf" | "readFile" | "deleteFile"
+> {
   return {
     async savePdf(_adultoMayorId, file) {
       return {

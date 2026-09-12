@@ -1,4 +1,5 @@
 import {
+  type AdultoMayorStatus,
   type ActividadGrupalOrganizer,
   type ActividadGrupalResponsibleDepartment,
   type ActividadGrupalSupportFileKind,
@@ -51,6 +52,8 @@ export type ActividadGrupalIntegranteOptionRecord = {
   id: string;
   documentNumber: string;
   fullName: string;
+  status?: AdultoMayorStatus;
+  deathDate?: string | null;
 };
 
 export type ActividadGrupalSupportFileRecord = {

@@ -28,6 +28,8 @@ import {
   adultoMayorTrashListResponseSchema,
   adultoMayorTrashMutationResponseSchema,
   adultoMayorTenantOptionsResponseSchema,
+  adultoMayorStatusHistoryQuerySchema,
+  adultoMayorStatusHistoryResponseSchema,
   createAdultoMayorRequestSchema,
   updateAdultoMayorRequestSchema,
   sendAdultoMayorToTrashRequestSchema,
@@ -125,6 +127,25 @@ export class AdultosMayoresController {
     return adultoMayorDetailResponseSchema.parse(detail);
   }
 
+  @Get(":id/historial-estados")
+  @ApiOkResponse({ description: "Historial de estados del adulto mayor." })
+  @ApiNotFoundResponse({ description: "Adulto mayor no encontrado." })
+  async getStatusHistory(
+    @Param("id") id: string,
+    @Query() query: unknown,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const adultoMayorId = parseZodSchema(adultoMayorIdParamSchema, id);
+    const parsedQuery = parseZodSchema(adultoMayorStatusHistoryQuerySchema, query);
+    const history = await this.adultosMayoresService.getStatusHistory(
+      adultoMayorId,
+      parsedQuery,
+      request.currentUser,
+    );
+
+    return adultoMayorStatusHistoryResponseSchema.parse(history);
+  }
+
   @Delete(":id")
   @ApiOkResponse({ description: "Adulto mayor enviado a papelera." })
   async sendAdultoMayorToTrash(
@@ -155,10 +176,7 @@ export class AdultosMayoresController {
   @Post(":id/document")
   @ApiOkResponse({ description: "PDF del adulto mayor cargado." })
   @ApiBadRequestResponse({ description: "Solo se permite un PDF de hasta 10 MB." })
-  async uploadDocument(
-    @Param("id") id: string,
-    @Req() request: MultipartAuthenticatedRequest,
-  ) {
+  async uploadDocument(@Param("id") id: string, @Req() request: MultipartAuthenticatedRequest) {
     const adultoMayorId = parseZodSchema(adultoMayorIdParamSchema, id);
     const file = await parsePdfMultipartRequest(request);
     const document = await this.adultosMayoresService.uploadDocument(
@@ -178,7 +196,10 @@ export class AdultosMayoresController {
     @Res() reply: FastifyReply,
   ) {
     const adultoMayorId = parseZodSchema(adultoMayorIdParamSchema, id);
-    const file = await this.adultosMayoresService.downloadDocument(adultoMayorId, request.currentUser);
+    const file = await this.adultosMayoresService.downloadDocument(
+      adultoMayorId,
+      request.currentUser,
+    );
     reply.header("Content-Type", file.contentType);
     reply.header("Content-Disposition", `inline; filename="${file.filename}"`);
     return reply.send(file.buffer);

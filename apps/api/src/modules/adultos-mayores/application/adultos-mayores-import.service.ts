@@ -37,7 +37,7 @@ import { AdultosMayoresImportTemplateService } from "./adultos-mayores-import-te
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const TEMPLATE_KEY = "adultos-mayores-import";
-const TEMPLATE_VERSION = 2;
+const TEMPLATE_VERSION = 3;
 
 export type BufferedAdultoMayorImportUpload = {
   originalName: string;

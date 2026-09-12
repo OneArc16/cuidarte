@@ -19,46 +19,66 @@ type AdultoMayorCommandInput = z.input<typeof updateAdultoMayorRequestSchema>;
 const requiredFormTextSchema = (maxLength: number) => z.string().trim().min(1).max(maxLength);
 const optionalFormTextSchema = (maxLength: number) => z.string().trim().max(maxLength);
 
-export const adultoMayorFormSchema = z.object({
-  tenantId: z.string().trim(),
-  documentType: adultoMayorDocumentTypeSchema,
-  documentNumber: requiredFormTextSchema(80),
-  sex: adultoMayorSexSchema,
-  status: adultoMayorStatusSchema,
-  firstName: requiredFormTextSchema(80),
-  middleName: optionalFormTextSchema(80),
-  firstSurname: requiredFormTextSchema(80),
-  secondSurname: optionalFormTextSchema(80),
-  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  educationLevel: optionalFormTextSchema(80),
-  disability: optionalFormTextSchema(120),
-  populationGroup: optionalFormTextSchema(120),
-  address: requiredFormTextSchema(220),
-  departmentId: z.uuid({ message: "Selecciona un departamento de la lista." }),
-  municipalityId: z.uuid({ message: "Selecciona un municipio de la lista." }),
-  zone: adultoMayorZoneSchema,
-  country: requiredFormTextSchema(80),
-  phone: optionalFormTextSchema(40),
-  phoneSecondary: optionalFormTextSchema(40),
-  email: z.union([z.literal(""), z.email().max(320)]),
-  emergencyContactFullName: optionalFormTextSchema(180),
-  emergencyContactRelationship: optionalFormTextSchema(80),
-  emergencyContactPhone: optionalFormTextSchema(40),
-  emergencyContactAddress: optionalFormTextSchema(220),
-  bloodType: z.union([adultoMayorBloodTypeSchema, z.literal("")]),
-  sisben: optionalFormTextSchema(40),
-  healthRegime: optionalFormTextSchema(120),
-  epsId: z.union([z.literal(""), z.uuid({ message: "Selecciona una EPS de la lista." })]),
-  livesWithSomeone: z.boolean(),
-  companion: optionalFormTextSchema(160),
-  economicIncome: z
-    .string()
-    .trim()
-    .refine((value) => value === "" || /^\d+$/.test(value), {
-      message: "Debe ser un numero valido.",
-    }),
-  socialProgramBeneficiary: z.boolean(),
-});
+export const adultoMayorFormSchema = z
+  .object({
+    tenantId: z.string().trim(),
+    documentType: adultoMayorDocumentTypeSchema,
+    documentNumber: requiredFormTextSchema(80),
+    sex: adultoMayorSexSchema,
+    status: adultoMayorStatusSchema,
+    deathDate: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.literal("")]),
+    statusChangeReason: optionalFormTextSchema(500),
+    firstName: requiredFormTextSchema(80),
+    middleName: optionalFormTextSchema(80),
+    firstSurname: requiredFormTextSchema(80),
+    secondSurname: optionalFormTextSchema(80),
+    birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    educationLevel: optionalFormTextSchema(80),
+    disability: optionalFormTextSchema(120),
+    populationGroup: optionalFormTextSchema(120),
+    address: requiredFormTextSchema(220),
+    departmentId: z.uuid({ message: "Selecciona un departamento de la lista." }),
+    municipalityId: z.uuid({ message: "Selecciona un municipio de la lista." }),
+    zone: adultoMayorZoneSchema,
+    country: requiredFormTextSchema(80),
+    phone: optionalFormTextSchema(40),
+    phoneSecondary: optionalFormTextSchema(40),
+    email: z.union([z.literal(""), z.email().max(320)]),
+    emergencyContactFullName: optionalFormTextSchema(180),
+    emergencyContactRelationship: optionalFormTextSchema(80),
+    emergencyContactPhone: optionalFormTextSchema(40),
+    emergencyContactAddress: optionalFormTextSchema(220),
+    bloodType: z.union([adultoMayorBloodTypeSchema, z.literal("")]),
+    sisben: optionalFormTextSchema(40),
+    healthRegime: optionalFormTextSchema(120),
+    epsId: z.union([z.literal(""), z.uuid({ message: "Selecciona una EPS de la lista." })]),
+    livesWithSomeone: z.boolean(),
+    companion: optionalFormTextSchema(160),
+    economicIncome: z
+      .string()
+      .trim()
+      .refine((value) => value === "" || /^\d+$/.test(value), {
+        message: "Debe ser un numero valido.",
+      }),
+    socialProgramBeneficiary: z.boolean(),
+  })
+  .superRefine((value, context) => {
+    if (value.status === "deceased" && value.deathDate === "") {
+      context.addIssue({
+        code: "custom",
+        path: ["deathDate"],
+        message: "Indica la fecha de defuncion.",
+      });
+    }
+
+    if (value.status === "alive" && value.deathDate !== "") {
+      context.addIssue({
+        code: "custom",
+        path: ["deathDate"],
+        message: "Un adulto mayor vivo no puede tener fecha de defuncion.",
+      });
+    }
+  });
 
 export type AdultoMayorFormValues = Omit<
   AdultoMayorCommandInput,
@@ -69,6 +89,8 @@ export type AdultoMayorFormValues = Omit<
   economicIncome: string;
   epsId: string;
   healthRegime: string;
+  deathDate: string;
+  statusChangeReason: string;
 };
 
 export function createDefaultAdultoMayorFormValues(): AdultoMayorFormValues {
@@ -78,6 +100,8 @@ export function createDefaultAdultoMayorFormValues(): AdultoMayorFormValues {
     documentNumber: "",
     sex: "female",
     status: "alive",
+    deathDate: "",
+    statusChangeReason: "",
     firstName: "",
     middleName: "",
     firstSurname: "",
@@ -116,6 +140,8 @@ export function toAdultoMayorFormValues(detail: AdultoMayorDetail): AdultoMayorF
     documentNumber: detail.documentNumber,
     sex: detail.sex,
     status: detail.status,
+    deathDate: detail.deathDate ?? "",
+    statusChangeReason: "",
     firstName: detail.firstName,
     middleName: detail.middleName ?? "",
     firstSurname: detail.firstSurname,
@@ -156,6 +182,8 @@ export function toCreateAdultoMayorRequest(
     bloodType: toNullableValue(values.bloodType),
     healthRegime: toNullableValue(values.healthRegime),
     epsId: toNullableValue(values.epsId),
+    deathDate: values.status === "deceased" ? toNullableValue(values.deathDate) : null,
+    statusChangeReason: toNullableValue(values.statusChangeReason),
   });
 }
 
@@ -169,6 +197,8 @@ export function toUpdateAdultoMayorRequest(
     bloodType: toNullableValue(values.bloodType),
     healthRegime: toNullableValue(values.healthRegime),
     epsId: toNullableValue(values.epsId),
+    deathDate: values.status === "deceased" ? toNullableValue(values.deathDate) : null,
+    statusChangeReason: toNullableValue(values.statusChangeReason),
   });
 }
 

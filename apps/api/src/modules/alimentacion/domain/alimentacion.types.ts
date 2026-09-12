@@ -1,4 +1,5 @@
 import {
+  type AdultoMayorStatus,
   type AlimentacionOrganizer,
   type AlimentacionStatus,
   type UserRole,
@@ -87,6 +88,8 @@ export type AlimentacionAdultoOptionRecord = {
   tenantDepartment: string | null;
   documentNumber: string;
   fullName: string;
+  status?: AdultoMayorStatus;
+  deathDate?: string | null;
 };
 
 export type AlimentacionRecord = {

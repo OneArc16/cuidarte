@@ -180,6 +180,7 @@ describe("App adultos mayores flow", () => {
     const secondNameInput = await screen.findByLabelText("Segundo nombre");
 
     await user.selectOptions(screen.getByLabelText("Estado"), "deceased");
+    await user.type(screen.getByLabelText("Fecha de defuncion"), "2026-09-12");
     await user.clear(secondNameInput);
     await user.type(secondNameInput, "Maria");
     await user.click(screen.getByRole("button", { name: "Guardar" }));
@@ -241,9 +242,9 @@ describe("App adultos mayores flow", () => {
     server.use(mockAuthMe(authUserFixture));
     let excelSearch: string | null = null;
     let pdfSearch: string | null = null;
-    const createObjectUrlSpy = vi.spyOn(URL, "createObjectURL").mockReturnValue(
-      "blob:adultos-mayores",
-    );
+    const createObjectUrlSpy = vi
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:adultos-mayores");
     const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
 
     server.use(
@@ -361,13 +362,9 @@ describe("App adultos mayores flow", () => {
       throw new Error("Expected import file input to be present");
     }
 
-    const file = new File(
-      ["plantilla"],
-      "plantilla-importacion-adultos-mayores-v1.xlsx",
-      {
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      },
-    );
+    const file = new File(["plantilla"], "plantilla-importacion-adultos-mayores-v1.xlsx", {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
 
     await user.upload(fileInput, file);
     expect(screen.getByRole("button", { name: "Validar archivo" })).toBeEnabled();
@@ -382,10 +379,13 @@ describe("App adultos mayores flow", () => {
     server.use(mockAuthMe(superAdminUserFixture));
     let deletionReason: string | null = null;
     server.use(
-      http.delete("http://localhost:3001/api/adultos-mayores/:adultoMayorId", async ({ request }) => {
-        deletionReason = ((await request.json()) as { reason: string }).reason;
-        return HttpResponse.json({ success: true });
-      }),
+      http.delete(
+        "http://localhost:3001/api/adultos-mayores/:adultoMayorId",
+        async ({ request }) => {
+          deletionReason = ((await request.json()) as { reason: string }).reason;
+          return HttpResponse.json({ success: true });
+        },
+      ),
     );
     const user = userEvent.setup();
     renderAppAtPath("/adultos-mayores");

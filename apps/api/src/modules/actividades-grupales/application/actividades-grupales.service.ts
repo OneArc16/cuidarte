@@ -44,6 +44,7 @@ import {
   canTrashActividadGrupal,
   resolveActividadesGrupalesScope,
 } from "../domain/actividad-grupal.policy";
+import { assertAdultoMayorRecordDateAllowed } from "../../adultos-mayores/domain/adulto-mayor-status-policy";
 import {
   type ActividadGrupalDiligenciamientoDetailRecord,
   type ActividadGrupalRecord,
@@ -208,6 +209,8 @@ export class ActividadesGrupalesService {
       );
     }
 
+    this.assertIntegrantesDateAllowed(detail.integrantes, command.activityDate);
+
     const record = await this.actividadesGrupalesRepository.update({
       activityId,
       actorUserId: actor.id,
@@ -349,6 +352,8 @@ export class ActividadesGrupalesService {
         "Selecciona adultos mayores activos del centro para diligenciar la sesion.",
       );
     }
+
+    this.assertIntegrantesDateAllowed(integrantes, detail.activity.activityDate);
 
     const storedFiles = await this.storeNewUploads(detail, command.newPhotos, command.newPdf);
 
@@ -669,6 +674,19 @@ export class ActividadesGrupalesService {
     }
 
     return tenantId;
+  }
+
+  private assertIntegrantesDateAllowed(
+    integrantes: Array<{ status?: "alive" | "deceased"; deathDate?: string | null }>,
+    activityDate: string,
+  ) {
+    for (const integrante of integrantes) {
+      assertAdultoMayorRecordDateAllowed({
+        status: integrante.status,
+        deathDate: integrante.deathDate,
+        recordDate: activityDate,
+      });
+    }
   }
 
   private toListItem(record: ActividadGrupalRecord, actor: AuthUser): ActividadGrupalListItem {

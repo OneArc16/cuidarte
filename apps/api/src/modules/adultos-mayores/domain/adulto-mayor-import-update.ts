@@ -12,6 +12,7 @@ export const ADULTO_MAYOR_IMPORT_MUTABLE_FIELDS = [
   "birthDate",
   "sex",
   "status",
+  "deathDate",
   "educationLevel",
   "disability",
   "populationGroup",

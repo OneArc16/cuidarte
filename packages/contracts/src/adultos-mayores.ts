@@ -268,6 +268,7 @@ export const adultoMayorListItemSchema = z.object({
   age: z.number().int().min(0),
   sex: adultoMayorSexSchema,
   status: adultoMayorStatusSchema,
+  deathDate: dateSchema.nullable().optional().default(null),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
 });
@@ -281,6 +282,7 @@ export const adultoMayorDocumentSchema = z.object({
 });
 
 export const adultoMayorDetailSchema = adultoMayorListItemSchema.extend({
+  deathDate: dateSchema.nullable().optional().default(null),
   firstName: z.string().min(1).max(80),
   middleName: z.string().max(80).nullable(),
   firstSurname: z.string().min(1).max(80),
@@ -314,11 +316,13 @@ export const adultoMayorDetailSchema = adultoMayorListItemSchema.extend({
   documentFile: adultoMayorDocumentSchema.nullable(),
 });
 
-export const adultoMayorCommandSchema = z.object({
+const adultoMayorCommandBaseSchema = z.object({
   documentType: adultoMayorDocumentTypeSchema,
   documentNumber: requiredTextSchema(80),
   sex: adultoMayorSexSchema,
   status: adultoMayorStatusSchema,
+  deathDate: dateSchema.nullable().optional().default(null),
+  statusChangeReason: nullableTextSchema(500).optional().default(null),
   firstName: requiredTextSchema(80),
   middleName: nullableTextSchema(80),
   firstSurname: requiredTextSchema(80),
@@ -349,10 +353,37 @@ export const adultoMayorCommandSchema = z.object({
   socialProgramBeneficiary: z.boolean(),
 });
 
-export const createAdultoMayorRequestSchema = adultoMayorCommandSchema.extend({
-  tenantId: z.uuid().nullable().optional().default(null),
-  status: adultoMayorStatusSchema.optional().default("alive"),
-});
+function validateAdultoMayorStatusFields(
+  value: { status: z.infer<typeof adultoMayorStatusSchema>; deathDate: string | null },
+  context: z.RefinementCtx,
+) {
+  if (value.status === "deceased" && value.deathDate === null) {
+    context.addIssue({
+      code: "custom",
+      path: ["deathDate"],
+      message: "Indica la fecha de defuncion.",
+    });
+  }
+
+  if (value.status === "alive" && value.deathDate !== null) {
+    context.addIssue({
+      code: "custom",
+      path: ["deathDate"],
+      message: "Un adulto mayor vivo no puede tener fecha de defuncion.",
+    });
+  }
+}
+
+export const adultoMayorCommandSchema = adultoMayorCommandBaseSchema.superRefine(
+  validateAdultoMayorStatusFields,
+);
+
+export const createAdultoMayorRequestSchema = adultoMayorCommandBaseSchema
+  .extend({
+    tenantId: z.uuid().nullable().optional().default(null),
+    status: adultoMayorStatusSchema.optional().default("alive"),
+  })
+  .superRefine(validateAdultoMayorStatusFields);
 
 export const updateAdultoMayorRequestSchema = adultoMayorCommandSchema;
 
@@ -372,6 +403,28 @@ export const adultoMayorTrashListResponseSchema = z.object({
 });
 
 export const adultoMayorTrashMutationResponseSchema = z.object({ success: z.literal(true) });
+
+export const adultoMayorStatusHistoryEntrySchema = z.object({
+  id: z.uuid(),
+  previousStatus: adultoMayorStatusSchema.nullable(),
+  newStatus: adultoMayorStatusSchema,
+  previousDeathDate: dateSchema.nullable(),
+  newDeathDate: dateSchema.nullable(),
+  reason: z.string().max(500).nullable(),
+  changedByUserId: z.uuid(),
+  changedByUserFullName: z.string().min(1).max(180),
+  createdAt: z.string().min(1),
+});
+
+export const adultoMayorStatusHistoryResponseSchema = z.object({
+  entries: z.array(adultoMayorStatusHistoryEntrySchema),
+  nextCursor: z.string().nullable(),
+});
+
+export const adultoMayorStatusHistoryQuerySchema = z.object({
+  cursor: z.string().trim().min(1).nullable().optional().default(null),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+});
 
 export const adultoMayorDetailResponseSchema = adultoMayorDetailSchema;
 export const adultoMayorDocumentResponseSchema = z.object({ document: adultoMayorDocumentSchema });
@@ -424,9 +477,26 @@ export type AdultoMayorListQuery = z.infer<typeof adultoMayorListQuerySchema>;
 export type AdultoMayorListItem = z.infer<typeof adultoMayorListItemSchema>;
 export type AdultoMayorTrashListItem = z.infer<typeof adultoMayorTrashListItemSchema>;
 export type AdultoMayorDetail = z.infer<typeof adultoMayorDetailSchema>;
+export type AdultoMayorStatusHistoryEntry = z.infer<typeof adultoMayorStatusHistoryEntrySchema>;
+export type AdultoMayorStatusHistoryResponse = z.infer<
+  typeof adultoMayorStatusHistoryResponseSchema
+>;
+export type AdultoMayorStatusHistoryQuery = z.infer<typeof adultoMayorStatusHistoryQuerySchema>;
 export type AdultoMayorDocument = z.infer<typeof adultoMayorDocumentSchema>;
-export type CreateAdultoMayorRequest = z.infer<typeof createAdultoMayorRequestSchema>;
-export type UpdateAdultoMayorRequest = z.infer<typeof updateAdultoMayorRequestSchema>;
+type AdultoMayorStatusCommandFields = {
+  deathDate?: string | null;
+  statusChangeReason?: string | null;
+};
+export type CreateAdultoMayorRequest = Omit<
+  z.infer<typeof createAdultoMayorRequestSchema>,
+  keyof AdultoMayorStatusCommandFields
+> &
+  AdultoMayorStatusCommandFields;
+export type UpdateAdultoMayorRequest = Omit<
+  z.infer<typeof updateAdultoMayorRequestSchema>,
+  keyof AdultoMayorStatusCommandFields
+> &
+  AdultoMayorStatusCommandFields;
 export type AdultoMayorListResponse = z.infer<typeof adultoMayorListResponseSchema>;
 export type AdultoMayorTrashListResponse = z.infer<typeof adultoMayorTrashListResponseSchema>;
 export type SendAdultoMayorToTrashRequest = z.infer<typeof sendAdultoMayorToTrashRequestSchema>;

@@ -4,11 +4,12 @@ import {
   adultoMayorHealthRegimeSchema,
   adultoMayorZoneSchema,
 } from "@cuidarte/contracts";
-import { and, asc, desc, eq, ilike, isNotNull, isNull, ne, or, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNotNull, isNull, lt, ne, or, type SQL } from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
 import {
   adultoMayorDocuments,
+  adultoMayorStatusHistory,
   adultosMayores,
   auditLogs,
   epsCatalog,
@@ -28,6 +29,7 @@ import {
   type UpdateAdultoMayorRecordCommand,
   type AdultoMayorDocumentRecord,
   type AdultoMayorTrashRecord,
+  type AdultoMayorStatusHistoryRecord,
   type RestoreAdultoMayorCommand,
   type SendAdultoMayorToTrashCommand,
 } from "../domain/adulto-mayor.types";
@@ -51,6 +53,7 @@ type AdultoMayorSelectionRow = {
   birthDate: string;
   sex: AdultoMayorRecord["sex"];
   status: AdultoMayorRecord["status"];
+  deathDate: string | null;
   educationLevel: string | null;
   disability: string | null;
   populationGroup: string | null;
@@ -134,7 +137,11 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
       .innerJoin(users, eq(users.id, adultosMayores.deletedByUserId))
       .where(and(...conditions))
-      .orderBy(desc(adultosMayores.deletedAt), asc(adultosMayores.surnames), asc(adultosMayores.names));
+      .orderBy(
+        desc(adultosMayores.deletedAt),
+        asc(adultosMayores.surnames),
+        asc(adultosMayores.names),
+      );
 
     return rows.map((row) => ({
       ...row,
@@ -154,6 +161,68 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       .limit(1);
 
     return row === undefined ? null : this.toRecord(row);
+  }
+
+  async findStatusHistory(query: {
+    adultoMayorId: string;
+    scope: FindAdultoMayorByIdQuery["scope"];
+    limit: number;
+    cursor: string | null;
+  }): Promise<{ entries: AdultoMayorStatusHistoryRecord[]; nextCursor: string | null }> {
+    const conditions: SQL[] = [eq(adultoMayorStatusHistory.adultoMayorId, query.adultoMayorId)];
+
+    if (query.scope.type === "tenant") {
+      conditions.push(eq(adultoMayorStatusHistory.tenantId, query.scope.tenantId));
+    }
+
+    if (query.cursor !== null) {
+      const cursor = decodeStatusHistoryCursor(query.cursor);
+      const cursorDate = new Date(cursor.createdAt);
+
+      if (Number.isNaN(cursorDate.getTime())) {
+        throw new Error("El cursor del historial de estados no es valido.");
+      }
+
+      conditions.push(
+        or(
+          lt(adultoMayorStatusHistory.createdAt, cursorDate),
+          and(
+            eq(adultoMayorStatusHistory.createdAt, cursorDate),
+            lt(adultoMayorStatusHistory.id, cursor.id),
+          ),
+        )!,
+      );
+    }
+
+    const rows = await this.database.db
+      .select({
+        id: adultoMayorStatusHistory.id,
+        previousStatus: adultoMayorStatusHistory.previousStatus,
+        newStatus: adultoMayorStatusHistory.newStatus,
+        previousDeathDate: adultoMayorStatusHistory.previousDeathDate,
+        newDeathDate: adultoMayorStatusHistory.newDeathDate,
+        reason: adultoMayorStatusHistory.reason,
+        changedByUserId: adultoMayorStatusHistory.changedByUserId,
+        changedByUserFullName: users.fullName,
+        createdAt: adultoMayorStatusHistory.createdAt,
+      })
+      .from(adultoMayorStatusHistory)
+      .innerJoin(users, eq(users.id, adultoMayorStatusHistory.changedByUserId))
+      .where(and(...conditions))
+      .orderBy(desc(adultoMayorStatusHistory.createdAt), desc(adultoMayorStatusHistory.id))
+      .limit(query.limit + 1);
+
+    const hasNextPage = rows.length > query.limit;
+    const pageRows = hasNextPage ? rows.slice(0, query.limit) : rows;
+    const lastRow = pageRows.at(-1);
+
+    return {
+      entries: pageRows,
+      nextCursor:
+        hasNextPage && lastRow !== undefined
+          ? encodeStatusHistoryCursor(lastRow.createdAt, lastRow.id)
+          : null,
+    };
   }
 
   async findByDocument(query: FindAdultoMayorByDocumentQuery): Promise<AdultoMayorRecord | null> {
@@ -283,6 +352,20 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
     audit: AdultoMayorAuditCommand,
   ): Promise<AdultoMayorRecord> {
     return await this.database.db.transaction(async (tx) => {
+      const [current] = await tx
+        .select({
+          status: adultosMayores.status,
+          deathDate: adultosMayores.deathDate,
+          tenantId: adultosMayores.tenantId,
+        })
+        .from(adultosMayores)
+        .where(eq(adultosMayores.id, command.id))
+        .limit(1);
+
+      if (current === undefined) {
+        throw new Error("No fue posible consultar el adulto mayor a actualizar.");
+      }
+
       const [updated] = await tx
         .update(adultosMayores)
         .set({
@@ -297,6 +380,34 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       }
 
       await tx.insert(auditLogs).values(this.toAuditInsert(audit));
+
+      if (current.status !== command.status) {
+        await tx.insert(adultoMayorStatusHistory).values({
+          adultoMayorId: command.id,
+          tenantId: current.tenantId,
+          previousStatus: current.status,
+          newStatus: command.status,
+          previousDeathDate: current.deathDate,
+          newDeathDate: command.deathDate ?? null,
+          reason: command.statusChangeReason ?? null,
+          changedByUserId: command.actorUserId,
+        });
+
+        await tx.insert(auditLogs).values({
+          actorUserId: command.actorUserId,
+          action: "adultos-mayores.status-changed",
+          targetTenantId: current.tenantId,
+          summary: `Estado de adulto mayor cambiado de ${current.status} a ${command.status}.`,
+          metadata: {
+            adultoMayorId: command.id,
+            previousStatus: current.status,
+            newStatus: command.status,
+            previousDeathDate: current.deathDate,
+            newDeathDate: command.deathDate ?? null,
+            reason: command.statusChangeReason ?? null,
+          },
+        });
+      }
 
       const [row] = await tx
         .select(this.getAdultoMayorSelection())
@@ -449,6 +560,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       birthDate: adultosMayores.birthDate,
       sex: adultosMayores.sex,
       status: adultosMayores.status,
+      deathDate: adultosMayores.deathDate,
       educationLevel: adultosMayores.educationLevel,
       disability: adultosMayores.disability,
       populationGroup: adultosMayores.populationGroup,
@@ -478,7 +590,9 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
     };
   }
 
-  private buildMutableValues(command: Omit<AdultoMayorCommandRecord, "tenantId">) {
+  private buildMutableValues(
+    command: Omit<AdultoMayorCommandRecord, "tenantId" | "statusChangeReason">,
+  ) {
     return {
       documentType: command.documentType,
       documentNumber: command.documentNumber,
@@ -494,6 +608,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       birthDate: command.birthDate,
       sex: command.sex,
       status: command.status,
+      deathDate: command.deathDate ?? null,
       educationLevel: command.educationLevel,
       disability: command.disability,
       populationGroup: command.populationGroup,
@@ -543,9 +658,38 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
     };
   }
 
-  private toDocumentRecord(row: typeof adultoMayorDocuments.$inferSelect): AdultoMayorDocumentRecord {
+  private toDocumentRecord(
+    row: typeof adultoMayorDocuments.$inferSelect,
+  ): AdultoMayorDocumentRecord {
     return { ...row, mimeType: "application/pdf" };
   }
+}
+
+function encodeStatusHistoryCursor(createdAt: Date, id: string) {
+  return Buffer.from(JSON.stringify({ createdAt: createdAt.toISOString(), id })).toString(
+    "base64url",
+  );
+}
+
+function decodeStatusHistoryCursor(value: string): { createdAt: string; id: string } {
+  try {
+    const parsed: unknown = JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
+
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "createdAt" in parsed &&
+      "id" in parsed &&
+      typeof parsed.createdAt === "string" &&
+      typeof parsed.id === "string"
+    ) {
+      return { createdAt: parsed.createdAt, id: parsed.id };
+    }
+  } catch {
+    // Se traduce a un error de cursor para no exponer detalles de parsing.
+  }
+
+  throw new Error("El cursor del historial de estados no es valido.");
 }
 
 function escapeLikePattern(value: string): string {

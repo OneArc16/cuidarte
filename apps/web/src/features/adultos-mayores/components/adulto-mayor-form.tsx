@@ -47,6 +47,8 @@ const FORM_SECTIONS = [
       "documentNumber",
       "sex",
       "status",
+      "deathDate",
+      "statusChangeReason",
       "firstName",
       "middleName",
       "firstSurname",
@@ -113,7 +115,10 @@ type AdultoMayorFormProps =
       tenantOptions: AdultoMayorTenantOption[];
       onCancel: () => void;
       onDeleteDocument?: () => Promise<void>;
-      onSubmit: (values: CreateAdultoMayorRequest, documentFile: File | null) => Promise<void> | void;
+      onSubmit: (
+        values: CreateAdultoMayorRequest,
+        documentFile: File | null,
+      ) => Promise<void> | void;
     }
   | {
       mode: "edit";
@@ -122,7 +127,10 @@ type AdultoMayorFormProps =
       isPending: boolean;
       onCancel: () => void;
       onDeleteDocument: () => Promise<void>;
-      onSubmit: (values: UpdateAdultoMayorRequest, documentFile: File | null) => Promise<void> | void;
+      onSubmit: (
+        values: UpdateAdultoMayorRequest,
+        documentFile: File | null,
+      ) => Promise<void> | void;
     };
 
 export function AdultoMayorForm(props: AdultoMayorFormProps) {
@@ -139,7 +147,7 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
         : createDefaultAdultoMayorFormValues(),
     mode: "onBlur",
   });
-  const { reset, setError } = form;
+  const { reset, setError, setValue } = form;
   const getValues = form.getValues;
   const departmentId = useWatch({
     control: form.control,
@@ -153,6 +161,8 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
     control: form.control,
     name: "epsId",
   });
+  const status = useWatch({ control: form.control, name: "status" });
+  const isCorrectingDeath = detail?.status === "deceased" && status === "alive";
   const departmentsQuery = useDepartmentsQuery();
   const epsQuery = useEpsQuery();
   const municipalitiesQuery = useMunicipalitiesQuery(departmentId, departmentId.trim() !== "");
@@ -185,6 +195,17 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
       reset(toAdultoMayorFormValues(detail));
     }
   }, [detail, reset]);
+
+  useEffect(() => {
+    if (status !== "alive" || getValues("deathDate") === "") {
+      return;
+    }
+
+    setValue("deathDate", "", {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  }, [getValues, setValue, status]);
 
   useEffect(() => {
     if (props.error === null) {
@@ -345,10 +366,7 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
 
     if (props.mode === "create" && !isLastSection) {
       const sectionFields: Array<keyof AdultoMayorFormValues> = [...currentSection.fields];
-      const isSectionValid = await form.trigger(
-        sectionFields,
-        { shouldFocus: true },
-      );
+      const isSectionValid = await form.trigger(sectionFields, { shouldFocus: true });
 
       if (!isSectionValid) {
         return;
@@ -469,6 +487,30 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
               <option value="deceased">Fallecido</option>
             </select>
           </AdultoMayorFieldGroup>
+
+          {status === "deceased" ? (
+            <AdultoMayorFieldGroup label="Fecha de defuncion" error={getError("deathDate")}>
+              <input
+                type="date"
+                aria-invalid={getError("deathDate") === undefined ? "false" : "true"}
+                {...form.register("deathDate")}
+              />
+            </AdultoMayorFieldGroup>
+          ) : null}
+
+          {isCorrectingDeath ? (
+            <AdultoMayorFieldGroup
+              label="Motivo de la correccion"
+              error={getError("statusChangeReason")}
+            >
+              <textarea
+                rows={3}
+                aria-invalid={getError("statusChangeReason") === undefined ? "false" : "true"}
+                placeholder="Explica por que debe corregirse el estado."
+                {...form.register("statusChangeReason")}
+              />
+            </AdultoMayorFieldGroup>
+          ) : null}
 
           <AdultoMayorFieldGroup label="Primer nombre" error={getError("firstName")}>
             <input
@@ -883,7 +925,9 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
               </button>
             ) : null}
           </div>
-          {detail?.documentFile !== null && detail?.documentFile !== undefined && documentFile === null ? (
+          {detail?.documentFile !== null &&
+          detail?.documentFile !== undefined &&
+          documentFile === null ? (
             <div className="adulto-document-card">
               <FileText aria-hidden="true" />
               <div className="adulto-document-card__details">

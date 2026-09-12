@@ -1,4 +1,5 @@
 import {
+  type AdultoMayorStatus,
   type AtencionEnfermeriaCareType,
   type AtencionEnfermeriaGlucometriaContext,
   type AtencionEnfermeriaHistoryAccess,
@@ -25,6 +26,8 @@ export type AtencionEnfermeriaAdultoRecord = {
   sex: string;
   eps: string | null;
   healthRegime: string | null;
+  status?: AdultoMayorStatus;
+  deathDate?: string | null;
 };
 
 export type AtencionEnfermeriaRecordBase = {

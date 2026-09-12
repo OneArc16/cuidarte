@@ -4,6 +4,7 @@ import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { DatabaseService } from "../../../database/database.service";
 import {
   adultosMayores,
+  adultoMayorStatusHistory,
   adultoMayorImportBatches,
   adultoMayorImportRows,
   auditLogs,
@@ -154,6 +155,7 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
         birthDate: adultosMayores.birthDate,
         sex: adultosMayores.sex,
         status: adultosMayores.status,
+        deathDate: adultosMayores.deathDate,
         educationLevel: adultosMayores.educationLevel,
         disability: adultosMayores.disability,
         populationGroup: adultosMayores.populationGroup,
@@ -204,6 +206,7 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
         birthDate: row.birthDate,
         sex: row.sex,
         status: row.status,
+        deathDate: row.deathDate,
         educationLevel: row.educationLevel,
         disability: row.disability,
         populationGroup: row.populationGroup,
@@ -501,6 +504,22 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
           .where(eq(adultoMayorImportRows.id, row.id));
       }
 
+      const updatedAdultIds = updateRows
+        .map((row) => row.existingAdultoId)
+        .filter((id): id is string => id !== null);
+      const currentStatuses =
+        updatedAdultIds.length === 0
+          ? []
+          : await tx
+              .select({
+                id: adultosMayores.id,
+                status: adultosMayores.status,
+                deathDate: adultosMayores.deathDate,
+              })
+              .from(adultosMayores)
+              .where(inArray(adultosMayores.id, updatedAdultIds));
+      const currentStatusById = new Map(currentStatuses.map((adult) => [adult.id, adult]));
+
       for (const row of updateRows) {
         const [updatedAdult] = await tx
           .update(adultosMayores)
@@ -514,6 +533,46 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
         if (updatedAdult === undefined) {
           throw new AdultoMayorImportCommitConflictError();
         }
+      }
+
+      const statusChanges = updateRows.flatMap((row) => {
+        const current = currentStatusById.get(row.existingAdultoId ?? "");
+        const next = row.normalizedPayload;
+        if (current === undefined || next === null || current.status === next.status) {
+          return [];
+        }
+        return [{ row, current, next }];
+      });
+
+      if (statusChanges.length > 0) {
+        await tx.insert(adultoMayorStatusHistory).values(
+          statusChanges.map(({ row, current, next }) => ({
+            adultoMayorId: row.existingAdultoId!,
+            tenantId: batch.tenant.id,
+            previousStatus: current.status,
+            newStatus: next.status,
+            previousDeathDate: current.deathDate,
+            newDeathDate: next.deathDate ?? null,
+            reason: "Cambio realizado mediante importacion.",
+            changedByUserId: params.actorUserId,
+          })),
+        );
+        await tx.insert(auditLogs).values(
+          statusChanges.map(({ row, current, next }) => ({
+            actorUserId: params.actorUserId,
+            action: "adultos-mayores.status-changed" as const,
+            targetTenantId: batch.tenant.id,
+            summary: `Estado de adulto mayor cambiado de ${current.status} a ${next.status} por importacion.`,
+            metadata: {
+              importId: batch.id,
+              adultoMayorId: row.existingAdultoId,
+              rowNumber: row.rowNumber,
+              previousStatus: current.status,
+              newStatus: next.status,
+              reason: "Cambio realizado mediante importacion.",
+            },
+          })),
+        );
       }
 
       if (updateRows.length > 0) {
@@ -832,6 +891,7 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
       birthDate: String(payload.birthDate),
       sex: payload.sex as never,
       status: payload.status as never,
+      deathDate: this.toNullableString(payload.deathDate),
     };
   }
 

@@ -26,6 +26,7 @@ import {
 import { randomUUID } from "node:crypto";
 
 import { calculateAgeFromBirthDate } from "../../adultos-mayores/application/age";
+import { assertAdultoMayorRecordDateAllowed } from "../../adultos-mayores/domain/adulto-mayor-status-policy";
 import {
   canCreateAtencionEnfermeria,
   canOpenAtencionEnfermeriaModule,
@@ -127,12 +128,21 @@ export class AtencionesEnfermeriaService {
     return this.toDetail(record, actor);
   }
 
-  async getPapelera(adultoMayorId: string, actor: AuthUser): Promise<AtencionEnfermeriaHistoryResponse> {
+  async getPapelera(
+    adultoMayorId: string,
+    actor: AuthUser,
+  ): Promise<AtencionEnfermeriaHistoryResponse> {
     this.ensureTrashAccess(actor);
     const scope = this.resolveScopeOrThrow(actor);
-    const adultoMayor = await this.atencionesRepository.findAdultoMayorById({ adultoMayorId, scope });
+    const adultoMayor = await this.atencionesRepository.findAdultoMayorById({
+      adultoMayorId,
+      scope,
+    });
     if (adultoMayor === null) throw new NotFoundException("Adulto mayor no encontrado.");
-    const records = await this.atencionesRepository.findTrashByAdultoMayor({ adultoMayorId, scope });
+    const records = await this.atencionesRepository.findTrashByAdultoMayor({
+      adultoMayorId,
+      scope,
+    });
     return atencionEnfermeriaHistoryResponseSchema.parse({
       adultoMayor: this.toAdultoResumen(adultoMayor),
       atenciones: records.map((record) => this.toListItem(record, actor)),
@@ -145,7 +155,11 @@ export class AtencionesEnfermeriaService {
     const record = await this.atencionesRepository.findById({ id, scope });
     if (record === null) throw new NotFoundException("Atencion de enfermeria no encontrada.");
     await this.runGuarded(() =>
-      this.atencionesRepository.softDelete({ id, tenantId: record.tenantId, actorUserId: actor.id }),
+      this.atencionesRepository.softDelete({
+        id,
+        tenantId: record.tenantId,
+        actorUserId: actor.id,
+      }),
     );
     return { success: true };
   }
@@ -154,7 +168,8 @@ export class AtencionesEnfermeriaService {
     this.ensureTrashAccess(actor);
     const scope = this.resolveScopeOrThrow(actor);
     const record = await this.atencionesRepository.findById({ id, scope, includeDeleted: true });
-    if (record === null || record.deletedAt === null) throw new NotFoundException("Atencion en papelera no encontrada.");
+    if (record === null || record.deletedAt === null)
+      throw new NotFoundException("Atencion en papelera no encontrada.");
     await this.runGuarded(() =>
       this.atencionesRepository.restore({ id, tenantId: record.tenantId, actorUserId: actor.id }),
     );
@@ -176,6 +191,12 @@ export class AtencionesEnfermeriaService {
     if (adultoMayor === null) {
       throw new NotFoundException("Adulto mayor no encontrado.");
     }
+
+    assertAdultoMayorRecordDateAllowed({
+      status: adultoMayor.status,
+      deathDate: adultoMayor.deathDate,
+      recordDate: normalizedCommand.attentionDate,
+    });
 
     const created = await this.runGuarded(async () =>
       this.atencionesRepository.create({
@@ -209,6 +230,12 @@ export class AtencionesEnfermeriaService {
         "Solo puedes editar atenciones de enfermeria registradas por ti.",
       );
     }
+
+    assertAdultoMayorRecordDateAllowed({
+      status: currentRecord.adultoMayor.status,
+      deathDate: currentRecord.adultoMayor.deathDate,
+      recordDate: normalizedCommand.attentionDate,
+    });
 
     const updated = await this.runGuarded(async () =>
       this.atencionesRepository.update({

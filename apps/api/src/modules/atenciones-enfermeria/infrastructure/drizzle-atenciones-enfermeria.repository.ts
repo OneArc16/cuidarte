@@ -42,6 +42,8 @@ type AtencionEnfermeriaRow = {
   adultoSurnames: string;
   adultoBirthDate: string;
   adultoSex: string;
+  adultoStatus: AtencionEnfermeriaAdultoRecord["status"];
+  adultoDeathDate: string | null;
   adultoEps: string | null;
   adultoHealthRegime: string | null;
   attentionDate: string;
@@ -141,22 +143,59 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
   async softDelete(command: { id: string; actorUserId: string; tenantId: string }): Promise<void> {
     const now = new Date();
     await this.database.db.transaction(async (tx) => {
-      const result = await tx.update(atencionesEnfermeria).set({
-        deletedAt: now,
-        deletedByUserId: command.actorUserId,
-        updatedAt: now,
-      }).where(and(eq(atencionesEnfermeria.id, command.id), eq(atencionesEnfermeria.tenantId, command.tenantId), isNull(atencionesEnfermeria.deletedAt))).returning({ id: atencionesEnfermeria.id });
+      const result = await tx
+        .update(atencionesEnfermeria)
+        .set({
+          deletedAt: now,
+          deletedByUserId: command.actorUserId,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(atencionesEnfermeria.id, command.id),
+            eq(atencionesEnfermeria.tenantId, command.tenantId),
+            isNull(atencionesEnfermeria.deletedAt),
+          ),
+        )
+        .returning({ id: atencionesEnfermeria.id });
       if (result.length === 0) throw new AtencionEnfermeriaNotFoundError();
-      await tx.insert(auditLogs).values({ actorUserId: command.actorUserId, targetTenantId: command.tenantId, action: "atenciones-enfermeria.deleted", summary: "Atencion enviada a papelera.", metadata: { atencionId: command.id } });
+      await tx.insert(auditLogs).values({
+        actorUserId: command.actorUserId,
+        targetTenantId: command.tenantId,
+        action: "atenciones-enfermeria.deleted",
+        summary: "Atencion enviada a papelera.",
+        metadata: { atencionId: command.id },
+      });
     });
   }
 
   async restore(command: { id: string; actorUserId: string; tenantId: string }): Promise<void> {
     const now = new Date();
     await this.database.db.transaction(async (tx) => {
-      const result = await tx.update(atencionesEnfermeria).set({ deletedAt: null, deletedByUserId: null, updatedByUserId: command.actorUserId, updatedAt: now }).where(and(eq(atencionesEnfermeria.id, command.id), eq(atencionesEnfermeria.tenantId, command.tenantId), isNotNull(atencionesEnfermeria.deletedAt))).returning({ id: atencionesEnfermeria.id });
+      const result = await tx
+        .update(atencionesEnfermeria)
+        .set({
+          deletedAt: null,
+          deletedByUserId: null,
+          updatedByUserId: command.actorUserId,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(atencionesEnfermeria.id, command.id),
+            eq(atencionesEnfermeria.tenantId, command.tenantId),
+            isNotNull(atencionesEnfermeria.deletedAt),
+          ),
+        )
+        .returning({ id: atencionesEnfermeria.id });
       if (result.length === 0) throw new AtencionEnfermeriaNotFoundError();
-      await tx.insert(auditLogs).values({ actorUserId: command.actorUserId, targetTenantId: command.tenantId, action: "atenciones-enfermeria.restored", summary: "Atencion restaurada.", metadata: { atencionId: command.id } });
+      await tx.insert(auditLogs).values({
+        actorUserId: command.actorUserId,
+        targetTenantId: command.tenantId,
+        action: "atenciones-enfermeria.restored",
+        summary: "Atencion restaurada.",
+        metadata: { atencionId: command.id },
+      });
     });
   }
 
@@ -525,6 +564,8 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
       adultoSurnames: adultosMayores.surnames,
       adultoBirthDate: adultosMayores.birthDate,
       adultoSex: adultosMayores.sex,
+      adultoStatus: adultosMayores.status,
+      adultoDeathDate: adultosMayores.deathDate,
       adultoEps: sql<string | null>`coalesce(${epsCatalog.name}, ${adultosMayores.eps})`,
       adultoHealthRegime: adultosMayores.healthRegime,
       attentionDate: atencionesEnfermeria.attentionDate,
@@ -566,6 +607,8 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
       surnames: adultosMayores.surnames,
       birthDate: adultosMayores.birthDate,
       sex: adultosMayores.sex,
+      status: adultosMayores.status,
+      deathDate: adultosMayores.deathDate,
       eps: sql<string | null>`coalesce(${epsCatalog.name}, ${adultosMayores.eps})`,
       healthRegime: adultosMayores.healthRegime,
     };
@@ -634,6 +677,8 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
       sex: row.adultoSex,
       eps: row.adultoEps,
       healthRegime: row.adultoHealthRegime,
+      ...(row.adultoStatus === undefined ? {} : { status: row.adultoStatus }),
+      deathDate: row.adultoDeathDate,
     };
   }
 
@@ -646,6 +691,8 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
     surnames: string;
     birthDate: string;
     sex: string;
+    status: AtencionEnfermeriaAdultoRecord["status"];
+    deathDate: string | null;
     eps: string | null;
     healthRegime: string | null;
   }): AtencionEnfermeriaAdultoRecord {
@@ -657,6 +704,8 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
       fullName: `${row.names} ${row.surnames}`.trim(),
       birthDate: row.birthDate,
       sex: row.sex,
+      ...(row.status === undefined ? {} : { status: row.status }),
+      deathDate: row.deathDate,
       eps: row.eps,
       healthRegime: row.healthRegime,
     };
@@ -666,11 +715,17 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
     tx: EnfermeriaDb,
     query: FindAtencionEnfermeriaByIdQuery,
   ): Promise<AtencionEnfermeriaDetailRecord | null> {
-    const [row] = await this.selectRows(tx, query.scope, [eq(atencionesEnfermeria.id, query.id)], {
-      includeNote: true,
-      orderByAdultFields: false,
-      limit: 1,
-    }, query.includeDeleted ?? false);
+    const [row] = await this.selectRows(
+      tx,
+      query.scope,
+      [eq(atencionesEnfermeria.id, query.id)],
+      {
+        includeNote: true,
+        orderByAdultFields: false,
+        limit: 1,
+      },
+      query.includeDeleted ?? false,
+    );
 
     return row === undefined ? null : this.toDetail(row);
   }

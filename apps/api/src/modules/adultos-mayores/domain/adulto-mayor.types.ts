@@ -54,6 +54,8 @@ export type AdultoMayorCommandRecord = {
   birthDate: string;
   sex: AdultoMayorSex;
   status: AdultoMayorStatus;
+  deathDate?: string | null;
+  statusChangeReason?: string | null;
   educationLevel: string | null;
   disability: string | null;
   populationGroup: string | null;
@@ -82,6 +84,7 @@ export type CreateAdultoMayorRecordCommand = AdultoMayorCommandRecord;
 
 export type UpdateAdultoMayorRecordCommand = Omit<AdultoMayorCommandRecord, "tenantId"> & {
   id: string;
+  actorUserId: string;
 };
 
 export type AdultoMayorAuditCommand = {
@@ -89,6 +92,7 @@ export type AdultoMayorAuditCommand = {
   action:
     | "adultos-mayores.created"
     | "adultos-mayores.updated"
+    | "adultos-mayores.status-changed"
     | "adultos-mayores.deleted"
     | "adultos-mayores.restored";
   targetTenantId: string;
@@ -114,6 +118,7 @@ export type AdultoMayorRecord = {
   birthDate: string;
   sex: AdultoMayorSex;
   status: AdultoMayorStatus;
+  deathDate?: string | null;
   educationLevel: string | null;
   disability: string | null;
   populationGroup: string | null;
@@ -174,6 +179,18 @@ export type SendAdultoMayorToTrashCommand = {
 export type RestoreAdultoMayorCommand = {
   id: string;
   actorUserId: string;
+};
+
+export type AdultoMayorStatusHistoryRecord = {
+  id: string;
+  previousStatus: AdultoMayorStatus | null;
+  newStatus: AdultoMayorStatus;
+  previousDeathDate: string | null;
+  newDeathDate: string | null;
+  reason: string | null;
+  changedByUserId: string;
+  changedByUserFullName: string;
+  createdAt: Date;
 };
 
 export type AdultoMayorDocumentRecord = {

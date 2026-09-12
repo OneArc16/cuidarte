@@ -301,6 +301,8 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         documentNumber: adultosMayores.documentNumber,
         names: adultosMayores.names,
         surnames: adultosMayores.surnames,
+        status: adultosMayores.status,
+        deathDate: adultosMayores.deathDate,
       })
       .from(adultosMayores)
       .where(and(...conditions))
@@ -311,6 +313,8 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       id: row.id,
       documentNumber: row.documentNumber,
       fullName: `${row.names} ${row.surnames}`.trim(),
+      status: row.status,
+      deathDate: row.deathDate,
     }));
   }
 
@@ -328,6 +332,8 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         documentNumber: adultosMayores.documentNumber,
         names: adultosMayores.names,
         surnames: adultosMayores.surnames,
+        status: adultosMayores.status,
+        deathDate: adultosMayores.deathDate,
       })
       .from(adultosMayores)
       .where(
@@ -342,6 +348,8 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       id: row.id,
       documentNumber: row.documentNumber,
       fullName: `${row.names} ${row.surnames}`.trim(),
+      status: row.status,
+      deathDate: row.deathDate,
     }));
   }
 

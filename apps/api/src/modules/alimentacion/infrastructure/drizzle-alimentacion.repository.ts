@@ -80,6 +80,8 @@ type AlimentacionAdultoOptionRow = {
   documentNumber: string;
   names: string;
   surnames: string;
+  status: AlimentacionAdultoOptionRecord["status"];
+  deathDate: string | null;
 };
 
 type AlimentacionFormatoEntregaRow = {
@@ -187,6 +189,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       eq(adultosMayores.tenantId, query.tenantId),
       isNull(adultosMayores.deletedAt),
       isNull(alimentacionRegistros.id),
+      or(isNull(adultosMayores.deathDate), gte(adultosMayores.deathDate, query.deliveryDate))!,
     ];
 
     if (query.search !== null) {
@@ -211,6 +214,8 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         documentNumber: adultosMayores.documentNumber,
         names: adultosMayores.names,
         surnames: adultosMayores.surnames,
+        status: adultosMayores.status,
+        deathDate: adultosMayores.deathDate,
       })
       .from(adultosMayores)
       .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
@@ -246,6 +251,8 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         documentNumber: adultosMayores.documentNumber,
         names: adultosMayores.names,
         surnames: adultosMayores.surnames,
+        status: adultosMayores.status,
+        deathDate: adultosMayores.deathDate,
       })
       .from(adultosMayores)
       .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
@@ -283,6 +290,8 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         documentNumber: adultosMayores.documentNumber,
         names: adultosMayores.names,
         surnames: adultosMayores.surnames,
+        status: adultosMayores.status,
+        deathDate: adultosMayores.deathDate,
       })
       .from(adultosMayores)
       .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
@@ -1060,6 +1069,8 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       tenantDepartment: row.tenantDepartment,
       documentNumber: row.documentNumber,
       fullName: `${row.names} ${row.surnames}`.trim(),
+      ...(row.status === undefined ? {} : { status: row.status }),
+      deathDate: row.deathDate,
     };
   }
 

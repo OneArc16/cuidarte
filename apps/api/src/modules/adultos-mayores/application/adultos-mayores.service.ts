@@ -4,6 +4,7 @@ import {
   type AdultoMayorListQuery,
   type AdultoMayorTenantOption,
   type AdultoMayorTrashListItem,
+  type AdultoMayorStatusHistoryQuery,
   type SendAdultoMayorToTrashRequest,
   type AuthUser,
   type CreateAdultoMayorRequest,
@@ -12,6 +13,7 @@ import {
   adultoMayorListItemSchema,
   adultoMayorTenantOptionSchema,
   adultoMayorTrashListItemSchema,
+  adultoMayorStatusHistoryResponseSchema,
 } from "@cuidarte/contracts";
 import {
   BadRequestException,
@@ -35,6 +37,10 @@ import {
   type AdultosMayoresRepository,
 } from "../domain/adultos-mayores.repository";
 import { type AdultoMayorRecord } from "../domain/adulto-mayor.types";
+import {
+  assertAdultoMayorStatusData,
+  canCorrectDeceasedStatus,
+} from "../domain/adulto-mayor-status-policy";
 import { UbicacionesService } from "../../ubicaciones/application/ubicaciones.service";
 import { EpsService } from "../../eps/application/eps.service";
 import {
@@ -160,6 +166,34 @@ export class AdultosMayoresService {
     return this.toDetail(record, documentFile);
   }
 
+  async getStatusHistory(
+    adultoMayorId: string,
+    query: AdultoMayorStatusHistoryQuery,
+    actor: AuthUser,
+  ) {
+    const scope = this.resolveScopeOrThrow(actor);
+    const record = await this.adultosMayoresRepository.findById({ id: adultoMayorId, scope });
+
+    if (record === null) {
+      throw new NotFoundException("Adulto mayor no encontrado.");
+    }
+
+    const history = await this.adultosMayoresRepository.findStatusHistory({
+      adultoMayorId,
+      scope,
+      limit: query.limit,
+      cursor: query.cursor,
+    });
+
+    return adultoMayorStatusHistoryResponseSchema.parse({
+      entries: history.entries.map((entry) => ({
+        ...entry,
+        createdAt: entry.createdAt.toISOString(),
+      })),
+      nextCursor: history.nextCursor,
+    });
+  }
+
   async uploadDocument(adultoMayorId: string, file: AdultoMayorPdfUpload, actor: AuthUser) {
     this.ensureCanManage(actor);
     const scope = this.resolveScopeOrThrow(actor);
@@ -192,7 +226,8 @@ export class AdultosMayoresService {
     const record = await this.adultosMayoresRepository.findById({ id: adultoMayorId, scope });
     if (record === null) throw new NotFoundException("Adulto mayor no encontrado.");
     const document = await this.adultosMayoresRepository.findDocumentByAdultoId(adultoMayorId);
-    if (document === null) throw new NotFoundException("Este adulto mayor no tiene un PDF cargado.");
+    if (document === null)
+      throw new NotFoundException("Este adulto mayor no tiene un PDF cargado.");
 
     return {
       buffer: await this.filesStorage.readFile(document.relativePath),
@@ -221,6 +256,13 @@ export class AdultosMayoresService {
       throw new BadRequestException("Selecciona el centro al que pertenece el adulto mayor.");
     }
 
+    const deathDate = command.deathDate ?? null;
+    assertAdultoMayorStatusData({
+      status: command.status,
+      birthDate: command.birthDate,
+      deathDate,
+    });
+
     if (
       actor.role !== "super_admin" &&
       command.tenantId !== null &&
@@ -247,6 +289,7 @@ export class AdultosMayoresService {
       const record = await this.adultosMayoresRepository.create(
         {
           ...command,
+          deathDate,
           departmentId: location.department.id,
           municipalityId: location.municipality.id,
           department: location.department.name,
@@ -289,6 +332,28 @@ export class AdultosMayoresService {
       throw new NotFoundException("Adulto mayor no encontrado.");
     }
 
+    const deathDate = command.deathDate ?? null;
+    assertAdultoMayorStatusData({
+      status: command.status,
+      birthDate: command.birthDate,
+      deathDate,
+    });
+
+    const statusChanged = currentRecord.status !== command.status;
+    const statusChangeReason = command.statusChangeReason ?? null;
+
+    if (statusChanged && currentRecord.status === "deceased" && command.status === "alive") {
+      if (!canCorrectDeceasedStatus(actor)) {
+        throw new ForbiddenException(
+          "No tienes permisos para corregir el estado de fallecimiento.",
+        );
+      }
+
+      if (statusChangeReason === null) {
+        throw new BadRequestException("Indica el motivo para corregir el estado de fallecimiento.");
+      }
+    }
+
     const [location, selectedEps] = await Promise.all([
       this.ubicacionesService.resolveDepartmentMunicipalityPair(
         command.departmentId,
@@ -314,6 +379,9 @@ export class AdultosMayoresService {
       const record = await this.adultosMayoresRepository.update(
         {
           ...safeCommand,
+          actorUserId: actor.id,
+          deathDate,
+          statusChangeReason,
           departmentId: location.department.id,
           municipalityId: location.municipality.id,
           department: location.department.name,
@@ -368,7 +436,9 @@ export class AdultosMayoresService {
 
   private ensureCanManageTrash(actor: AuthUser) {
     if (!canManageAdultosMayoresTrash(actor)) {
-      throw new ForbiddenException("No tienes permisos para gestionar la papelera de adultos mayores.");
+      throw new ForbiddenException(
+        "No tienes permisos para gestionar la papelera de adultos mayores.",
+      );
     }
   }
 
@@ -399,14 +469,19 @@ export class AdultosMayoresService {
       age: calculateAgeFromBirthDate(record.birthDate),
       sex: record.sex,
       status: record.status,
+      deathDate: record.deathDate,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
     });
   }
 
-  private toDetail(record: AdultoMayorRecord, documentFile = record.documentFile): AdultoMayorDetail {
+  private toDetail(
+    record: AdultoMayorRecord,
+    documentFile = record.documentFile,
+  ): AdultoMayorDetail {
     return adultoMayorDetailSchema.parse({
       ...this.toListItem(record),
+      deathDate: record.deathDate,
       firstName: record.firstName,
       middleName: record.middleName,
       firstSurname: record.firstSurname,

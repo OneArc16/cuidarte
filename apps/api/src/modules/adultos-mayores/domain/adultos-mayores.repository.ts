@@ -12,6 +12,7 @@ import {
   type RestoreAdultoMayorCommand,
   type UpdateAdultoMayorRecordCommand,
   type AdultoMayorDocumentRecord,
+  type AdultoMayorStatusHistoryRecord,
 } from "./adulto-mayor.types";
 
 export const ADULTOS_MAYORES_REPOSITORY = Symbol("ADULTOS_MAYORES_REPOSITORY");
@@ -21,6 +22,12 @@ export type AdultosMayoresRepository = {
   findTrashMany(query: FindAdultosMayoresTrashQuery): Promise<AdultoMayorTrashRecord[]>;
   findById(query: FindAdultoMayorByIdQuery): Promise<AdultoMayorRecord | null>;
   findByDocument(query: FindAdultoMayorByDocumentQuery): Promise<AdultoMayorRecord | null>;
+  findStatusHistory(query: {
+    adultoMayorId: string;
+    scope: FindAdultoMayorByIdQuery["scope"];
+    limit: number;
+    cursor: string | null;
+  }): Promise<{ entries: AdultoMayorStatusHistoryRecord[]; nextCursor: string | null }>;
   findTenantOptions(): Promise<AdultoMayorTenantOptionRecord[]>;
   create(
     command: CreateAdultoMayorRecordCommand,
