@@ -1,5 +1,5 @@
 import { type CreateAdultoMayorRequest, type UpdateAdultoMayorRequest } from "@cuidarte/contracts";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import * as adultosMayoresApi from "../api/adultos-mayores-api";
 
@@ -7,7 +7,20 @@ export const adultosMayoresQueryKeys = {
   list: (params: { search: string }) => ["adultos-mayores", params] as const,
   detail: (adultoMayorId: string) => ["adultos-mayores", adultoMayorId] as const,
   tenantOptions: () => ["adultos-mayores", "tenant-options"] as const,
+  trashList: (params: { search: string }) => ["adultos-mayores", "papelera", params] as const,
 };
+
+async function invalidateAdultoMayorDependencies(queryClient: QueryClient) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: ["adultos-mayores"] }),
+    queryClient.invalidateQueries({ queryKey: ["atenciones-enfermeria"] }),
+    queryClient.invalidateQueries({ queryKey: ["atenciones-individuales"] }),
+    queryClient.invalidateQueries({ queryKey: ["alimentacion"] }),
+    queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] }),
+    queryClient.invalidateQueries({ queryKey: ["home"] }),
+    queryClient.invalidateQueries({ queryKey: ["reports"] }),
+  ]);
+}
 
 export function useAdultosMayoresQuery(params: { search: string }) {
   return useQuery({
@@ -31,6 +44,39 @@ export function useAdultoMayorQuery(adultoMayorId: string) {
     queryKey: adultosMayoresQueryKeys.detail(adultoMayorId),
     queryFn: () => adultosMayoresApi.getAdultoMayor(adultoMayorId),
     retry: false,
+  });
+}
+
+export function useAdultosMayoresTrashQuery(params: { search: string }, enabled: boolean) {
+  return useQuery({
+    queryKey: adultosMayoresQueryKeys.trashList(params),
+    queryFn: () => adultosMayoresApi.listAdultosMayoresTrash(params),
+    enabled,
+    retry: false,
+  });
+}
+
+export function useSendAdultoMayorToTrashMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: { adultoMayorId: string; reason: string }) =>
+      adultosMayoresApi.sendAdultoMayorToTrash(request.adultoMayorId, request.reason),
+    onSuccess: async (_, request) => {
+      queryClient.removeQueries({ queryKey: adultosMayoresQueryKeys.detail(request.adultoMayorId) });
+      await invalidateAdultoMayorDependencies(queryClient);
+    },
+  });
+}
+
+export function useRestoreAdultoMayorMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (adultoMayorId: string) => adultosMayoresApi.restoreAdultoMayor(adultoMayorId),
+    onSuccess: async () => {
+      await invalidateAdultoMayorDependencies(queryClient);
+    },
   });
 }
 

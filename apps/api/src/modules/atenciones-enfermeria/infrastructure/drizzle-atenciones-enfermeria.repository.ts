@@ -100,7 +100,10 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
     adultoMayorId: string;
     scope: AtencionEnfermeriaScope;
   }): Promise<AtencionEnfermeriaAdultoRecord | null> {
-    const conditions: SQL[] = [eq(adultosMayores.id, query.adultoMayorId)];
+    const conditions: SQL[] = [
+      eq(adultosMayores.id, query.adultoMayorId),
+      isNull(adultosMayores.deletedAt),
+    ];
 
     if (query.scope.type === "tenant") {
       conditions.push(eq(adultosMayores.tenantId, query.scope.tenantId));
@@ -194,7 +197,10 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
     adultoMayorId: string;
     scope: AtencionEnfermeriaScope;
   }): Promise<{ id: string; tenantId: string } | null> {
-    const conditions: SQL[] = [eq(adultosMayores.id, query.adultoMayorId)];
+    const conditions: SQL[] = [
+      eq(adultosMayores.id, query.adultoMayorId),
+      isNull(adultosMayores.deletedAt),
+    ];
 
     if (query.scope.type === "tenant") {
       conditions.push(eq(adultosMayores.tenantId, query.scope.tenantId));
@@ -495,7 +501,7 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
   }
 
   private buildScopedWhere(scope: AtencionEnfermeriaScope, extra: SQL[], includeDeleted = false) {
-    const conditions = [...extra];
+    const conditions = [...extra, isNull(adultosMayores.deletedAt)];
 
     if (!includeDeleted) {
       conditions.push(isNull(atencionesEnfermeria.deletedAt));

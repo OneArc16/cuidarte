@@ -1,5 +1,5 @@
 import { type AdultoMayorListItem } from "@cuidarte/contracts";
-import { ClipboardPlus, HeartPulse, Pencil, Utensils } from "lucide-react";
+import { ClipboardPlus, HeartPulse, Pencil, Trash2, Utensils } from "lucide-react";
 
 import {
   formatAdultoMayorDocument,
@@ -13,6 +13,7 @@ type AdultosMayoresTableProps = {
   canCreateAtencionIndividual: boolean;
   canManageAdultosMayores: boolean;
   canOpenHistoriaClinica: boolean;
+  canManageTrash: boolean;
   hideAtencionIndividualAction: boolean;
   isLoading: boolean;
   showTenantColumn: boolean;
@@ -20,6 +21,7 @@ type AdultosMayoresTableProps = {
   onOpenAtencionIndividual: (adultoMayorId: string) => void;
   onOpenHistoriaClinica: (adultoMayorId: string) => void;
   onEdit: (adultoMayorId: string) => void;
+  onSendToTrash: (adultoMayor: AdultoMayorListItem) => void;
 };
 
 export function AdultosMayoresTable({
@@ -28,12 +30,14 @@ export function AdultosMayoresTable({
   canCreateAtencionIndividual,
   canManageAdultosMayores,
   canOpenHistoriaClinica,
+  canManageTrash,
   hideAtencionIndividualAction,
   isLoading,
   onOpenAlimentacion,
   onOpenAtencionIndividual,
   onOpenHistoriaClinica,
   onEdit,
+  onSendToTrash,
   showTenantColumn,
 }: AdultosMayoresTableProps) {
   const columnCount = showTenantColumn ? 8 : 7;
@@ -117,6 +121,17 @@ export function AdultosMayoresTable({
                       onClick={() => onEdit(adultoMayor.id)}
                     >
                       <Pencil aria-hidden="true" />
+                    </button>
+                  ) : null}
+                  {canManageTrash ? (
+                    <button
+                      className="adultos-row-action adultos-row-action--trash"
+                      type="button"
+                      aria-label={`Enviar a papelera ${adultoMayor.names} ${adultoMayor.surnames}`}
+                      title="Enviar a papelera"
+                      onClick={() => onSendToTrash(adultoMayor)}
+                    >
+                      <Trash2 aria-hidden="true" />
                     </button>
                   ) : null}
                   <button

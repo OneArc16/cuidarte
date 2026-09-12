@@ -25,9 +25,12 @@ import {
   adultoMayorDetailResponseSchema,
   adultoMayorListQuerySchema,
   adultoMayorListResponseSchema,
+  adultoMayorTrashListResponseSchema,
+  adultoMayorTrashMutationResponseSchema,
   adultoMayorTenantOptionsResponseSchema,
   createAdultoMayorRequestSchema,
   updateAdultoMayorRequestSchema,
+  sendAdultoMayorToTrashRequestSchema,
 } from "@cuidarte/contracts";
 import { type FastifyReply } from "fastify";
 import { z } from "zod";
@@ -77,6 +80,18 @@ export class AdultosMayoresController {
     return adultoMayorTenantOptionsResponseSchema.parse({ tenants });
   }
 
+  @Get("trash")
+  @ApiOkResponse({ description: "Listado de adultos mayores enviados a papelera." })
+  async listTrashAdultosMayores(@Query() query: unknown, @Req() request: AuthenticatedRequest) {
+    const parsedQuery = parseZodSchema(adultoMayorListQuerySchema, query);
+    const adultosMayores = await this.adultosMayoresService.listTrashAdultosMayores(
+      parsedQuery,
+      request.currentUser,
+    );
+
+    return adultoMayorTrashListResponseSchema.parse({ adultosMayores });
+  }
+
   @Post()
   @ApiOkResponse({ description: "Adulto mayor creado." })
   @ApiBadRequestResponse({ description: "Solicitud invalida." })
@@ -108,6 +123,33 @@ export class AdultosMayoresController {
     );
 
     return adultoMayorDetailResponseSchema.parse(detail);
+  }
+
+  @Delete(":id")
+  @ApiOkResponse({ description: "Adulto mayor enviado a papelera." })
+  async sendAdultoMayorToTrash(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const adultoMayorId = parseZodSchema(adultoMayorIdParamSchema, id);
+    const command = parseZodSchema(sendAdultoMayorToTrashRequestSchema, body);
+    await this.adultosMayoresService.sendAdultoMayorToTrash(
+      adultoMayorId,
+      command,
+      request.currentUser,
+    );
+
+    return adultoMayorTrashMutationResponseSchema.parse({ success: true });
+  }
+
+  @Post(":id/restore")
+  @ApiOkResponse({ description: "Adulto mayor restaurado desde papelera." })
+  async restoreAdultoMayor(@Param("id") id: string, @Req() request: AuthenticatedRequest) {
+    const adultoMayorId = parseZodSchema(adultoMayorIdParamSchema, id);
+    await this.adultosMayoresService.restoreAdultoMayor(adultoMayorId, request.currentUser);
+
+    return adultoMayorTrashMutationResponseSchema.parse({ success: true });
   }
 
   @Post(":id/document")

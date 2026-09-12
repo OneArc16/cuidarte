@@ -1,4 +1,4 @@
-import { type AuthUser } from "@cuidarte/contracts";
+import { type AdultoMayorListItem, type AuthUser } from "@cuidarte/contracts";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 
@@ -12,7 +12,10 @@ import {
   canCreateAtencionIndividual,
   canOpenHistoriaClinica,
 } from "@/features/atenciones-individuales/lib/historia-clinica-permissions";
-import { canManageAdultosMayores } from "../lib/adultos-mayores-permissions";
+import {
+  canManageAdultosMayores,
+  canManageAdultosMayoresTrash,
+} from "../lib/adultos-mayores-permissions";
 
 import { AdultosMayoresTable } from "../components/adultos-mayores-table";
 import { AdultosMayoresToolbar } from "../components/adultos-mayores-toolbar";
@@ -22,11 +25,16 @@ import { resolveAdultosMayoresApiError } from "../lib/adultos-mayores-formatters
 import {
   ADULTOS_MAYORES_IMPORT_PATH,
   ADULTOS_MAYORES_NEW_PATH,
+  ADULTOS_MAYORES_TRASH_PATH,
   buildAdultoMayorEditPath,
 } from "../lib/adultos-mayores-paths";
-import { useAdultosMayoresQuery } from "../model/adultos-mayores-queries";
+import {
+  useAdultosMayoresQuery,
+  useSendAdultoMayorToTrashMutation,
+} from "../model/adultos-mayores-queries";
 import { openBlobInNewTab } from "@/shared/lib/open-blob-in-new-tab";
 import { canImportAdultosMayores } from "../lib/adultos-mayores-permissions";
+import { AdultoMayorTrashDialog } from "../components/adulto-mayor-trash-dialog";
 
 type AdultosMayoresIndexPageProps = {
   navigate: Navigate;
@@ -39,6 +47,8 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
   const [search, setSearch] = useSessionStorageState(`cuidarte:adultos-mayores:search:${user.id}`);
   const [exportTarget, setExportTarget] = useState<ExportTarget>(null);
   const [exportError, setExportError] = useState<string | null>(null);
+  const [adultoMayorPendingTrash, setAdultoMayorPendingTrash] =
+    useState<AdultoMayorListItem | null>(null);
   const adultosMayoresQuery = useAdultosMayoresQuery({ search });
   const adultosMayores = adultosMayoresQuery.data?.adultosMayores ?? [];
   const showTenantColumn = user.role === "super_admin";
@@ -48,6 +58,8 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
   const canOpenClinicalHistory = canOpenHistoriaClinica(user);
   const canCreateFeedingRecord = canManageAlimentacion(user);
   const canImportRecords = canImportAdultosMayores(user);
+  const canManageTrash = canManageAdultosMayoresTrash(user);
+  const sendToTrashMutation = useSendAdultoMayorToTrashMutation();
 
   async function handleExportExcel() {
     await exportFile("excel");
@@ -87,6 +99,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
 
       <AdultosMayoresToolbar
         canImportAdultosMayores={canImportRecords}
+        canManageTrash={canManageTrash}
         search={search}
         isExporting={exportTarget !== null}
         onSearchChange={setSearch}
@@ -94,6 +107,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
         onExportExcel={handleExportExcel}
         onExportPdf={handleExportPdf}
         onPrint={() => window.print()}
+        onOpenTrash={() => navigate(ADULTOS_MAYORES_TRASH_PATH)}
       />
 
       {adultosMayoresQuery.isError ? (
@@ -115,6 +129,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
         showTenantColumn={showTenantColumn}
         canCreateAtencionIndividual={canCreateClinicalAttention}
         canManageAdultosMayores={canManageRecords}
+        canManageTrash={canManageTrash}
         canOpenHistoriaClinica={canOpenClinicalHistory}
         hideAtencionIndividualAction={hideAtencionIndividualAction}
         onOpenAlimentacion={(adultoMayorId) =>
@@ -125,6 +140,10 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
         }
         onOpenHistoriaClinica={(adultoMayorId) => navigate(buildHistoriaClinicaPath(adultoMayorId))}
         onEdit={(adultoMayorId) => navigate(buildAdultoMayorEditPath(adultoMayorId))}
+        onSendToTrash={(adultoMayor) => {
+          sendToTrashMutation.reset();
+          setAdultoMayorPendingTrash(adultoMayor);
+        }}
       />
 
       {canManageRecords ? (
@@ -137,6 +156,31 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
         >
           <Plus aria-hidden="true" />
         </button>
+      ) : null}
+
+      {adultoMayorPendingTrash !== null ? (
+        <AdultoMayorTrashDialog
+          adultoMayor={adultoMayorPendingTrash}
+          errorMessage={resolveAdultosMayoresApiError(sendToTrashMutation.error)}
+          isPending={sendToTrashMutation.isPending}
+          onClose={() => {
+            if (!sendToTrashMutation.isPending) {
+              sendToTrashMutation.reset();
+              setAdultoMayorPendingTrash(null);
+            }
+          }}
+          onConfirm={(reason) => {
+            sendToTrashMutation.mutate(
+              { adultoMayorId: adultoMayorPendingTrash.id, reason },
+              {
+                onSuccess: () => {
+                  sendToTrashMutation.reset();
+                  setAdultoMayorPendingTrash(null);
+                },
+              },
+            );
+          }}
+        />
       ) : null}
     </section>
   );

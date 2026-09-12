@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { and, asc, desc, eq, inArray, ne, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne, sql, type SQL } from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
 import {
@@ -90,7 +90,10 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
   async findAdultoMayorById(
     query: FindAtencionIndividualAdultoByIdQuery,
   ): Promise<AtencionIndividualAdultoRecord | null> {
-    const conditions: SQL[] = [eq(adultosMayores.id, query.adultoMayorId)];
+    const conditions: SQL[] = [
+      eq(adultosMayores.id, query.adultoMayorId),
+      isNull(adultosMayores.deletedAt),
+    ];
 
     if (query.scope.type === "tenant") {
       conditions.push(eq(adultosMayores.tenantId, query.scope.tenantId));
@@ -140,7 +143,10 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
   }
 
   async findById(query: FindAtencionIndividualByIdQuery): Promise<AtencionIndividualRecord | null> {
-    const conditions: SQL[] = [eq(atencionesIndividuales.id, query.id)];
+    const conditions: SQL[] = [
+      eq(atencionesIndividuales.id, query.id),
+      isNull(adultosMayores.deletedAt),
+    ];
 
     if (query.scope.type === "tenant") {
       conditions.push(eq(atencionesIndividuales.tenantId, query.scope.tenantId));

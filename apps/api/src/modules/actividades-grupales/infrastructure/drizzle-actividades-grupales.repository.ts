@@ -262,7 +262,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
   async searchIntegranteOptions(
     query: SearchActividadGrupalIntegrantesOptionsQuery,
   ): Promise<ActividadGrupalIntegranteOptionRecord[]> {
-    const conditions: SQL[] = [eq(adultosMayores.tenantId, query.tenantId)];
+    const conditions: SQL[] = [
+      eq(adultosMayores.tenantId, query.tenantId),
+      isNull(adultosMayores.deletedAt),
+    ];
 
     if (query.search !== null) {
       const searchPattern = `%${escapeLikePattern(query.search)}%`;
@@ -311,7 +314,13 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         surnames: adultosMayores.surnames,
       })
       .from(adultosMayores)
-      .where(and(eq(adultosMayores.tenantId, tenantId), inArray(adultosMayores.id, integranteIds)));
+      .where(
+        and(
+          eq(adultosMayores.tenantId, tenantId),
+          inArray(adultosMayores.id, integranteIds),
+          isNull(adultosMayores.deletedAt),
+        ),
+      );
 
     return rows.map((row) => ({
       id: row.id,

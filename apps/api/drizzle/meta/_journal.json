@@ -253,6 +253,13 @@
       "when": 1789157471371,
       "tag": "0035_atenciones_enfermeria_trash",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1789232400000,
+      "tag": "0036_adultos_mayores_trash",
+      "breakpoints": true
     }
   ]
 }

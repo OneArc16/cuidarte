@@ -479,6 +479,11 @@ export const adultosMayores = pgTable(
     status: adultoMayorStatus("status").notNull().default("alive"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedByUserId: uuid("deleted_by_user_id").references(() => users.id, {
+      onDelete: "restrict",
+    }),
+    deletionReason: varchar("deletion_reason", { length: 500 }),
   },
   (table) => [
     uniqueIndex("adultos_mayores_tenant_document_unique").on(
@@ -492,6 +497,8 @@ export const adultosMayores = pgTable(
     index("adultos_mayores_municipality_id_idx").on(table.municipalityId),
     index("adultos_mayores_names_idx").on(table.names),
     index("adultos_mayores_surnames_idx").on(table.surnames),
+    index("adultos_mayores_deleted_at_idx").on(table.deletedAt),
+    index("adultos_mayores_tenant_deleted_at_idx").on(table.tenantId, table.deletedAt),
   ],
 );
 

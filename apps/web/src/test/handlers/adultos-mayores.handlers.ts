@@ -15,6 +15,25 @@ export const adultosMayoresHandlers = [
   http.get("http://localhost:3001/api/adultos-mayores/tenant-options", () =>
     HttpResponse.json({ tenants: [backofficeTenantDetailFixture.tenant] }),
   ),
+  http.get("http://localhost:3001/api/adultos-mayores/trash", () =>
+    HttpResponse.json({
+      adultosMayores: [
+        {
+          ...adultoMayorFixture,
+          deletedAt: "2026-09-12T12:00:00.000Z",
+          deletedByUserId: "4c5b84e6-d88e-4f8a-93de-af2916d62f40",
+          deletedByUserFullName: "Super Admin CuidarTe",
+          deletionReason: "Registro duplicado",
+        },
+      ],
+    }),
+  ),
+  http.delete("http://localhost:3001/api/adultos-mayores/:adultoMayorId", () =>
+    HttpResponse.json({ success: true }),
+  ),
+  http.post("http://localhost:3001/api/adultos-mayores/:adultoMayorId/restore", () =>
+    HttpResponse.json({ success: true }),
+  ),
   http.get("http://localhost:3001/api/adultos-mayores/:adultoMayorId", () =>
     HttpResponse.json(adultoMayorFixture),
   ),

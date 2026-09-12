@@ -33,6 +33,8 @@ export type FindAdultoMayorByDocumentQuery = {
   excludeId?: string;
 };
 
+export type FindAdultosMayoresTrashQuery = FindAdultosMayoresQuery;
+
 export type AdultoMayorTenantOptionRecord = {
   id: string;
   name: string;
@@ -84,7 +86,11 @@ export type UpdateAdultoMayorRecordCommand = Omit<AdultoMayorCommandRecord, "ten
 
 export type AdultoMayorAuditCommand = {
   actorUserId: string;
-  action: "adultos-mayores.created" | "adultos-mayores.updated";
+  action:
+    | "adultos-mayores.created"
+    | "adultos-mayores.updated"
+    | "adultos-mayores.deleted"
+    | "adultos-mayores.restored";
   targetTenantId: string;
   summary: string;
   metadata: Record<string, unknown>;
@@ -135,6 +141,39 @@ export type AdultoMayorRecord = {
   createdAt: Date;
   updatedAt: Date;
   documentFile: AdultoMayorDocumentRecord | null;
+};
+
+export type AdultoMayorTrashRecord = Pick<
+  AdultoMayorRecord,
+  | "id"
+  | "tenantId"
+  | "tenantName"
+  | "documentType"
+  | "documentNumber"
+  | "names"
+  | "surnames"
+  | "phone"
+  | "birthDate"
+  | "sex"
+  | "status"
+  | "createdAt"
+  | "updatedAt"
+> & {
+  deletedAt: Date;
+  deletedByUserId: string;
+  deletedByUserFullName: string;
+  deletionReason: string;
+};
+
+export type SendAdultoMayorToTrashCommand = {
+  id: string;
+  actorUserId: string;
+  reason: string;
+};
+
+export type RestoreAdultoMayorCommand = {
+  id: string;
+  actorUserId: string;
 };
 
 export type AdultoMayorDocumentRecord = {

@@ -377,4 +377,32 @@ describe("App adultos mayores flow", () => {
       expect(requestedTenantId).toBeNull();
     });
   });
+
+  it("allows SuperAdmin users to send an adulto mayor to trash and access the trash", async () => {
+    server.use(mockAuthMe(superAdminUserFixture));
+    let deletionReason: string | null = null;
+    server.use(
+      http.delete("http://localhost:3001/api/adultos-mayores/:adultoMayorId", async ({ request }) => {
+        deletionReason = ((await request.json()) as { reason: string }).reason;
+        return HttpResponse.json({ success: true });
+      }),
+    );
+    const user = userEvent.setup();
+    renderAppAtPath("/adultos-mayores");
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: `Enviar a papelera ${adultoMayorFixture.names} ${adultoMayorFixture.surnames}`,
+      }),
+    );
+    await user.type(screen.getByLabelText("Motivo"), "Registro duplicado");
+    await user.click(screen.getByRole("button", { name: "Enviar a papelera" }));
+
+    await waitFor(() => expect(deletionReason).toBe("Registro duplicado"));
+    await user.click(screen.getByRole("button", { name: "Papelera" }));
+    await waitFor(() => expect(window.location.pathname).toBe("/adultos-mayores/papelera"));
+    expect(
+      await screen.findByRole("region", { name: "Papelera de adultos mayores" }),
+    ).toBeInTheDocument();
+  });
 });

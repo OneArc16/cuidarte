@@ -165,15 +165,30 @@ export class HomeService {
   }
 
   private async countAdultosMayores(scope: TenantScope): Promise<number> {
-    return this.countScopedRows(adultosMayores, adultosMayores.tenantId, scope);
+    return this.countScopedRows(
+      adultosMayores,
+      adultosMayores.tenantId,
+      scope,
+      isNull(adultosMayores.deletedAt),
+    );
   }
 
   private async countAtencionesEnfermeria(scope: TenantScope): Promise<number> {
-    return this.countScopedRows(atencionesEnfermeria, atencionesEnfermeria.tenantId, scope);
+    return await this.countRelatedRows(
+      atencionesEnfermeria,
+      atencionesEnfermeria.tenantId,
+      atencionesEnfermeria.adultoMayorId,
+      scope,
+    );
   }
 
   private async countAtencionesMedico(scope: TenantScope): Promise<number> {
-    return this.countScopedRows(atencionesIndividuales, atencionesIndividuales.tenantId, scope);
+    return await this.countRelatedRows(
+      atencionesIndividuales,
+      atencionesIndividuales.tenantId,
+      atencionesIndividuales.adultoMayorId,
+      scope,
+    );
   }
 
   private async countEmpleados(scope: TenantScope): Promise<number> {
@@ -261,6 +276,10 @@ export class HomeService {
 
   private async summarizeAlimentacion(scope: TenantScope): Promise<AlimentacionSummary> {
     const scopeCondition = this.buildScopeCondition(scope, alimentacionRegistros.tenantId);
+    const activeCondition =
+      scopeCondition === undefined
+        ? isNull(adultosMayores.deletedAt)
+        : and(scopeCondition, isNull(adultosMayores.deletedAt));
     const query = this.database.db
       .select({
         recordsTotal: sql<number>`count(*)::int`,
@@ -271,8 +290,9 @@ export class HomeService {
           (case when ${alimentacionRegistros.auxilioTransporte} = 'entregado' then 1 else 0 end)
         ), 0)::int`,
       })
-      .from(alimentacionRegistros);
-    const [row] = await (scopeCondition === undefined ? query : query.where(scopeCondition));
+      .from(alimentacionRegistros)
+      .innerJoin(adultosMayores, eq(adultosMayores.id, alimentacionRegistros.adultoMayorId));
+    const [row] = await query.where(activeCondition);
 
     return {
       recordsTotal: row?.recordsTotal ?? 0,
@@ -303,6 +323,26 @@ export class HomeService {
       })
       .from(table);
     const [row] = await (where === undefined ? query : query.where(where));
+
+    return row?.total ?? 0;
+  }
+
+  private async countRelatedRows(
+    table: typeof atencionesEnfermeria | typeof atencionesIndividuales,
+    tenantColumn: AnyPgColumn,
+    adultoMayorIdColumn: AnyPgColumn,
+    scope: TenantScope,
+  ): Promise<number> {
+    const scopeCondition = this.buildScopeCondition(scope, tenantColumn);
+    const where =
+      scopeCondition === undefined
+        ? isNull(adultosMayores.deletedAt)
+        : and(scopeCondition, isNull(adultosMayores.deletedAt));
+    const [row] = await this.database.db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(table)
+      .innerJoin(adultosMayores, eq(adultosMayores.id, adultoMayorIdColumn))
+      .where(where);
 
     return row?.total ?? 0;
   }

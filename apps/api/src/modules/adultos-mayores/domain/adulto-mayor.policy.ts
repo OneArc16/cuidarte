@@ -44,3 +44,7 @@ export function resolveAdultoMayorTenantForCreate(
 export function canManageAdultosMayores(user: Pick<AuthUser, "role">): boolean {
   return ADULTOS_MAYORES_EDITOR_ROLES.has(user.role);
 }
+
+export function canManageAdultosMayoresTrash(user: Pick<AuthUser, "role">): boolean {
+  return user.role === "super_admin";
+}

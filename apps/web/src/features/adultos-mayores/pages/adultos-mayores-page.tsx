@@ -11,6 +11,7 @@ import {
   ADULTOS_MAYORES_NEW_PATH,
   ADULTOS_MAYORES_PATH,
   ADULTOS_MAYORES_IMPORT_PATH,
+  ADULTOS_MAYORES_TRASH_PATH,
   getAdultoMayorEditIdFromPath,
   isAdultosMayoresImportPath,
 } from "../lib/adultos-mayores-paths";
@@ -22,6 +23,7 @@ import {
 import { AdultoMayorCreatePage } from "./adulto-mayor-create-page";
 import { AdultoMayorEditPage } from "./adulto-mayor-edit-page";
 import { AdultosMayoresIndexPage } from "./adultos-mayores-index-page";
+import { AdultosMayoresTrashPage } from "./adultos-mayores-trash-page";
 
 const AdultosMayoresImportPage = lazy(async () => {
   const module = await import("./adultos-mayores-import-page");
@@ -42,6 +44,10 @@ export function AdultosMayoresPage({ navigate, path, user }: AdultosMayoresPageP
 
   if (path === ADULTOS_MAYORES_NEW_PATH) {
     return <AdultoMayorCreatePage navigate={navigate} user={user} />;
+  }
+
+  if (path === ADULTOS_MAYORES_TRASH_PATH) {
+    return <AdultosMayoresTrashPage navigate={navigate} user={user} />;
   }
 
   if (path === ADULTOS_MAYORES_IMPORT_PATH || isAdultosMayoresImportPath(path)) {

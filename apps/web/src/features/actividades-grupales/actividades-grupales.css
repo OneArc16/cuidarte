@@ -9,10 +9,16 @@
 .actividades-toolbar {
   display: grid;
   grid-template-columns:
-    minmax(240px, 1.45fr) minmax(180px, 220px) minmax(210px, 260px)
+    minmax(300px, 430px) minmax(180px, 220px) minmax(210px, 260px)
     minmax(210px, 270px) 42px;
   gap: 12px;
   align-items: end;
+}
+
+.actividades-toolbar--with-tenant {
+  grid-template-columns:
+    minmax(300px, 430px) minmax(180px, 220px) minmax(210px, 260px)
+    minmax(210px, 270px) minmax(160px, 220px) 42px;
 }
 
 .actividades-search,

@@ -2,12 +2,16 @@ import {
   type AdultoMayorDetailResponse,
   type AdultoMayorListResponse,
   type AdultoMayorTenantOptionsResponse,
+  type AdultoMayorTrashListResponse,
+  type AdultoMayorTrashMutationResponse,
   type CreateAdultoMayorRequest,
   type UpdateAdultoMayorRequest,
   adultoMayorDocumentResponseSchema,
   adultoMayorDetailResponseSchema,
   adultoMayorListResponseSchema,
   adultoMayorTenantOptionsResponseSchema,
+  adultoMayorTrashListResponseSchema,
+  adultoMayorTrashMutationResponseSchema,
 } from "@cuidarte/contracts";
 import { z } from "zod";
 
@@ -29,6 +33,31 @@ export function listAdultoMayorTenantOptions(): Promise<AdultoMayorTenantOptions
   return fetchJson(
     `${getApiBaseUrl()}/adultos-mayores/tenant-options`,
     adultoMayorTenantOptionsResponseSchema,
+  );
+}
+
+export function listAdultosMayoresTrash(params: ListAdultosMayoresParams): Promise<AdultoMayorTrashListResponse> {
+  return fetchJson(buildAdultosMayoresUrl(params.search, "/trash"), adultoMayorTrashListResponseSchema);
+}
+
+export function sendAdultoMayorToTrash(
+  adultoMayorId: string,
+  reason: string,
+): Promise<AdultoMayorTrashMutationResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/adultos-mayores/${adultoMayorId}`,
+    adultoMayorTrashMutationResponseSchema,
+    { method: "DELETE", body: { reason } },
+  );
+}
+
+export function restoreAdultoMayor(
+  adultoMayorId: string,
+): Promise<AdultoMayorTrashMutationResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/adultos-mayores/${adultoMayorId}/restore`,
+    adultoMayorTrashMutationResponseSchema,
+    { method: "POST" },
   );
 }
 

@@ -251,6 +251,40 @@ describe("AdultosMayoresService", () => {
     );
   });
 
+  it("allows only SuperAdmin users to send an adulto mayor to trash", async () => {
+    const repository = createRepository();
+    const service = createService(repository);
+    const currentRecord = records[0]!;
+
+    await service.sendAdultoMayorToTrash(
+      currentRecord.id,
+      { reason: "Registro duplicado" },
+      superAdminUser,
+    );
+
+    await assert.rejects(
+      () =>
+        service.sendAdultoMayorToTrash(
+          currentRecord.id,
+          { reason: "Registro duplicado" },
+          tenantAdminUser,
+        ),
+      { constructor: ForbiddenException },
+    );
+  });
+
+  it("allows only SuperAdmin users to restore an adulto mayor", async () => {
+    const repository = createRepository();
+    const service = createService(repository);
+    const currentRecord = records[0]!;
+
+    await service.restoreAdultoMayor(currentRecord.id, superAdminUser);
+
+    await assert.rejects(() => service.restoreAdultoMayor(currentRecord.id, tenantAdminUser), {
+      constructor: ForbiddenException,
+    });
+  });
+
   it("calculates age from birth date", () => {
     assert.equal(calculateAgeFromBirthDate("1948-03-12", new Date("2026-04-22T12:00:00Z")), 78);
     assert.equal(calculateAgeFromBirthDate("1948-10-12", new Date("2026-04-22T12:00:00Z")), 77);
@@ -315,6 +349,9 @@ function createRepository(): AdultosMayoresRepository & { queries: FindAdultosMa
 
       return storedRecords;
     },
+    async findTrashMany() {
+      return [];
+    },
     async findById(query) {
       const record = storedRecords.find((candidate) => candidate.id === query.id) ?? null;
 
@@ -376,6 +413,12 @@ function createRepository(): AdultosMayoresRepository & { queries: FindAdultosMa
       storedRecords.splice(storedRecords.indexOf(currentRecord), 1, updatedRecord);
 
       return updatedRecord;
+    },
+    async sendToTrash() {
+      return true;
+    },
+    async restore() {
+      return true;
     },
     async findDocumentByAdultoId() {
       return null;

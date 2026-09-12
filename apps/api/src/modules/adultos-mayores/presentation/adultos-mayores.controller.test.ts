@@ -64,6 +64,23 @@ describe("AdultosMayoresController exports", () => {
     });
   });
 
+  it("passes a required trash reason and current user to the service", async () => {
+    const service = createAdultosMayoresService();
+    const controller = new AdultosMayoresController(service as never, createExportService() as never);
+
+    await controller.sendAdultoMayorToTrash(
+      "0b17e370-8f81-48c0-b707-c7046f497855",
+      { reason: "  Registro duplicado  " },
+      { currentUser } as never,
+    );
+
+    assert.deepEqual(service.trashCalls[0], {
+      adultoMayorId: "0b17e370-8f81-48c0-b707-c7046f497855",
+      command: { reason: "Registro duplicado" },
+      actor: currentUser,
+    });
+  });
+
   it("passes the parsed query and current user to Excel exports", async () => {
     const exportService = createExportService();
     const controller = new AdultosMayoresController({} as never, exportService as never);
@@ -105,10 +122,12 @@ describe("AdultosMayoresController exports", () => {
 function createAdultosMayoresService() {
   const createCalls: Array<{ command: unknown; actor: AuthUser }> = [];
   const updateCalls: Array<{ adultoMayorId: string; command: unknown; actor: AuthUser }> = [];
+  const trashCalls: Array<{ adultoMayorId: string; command: unknown; actor: AuthUser }> = [];
 
   return {
     createCalls,
     updateCalls,
+    trashCalls,
     async createAdultoMayor(command: unknown, actor: AuthUser) {
       createCalls.push({ command, actor });
 
@@ -118,6 +137,9 @@ function createAdultosMayoresService() {
       updateCalls.push({ adultoMayorId, command, actor });
 
       return createDetail();
+    },
+    async sendAdultoMayorToTrash(adultoMayorId: string, command: unknown, actor: AuthUser) {
+      trashCalls.push({ adultoMayorId, command, actor });
     },
   };
 }
@@ -203,6 +225,7 @@ function createDetail() {
     companion: "Mariana Rojas",
     economicIncome: 450000,
     socialProgramBeneficiary: true,
+    documentFile: null,
     createdAt: "2026-04-21T12:00:00.000Z",
     updatedAt: "2026-04-21T12:00:00.000Z",
   };

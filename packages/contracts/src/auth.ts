@@ -26,8 +26,10 @@ export const authUserSchema = z.object({
 });
 
 export const loginRequestSchema = z.object({
-  email: z.email().transform((value) => value.toLowerCase()),
-  password: z.string().min(1),
+  email: z
+    .email("Ingresa un correo electrónico válido.")
+    .transform((value) => value.toLowerCase()),
+  password: z.string().min(1, "La contraseña es obligatoria."),
 });
 
 export const authSessionSchema = z.object({

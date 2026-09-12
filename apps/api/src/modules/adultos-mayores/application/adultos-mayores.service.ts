@@ -3,12 +3,15 @@ import {
   type AdultoMayorListItem,
   type AdultoMayorListQuery,
   type AdultoMayorTenantOption,
+  type AdultoMayorTrashListItem,
+  type SendAdultoMayorToTrashRequest,
   type AuthUser,
   type CreateAdultoMayorRequest,
   type UpdateAdultoMayorRequest,
   adultoMayorDetailSchema,
   adultoMayorListItemSchema,
   adultoMayorTenantOptionSchema,
+  adultoMayorTrashListItemSchema,
 } from "@cuidarte/contracts";
 import {
   BadRequestException,
@@ -23,6 +26,7 @@ import { randomUUID } from "node:crypto";
 import { calculateAgeFromBirthDate } from "./age";
 import {
   canManageAdultosMayores,
+  canManageAdultosMayoresTrash,
   resolveAdultoMayorTenantForCreate,
   resolveAdultosMayoresScope,
 } from "../domain/adulto-mayor.policy";
@@ -79,6 +83,65 @@ export class AdultosMayoresService {
     const tenants = await this.adultosMayoresRepository.findTenantOptions();
 
     return tenants.map((tenant) => adultoMayorTenantOptionSchema.parse(tenant));
+  }
+
+  async listTrashAdultosMayores(
+    query: AdultoMayorListQuery,
+    actor: AuthUser,
+  ): Promise<AdultoMayorTrashListItem[]> {
+    this.ensureCanManageTrash(actor);
+    const records = await this.adultosMayoresRepository.findTrashMany({
+      search: query.search,
+      scope: { type: "all" },
+    });
+
+    return records.map((record) =>
+      adultoMayorTrashListItemSchema.parse({
+        id: record.id,
+        tenantId: record.tenantId,
+        tenantName: record.tenantName,
+        documentType: record.documentType,
+        documentNumber: record.documentNumber,
+        names: record.names,
+        surnames: record.surnames,
+        phone: record.phone,
+        birthDate: record.birthDate,
+        age: calculateAgeFromBirthDate(record.birthDate),
+        sex: record.sex,
+        status: record.status,
+        createdAt: record.createdAt.toISOString(),
+        updatedAt: record.updatedAt.toISOString(),
+        deletedAt: record.deletedAt.toISOString(),
+        deletedByUserId: record.deletedByUserId,
+        deletedByUserFullName: record.deletedByUserFullName,
+        deletionReason: record.deletionReason,
+      }),
+    );
+  }
+
+  async sendAdultoMayorToTrash(
+    adultoMayorId: string,
+    command: SendAdultoMayorToTrashRequest,
+    actor: AuthUser,
+  ): Promise<void> {
+    this.ensureCanManageTrash(actor);
+    const deleted = await this.adultosMayoresRepository.sendToTrash({
+      id: adultoMayorId,
+      actorUserId: actor.id,
+      reason: command.reason,
+    });
+
+    if (!deleted) throw new NotFoundException("Adulto mayor no encontrado.");
+  }
+
+  async restoreAdultoMayor(adultoMayorId: string, actor: AuthUser): Promise<void> {
+    this.ensureCanManageTrash(actor);
+    const restored = await this.adultosMayoresRepository.restore({
+      id: adultoMayorId,
+      actorUserId: actor.id,
+    });
+
+    if (!restored) throw new NotFoundException("Adulto mayor en papelera no encontrado.");
   }
 
   async getAdultoMayor(adultoMayorId: string, actor: AuthUser): Promise<AdultoMayorDetail> {
@@ -300,6 +363,12 @@ export class AdultosMayoresService {
   private ensureCanManage(actor: AuthUser) {
     if (!canManageAdultosMayores(actor)) {
       throw new ForbiddenException("No tienes permisos para crear o actualizar adultos mayores.");
+    }
+  }
+
+  private ensureCanManageTrash(actor: AuthUser) {
+    if (!canManageAdultosMayoresTrash(actor)) {
+      throw new ForbiddenException("No tienes permisos para gestionar la papelera de adultos mayores.");
     }
   }
 

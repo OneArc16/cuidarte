@@ -8,11 +8,13 @@ import {
   ADULTOS_MAYORES_PATH,
   getAdultoMayorEditIdFromPath,
   isAdultosMayoresImportPath,
+  isAdultosMayoresTrashPath,
   isAdultosMayoresPath,
 } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
 import {
   canImportAdultosMayores,
   canManageAdultosMayores,
+  canManageAdultosMayoresTrash,
 } from "@/features/adultos-mayores/lib/adultos-mayores-permissions";
 import {
   canManageAlimentacion,
@@ -156,6 +158,11 @@ export function App() {
     }
 
     if (isAdultosMayoresPath(path)) {
+      if (isAdultosMayoresTrashPath(path) && !canManageAdultosMayoresTrash(user)) {
+        navigate(HOME_PATH, { replace: true });
+        return;
+      }
+
       if (isAdultosMayoresImportPath(path)) {
         if (!canImportAdultosMayores(user)) {
           navigate(HOME_PATH, { replace: true });
@@ -205,9 +212,11 @@ export function App() {
         : isBackofficePath(path)
           ? "BackOffice | CuidarTe"
           : isAdultosMayoresPath(path)
-            ? isAdultosMayoresImportPath(path)
-              ? "Importar adultos mayores | CuidarTe"
-              : "Adultos mayores | CuidarTe"
+          ? isAdultosMayoresImportPath(path)
+            ? "Importar adultos mayores | CuidarTe"
+            : isAdultosMayoresTrashPath(path)
+              ? "Papelera de adultos mayores | CuidarTe"
+            : "Adultos mayores | CuidarTe"
             : isAlimentacionPath(path)
               ? "Registro de alimentacion | CuidarTe"
               : isAtencionesEnfermeriaPath(path)

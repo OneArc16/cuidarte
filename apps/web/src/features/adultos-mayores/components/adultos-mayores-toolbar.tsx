@@ -1,7 +1,8 @@
-import { FileSpreadsheet, FileText, Printer, Search, Upload } from "lucide-react";
+import { FileSpreadsheet, FileText, Printer, Search, Trash2, Upload } from "lucide-react";
 
 type AdultosMayoresToolbarProps = {
   canImportAdultosMayores: boolean;
+  canManageTrash: boolean;
   search: string;
   isExporting: boolean;
   onSearchChange: (search: string) => void;
@@ -9,14 +10,17 @@ type AdultosMayoresToolbarProps = {
   onExportExcel: () => void;
   onExportPdf: () => void;
   onPrint: () => void;
+  onOpenTrash: () => void;
 };
 
 export function AdultosMayoresToolbar({
   canImportAdultosMayores,
+  canManageTrash,
   isExporting,
   onExportExcel,
   onExportPdf,
   onPrint,
+  onOpenTrash,
   onImportAdultosMayores,
   onSearchChange,
   search,
@@ -38,7 +42,7 @@ export function AdultosMayoresToolbar({
       <div className="adultos-export-actions" aria-label="Exportaciones">
         {canImportAdultosMayores ? (
           <button
-            className="adultos-export-action"
+            className="adultos-export-action adultos-export-action--import"
             type="button"
             aria-label="Importar adultos mayores"
             title="Importar adultos mayores"
@@ -48,7 +52,7 @@ export function AdultosMayoresToolbar({
           </button>
         ) : null}
         <button
-          className="adultos-export-action"
+          className="adultos-export-action adultos-export-action--excel"
           type="button"
           aria-label="Exportar a Excel"
           title="Exportar a Excel"
@@ -58,7 +62,7 @@ export function AdultosMayoresToolbar({
           <FileSpreadsheet aria-hidden="true" />
         </button>
         <button
-          className="adultos-export-action"
+          className="adultos-export-action adultos-export-action--pdf"
           type="button"
           aria-label="Exportar a PDF"
           title="Exportar a PDF"
@@ -68,7 +72,7 @@ export function AdultosMayoresToolbar({
           <FileText aria-hidden="true" />
         </button>
         <button
-          className="adultos-export-action"
+          className="adultos-export-action adultos-export-action--print"
           type="button"
           aria-label="Imprimir listado"
           title="Imprimir listado"
@@ -76,6 +80,17 @@ export function AdultosMayoresToolbar({
         >
           <Printer aria-hidden="true" />
         </button>
+        {canManageTrash ? (
+          <button
+            className="adultos-export-action adultos-export-action--trash"
+            type="button"
+            aria-label="Papelera"
+            title="Papelera"
+            onClick={onOpenTrash}
+          >
+            <Trash2 aria-hidden="true" />
+          </button>
+        ) : null}
       </div>
     </section>
   );

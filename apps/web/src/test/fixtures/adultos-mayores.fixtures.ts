@@ -45,6 +45,7 @@ export const adultoMayorFixture = {
   companion: "Mariana Rojas",
   economicIncome: 450000,
   socialProgramBeneficiary: true,
+  documentFile: null,
   createdAt: "2026-04-21T12:00:00.000Z",
   updatedAt: "2026-04-21T12:00:00.000Z",
 } as const;

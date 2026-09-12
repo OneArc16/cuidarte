@@ -185,6 +185,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
   ): Promise<AlimentacionAdultoOptionRecord[]> {
     const conditions: SQL[] = [
       eq(adultosMayores.tenantId, query.tenantId),
+      isNull(adultosMayores.deletedAt),
       isNull(alimentacionRegistros.id),
     ];
 
@@ -248,7 +249,13 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       })
       .from(adultosMayores)
       .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
-      .where(and(eq(adultosMayores.tenantId, tenantId), inArray(adultosMayores.id, adultoMayorIds)))
+      .where(
+        and(
+          eq(adultosMayores.tenantId, tenantId),
+          inArray(adultosMayores.id, adultoMayorIds),
+          isNull(adultosMayores.deletedAt),
+        ),
+      )
       .orderBy(asc(adultosMayores.surnames), asc(adultosMayores.names));
 
     return rows.map((row) => this.toAdultoOption(row));
@@ -257,7 +264,10 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
   async findAdultoMayorById(
     query: FindAlimentacionAdultoMayorByIdQuery,
   ): Promise<AlimentacionAdultoOptionRecord | null> {
-    const conditions: SQL[] = [eq(adultosMayores.id, query.adultoMayorId)];
+    const conditions: SQL[] = [
+      eq(adultosMayores.id, query.adultoMayorId),
+      isNull(adultosMayores.deletedAt),
+    ];
 
     if (query.scope.type === "tenant") {
       conditions.push(eq(adultosMayores.tenantId, query.scope.tenantId));
@@ -315,6 +325,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       .where(
         and(
           eq(alimentacionRegistros.adultoMayorId, query.adultoMayorId),
+          isNull(adultosMayores.deletedAt),
           gte(alimentacionRegistros.deliveryDate, monthRange.startDate),
           lt(alimentacionRegistros.deliveryDate, monthRange.endDateExclusive),
           ...scopedConditions,
@@ -406,6 +417,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       .where(
         and(
           eq(adultosMayores.tenantId, query.tenantId),
+          isNull(adultosMayores.deletedAt),
           or(
             eq(alimentacionRegistros.tenantId, query.tenantId),
             eq(alimentacionFormatoImportedVersions.tenantId, query.tenantId),
@@ -452,7 +464,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       .from(alimentacionRegistros)
       .innerJoin(adultosMayores, eq(adultosMayores.id, alimentacionRegistros.adultoMayorId))
       .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
-      .where(eq(alimentacionRegistros.tenantId, tenantId))
+      .where(and(eq(alimentacionRegistros.tenantId, tenantId), isNull(adultosMayores.deletedAt)))
       .groupBy(
         adultosMayores.tenantId,
         tenants.name,
@@ -479,7 +491,12 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         eq(adultosMayores.id, alimentacionFormatoImportedVersions.adultoMayorId),
       )
       .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
-      .where(eq(alimentacionFormatoImportedVersions.tenantId, tenantId))
+      .where(
+        and(
+          eq(alimentacionFormatoImportedVersions.tenantId, tenantId),
+          isNull(adultosMayores.deletedAt),
+        ),
+      )
       .groupBy(
         adultosMayores.tenantId,
         tenants.name,
@@ -990,7 +1007,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
   }
 
   private buildWhere(query: FindAlimentacionRecordsQuery): SQL | undefined {
-    const conditions: SQL[] = [];
+    const conditions: SQL[] = [isNull(adultosMayores.deletedAt)];
 
     if (query.scope.type === "tenant") {
       conditions.push(eq(alimentacionRegistros.tenantId, query.scope.tenantId));
@@ -1025,7 +1042,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
   }
 
   private buildScopedWhere(scope: FindAlimentacionRecordByIdQuery["scope"], extra: SQL[]) {
-    const conditions = [...extra];
+    const conditions = [...extra, isNull(adultosMayores.deletedAt)];
 
     if (scope.type === "tenant") {
       conditions.push(eq(alimentacionRegistros.tenantId, scope.tenantId));

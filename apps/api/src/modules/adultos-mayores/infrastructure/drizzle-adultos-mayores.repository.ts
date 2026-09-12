@@ -4,10 +4,17 @@ import {
   adultoMayorHealthRegimeSchema,
   adultoMayorZoneSchema,
 } from "@cuidarte/contracts";
-import { and, asc, eq, ilike, ne, or, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNotNull, isNull, ne, or, type SQL } from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
-import { adultoMayorDocuments, adultosMayores, auditLogs, epsCatalog, tenants } from "../../../database/schema";
+import {
+  adultoMayorDocuments,
+  adultosMayores,
+  auditLogs,
+  epsCatalog,
+  tenants,
+  users,
+} from "../../../database/schema";
 import {
   type AdultoMayorAuditCommand,
   type AdultoMayorCommandRecord,
@@ -17,8 +24,12 @@ import {
   type FindAdultoMayorByDocumentQuery,
   type FindAdultoMayorByIdQuery,
   type FindAdultosMayoresQuery,
+  type FindAdultosMayoresTrashQuery,
   type UpdateAdultoMayorRecordCommand,
   type AdultoMayorDocumentRecord,
+  type AdultoMayorTrashRecord,
+  type RestoreAdultoMayorCommand,
+  type SendAdultoMayorToTrashCommand,
 } from "../domain/adulto-mayor.types";
 import { type AdultosMayoresRepository } from "../domain/adultos-mayores.repository";
 
@@ -82,6 +93,55 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       .orderBy(asc(adultosMayores.surnames), asc(adultosMayores.names));
 
     return rows.map((row) => this.toRecord(row));
+  }
+
+  async findTrashMany(query: FindAdultosMayoresTrashQuery): Promise<AdultoMayorTrashRecord[]> {
+    const conditions = this.buildTrashScopeConditions(query.scope);
+
+    if (query.search !== null) {
+      const searchPattern = `%${escapeLikePattern(query.search)}%`;
+      conditions.push(
+        or(
+          ilike(adultosMayores.documentNumber, searchPattern),
+          ilike(adultosMayores.names, searchPattern),
+          ilike(adultosMayores.surnames, searchPattern),
+          ilike(tenants.name, searchPattern),
+        )!,
+      );
+    }
+
+    const rows = await this.database.db
+      .select({
+        id: adultosMayores.id,
+        tenantId: adultosMayores.tenantId,
+        tenantName: tenants.name,
+        documentType: adultosMayores.documentType,
+        documentNumber: adultosMayores.documentNumber,
+        names: adultosMayores.names,
+        surnames: adultosMayores.surnames,
+        phone: adultosMayores.phone,
+        birthDate: adultosMayores.birthDate,
+        sex: adultosMayores.sex,
+        status: adultosMayores.status,
+        createdAt: adultosMayores.createdAt,
+        updatedAt: adultosMayores.updatedAt,
+        deletedAt: adultosMayores.deletedAt,
+        deletedByUserId: adultosMayores.deletedByUserId,
+        deletedByUserFullName: users.fullName,
+        deletionReason: adultosMayores.deletionReason,
+      })
+      .from(adultosMayores)
+      .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
+      .innerJoin(users, eq(users.id, adultosMayores.deletedByUserId))
+      .where(and(...conditions))
+      .orderBy(desc(adultosMayores.deletedAt), asc(adultosMayores.surnames), asc(adultosMayores.names));
+
+    return rows.map((row) => ({
+      ...row,
+      deletedAt: row.deletedAt!,
+      deletedByUserId: row.deletedByUserId!,
+      deletionReason: row.deletionReason!,
+    }));
   }
 
   async findById(query: FindAdultoMayorByIdQuery): Promise<AdultoMayorRecord | null> {
@@ -254,6 +314,70 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
     });
   }
 
+  async sendToTrash(command: SendAdultoMayorToTrashCommand): Promise<boolean> {
+    return await this.database.db.transaction(async (tx) => {
+      const [deleted] = await tx
+        .update(adultosMayores)
+        .set({
+          deletedAt: new Date(),
+          deletedByUserId: command.actorUserId,
+          deletionReason: command.reason,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(adultosMayores.id, command.id), isNull(adultosMayores.deletedAt)))
+        .returning({
+          id: adultosMayores.id,
+          tenantId: adultosMayores.tenantId,
+          documentType: adultosMayores.documentType,
+          documentNumber: adultosMayores.documentNumber,
+        });
+
+      if (deleted === undefined) return false;
+
+      await tx.insert(auditLogs).values({
+        actorUserId: command.actorUserId,
+        action: "adultos-mayores.deleted",
+        targetTenantId: deleted.tenantId,
+        summary: "Adulto mayor enviado a papelera",
+        metadata: {
+          adultoMayorId: deleted.id,
+          documentType: deleted.documentType,
+          documentNumberMasked: maskDocumentNumber(deleted.documentNumber),
+          reason: command.reason,
+        },
+      });
+
+      return true;
+    });
+  }
+
+  async restore(command: RestoreAdultoMayorCommand): Promise<boolean> {
+    return await this.database.db.transaction(async (tx) => {
+      const [restored] = await tx
+        .update(adultosMayores)
+        .set({
+          deletedAt: null,
+          deletedByUserId: null,
+          deletionReason: null,
+          updatedAt: new Date(),
+        })
+        .where(and(eq(adultosMayores.id, command.id), isNotNull(adultosMayores.deletedAt)))
+        .returning({ id: adultosMayores.id, tenantId: adultosMayores.tenantId });
+
+      if (restored === undefined) return false;
+
+      await tx.insert(auditLogs).values({
+        actorUserId: command.actorUserId,
+        action: "adultos-mayores.restored",
+        targetTenantId: restored.tenantId,
+        summary: "Adulto mayor restaurado desde papelera",
+        metadata: { adultoMayorId: restored.id },
+      });
+
+      return true;
+    });
+  }
+
   private buildWhere(query: FindAdultosMayoresQuery): SQL | undefined {
     const conditions = this.buildScopeConditions(query.scope);
 
@@ -287,11 +411,23 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
   }
 
   private buildScopeConditions(scope: FindAdultosMayoresQuery["scope"]): SQL[] {
+    const conditions: SQL[] = [isNull(adultosMayores.deletedAt)];
+
     if (scope.type === "tenant") {
-      return [eq(adultosMayores.tenantId, scope.tenantId)];
+      conditions.push(eq(adultosMayores.tenantId, scope.tenantId));
     }
 
-    return [];
+    return conditions;
+  }
+
+  private buildTrashScopeConditions(scope: FindAdultosMayoresQuery["scope"]): SQL[] {
+    const conditions: SQL[] = [isNotNull(adultosMayores.deletedAt)];
+
+    if (scope.type === "tenant") {
+      conditions.push(eq(adultosMayores.tenantId, scope.tenantId));
+    }
+
+    return conditions;
   }
 
   private getAdultoMayorSelection() {
@@ -418,4 +554,9 @@ function escapeLikePattern(value: string): string {
 
 function joinNameParts(requiredName: string, optionalName: string | null): string {
   return optionalName === null ? requiredName : `${requiredName} ${optionalName}`;
+}
+
+function maskDocumentNumber(documentNumber: string): string {
+  if (documentNumber.length <= 4) return "****";
+  return `${"*".repeat(documentNumber.length - 4)}${documentNumber.slice(-4)}`;
 }

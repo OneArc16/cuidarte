@@ -95,7 +95,10 @@ export function ActividadesGrupalesToolbar({
   }
 
   return (
-    <section className="actividades-toolbar" aria-label="Herramientas del listado">
+    <section
+      className={`actividades-toolbar${showTenantFilter ? " actividades-toolbar--with-tenant" : ""}`}
+      aria-label="Herramientas del listado"
+    >
       <label className="actividades-search">
         <span>Buscar actividad</span>
         <div className="actividades-search__control">

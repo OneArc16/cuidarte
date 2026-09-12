@@ -246,6 +246,10 @@ export const adultoMayorListQuerySchema = z.object({
   search: nullableSearchSchema.optional().default(null),
 });
 
+export const sendAdultoMayorToTrashRequestSchema = z.object({
+  reason: requiredTextSchema(500),
+});
+
 export const adultoMayorTenantOptionSchema = z.object({
   id: z.uuid(),
   name: z.string().min(1),
@@ -356,6 +360,19 @@ export const adultoMayorListResponseSchema = z.object({
   adultosMayores: z.array(adultoMayorListItemSchema),
 });
 
+export const adultoMayorTrashListItemSchema = adultoMayorListItemSchema.extend({
+  deletedAt: z.string().min(1),
+  deletedByUserId: z.uuid(),
+  deletedByUserFullName: z.string().min(1),
+  deletionReason: z.string().min(1).max(500),
+});
+
+export const adultoMayorTrashListResponseSchema = z.object({
+  adultosMayores: z.array(adultoMayorTrashListItemSchema),
+});
+
+export const adultoMayorTrashMutationResponseSchema = z.object({ success: z.literal(true) });
+
 export const adultoMayorDetailResponseSchema = adultoMayorDetailSchema;
 export const adultoMayorDocumentResponseSchema = z.object({ document: adultoMayorDocumentSchema });
 
@@ -405,11 +422,17 @@ export type AdultoMayorImportTemplateQuery = z.infer<typeof adultoMayorImportTem
 export type AdultoMayorImportValidateQuery = z.infer<typeof adultoMayorImportValidateQuerySchema>;
 export type AdultoMayorListQuery = z.infer<typeof adultoMayorListQuerySchema>;
 export type AdultoMayorListItem = z.infer<typeof adultoMayorListItemSchema>;
+export type AdultoMayorTrashListItem = z.infer<typeof adultoMayorTrashListItemSchema>;
 export type AdultoMayorDetail = z.infer<typeof adultoMayorDetailSchema>;
 export type AdultoMayorDocument = z.infer<typeof adultoMayorDocumentSchema>;
 export type CreateAdultoMayorRequest = z.infer<typeof createAdultoMayorRequestSchema>;
 export type UpdateAdultoMayorRequest = z.infer<typeof updateAdultoMayorRequestSchema>;
 export type AdultoMayorListResponse = z.infer<typeof adultoMayorListResponseSchema>;
+export type AdultoMayorTrashListResponse = z.infer<typeof adultoMayorTrashListResponseSchema>;
+export type SendAdultoMayorToTrashRequest = z.infer<typeof sendAdultoMayorToTrashRequestSchema>;
+export type AdultoMayorTrashMutationResponse = z.infer<
+  typeof adultoMayorTrashMutationResponseSchema
+>;
 export type AdultoMayorDetailResponse = z.infer<typeof adultoMayorDetailResponseSchema>;
 export type AdultoMayorTenantOptionsResponse = z.infer<
   typeof adultoMayorTenantOptionsResponseSchema
