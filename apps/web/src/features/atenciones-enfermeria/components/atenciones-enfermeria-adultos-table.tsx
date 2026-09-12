@@ -75,7 +75,7 @@ export function AtencionesEnfermeriaAdultosTable({
                 <div className="atenciones-enfermeria-row-actions">
                   <button
                     type="button"
-                    className="atenciones-enfermeria-row-action"
+                    className="atenciones-enfermeria-row-action atenciones-enfermeria-row-action--historia"
                     aria-label={`Historia de enfermería de ${adultoMayor.names} ${adultoMayor.surnames}`}
                     title="Historia de enfermería"
                     onClick={() => onOpenHistory(adultoMayor.id)}
@@ -85,7 +85,7 @@ export function AtencionesEnfermeriaAdultosTable({
                   {canCreateAtencion ? (
                     <button
                       type="button"
-                      className="atenciones-enfermeria-row-action"
+                      className="atenciones-enfermeria-row-action atenciones-enfermeria-row-action--atencion"
                       aria-label={`Nueva atención de enfermería de ${adultoMayor.names} ${adultoMayor.surnames}`}
                       title="Nueva atención de enfermería"
                       onClick={() => onOpenAtencion(adultoMayor.id)}

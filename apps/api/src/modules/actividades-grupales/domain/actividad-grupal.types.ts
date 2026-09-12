@@ -19,6 +19,7 @@ export type FindActividadesGrupalesQuery = {
   search: string | null;
   activityType: ActividadGrupalType | null;
   organizer: ActividadGrupalOrganizer | null;
+  activityMonth: string | null;
   tenantId: string | null;
   scope: ActividadesGrupalesScope;
 };

@@ -32,6 +32,7 @@ type ListActividadesGrupalesParams = {
   search: string;
   activityType: ActividadGrupalType | null;
   organizer: ActividadGrupalOrganizer | null;
+  activityMonth: string | null;
   tenantId: string | null;
 };
 
@@ -208,6 +209,10 @@ function buildActividadesGrupalesUrl(params: ListActividadesGrupalesParams): str
     searchParams.set("organizer", params.organizer);
   }
 
+  if (params.activityMonth !== null) {
+    searchParams.set("activityMonth", params.activityMonth);
+  }
+
   if (params.tenantId !== null) {
     searchParams.set("tenantId", params.tenantId);
   }
@@ -230,6 +235,10 @@ function buildActividadesGrupalesTrashUrl(params: TrashActividadesGrupalesParams
 
   if (params.organizer !== null) {
     searchParams.set("organizer", params.organizer);
+  }
+
+  if (params.activityMonth !== null) {
+    searchParams.set("activityMonth", params.activityMonth);
   }
 
   if (params.tenantId !== null) {

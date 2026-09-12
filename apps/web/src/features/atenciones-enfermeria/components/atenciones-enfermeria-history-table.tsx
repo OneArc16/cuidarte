@@ -32,7 +32,7 @@ export function AtencionesEnfermeriaHistoryTable({
 
   return (
     <section className="adultos-table-wrap" aria-label="Historia de enfermería">
-      <table className="adultos-table atencion-history-table">
+      <table className="adultos-table atencion-history-table atenciones-enfermeria-history-table">
         <thead>
           <tr>
             <th scope="col">Fecha y hora</th>
@@ -87,16 +87,46 @@ export function AtencionesEnfermeriaHistoryTable({
                 </td>
                 <td>{formatAtencionEnfermeriaProfessionalRole(atencion.professional.role)}</td>
                 <td className="atencion-history-actions">
-                  {!isTrash ? <button type="button" className="outline-action atencion-history-action" aria-label={`Acceso ${accessLabel}`} onClick={() => onOpenAtencion(atencion.id)}>
-                    {atencion.access === "edit" ? <Pencil aria-hidden="true" /> : <Eye aria-hidden="true" />}
-                    <span>{accessLabel}</span>
-                  </button> : null}
-                  {canManageTrash && isTrash ? <button type="button" className="outline-action atencion-history-action" onClick={() => onRestore?.(atencion.id)}>
-                    <RotateCcw aria-hidden="true" /><span>Restaurar</span>
-                  </button> : null}
-                  {canManageTrash && !isTrash ? <button type="button" className="danger-action atencion-history-action" onClick={() => onDelete?.(atencion.id)}>
-                    <Trash2 aria-hidden="true" /><span>Eliminar</span>
-                  </button> : null}
+                  {!isTrash ? (
+                    <button
+                      type="button"
+                      className="outline-action atencion-history-action atenciones-enfermeria-history-action--access"
+                      aria-label={`${accessLabel} atención`}
+                      title={`${accessLabel} atención`}
+                      onClick={() => onOpenAtencion(atencion.id)}
+                    >
+                      {atencion.access === "edit" ? (
+                        <Pencil aria-hidden="true" />
+                      ) : (
+                        <Eye aria-hidden="true" />
+                      )}
+                      <span className="visually-hidden">{accessLabel}</span>
+                    </button>
+                  ) : null}
+                  {canManageTrash && isTrash ? (
+                    <button
+                      type="button"
+                      className="outline-action atencion-history-action atenciones-enfermeria-history-action--restore"
+                      aria-label="Restaurar atención"
+                      title="Restaurar atención"
+                      onClick={() => onRestore?.(atencion.id)}
+                    >
+                      <RotateCcw aria-hidden="true" />
+                      <span className="visually-hidden">Restaurar</span>
+                    </button>
+                  ) : null}
+                  {canManageTrash && !isTrash ? (
+                    <button
+                      type="button"
+                      className="danger-action atencion-history-action atenciones-enfermeria-history-action--delete"
+                      aria-label="Eliminar atención"
+                      title="Eliminar atención"
+                      onClick={() => onDelete?.(atencion.id)}
+                    >
+                      <Trash2 aria-hidden="true" />
+                      <span className="visually-hidden">Eliminar</span>
+                    </button>
+                  ) : null}
                 </td>
               </tr>
             );

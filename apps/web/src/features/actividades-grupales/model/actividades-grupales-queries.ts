@@ -25,6 +25,7 @@ type TrashActividadesGrupalesParams = {
   search: string;
   activityType: ActividadGrupalType | null;
   organizer: ActividadGrupalOrganizer | null;
+  activityMonth: string | null;
   tenantId: string | null;
 };
 
@@ -37,6 +38,7 @@ export const actividadesGrupalesQueryKeys = {
     search: string;
     activityType: ActividadGrupalType | null;
     organizer: ActividadGrupalOrganizer | null;
+    activityMonth: string | null;
     tenantId: string | null;
   }) => ["actividades-grupales", params] as const,
   detail: (activityId: string) => ["actividades-grupales", activityId, "diligenciamiento"] as const,
@@ -54,6 +56,7 @@ export function useActividadesGrupalesQuery(params: {
   search: string;
   activityType: ActividadGrupalType | null;
   organizer: ActividadGrupalOrganizer | null;
+  activityMonth: string | null;
   tenantId: string | null;
 }) {
   return useQuery({

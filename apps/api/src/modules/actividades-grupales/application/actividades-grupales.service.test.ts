@@ -108,7 +108,13 @@ describe("ActividadesGrupalesService", () => {
     const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.listActividadesGrupales(
-      { search: "bienestar", activityType: null, organizer: null, tenantId: null },
+      {
+        search: "bienestar",
+        activityType: null,
+        organizer: null,
+        activityMonth: null,
+        tenantId: null,
+      },
       medicoUser,
     );
 
@@ -118,6 +124,7 @@ describe("ActividadesGrupalesService", () => {
       search: "bienestar",
       activityType: null,
       organizer: null,
+      activityMonth: null,
       tenantId,
       scope: { type: "tenant", tenantId },
     });
@@ -128,7 +135,13 @@ describe("ActividadesGrupalesService", () => {
     const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.listActividadesGrupales(
-      { search: null, activityType: null, organizer: null, tenantId: otherTenantId },
+      {
+        search: null,
+        activityType: null,
+        organizer: null,
+        activityMonth: null,
+        tenantId: otherTenantId,
+      },
       superAdminUser,
     );
 
@@ -138,6 +151,7 @@ describe("ActividadesGrupalesService", () => {
       search: null,
       activityType: null,
       organizer: null,
+      activityMonth: null,
       tenantId: otherTenantId,
       scope: { type: "all" },
     });
@@ -148,7 +162,7 @@ describe("ActividadesGrupalesService", () => {
     const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.listActividadesGrupales(
-      { search: null, activityType: null, organizer: null, tenantId: null },
+      { search: null, activityType: null, organizer: null, activityMonth: null, tenantId: null },
       auditorUser,
     );
 
@@ -157,6 +171,7 @@ describe("ActividadesGrupalesService", () => {
       search: null,
       activityType: null,
       organizer: null,
+      activityMonth: null,
       tenantId,
       scope: { type: "tenant", tenantId },
     });
@@ -167,7 +182,13 @@ describe("ActividadesGrupalesService", () => {
     const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.listActividadesGrupales(
-      { search: null, activityType: "actividad_campo", organizer: null, tenantId: null },
+      {
+        search: null,
+        activityType: "actividad_campo",
+        organizer: null,
+        activityMonth: null,
+        tenantId: null,
+      },
       superAdminUser,
     );
 
@@ -177,6 +198,7 @@ describe("ActividadesGrupalesService", () => {
       search: null,
       activityType: "actividad_campo",
       organizer: null,
+      activityMonth: null,
       tenantId: null,
       scope: { type: "all" },
     });
@@ -187,7 +209,13 @@ describe("ActividadesGrupalesService", () => {
     const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.listActividadesGrupales(
-      { search: null, activityType: null, organizer: "trabajadora_social", tenantId: null },
+      {
+        search: null,
+        activityType: null,
+        organizer: "trabajadora_social",
+        activityMonth: null,
+        tenantId: null,
+      },
       superAdminUser,
     );
 
@@ -197,6 +225,7 @@ describe("ActividadesGrupalesService", () => {
       search: null,
       activityType: null,
       organizer: "trabajadora_social",
+      activityMonth: null,
       tenantId: null,
       scope: { type: "all" },
     });
@@ -209,7 +238,13 @@ describe("ActividadesGrupalesService", () => {
     await assert.rejects(
       () =>
         service.listActividadesGrupales(
-          { search: null, activityType: null, organizer: null, tenantId: otherTenantId },
+          {
+            search: null,
+            activityType: null,
+            organizer: null,
+            activityMonth: null,
+            tenantId: otherTenantId,
+          },
           medicoUser,
         ),
       { constructor: ForbiddenException },
@@ -282,7 +317,13 @@ describe("ActividadesGrupalesService", () => {
     await assert.rejects(
       () =>
         service.listActividadesGrupales(
-          { search: null, activityType: null, organizer: null, tenantId: null },
+          {
+            search: null,
+            activityType: null,
+            organizer: null,
+            activityMonth: null,
+            tenantId: null,
+          },
           tenantlessDirectorUser,
         ),
       { constructor: ForbiddenException },

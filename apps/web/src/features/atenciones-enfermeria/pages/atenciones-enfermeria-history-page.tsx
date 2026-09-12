@@ -5,13 +5,19 @@ import { useState } from "react";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
+import { AtencionEnfermeriaDeleteDialog } from "../components/atencion-enfermeria-delete-dialog";
 import { AtencionesEnfermeriaHistoryTable } from "../components/atenciones-enfermeria-history-table";
 import { resolveAtencionesEnfermeriaApiError } from "../lib/atenciones-enfermeria-formatters";
 import {
   ATENCIONES_ENFERMERIA_PATH,
   buildAtencionEnfermeriaDetailPath,
 } from "../lib/atenciones-enfermeria-paths";
-import { useAtencionesEnfermeriaHistoryQuery, useAtencionesEnfermeriaTrashQuery, useDeleteAtencionEnfermeriaMutation, useRestoreAtencionEnfermeriaMutation } from "../model/atenciones-enfermeria-queries";
+import {
+  useAtencionesEnfermeriaHistoryQuery,
+  useAtencionesEnfermeriaTrashQuery,
+  useDeleteAtencionEnfermeriaMutation,
+  useRestoreAtencionEnfermeriaMutation,
+} from "../model/atenciones-enfermeria-queries";
 
 type AtencionesEnfermeriaHistoryPageProps = {
   adultoMayorId: string;
@@ -26,6 +32,7 @@ export function AtencionesEnfermeriaHistoryPage({
 }: AtencionesEnfermeriaHistoryPageProps) {
   const canManageTrash = ["super_admin", "admin", "director"].includes(user.role);
   const [showTrash, setShowTrash] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const historyQuery = useAtencionesEnfermeriaHistoryQuery(adultoMayorId);
   const trashQuery = useAtencionesEnfermeriaTrashQuery(adultoMayorId, canManageTrash && showTrash);
   const deleteMutation = useDeleteAtencionEnfermeriaMutation();
@@ -113,9 +120,15 @@ export function AtencionesEnfermeriaHistoryPage({
           <span className="eyebrow">Atenciones registradas</span>
         </div>
         {canManageTrash ? (
-          <button className="outline-action" type="button" onClick={() => setShowTrash((value) => !value)}>
+          <button
+            className="outline-action atencion-history-trash-toggle"
+            type="button"
+            aria-label={showTrash ? "Ver atenciones activas" : "Abrir papelera"}
+            title={showTrash ? "Ver atenciones activas" : "Abrir papelera"}
+            onClick={() => setShowTrash((value) => !value)}
+          >
             {showTrash ? <RotateCcw aria-hidden="true" /> : <Trash2 aria-hidden="true" />}
-            <span>{showTrash ? "Ver activas" : "Papelera"}</span>
+            <span className="visually-hidden">{showTrash ? "Ver activas" : "Papelera"}</span>
           </button>
         ) : null}
       </div>
@@ -125,11 +138,7 @@ export function AtencionesEnfermeriaHistoryPage({
         isLoading={showTrash ? trashQuery.isLoading : false}
         isTrash={showTrash}
         canManageTrash={canManageTrash}
-        onDelete={async (atencionId) => {
-          if (!window.confirm("¿Enviar esta atención a la papelera?")) return;
-          await deleteMutation.mutateAsync(atencionId);
-          toast.success("Atención enviada a la papelera.");
-        }}
+        onDelete={(atencionId) => setPendingDeleteId(atencionId)}
         onRestore={async (atencionId) => {
           await restoreMutation.mutateAsync(atencionId);
           toast.success("Atención restaurada.");
@@ -138,6 +147,28 @@ export function AtencionesEnfermeriaHistoryPage({
           navigate(buildAtencionEnfermeriaDetailPath(atencionId));
         }}
       />
+
+      {pendingDeleteId !== null ? (
+        <AtencionEnfermeriaDeleteDialog
+          isPending={deleteMutation.isPending}
+          onClose={() => setPendingDeleteId(null)}
+          onConfirm={() => {
+            void deleteMutation
+              .mutateAsync(pendingDeleteId)
+              .then(() => {
+                setPendingDeleteId(null);
+                toast.success("Atención enviada a la papelera.");
+              })
+              .catch((error: unknown) => {
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : "No fue posible enviar la atención a la papelera.",
+                );
+              });
+          }}
+        />
+      ) : null}
     </section>
   );
 }

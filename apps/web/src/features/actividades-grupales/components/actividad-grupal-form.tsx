@@ -3,7 +3,7 @@ import {
   type ActividadGrupalTenantOption,
 } from "@cuidarte/contracts";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Search, Sparkles } from "lucide-react";
+import { Save, Search, Sparkles, X } from "lucide-react";
 import { type FieldErrors, type Resolver, useForm } from "react-hook-form";
 import { useEffect, useMemo, useRef, useState } from "react";
 
@@ -417,11 +417,23 @@ export function ActividadGrupalForm({
       ) : null}
 
       <div className="actividad-form-actions">
-        <button className="outline-action" type="button" onClick={onCancel}>
+        <button
+          className="outline-action actividad-form-action actividad-form-action--cancel"
+          type="button"
+          onClick={onCancel}
+        >
+          <X aria-hidden="true" />
           Cancelar
         </button>
-        <button className="primary-action" type="submit" disabled={isPending}>
-          {isPending ? "Guardando..." : mode === "create" ? "Guardar actividad" : "Guardar cambios"}
+        <button
+          className="primary-action actividad-form-action actividad-form-action--save"
+          type="submit"
+          aria-label={mode === "create" ? "Guardar actividad" : "Guardar cambios"}
+          title="Guardar"
+          disabled={isPending}
+        >
+          <Save aria-hidden="true" />
+          {isPending ? "Guardando..." : "Guardar"}
         </button>
       </div>
     </form>

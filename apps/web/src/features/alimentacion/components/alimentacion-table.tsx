@@ -25,11 +25,13 @@ type AlimentacionTableProps = {
   onOpenEdit: (recordId: string) => void;
   onExportFormato: (params: {
     adultoMayorId: string;
+    deliveryMonth: string;
     documentNumber: string;
     fullName: string;
   }) => void;
   onImportFormato: (params: {
     adultoMayorId: string;
+    deliveryMonth: string;
     documentNumber: string;
     fullName: string;
     hasImportedFormato: boolean;
@@ -40,14 +42,20 @@ type AlimentacionTableProps = {
     originalName: string;
   }) => void;
   onDelete: (record: AlimentacionListItem) => void;
-  onOpenImportedFormatoHistory: (params: { adultoMayorId: string; fullName: string }) => void;
+  onOpenImportedFormatoHistory: (params: {
+    adultoMayorId: string;
+    deliveryMonth: string;
+    fullName: string;
+  }) => void;
   exportingAdultoMayorId: string | null;
   importingAdultoMayorId: string | null;
   downloadingImportedVersionId: string | null;
 };
 
 type AlimentacionGroupedRecord = {
+  id: string;
   adultoMayorId: string;
+  deliveryMonth: string;
   documentNumber: string;
   fullName: string;
   tenantName: string;
@@ -69,16 +77,16 @@ export function AlimentacionTable({
   records,
   showTenantColumn,
 }: AlimentacionTableProps) {
-  const [expandedAdultoIds, setExpandedAdultoIds] = useState<Set<string>>(new Set());
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set());
   const shouldReduceMotion = useReducedMotion();
-  const toggleAdultoRows = useCallback((adultoMayorId: string) => {
-    setExpandedAdultoIds((current) => {
+  const toggleGroupRows = useCallback((groupId: string) => {
+    setExpandedGroupIds((current) => {
       const next = new Set(current);
 
-      if (next.has(adultoMayorId)) {
-        next.delete(adultoMayorId);
+      if (next.has(groupId)) {
+        next.delete(groupId);
       } else {
-        next.add(adultoMayorId);
+        next.add(groupId);
       }
 
       return next;
@@ -86,18 +94,22 @@ export function AlimentacionTable({
   }, []);
 
   const groupedRecords = useMemo(() => {
-    const groupsByAdultoId = new Map<string, AlimentacionGroupedRecord>();
+    const groupsByAdultoAndMonth = new Map<string, AlimentacionGroupedRecord>();
 
     for (const record of records) {
-      const existingGroup = groupsByAdultoId.get(record.adultoMayorId);
+      const deliveryMonth = getRecordDeliveryMonth(record);
+      const groupId = `${record.adultoMayorId}:${deliveryMonth}`;
+      const existingGroup = groupsByAdultoAndMonth.get(groupId);
 
       if (existingGroup !== undefined) {
         existingGroup.records.push(record);
         continue;
       }
 
-      groupsByAdultoId.set(record.adultoMayorId, {
+      groupsByAdultoAndMonth.set(groupId, {
+        id: groupId,
         adultoMayorId: record.adultoMayorId,
+        deliveryMonth,
         documentNumber: record.documentNumber,
         fullName: record.fullName,
         tenantName: record.tenantName,
@@ -105,16 +117,24 @@ export function AlimentacionTable({
       });
     }
 
-    return Array.from(groupsByAdultoId.values())
+    return Array.from(groupsByAdultoAndMonth.values())
       .map((group) => ({
         ...group,
         records: [...group.records].sort((leftRecord, rightRecord) =>
           rightRecord.deliveryDate.localeCompare(leftRecord.deliveryDate),
         ),
       }))
-      .sort((left, right) =>
-        left.fullName.localeCompare(right.fullName, "es", { sensitivity: "base" }),
-      );
+      .sort((left, right) => {
+        const nameComparison = left.fullName.localeCompare(right.fullName, "es", {
+          sensitivity: "base",
+        });
+
+        if (nameComparison !== 0) {
+          return nameComparison;
+        }
+
+        return right.deliveryMonth.localeCompare(left.deliveryMonth);
+      });
   }, [records]);
 
   if (isLoading) {
@@ -173,20 +193,23 @@ export function AlimentacionTable({
             </tr>
           ) : (
             groupedRecords.map((group) => {
-              const isExpanded = expandedAdultoIds.has(group.adultoMayorId);
+              const isExpanded = expandedGroupIds.has(group.id);
               const isExporting = exportingAdultoMayorId === group.adultoMayorId;
               const isImporting = importingAdultoMayorId === group.adultoMayorId;
               const latestRecord = group.records[0];
-              const detailRowsRegionId = `alimentacion-registros-${group.adultoMayorId}`;
+              const detailRowsRegionId = `alimentacion-registros-${group.id}`;
 
               if (latestRecord === undefined) {
                 return null;
               }
 
+              const detailRecords = group.records.filter(
+                (record) => getRecordDeliveryMonth(record) === group.deliveryMonth,
+              );
               const importedFormato = latestRecord.importedFormato;
 
               return (
-                <Fragment key={group.adultoMayorId}>
+                <Fragment key={group.id}>
                   <tr className={`alimentacion-group-row ${isExpanded ? "is-expanded" : ""}`}>
                     <td>{group.documentNumber}</td>
                     <td className="alimentacion-cell-name">
@@ -198,7 +221,7 @@ export function AlimentacionTable({
                             aria-controls={detailRowsRegionId}
                             aria-expanded={isExpanded}
                             title="Mostrar registros del adulto mayor en el mes"
-                            onClick={() => toggleAdultoRows(group.adultoMayorId)}
+                            onClick={() => toggleGroupRows(group.id)}
                           >
                             <strong>{group.fullName}</strong>
                           </button>
@@ -219,7 +242,7 @@ export function AlimentacionTable({
                         </>
                       )}
                     </td>
-                    <td>{latestRecord.deliveryDate.slice(0, 7)}</td>
+                    <td>{group.deliveryMonth}</td>
                     <td>{formatAlimentacionOrganizer(latestRecord.organizer)}</td>
                     <td>{formatAlimentacionStatus(latestRecord.refrigerio1)}</td>
                     <td>{formatAlimentacionStatus(latestRecord.almuerzo)}</td>
@@ -231,7 +254,7 @@ export function AlimentacionTable({
                         {canManageAlimentacion ? (
                           <>
                             <button
-                              className="alimentacion-row-action"
+                              className="alimentacion-row-action alimentacion-row-action--export"
                               type="button"
                               aria-label={
                                 isExporting
@@ -243,6 +266,7 @@ export function AlimentacionTable({
                               onClick={() =>
                                 onExportFormato({
                                   adultoMayorId: group.adultoMayorId,
+                                  deliveryMonth: group.deliveryMonth,
                                   documentNumber: group.documentNumber,
                                   fullName: group.fullName,
                                 })
@@ -255,7 +279,7 @@ export function AlimentacionTable({
                               )}
                             </button>
                             <button
-                              className="alimentacion-row-action"
+                              className="alimentacion-row-action alimentacion-row-action--import"
                               type="button"
                               aria-label={
                                 isImporting
@@ -271,6 +295,7 @@ export function AlimentacionTable({
                               onClick={() =>
                                 onImportFormato({
                                   adultoMayorId: group.adultoMayorId,
+                                  deliveryMonth: group.deliveryMonth,
                                   documentNumber: group.documentNumber,
                                   fullName: group.fullName,
                                   hasImportedFormato: importedFormato !== null,
@@ -316,6 +341,7 @@ export function AlimentacionTable({
                                   onClick={() =>
                                     onOpenImportedFormatoHistory({
                                       adultoMayorId: group.adultoMayorId,
+                                      deliveryMonth: group.deliveryMonth,
                                       fullName: group.fullName,
                                     })
                                   }
@@ -333,7 +359,7 @@ export function AlimentacionTable({
                           aria-expanded={isExpanded}
                           aria-label={`${isExpanded ? "Ocultar" : "Mostrar"} registros de ${group.fullName}`}
                           title={isExpanded ? "Ocultar registros" : "Mostrar registros"}
-                          onClick={() => toggleAdultoRows(group.adultoMayorId)}
+                          onClick={() => toggleGroupRows(group.id)}
                         >
                           <motion.span
                             className="alimentacion-toggle-icon"
@@ -350,7 +376,7 @@ export function AlimentacionTable({
 
                   <AnimatePresence initial={false}>
                     {isExpanded
-                      ? group.records.map((record, index) => (
+                      ? detailRecords.map((record, index) => (
                           <motion.tr
                             key={record.id}
                             className={`alimentacion-detail-row ${index === 0 ? "alimentacion-detail-row--first" : ""}`}
@@ -372,31 +398,31 @@ export function AlimentacionTable({
                             <td>{formatAlimentacionStatus(record.auxilioTransporte)}</td>
                             {showTenantColumn ? <td>{record.tenantName}</td> : null}
                             <td>
-                            {canManageAlimentacion ? (
-                              <button
-                                className="alimentacion-row-action"
-                                type="button"
-                                aria-label={`Editar alimentación de ${record.fullName} del día ${record.deliveryDate}`}
+                              {canManageAlimentacion ? (
+                                <button
+                                  className="alimentacion-row-action"
+                                  type="button"
+                                  aria-label={`Editar alimentación de ${record.fullName} del día ${record.deliveryDate}`}
                                   title="Editar registro"
                                   onClick={() => onOpenEdit(record.id)}
-                              >
-                                <Pencil aria-hidden="true" />
-                              </button>
-                            ) : null}
-                            {record.canDelete ? (
-                              <button
-                                className="alimentacion-row-action alimentacion-row-action--danger"
-                                type="button"
-                                aria-label={`Eliminar alimentación de ${record.fullName} del día ${record.deliveryDate}`}
-                                title="Eliminar registro"
-                                onClick={() => onDelete(record)}
-                              >
-                                <Trash2 aria-hidden="true" />
-                              </button>
-                            ) : null}
-                          </td>
-                        </motion.tr>
-                      ))
+                                >
+                                  <Pencil aria-hidden="true" />
+                                </button>
+                              ) : null}
+                              {record.canDelete ? (
+                                <button
+                                  className="alimentacion-row-action alimentacion-row-action--danger"
+                                  type="button"
+                                  aria-label={`Eliminar alimentación de ${record.fullName} del día ${record.deliveryDate}`}
+                                  title="Eliminar registro"
+                                  onClick={() => onDelete(record)}
+                                >
+                                  <Trash2 aria-hidden="true" />
+                                </button>
+                              ) : null}
+                            </td>
+                          </motion.tr>
+                        ))
                       : null}
                   </AnimatePresence>
                 </Fragment>
@@ -407,4 +433,8 @@ export function AlimentacionTable({
       </table>
     </div>
   );
+}
+
+function getRecordDeliveryMonth(record: AlimentacionListItem): string {
+  return record.deliveryDate.slice(0, 7);
 }

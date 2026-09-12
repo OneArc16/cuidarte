@@ -103,7 +103,7 @@ export function ActividadesGrupalesTable({
                 <td>
                   <div className="actividades-row-actions">
                     <button
-                      className="actividades-row-action"
+                      className={`actividades-row-action ${actividad.canEdit ? "actividades-row-action--diligenciar" : "actividades-row-action--ver"}`}
                       type="button"
                       aria-label={
                         actividad.canEdit
@@ -121,7 +121,7 @@ export function ActividadesGrupalesTable({
                     </button>
                     {actividad.canEdit ? (
                       <button
-                        className="actividades-row-action"
+                        className="actividades-row-action actividades-row-action--editar"
                         type="button"
                         aria-label={`Editar actividad ${actividad.activityName}`}
                         title="Editar actividad"
@@ -131,7 +131,7 @@ export function ActividadesGrupalesTable({
                       </button>
                     ) : null}
                     <button
-                      className="actividades-row-action"
+                      className="actividades-row-action actividades-row-action--acta"
                       type="button"
                       aria-label={`Ver PDF del acta ${formatActaNumber(actividad.actaNumber)}`}
                       title="Ver PDF del acta"
@@ -141,7 +141,7 @@ export function ActividadesGrupalesTable({
                     </button>
                     {actividad.canDelete ? (
                       <button
-                        className="actividades-row-action"
+                        className="actividades-row-action actividades-row-action--papelera"
                         type="button"
                         aria-label={`Enviar a la papelera la actividad ${actividad.activityName}`}
                         title="Enviar a la papelera"

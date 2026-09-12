@@ -110,6 +110,22 @@ const nullableResponsibleDepartmentSchema = z
   })
   .pipe(actividadGrupalResponsibleDepartmentSchema.nullable());
 
+const nullableMonthSchema = z
+  .union([z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/), z.literal(""), z.null(), z.undefined()])
+  .transform((value) => {
+    if (value === null || value === undefined || value === "") {
+      return null;
+    }
+
+    return value;
+  })
+  .pipe(
+    z
+      .string()
+      .regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+      .nullable(),
+  );
+
 const employeeIdsSchema = z
   .array(z.uuid())
   .min(1, "Selecciona minimo un empleado.")
@@ -133,6 +149,7 @@ export const actividadGrupalListQuerySchema = z.object({
   search: nullableSearchSchema.optional().default(null),
   activityType: nullableActivityTypeSchema.optional().default(null),
   organizer: nullableOrganizerSchema.optional().default(null),
+  activityMonth: nullableMonthSchema.optional().default(null),
   tenantId: nullableTenantIdSchema.optional().default(null),
 });
 

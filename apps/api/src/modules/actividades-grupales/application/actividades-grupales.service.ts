@@ -94,6 +94,7 @@ export class ActividadesGrupalesService {
       search: query.search,
       activityType: query.activityType,
       organizer: query.organizer,
+      activityMonth: query.activityMonth,
       tenantId: effectiveTenantId,
       scope,
     });

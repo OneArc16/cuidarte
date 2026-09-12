@@ -211,7 +211,19 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     tenantId: string;
     period: string;
   }): Promise<ActividadGrupalReportCandidateRecord[]> {
-    const monthRange = resolveMonthRange(query.period);
+    const monthRange = query.period === "ALL" ? null : resolveMonthRange(query.period);
+    const conditions: SQL[] = [
+      eq(actividadesGrupales.tenantId, query.tenantId),
+      isNull(actividadesGrupales.deletedAt),
+    ];
+
+    if (monthRange !== null) {
+      conditions.push(
+        gte(actividadesGrupales.activityDate, monthRange.startDate),
+        lt(actividadesGrupales.activityDate, monthRange.endDateExclusive),
+      );
+    }
+
     const rows = await this.database.db
       .select({
         id: actividadesGrupales.id,
@@ -227,14 +239,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         actividadGrupalDiligenciamientos,
         eq(actividadGrupalDiligenciamientos.activityId, actividadesGrupales.id),
       )
-      .where(
-        and(
-          eq(actividadesGrupales.tenantId, query.tenantId),
-          isNull(actividadesGrupales.deletedAt),
-          gte(actividadesGrupales.activityDate, monthRange.startDate),
-          lt(actividadesGrupales.activityDate, monthRange.endDateExclusive),
-        ),
-      )
+      .where(and(...conditions))
       .orderBy(asc(actividadesGrupales.activityDate), asc(actividadesGrupales.actaNumber));
 
     return rows;
@@ -840,6 +845,15 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       conditions.push(eq(actividadesGrupales.organizer, query.organizer));
     }
 
+    if (query.activityMonth !== null) {
+      const monthRange = resolveMonthRange(query.activityMonth);
+
+      conditions.push(
+        gte(actividadesGrupales.activityDate, monthRange.startDate),
+        lt(actividadesGrupales.activityDate, monthRange.endDateExclusive),
+      );
+    }
+
     if (query.search !== null) {
       const searchPattern = `%${escapeLikePattern(query.search)}%`;
 
@@ -872,6 +886,15 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
 
     if (query.organizer !== null) {
       conditions.push(eq(actividadesGrupales.organizer, query.organizer));
+    }
+
+    if (query.activityMonth !== null) {
+      const monthRange = resolveMonthRange(query.activityMonth);
+
+      conditions.push(
+        gte(actividadesGrupales.activityDate, monthRange.startDate),
+        lt(actividadesGrupales.activityDate, monthRange.endDateExclusive),
+      );
     }
 
     if (query.search !== null) {

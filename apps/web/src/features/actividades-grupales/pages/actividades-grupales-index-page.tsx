@@ -4,11 +4,12 @@ import {
   type ActividadGrupalType,
   type AuthUser,
 } from "@cuidarte/contracts";
-import { CalendarPlus } from "lucide-react";
+import { CalendarPlus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
+import { ReportExportButton } from "@/features/reports/components/report-export-button";
 
 import { ActividadGrupalDeleteDialog } from "../components/actividad-grupal-delete-dialog";
 import { ActividadesGrupalesTable } from "../components/actividades-grupales-table";
@@ -23,6 +24,7 @@ import {
   canManageActividadesGrupales,
   canViewActividadesGrupalesTrash,
 } from "../lib/actividades-grupales-permissions";
+import { getCurrentMonthInputValue } from "@/features/alimentacion/lib/alimentacion-formatters";
 import { resolveActividadesGrupalesApiError } from "../lib/actividades-grupales-formatters";
 import { openActividadGrupalActaPdf } from "../lib/open-actividad-grupal-acta-pdf";
 import {
@@ -41,12 +43,20 @@ export function ActividadesGrupalesIndexPage({
   user,
 }: ActividadesGrupalesIndexPageProps) {
   const [search, setSearch] = useState("");
+  const [activityMonth, setActivityMonth] = useState(getCurrentMonthInputValue());
   const [activityPendingDelete, setActivityPendingDelete] =
     useState<ActividadGrupalListItem | null>(null);
   const [selectedActivityType, setSelectedActivityType] = useState<ActividadGrupalType | "">("");
   const [selectedOrganizer, setSelectedOrganizer] = useState<ActividadGrupalOrganizer | "">("");
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const showTenantFilter = user.role === "super_admin";
+  const effectiveActivityMonth = activityMonth.trim() === "" ? null : activityMonth;
+  const reportPeriod = effectiveActivityMonth ?? "ALL";
+  const reportTenantId = showTenantFilter
+    ? selectedTenantId === ""
+      ? null
+      : selectedTenantId
+    : user.tenantId;
   const canViewTrash = canViewActividadesGrupalesTrash(user);
   const tenantOptionsQuery = useActividadGrupalTenantOptionsQuery(showTenantFilter);
   const deleteMutation = useDeleteActividadGrupalMutation();
@@ -54,11 +64,8 @@ export function ActividadesGrupalesIndexPage({
     search,
     activityType: selectedActivityType === "" ? null : selectedActivityType,
     organizer: selectedOrganizer === "" ? null : selectedOrganizer,
-    tenantId: showTenantFilter
-      ? selectedTenantId === ""
-        ? null
-        : selectedTenantId
-      : user.tenantId,
+    activityMonth: effectiveActivityMonth,
+    tenantId: reportTenantId,
   });
 
   return (
@@ -70,23 +77,36 @@ export function ActividadesGrupalesIndexPage({
       <div className="actividades-form-nav">
         {canViewTrash ? (
           <button
-            className="outline-action actividades-back-action"
+            className="outline-action actividades-back-action actividades-trash-action"
             type="button"
+            aria-label="Ver papelera"
+            title="Ver papelera"
             onClick={() => navigate(CREACION_ACTIVIDADES_TRASH_PATH)}
           >
-            <span>Ver papelera</span>
+            <Trash2 aria-hidden="true" />
+            <span className="visually-hidden">Ver papelera</span>
           </button>
         ) : null}
         <span className="actividades-form-nav__context">Listado activo</span>
       </div>
 
       <ActividadesGrupalesToolbar
+        activityMonth={activityMonth}
+        exportButton={
+          <ReportExportButton
+            className="actividades-zip-action"
+            period={reportPeriod}
+            tenantId={reportTenantId}
+            type="ACTAS_SESIONES_GRUPALES"
+          />
+        }
         search={search}
         selectedActivityType={selectedActivityType}
         selectedOrganizer={selectedOrganizer}
         selectedTenantId={selectedTenantId}
         showTenantFilter={showTenantFilter}
         tenantOptions={tenantOptionsQuery.data?.tenants ?? []}
+        onActivityMonthChange={setActivityMonth}
         isTenantOptionsLoading={tenantOptionsQuery.isLoading}
         onActivityTypeChange={setSelectedActivityType}
         onOrganizerChange={setSelectedOrganizer}

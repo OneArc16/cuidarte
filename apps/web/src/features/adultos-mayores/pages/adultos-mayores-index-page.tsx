@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { useState } from "react";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
+import { useSessionStorageState } from "@/shared/hooks/use-session-storage-state";
 import { buildAtencionIndividualCreatePath } from "@/features/atenciones-individuales/lib/atenciones-individuales-paths";
 import { buildHistoriaClinicaPath } from "@/features/atenciones-individuales/lib/atenciones-individuales-paths";
 import { canManageAlimentacion } from "@/features/alimentacion/lib/alimentacion-permissions";
@@ -35,7 +36,7 @@ type AdultosMayoresIndexPageProps = {
 type ExportTarget = "excel" | "pdf" | null;
 
 export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexPageProps) {
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useSessionStorageState(`cuidarte:adultos-mayores:search:${user.id}`);
   const [exportTarget, setExportTarget] = useState<ExportTarget>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const adultosMayoresQuery = useAdultosMayoresQuery({ search });

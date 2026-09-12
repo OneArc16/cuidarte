@@ -18,6 +18,7 @@ import { AlimentacionImportedPdfDialog } from "../components/alimentacion-import
 import { AlimentacionImportedPdfVersionsDialog } from "../components/alimentacion-imported-pdf-versions-dialog";
 import { AlimentacionTable } from "../components/alimentacion-table";
 import { AlimentacionToolbar } from "../components/alimentacion-toolbar";
+import { ReportExportButton } from "@/features/reports/components/report-export-button";
 import {
   REGISTRO_ALIMENTACION_NEW_PATH,
   buildAlimentacionEditPath,
@@ -42,6 +43,7 @@ type AlimentacionIndexPageProps = {
 
 type ImportTarget = {
   adultoMayorId: string;
+  deliveryMonth: string;
   documentNumber: string;
   fullName: string;
   hasImportedFormato: boolean;
@@ -79,14 +81,16 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
   const tenantOptionsQuery = useAlimentacionTenantOptionsQuery(showTenantFilter);
   const canManageRecords = canManageAlimentacion(user);
   const effectiveDeliveryMonth = deliveryMonth.trim() === "" ? null : deliveryMonth;
+  const reportPeriod = effectiveDeliveryMonth ?? "ALL";
+  const reportTenantId = showTenantFilter
+    ? selectedTenantId === ""
+      ? null
+      : selectedTenantId
+    : user.tenantId;
   const registrosQuery = useAlimentacionListQuery({
     search,
     deliveryMonth: effectiveDeliveryMonth,
-    tenantId: showTenantFilter
-      ? selectedTenantId === ""
-        ? null
-        : selectedTenantId
-      : user.tenantId,
+    tenantId: reportTenantId,
   });
   const importMutation = useImportAlimentacionFormatoEntregaMutation();
   const deleteMutation = useDeleteAlimentacionRecordMutation();
@@ -98,21 +102,17 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
 
   async function handleExportFormato(params: {
     adultoMayorId: string;
+    deliveryMonth: string;
     documentNumber: string;
     fullName: string;
   }) {
-    if (effectiveDeliveryMonth === null) {
-      setExportError("Selecciona un mes para exportar el formato de alimentación.");
-      return;
-    }
-
     setExportingAdultoMayorId(params.adultoMayorId);
     setExportError(null);
 
     try {
       const pdfUrl = buildAlimentacionFormatoEntregaPdfUrl({
         adultoMayorId: params.adultoMayorId,
-        deliveryMonth: effectiveDeliveryMonth,
+        deliveryMonth: params.deliveryMonth,
       });
       window.open(pdfUrl, "_blank", "noopener,noreferrer");
     } catch (error: unknown) {
@@ -123,11 +123,6 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
   }
 
   function handleRequestImport(params: ImportTarget) {
-    if (effectiveDeliveryMonth === null) {
-      setImportError("Selecciona un mes para importar el formato de alimentación.");
-      return;
-    }
-
     importMutation.reset();
     setImportError(null);
     setImportTarget(params);
@@ -139,7 +134,7 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
 
     event.target.value = "";
 
-    if (file === null || importTarget === null || effectiveDeliveryMonth === null) {
+    if (file === null || importTarget === null) {
       return;
     }
 
@@ -157,7 +152,7 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
     setImportError(null);
     setImportDialog({
       ...importTarget,
-      deliveryMonth: effectiveDeliveryMonth,
+      deliveryMonth: importTarget.deliveryMonth,
       file,
     });
   }
@@ -195,13 +190,12 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
     );
   }
 
-  function openImportedFormatoHistory(params: { adultoMayorId: string; fullName: string }) {
-    if (effectiveDeliveryMonth === null) {
-      setImportError("Selecciona un mes para consultar las versiones importadas.");
-      return;
-    }
-
-    setHistoryTarget({ ...params, deliveryMonth: effectiveDeliveryMonth });
+  function openImportedFormatoHistory(params: {
+    adultoMayorId: string;
+    deliveryMonth: string;
+    fullName: string;
+  }) {
+    setHistoryTarget(params);
   }
 
   async function handleDownloadImportedFormato(params: {
@@ -217,11 +211,7 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
         versionId: params.versionId,
       });
 
-      window.open(
-        pdfUrl,
-        "_blank",
-        "noopener,noreferrer",
-      );
+      window.open(pdfUrl, "_blank", "noopener,noreferrer");
     } catch (error: unknown) {
       toast.error(
         resolveAlimentacionApiError(error) ?? "No fue posible descargar el PDF importado.",
@@ -283,6 +273,14 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
         selectedTenantId={selectedTenantId}
         showTenantFilter={showTenantFilter}
         tenantOptions={tenantOptionsQuery.data?.tenants ?? []}
+        exportButton={
+          <ReportExportButton
+            className="alimentacion-zip-action"
+            period={reportPeriod}
+            tenantId={reportTenantId}
+            type="FORMATOS_ENTREGA_ALIMENTACION"
+          />
+        }
         onMonthChange={setDeliveryMonth}
         onSearchChange={setSearch}
         onTenantChange={setSelectedTenantId}

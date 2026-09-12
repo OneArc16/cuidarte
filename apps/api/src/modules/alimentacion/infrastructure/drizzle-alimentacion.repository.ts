@@ -372,6 +372,10 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
     tenantId: string;
     deliveryMonth: string;
   }): Promise<AlimentacionFormatoReportCandidateRecord[]> {
+    if (query.deliveryMonth === "ALL") {
+      return await this.findAllFormatoEntregaReportCandidates(query.tenantId);
+    }
+
     const monthRange = resolveMonthRange(query.deliveryMonth);
     const rows = await this.database.db
       .select({
@@ -429,6 +433,101 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       deliveryMonth: query.deliveryMonth,
       importedVersion: importedVersions.get(row.adultoMayorId) ?? null,
     }));
+  }
+
+  private async findAllFormatoEntregaReportCandidates(
+    tenantId: string,
+  ): Promise<AlimentacionFormatoReportCandidateRecord[]> {
+    const deliveryMonth = sql<string>`to_char(${alimentacionRegistros.deliveryDate}, 'YYYY-MM')`;
+    const recordRows = await this.database.db
+      .select({
+        tenantId: adultosMayores.tenantId,
+        tenantName: tenants.name,
+        adultoMayorId: adultosMayores.id,
+        documentNumber: adultosMayores.documentNumber,
+        names: adultosMayores.names,
+        surnames: adultosMayores.surnames,
+        deliveryMonth,
+      })
+      .from(alimentacionRegistros)
+      .innerJoin(adultosMayores, eq(adultosMayores.id, alimentacionRegistros.adultoMayorId))
+      .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
+      .where(eq(alimentacionRegistros.tenantId, tenantId))
+      .groupBy(
+        adultosMayores.tenantId,
+        tenants.name,
+        adultosMayores.id,
+        adultosMayores.documentNumber,
+        adultosMayores.names,
+        adultosMayores.surnames,
+        deliveryMonth,
+      );
+
+    const importedRows = await this.database.db
+      .select({
+        tenantId: adultosMayores.tenantId,
+        tenantName: tenants.name,
+        adultoMayorId: adultosMayores.id,
+        documentNumber: adultosMayores.documentNumber,
+        names: adultosMayores.names,
+        surnames: adultosMayores.surnames,
+        deliveryMonth: alimentacionFormatoImportedVersions.deliveryMonth,
+      })
+      .from(alimentacionFormatoImportedVersions)
+      .innerJoin(
+        adultosMayores,
+        eq(adultosMayores.id, alimentacionFormatoImportedVersions.adultoMayorId),
+      )
+      .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
+      .where(eq(alimentacionFormatoImportedVersions.tenantId, tenantId))
+      .groupBy(
+        adultosMayores.tenantId,
+        tenants.name,
+        adultosMayores.id,
+        adultosMayores.documentNumber,
+        adultosMayores.names,
+        adultosMayores.surnames,
+        alimentacionFormatoImportedVersions.deliveryMonth,
+      );
+
+    const candidatesByScope = new Map<
+      string,
+      Omit<AlimentacionFormatoReportCandidateRecord, "importedVersion">
+    >();
+
+    for (const row of [...recordRows, ...importedRows]) {
+      candidatesByScope.set(`${row.adultoMayorId}:${row.deliveryMonth}`, row);
+    }
+
+    const importedVersions = await this.findLatestImportedFormatoByScopes(
+      tenantId,
+      [...candidatesByScope.values()].map((candidate) => ({
+        adultoMayorId: candidate.adultoMayorId,
+        deliveryMonth: candidate.deliveryMonth,
+      })),
+    );
+
+    return [...candidatesByScope.values()]
+      .map((candidate) => ({
+        ...candidate,
+        importedVersion:
+          importedVersions.get(`${candidate.adultoMayorId}:${candidate.deliveryMonth}`) ?? null,
+      }))
+      .sort((first, second) => {
+        const surnamesComparison = first.surnames.localeCompare(second.surnames, "es");
+
+        if (surnamesComparison !== 0) {
+          return surnamesComparison;
+        }
+
+        const namesComparison = first.names.localeCompare(second.names, "es");
+
+        if (namesComparison !== 0) {
+          return namesComparison;
+        }
+
+        return first.deliveryMonth.localeCompare(second.deliveryMonth);
+      });
   }
 
   async findImportedFormatoVersions(
@@ -1093,6 +1192,46 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
     }
 
     return latestByAdultoMayorId;
+  }
+
+  private async findLatestImportedFormatoByScopes(
+    tenantId: string,
+    scopes: Array<{ adultoMayorId: string; deliveryMonth: string }>,
+  ): Promise<Map<string, AlimentacionImportedFormatoVersionRecord>> {
+    if (scopes.length === 0) {
+      return new Map();
+    }
+
+    const requestedScopes = new Set(
+      scopes.map((scope) => `${scope.adultoMayorId}:${scope.deliveryMonth}`),
+    );
+    const adultoMayorIds = [...new Set(scopes.map((scope) => scope.adultoMayorId))];
+    const rows = await this.database.db
+      .select(this.getImportedFormatoVersionSelection())
+      .from(alimentacionFormatoImportedVersions)
+      .innerJoin(users, eq(users.id, alimentacionFormatoImportedVersions.importedByUserId))
+      .where(
+        and(
+          eq(alimentacionFormatoImportedVersions.tenantId, tenantId),
+          inArray(alimentacionFormatoImportedVersions.adultoMayorId, adultoMayorIds),
+        ),
+      )
+      .orderBy(
+        asc(alimentacionFormatoImportedVersions.adultoMayorId),
+        asc(alimentacionFormatoImportedVersions.deliveryMonth),
+        desc(alimentacionFormatoImportedVersions.version),
+      );
+    const latestByScope = new Map<string, AlimentacionImportedFormatoVersionRecord>();
+
+    for (const row of rows) {
+      const key = `${row.adultoMayorId}:${row.deliveryMonth}`;
+
+      if (requestedScopes.has(key) && !latestByScope.has(key)) {
+        latestByScope.set(key, this.toImportedFormatoVersionRecord(row));
+      }
+    }
+
+    return latestByScope;
   }
 
   private toFormatoEntregaRecord(

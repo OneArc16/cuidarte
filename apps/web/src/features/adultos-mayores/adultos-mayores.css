@@ -167,6 +167,54 @@
   transform: translateY(-1px);
 }
 
+.adultos-row-action--alimentacion {
+  border-color: rgb(193 142 43 / 28%);
+  color: #a26f12;
+}
+
+.adultos-row-action--alimentacion:not(:disabled):hover,
+.adultos-row-action--alimentacion:not(:disabled):focus-visible {
+  border-color: rgb(193 142 43 / 48%);
+  background: #fff8e7;
+  color: #85580b;
+}
+
+.adultos-row-action--atencion {
+  border-color: rgb(211 91 91 / 26%);
+  color: #c25353;
+}
+
+.adultos-row-action--atencion:not(:disabled):hover,
+.adultos-row-action--atencion:not(:disabled):focus-visible {
+  border-color: rgb(211 91 91 / 46%);
+  background: #fff1f1;
+  color: #a83e3e;
+}
+
+.adultos-row-action--editar {
+  border-color: rgb(44 112 166 / 26%);
+  color: #2c70a6;
+}
+
+.adultos-row-action--editar:not(:disabled):hover,
+.adultos-row-action--editar:not(:disabled):focus-visible {
+  border-color: rgb(44 112 166 / 46%);
+  background: #eef7ff;
+  color: #205b89;
+}
+
+.adultos-row-action--historia {
+  border-color: rgb(29 158 117 / 30%);
+  color: #087c64;
+}
+
+.adultos-row-action--historia:not(:disabled):hover,
+.adultos-row-action--historia:not(:disabled):focus-visible {
+  border-color: rgb(29 158 117 / 50%);
+  background: #e9f9f2;
+  color: #05634f;
+}
+
 .adultos-floating-action {
   position: fixed;
   right: clamp(18px, 3vw, 34px);

@@ -69,6 +69,8 @@ export function HistoriaClinicaTable({
                   <button
                     className="outline-action atencion-history-action"
                     type="button"
+                    aria-label={actionLabel}
+                    title={actionLabel}
                     onClick={() => onOpenAtencion(atencion)}
                   >
                     {atencion.access === "edit" ? (
@@ -76,7 +78,7 @@ export function HistoriaClinicaTable({
                     ) : (
                       <Eye aria-hidden="true" />
                     )}
-                    <span>{actionLabel}</span>
+                    <span className="visually-hidden">{actionLabel}</span>
                   </button>
                 </td>
               </tr>

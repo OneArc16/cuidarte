@@ -78,7 +78,7 @@ export function EmpleadosTable({
               <td>
                 <div className="empleados-row-actions">
                   <button
-                    className="empleados-row-action"
+                    className="empleados-row-action empleados-row-action--ver"
                     type="button"
                     aria-label={`Ver ${empleado.fullName}`}
                     title="Ver"
@@ -88,7 +88,7 @@ export function EmpleadosTable({
                   </button>
                   {canEditEmpleados ? (
                     <button
-                      className="empleados-row-action"
+                      className="empleados-row-action empleados-row-action--editar"
                       type="button"
                       aria-label={`Editar ${empleado.fullName}`}
                       title="Editar"

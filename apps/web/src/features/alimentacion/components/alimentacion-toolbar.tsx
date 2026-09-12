@@ -1,6 +1,6 @@
 import { type AlimentacionTenantOption } from "@cuidarte/contracts";
 import { CalendarDays, Search } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -12,6 +12,7 @@ type AlimentacionToolbarProps = {
   selectedTenantId: string;
   showTenantFilter: boolean;
   tenantOptions: AlimentacionTenantOption[];
+  exportButton?: ReactNode;
   onMonthChange: (value: string) => void;
   onSearchChange: (value: string) => void;
   onTenantChange: (value: string) => void;
@@ -24,6 +25,7 @@ export function AlimentacionToolbar({
   selectedTenantId,
   showTenantFilter,
   tenantOptions,
+  exportButton,
   onMonthChange,
   onSearchChange,
   onTenantChange,
@@ -55,6 +57,12 @@ export function AlimentacionToolbar({
     setIsMonthPickerOpen(false);
   }
 
+  function resetDraftMonth() {
+    const today = new Date();
+    setDraftMonth(today.getMonth());
+    setDraftYear(today.getFullYear());
+  }
+
   function handleMonthPopoverOpenChange(open: boolean) {
     if (open) {
       const baseDate = selectedMonth ?? new Date();
@@ -68,7 +76,9 @@ export function AlimentacionToolbar({
   return (
     <div
       className={`alimentacion-toolbar ${
-        showTenantFilter ? "alimentacion-toolbar--with-tenant" : "alimentacion-toolbar--without-tenant"
+        showTenantFilter
+          ? "alimentacion-toolbar--with-tenant"
+          : "alimentacion-toolbar--without-tenant"
       }`}
     >
       <label className="alimentacion-search">
@@ -132,6 +142,9 @@ export function AlimentacionToolbar({
             </div>
             <div className="alimentacion-month-actions">
               <div className="alimentacion-month-actions-buttons">
+                <Button type="button" variant="ghost" size="sm" onClick={resetDraftMonth}>
+                  Limpiar
+                </Button>
                 <Button
                   type="button"
                   variant="ghost"
@@ -141,7 +154,7 @@ export function AlimentacionToolbar({
                     setIsMonthPickerOpen(false);
                   }}
                 >
-                  Limpiar
+                  Todos
                 </Button>
                 <Button
                   type="button"
@@ -175,6 +188,10 @@ export function AlimentacionToolbar({
           </select>
         </label>
       ) : null}
+
+      {exportButton === undefined ? null : (
+        <div className="alimentacion-toolbar-export">{exportButton}</div>
+      )}
     </div>
   );
 }

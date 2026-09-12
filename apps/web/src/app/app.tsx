@@ -58,7 +58,6 @@ import {
   isAtencionesEnfermeriaPath,
 } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-paths";
 import { canReadAtencionesEnfermeria } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-permissions";
-import { canOpenReports } from "@/features/reports/lib/reports-permissions";
 import { isReportsPath } from "@/features/reports/lib/reports-paths";
 
 export function App() {
@@ -126,7 +125,7 @@ export function App() {
       return;
     }
 
-    if (isReportsPath(path) && !canOpenReports(user)) {
+    if (isReportsPath(path)) {
       navigate(HOME_PATH, { replace: true });
       return;
     }
@@ -193,7 +192,6 @@ export function App() {
       !isAlimentacionPath(path) &&
       !isAtencionesEnfermeriaPath(path) &&
       !isActividadesGrupalesPath(path) &&
-      !isReportsPath(path) &&
       !isEmpleadosPath(path)
     ) {
       navigate(HOME_PATH, { replace: true });
@@ -220,11 +218,9 @@ export function App() {
                   ? "Papelera de actas | CuidarTe"
                   : isActividadesGrupalesPath(path)
                     ? "Sesiones grupales | CuidarTe"
-                    : isReportsPath(path)
-                      ? "Reportes | CuidarTe"
-                      : isEmpleadosPath(path)
-                        ? "Gestion de empleados | CuidarTe"
-                        : "Inicio | CuidarTe";
+                    : isEmpleadosPath(path)
+                      ? "Gestion de empleados | CuidarTe"
+                      : "Inicio | CuidarTe";
   }, [path, user]);
 
   if (currentUserQuery.isLoading) {

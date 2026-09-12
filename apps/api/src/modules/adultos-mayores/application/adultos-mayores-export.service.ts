@@ -82,7 +82,10 @@ export class AdultosMayoresExportService {
     adultosMayores: AdultoMayorListItem[],
     includeTenant: boolean,
   ): Promise<Buffer> {
-    const browser = await chromium.launch({ headless: true, env: playwrightEnv.createPlaywrightLaunchEnv() });
+    const browser = await chromium.launch({
+      headless: true,
+      env: playwrightEnv.createPlaywrightLaunchEnv(),
+    });
 
     try {
       const page = await browser.newPage();
@@ -108,7 +111,8 @@ export class AdultosMayoresExportService {
 
   private getExcelColumns(includeTenant: boolean): Partial<ExcelJS.Column>[] {
     const columns: Partial<ExcelJS.Column>[] = [
-      { header: "Documento", key: "documento", width: 18 },
+      { header: "Tipo de documento", key: "tipoDocumento", width: 20 },
+      { header: "Número de documento", key: "numeroDocumento", width: 22 },
       { header: "Nombres", key: "nombres", width: 24 },
       { header: "Apellidos", key: "apellidos", width: 24 },
       { header: "Telefono", key: "telefono", width: 18 },
@@ -129,7 +133,8 @@ export class AdultosMayoresExportService {
     includeTenant: boolean,
   ): Record<string, string | number> {
     const row = {
-      documento: formatDocument(adultoMayor.documentType, adultoMayor.documentNumber),
+      tipoDocumento: formatDocumentType(adultoMayor.documentType),
+      numeroDocumento: adultoMayor.documentNumber,
       nombres: adultoMayor.names,
       apellidos: adultoMayor.surnames,
       telefono: adultoMayor.phone ?? "Sin telefono",
@@ -156,7 +161,8 @@ export class AdultosMayoresExportService {
 
         return `<tr>
           ${tenantCell}
-          <td>${escapeHtml(formatDocument(adultoMayor.documentType, adultoMayor.documentNumber))}</td>
+          <td>${escapeHtml(formatDocumentType(adultoMayor.documentType))}</td>
+          <td>${escapeHtml(adultoMayor.documentNumber)}</td>
           <td>${escapeHtml(adultoMayor.names)}</td>
           <td>${escapeHtml(adultoMayor.surnames)}</td>
           <td>${escapeHtml(adultoMayor.phone ?? "Sin telefono")}</td>
@@ -231,7 +237,8 @@ export class AdultosMayoresExportService {
             <thead>
               <tr>
                 ${tenantHeader}
-                <th>Documento</th>
+                <th>Tipo de documento</th>
+                <th>Número de documento</th>
                 <th>Nombres</th>
                 <th>Apellidos</th>
                 <th>Telefono</th>
@@ -249,10 +256,7 @@ export class AdultosMayoresExportService {
   }
 }
 
-function formatDocument(
-  documentType: AdultoMayorListItem["documentType"],
-  documentNumber: string,
-): string {
+function formatDocumentType(documentType: AdultoMayorListItem["documentType"]): string {
   const typeLabels: Record<AdultoMayorListItem["documentType"], string> = {
     cc: "CC",
     ce: "CE",
@@ -260,7 +264,7 @@ function formatDocument(
     other: "Otro",
   };
 
-  return `${typeLabels[documentType]} ${documentNumber}`;
+  return typeLabels[documentType];
 }
 
 function formatSex(sex: AdultoMayorListItem["sex"]): string {
@@ -298,11 +302,30 @@ function buildBasicPdf(adultosMayores: AdultoMayorListItem[], includeTenant: boo
   const rowHeight = 22;
   const rows = adultosMayores.map((adultoMayor) => toPdfRow(adultoMayor, includeTenant));
   const headers = includeTenant
-    ? ["Centro", "Documento", "Nombres", "Apellidos", "Telefono", "Edad", "Sexo", "Estado"]
-    : ["Documento", "Nombres", "Apellidos", "Telefono", "Edad", "Sexo", "Estado"];
+    ? [
+        "Centro",
+        "Tipo de documento",
+        "Número de documento",
+        "Nombres",
+        "Apellidos",
+        "Telefono",
+        "Edad",
+        "Sexo",
+        "Estado",
+      ]
+    : [
+        "Tipo de documento",
+        "Número de documento",
+        "Nombres",
+        "Apellidos",
+        "Telefono",
+        "Edad",
+        "Sexo",
+        "Estado",
+      ];
   const columns = includeTenant
-    ? [135, 104, 122, 122, 96, 46, 76, 62]
-    : [125, 150, 150, 122, 52, 86, 70];
+    ? [105, 75, 90, 105, 105, 82, 40, 65, 60]
+    : [70, 90, 125, 125, 100, 45, 75, 65];
   const pages: string[] = [];
   let cursor = 0;
 
@@ -337,7 +360,8 @@ function buildBasicPdf(adultosMayores: AdultoMayorListItem[], includeTenant: boo
 
 function toPdfRow(adultoMayor: AdultoMayorListItem, includeTenant: boolean): string[] {
   const row = [
-    formatDocument(adultoMayor.documentType, adultoMayor.documentNumber),
+    formatDocumentType(adultoMayor.documentType),
+    adultoMayor.documentNumber,
     adultoMayor.names,
     adultoMayor.surnames,
     adultoMayor.phone ?? "Sin telefono",

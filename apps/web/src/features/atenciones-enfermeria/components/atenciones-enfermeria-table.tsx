@@ -86,7 +86,7 @@ export function AtencionesEnfermeriaTable({
               <td>
                 <button
                   type="button"
-                  className="atenciones-enfermeria-access"
+                  className={`atenciones-enfermeria-access atenciones-enfermeria-access--${atencion.access}`}
                   data-access={atencion.access}
                   aria-label={`Acceso ${formatAtencionEnfermeriaAccess(atencion.access)}`}
                   onClick={() => onOpenAtencion(atencion.id)}

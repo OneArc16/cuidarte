@@ -149,6 +149,30 @@
   transform: translateY(-1px);
 }
 
+.empleados-row-action--ver {
+  border-color: rgb(44 112 166 / 26%);
+  color: #2c70a6;
+}
+
+.empleados-row-action--ver:hover,
+.empleados-row-action--ver:focus-visible {
+  border-color: rgb(44 112 166 / 46%);
+  background: #eef7ff;
+  color: #205b89;
+}
+
+.empleados-row-action--editar {
+  border-color: rgb(193 142 43 / 28%);
+  color: #a26f12;
+}
+
+.empleados-row-action--editar:hover,
+.empleados-row-action--editar:focus-visible {
+  border-color: rgb(193 142 43 / 48%);
+  background: #fff8e7;
+  color: #85580b;
+}
+
 .empleados-row-action svg {
   width: 18px;
   height: 18px;

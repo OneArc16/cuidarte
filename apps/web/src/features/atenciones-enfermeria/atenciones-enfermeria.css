@@ -111,6 +111,30 @@
   background: rgb(18 120 91 / 10%);
 }
 
+.atenciones-enfermeria-row-action--historia {
+  border-color: rgb(116 91 163 / 28%);
+  color: #765ba3;
+}
+
+.atenciones-enfermeria-row-action--historia:hover,
+.atenciones-enfermeria-row-action--historia:focus-visible {
+  border-color: rgb(116 91 163 / 48%);
+  background: #f5f0ff;
+  color: #5b4388;
+}
+
+.atenciones-enfermeria-row-action--atencion {
+  border-color: rgb(211 91 91 / 26%);
+  color: #c25353;
+}
+
+.atenciones-enfermeria-row-action--atencion:hover,
+.atenciones-enfermeria-row-action--atencion:focus-visible {
+  border-color: rgb(211 91 91 / 46%);
+  background: #fff1f1;
+  color: #a83e3e;
+}
+
 .atenciones-enfermeria-row-action svg {
   width: 18px;
   height: 18px;
@@ -476,6 +500,32 @@
   color: var(--color-deep);
 }
 
+.atenciones-enfermeria-access--edit {
+  border: 1px solid rgb(193 142 43 / 28%);
+  background: #fffdf6;
+  color: #a26f12;
+}
+
+.atenciones-enfermeria-access--view {
+  border: 1px solid rgb(44 112 166 / 26%);
+  background: #f8fbff;
+  color: #2c70a6;
+}
+
+.atenciones-enfermeria-access--edit:hover,
+.atenciones-enfermeria-access--edit:focus-visible {
+  border-color: rgb(193 142 43 / 48%);
+  background: #fff8e7;
+  color: #85580b;
+}
+
+.atenciones-enfermeria-access--view:hover,
+.atenciones-enfermeria-access--view:focus-visible {
+  border-color: rgb(44 112 166 / 46%);
+  background: #eef7ff;
+  color: #205b89;
+}
+
 .atenciones-enfermeria-cell-author {
   min-width: 180px;
 }
@@ -519,7 +569,254 @@
 }
 
 .atencion-history-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
   white-space: nowrap;
+}
+
+.atencion-history-action {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 9px;
+}
+
+.atencion-history-action svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.2;
+}
+
+.atencion-history-action:focus-visible {
+  outline: 3px solid rgb(13 112 95 / 24%);
+  outline-offset: 2px;
+}
+
+.atenciones-enfermeria-history-table .atenciones-enfermeria-history-action--access {
+  border-color: rgb(44 112 166 / 26%);
+  color: #2c70a6;
+}
+
+.atenciones-enfermeria-history-table .atenciones-enfermeria-history-action--restore {
+  border-color: rgb(29 158 117 / 30%);
+  color: #087c64;
+}
+
+.atenciones-enfermeria-history-table .atenciones-enfermeria-history-action--delete {
+  border-color: rgb(211 91 91 / 26%);
+  color: #c25353;
+}
+
+.atenciones-enfermeria-history-table .atenciones-enfermeria-history-action--access:hover,
+.atenciones-enfermeria-history-table .atenciones-enfermeria-history-action--access:focus-visible {
+  border-color: rgb(44 112 166 / 46%);
+  background: #eef7ff;
+  color: #205b89;
+}
+
+.atenciones-enfermeria-history-table .atenciones-enfermeria-history-action--restore:hover,
+.atenciones-enfermeria-history-table .atenciones-enfermeria-history-action--restore:focus-visible {
+  border-color: rgb(29 158 117 / 50%);
+  background: #e9f9f2;
+  color: #05634f;
+}
+
+.atenciones-enfermeria-history-table .atenciones-enfermeria-history-action--delete:hover,
+.atenciones-enfermeria-history-table .atenciones-enfermeria-history-action--delete:focus-visible {
+  border-color: rgb(211 91 91 / 46%);
+  background: #fff1f1;
+  color: #a83e3e;
+}
+
+.atencion-history-trash-toggle {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 9px;
+}
+
+.atencion-history-trash-toggle svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 2.2;
+}
+
+.atencion-history-trash-toggle:focus-visible {
+  outline: 3px solid rgb(13 112 95 / 24%);
+  outline-offset: 2px;
+}
+
+.atencion-delete-dialog-backdrop {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(3 33 40 / 54%);
+  backdrop-filter: blur(8px);
+}
+
+.atencion-delete-dialog {
+  display: grid;
+  width: min(100%, 460px);
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid rgb(214 236 229 / 95%);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgb(255 255 255 / 98%), rgb(247 252 249 / 96%));
+  box-shadow:
+    0 24px 58px rgb(0 30 38 / 24%),
+    0 4px 12px rgb(0 30 38 / 10%);
+}
+
+.atencion-delete-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.atencion-delete-dialog__header h2,
+.atencion-delete-dialog__header p {
+  margin: 0;
+}
+
+.atencion-delete-dialog__header h2 {
+  color: var(--color-deep);
+  font-size: 1.14rem;
+  line-height: 1.1;
+}
+
+.atencion-delete-dialog__eyebrow {
+  margin-bottom: 4px !important;
+  color: rgb(190 82 54);
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.atencion-delete-dialog__close-button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: rgb(248 250 249);
+  color: var(--color-deep);
+  cursor: pointer;
+}
+
+.atencion-delete-dialog__close-button:hover {
+  background: rgb(238 247 243);
+}
+
+.atencion-delete-dialog__close-button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.atencion-delete-dialog__hero {
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 13px;
+  border: 1px solid rgb(219 100 67 / 16%);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgb(255 247 244 / 96%), rgb(255 241 237 / 88%));
+}
+
+.atencion-delete-dialog__icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgb(227 109 74), rgb(198 75 46));
+  color: white;
+  box-shadow: 0 12px 24px rgb(198 75 46 / 22%);
+}
+
+.atencion-delete-dialog__icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.atencion-delete-dialog__hero strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.atencion-delete-dialog__hero strong {
+  color: var(--color-deep);
+  font-size: 0.92rem;
+  font-weight: 850;
+}
+
+.atencion-delete-dialog__message {
+  margin: 0;
+  padding: 11px 13px;
+  border-left: 3px solid rgb(212 105 61);
+  border-radius: 11px;
+  background: rgb(255 247 240);
+  color: rgb(112 60 23);
+  font-size: 0.83rem;
+  line-height: 1.5;
+}
+
+.atencion-delete-dialog__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.atencion-delete-dialog__action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.atencion-delete-dialog__action-button--danger {
+  background: linear-gradient(135deg, rgb(219 100 67), rgb(190 70 42));
+  box-shadow: 0 12px 24px rgb(190 70 42 / 18%);
+}
+
+.atencion-delete-dialog__action-button--danger:not(:disabled):hover,
+.atencion-delete-dialog__action-button--danger:not(:disabled):focus-visible {
+  background: linear-gradient(135deg, rgb(206 89 58), rgb(176 60 33));
+}
+
+.atencion-delete-dialog__action-button svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+}
+
+.atencion-delete-dialog__spinner {
+  animation: atencion-delete-dialog-spin 0.9s linear infinite;
+}
+
+@keyframes atencion-delete-dialog-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .danger-action {

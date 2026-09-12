@@ -1,6 +1,6 @@
 import { type AlimentacionDetail, type UpdateAlimentacionRequest } from "@cuidarte/contracts";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Sparkles } from "lucide-react";
+import { Save, Sparkles, X } from "lucide-react";
 import { useEffect } from "react";
 import { type Resolver, useForm } from "react-hook-form";
 
@@ -166,11 +166,23 @@ export function AlimentacionRecordForm({
       ) : null}
 
       <div className="alimentacion-form-actions">
-        <button className="outline-action" type="button" onClick={onCancel}>
+        <button
+          className="outline-action alimentacion-form-action alimentacion-form-action--cancel"
+          type="button"
+          onClick={onCancel}
+        >
+          <X aria-hidden="true" />
           Cancelar
         </button>
-        <button className="primary-action" type="submit" disabled={isPending}>
-          {isPending ? "Guardando..." : "Guardar cambios"}
+        <button
+          className="primary-action alimentacion-form-action alimentacion-form-action--save"
+          type="submit"
+          aria-label="Guardar cambios"
+          title="Guardar"
+          disabled={isPending}
+        >
+          <Save aria-hidden="true" />
+          {isPending ? "Guardando..." : "Guardar"}
         </button>
       </div>
     </form>

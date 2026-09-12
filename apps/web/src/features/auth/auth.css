@@ -382,6 +382,33 @@ h1 {
   font-size: 0.86rem;
 }
 
+/* All navigation back buttons share the same compact icon treatment. */
+.outline-action:has(> svg.lucide-chevron-left) {
+  width: 38px;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+  gap: 0;
+  border-radius: 10px;
+}
+
+.outline-action:has(> svg.lucide-chevron-left) > span:not(.visually-hidden) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.outline-action:has(> svg.lucide-chevron-left) > svg {
+  width: 18px;
+  height: 18px;
+}
+
 .backoffice-floating-action {
   position: fixed;
   right: max(22px, env(safe-area-inset-right));

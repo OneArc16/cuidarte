@@ -77,7 +77,7 @@ export function ReportExportButton({ type, period, tenantId, className }: Report
       aria-label={isBusy ? "Generando ZIP" : "Exportar ZIP"}
       onClick={() => void exportReport()}
       disabled={isDisabled}
-      title={tenantId === null ? "Selecciona un centro para exportar" : undefined}
+      title={tenantId === null ? "Selecciona un centro para exportar" : "Generar ZIP"}
     >
       {isBusy ? (
         <LoaderCircle className="animate-spin" aria-hidden="true" />

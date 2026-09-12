@@ -45,6 +45,7 @@ export function ActividadesGrupalesTrashPage({
       search,
       activityType: selectedActivityType === "" ? null : selectedActivityType,
       organizer: selectedOrganizer === "" ? null : selectedOrganizer,
+      activityMonth: null,
       tenantId: showTenantFilter
         ? selectedTenantId === ""
           ? null
@@ -61,12 +62,14 @@ export function ActividadesGrupalesTrashPage({
         <p className="eyebrow">Papelera de actas</p>
         <h2 id="actividades-trash-denied-title">No tienes acceso a la papelera</h2>
         <button
-          className="outline-action"
+          className="outline-action actividades-trash-back-action"
           type="button"
+          aria-label="Volver al listado"
+          title="Volver al listado"
           onClick={() => navigate(CREACION_ACTIVIDADES_PATH)}
         >
           <ChevronLeft aria-hidden="true" />
-          <span>Volver al listado</span>
+          <span className="visually-hidden">Volver al listado</span>
         </button>
       </section>
     );
@@ -80,23 +83,28 @@ export function ActividadesGrupalesTrashPage({
 
       <div className="actividades-form-nav">
         <button
-          className="outline-action actividades-back-action"
+          className="outline-action actividades-back-action actividades-trash-back-action"
           type="button"
+          aria-label="Volver al listado"
+          title="Volver al listado"
           onClick={() => navigate(CREACION_ACTIVIDADES_PATH)}
         >
           <ChevronLeft aria-hidden="true" />
-          <span>Volver al listado</span>
+          <span className="visually-hidden">Volver al listado</span>
         </button>
         <span className="actividades-form-nav__context">Papelera de actas</span>
       </div>
 
       <ActividadesGrupalesToolbar
+        activityMonth=""
         search={search}
         selectedActivityType={selectedActivityType}
         selectedOrganizer={selectedOrganizer}
         selectedTenantId={selectedTenantId}
+        showMonthFilter={false}
         showTenantFilter={showTenantFilter}
         tenantOptions={tenantOptionsQuery.data?.tenants ?? []}
+        onActivityMonthChange={() => undefined}
         isTenantOptionsLoading={tenantOptionsQuery.isLoading}
         onActivityTypeChange={setSelectedActivityType}
         onOrganizerChange={setSelectedOrganizer}

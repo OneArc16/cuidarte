@@ -87,7 +87,7 @@ export function AdultosMayoresTable({
                 <div className="adultos-row-actions">
                   {canManageAlimentacion ? (
                     <button
-                      className="adultos-row-action"
+                      className="adultos-row-action adultos-row-action--alimentacion"
                       type="button"
                       aria-label={`Alimentacion de ${adultoMayor.names} ${adultoMayor.surnames}`}
                       title="Alimentacion"
@@ -98,7 +98,7 @@ export function AdultosMayoresTable({
                   ) : null}
                   {hideAtencionIndividualAction ? null : (
                     <button
-                      className="adultos-row-action"
+                      className="adultos-row-action adultos-row-action--atencion"
                       type="button"
                       aria-label={`Atencion individual de ${adultoMayor.names} ${adultoMayor.surnames}`}
                       title="Atencion individual"
@@ -110,7 +110,7 @@ export function AdultosMayoresTable({
                   )}
                   {canManageAdultosMayores ? (
                     <button
-                      className="adultos-row-action"
+                      className="adultos-row-action adultos-row-action--editar"
                       type="button"
                       aria-label={`Editar ${adultoMayor.names} ${adultoMayor.surnames}`}
                       title="Editar"
@@ -120,7 +120,7 @@ export function AdultosMayoresTable({
                     </button>
                   ) : null}
                   <button
-                    className="adultos-row-action"
+                    className="adultos-row-action adultos-row-action--historia"
                     type="button"
                     aria-label={`Historia clinica de ${adultoMayor.names} ${adultoMayor.surnames}`}
                     title="Historia clinica"
