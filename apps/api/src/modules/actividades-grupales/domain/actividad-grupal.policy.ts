@@ -1,6 +1,9 @@
 import { type AuthUser } from "@cuidarte/contracts";
 
-import { type ActividadGrupalRecord, type ActividadesGrupalesScope } from "./actividad-grupal.types";
+import {
+  type ActividadGrupalRecord,
+  type ActividadesGrupalesScope,
+} from "./actividad-grupal.types";
 
 export function resolveActividadesGrupalesScope(user: AuthUser): ActividadesGrupalesScope | null {
   if (user.role === "super_admin") {
@@ -21,7 +24,17 @@ export function canManageActividadesGrupales(user: Pick<AuthUser, "role">): bool
   return user.role !== "auditor";
 }
 
-export function canListTrashActividadesGrupales(user: Pick<AuthUser, "role" | "tenantId">): boolean {
+export function canCorrectActividadGrupalActaNumber(user: Pick<AuthUser, "role">): boolean {
+  return user.role === "super_admin";
+}
+
+export function canBulkCorrectActividadGrupalActaNumbers(user: Pick<AuthUser, "role">): boolean {
+  return user.role === "super_admin";
+}
+
+export function canListTrashActividadesGrupales(
+  user: Pick<AuthUser, "role" | "tenantId">,
+): boolean {
   if (user.role === "super_admin") {
     return true;
   }
@@ -42,8 +55,7 @@ export function canTrashActividadGrupal(
   }
 
   return (
-    (actor.role === "admin" || actor.role === "director") &&
-    actor.tenantId === activity.tenantId
+    (actor.role === "admin" || actor.role === "director") && actor.tenantId === activity.tenantId
   );
 }
 

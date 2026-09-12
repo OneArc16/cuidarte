@@ -61,6 +61,7 @@ describe("ActividadesGrupalesController", () => {
     assert.deepEqual(receivedQuery, {
       search: "bienestar",
       activityType: null,
+      activityMonth: null,
       organizer: "director",
       tenantId: null,
     });
@@ -96,6 +97,7 @@ describe("ActividadesGrupalesController", () => {
             deletedAt: "2026-04-24T12:00:00.000Z",
             deletedByUserId: currentUser.id,
             deletedByUserFullName: currentUser.fullName,
+            deletionReason: "Registro duplicado",
             canRestore: true,
           },
         ];
@@ -117,6 +119,7 @@ describe("ActividadesGrupalesController", () => {
     assert.deepEqual(receivedQuery, {
       search: "bienestar",
       activityType: null,
+      activityMonth: null,
       organizer: null,
       tenantId: null,
     });
@@ -135,6 +138,9 @@ describe("ActividadesGrupalesController", () => {
           tenantId: currentUser.tenantId,
           tenantName: "Centro de Vida Demo",
           actaNumber: "0004",
+          actaOrganizer: "fisioterapeuta",
+          actaSequence: 4,
+          previousActaNumber: null,
           activityName: "Jornada psicomotriz",
           activityType: "fisioterapia",
           activityDate: "2026-04-23",
@@ -191,6 +197,9 @@ describe("ActividadesGrupalesController", () => {
           tenantId: currentUser.tenantId,
           tenantName: "Centro de Vida Demo",
           actaNumber: "0004",
+          actaOrganizer: "fisioterapeuta",
+          actaSequence: 4,
+          previousActaNumber: null,
           activityName: "Jornada psicomotriz",
           activityType: "fisioterapia",
           activityDate: "2026-04-23",
@@ -290,9 +299,11 @@ describe("ActividadesGrupalesController", () => {
   it("sends the acta to the trash with the current user", async () => {
     let receivedActivityId: string | null = null;
     let receivedActorId: string | null = null;
+    let receivedReason: string | null = null;
     const trashService = {
-      sendToTrash: async (activityId: string, actor: AuthUser) => {
+      sendToTrash: async (activityId: string, reason: string, actor: AuthUser) => {
         receivedActivityId = activityId;
+        receivedReason = reason;
         receivedActorId = actor.id;
       },
     };
@@ -302,12 +313,15 @@ describe("ActividadesGrupalesController", () => {
       trashService as never,
     );
 
-    const result = await controller.deleteActividadGrupal("5f0361fb-ff51-43d7-a6e8-83c58df345b6", {
-      currentUser,
-    } as never);
+    const result = await controller.deleteActividadGrupal(
+      "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
+      { reason: "Registro duplicado" },
+      { currentUser } as never,
+    );
 
     assert.equal(receivedActivityId, "5f0361fb-ff51-43d7-a6e8-83c58df345b6");
     assert.equal(receivedActorId, currentUser.id);
+    assert.equal(receivedReason, "Registro duplicado");
     assert.deepEqual(result, { success: true });
   });
 

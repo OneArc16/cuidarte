@@ -32,7 +32,13 @@ import {
   actividadGrupalTrashListQuerySchema,
   actividadGrupalTrashListResponseSchema,
   actividadGrupalTenantOptionsResponseSchema,
+  actividadGrupalActaCorrectionPreviewRequestSchema,
+  actividadGrupalActaCorrectionPreviewResponseSchema,
+  applyActividadGrupalActaCorrectionRequestSchema,
+  applyActividadGrupalActaCorrectionResponseSchema,
+  correctActividadGrupalActaNumberRequestSchema,
   createActividadGrupalRequestSchema,
+  deleteActividadGrupalRequestSchema,
   deleteActividadGrupalResponseSchema,
   restoreActividadGrupalResponseSchema,
   saveActividadGrupalDiligenciamientoSchema,
@@ -86,7 +92,10 @@ export class ActividadesGrupalesController {
   @ApiOkResponse({ description: "Listado de actas eliminadas." })
   @ApiUnauthorizedResponse({ description: "Sesion requerida." })
   @ApiForbiddenResponse({ description: "El usuario no tiene permisos para consultar la papelera." })
-  async listActividadesGrupalesTrash(@Query() query: unknown, @Req() request: AuthenticatedRequest) {
+  async listActividadesGrupalesTrash(
+    @Query() query: unknown,
+    @Req() request: AuthenticatedRequest,
+  ) {
     const parsedQuery = parseZodSchema(actividadGrupalTrashListQuerySchema, query);
     const actividadesGrupales = await this.actividadesGrupalesTrashService.listTrash(
       parsedQuery,
@@ -138,15 +147,40 @@ export class ActividadesGrupalesController {
     return actividadGrupalListItemSchema.parse(detail);
   }
 
+  @Post("acta-number-corrections/preview")
+  @ApiOkResponse({ description: "Vista previa de la normalizacion de consecutivos." })
+  @ApiForbiddenResponse({ description: "Solo super administradores pueden normalizar actas." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async previewActaNumberCorrection(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    const command = parseZodSchema(actividadGrupalActaCorrectionPreviewRequestSchema, body);
+    const preview = await this.actividadesGrupalesService.previewActividadGrupalActaCorrection(
+      command.tenantId,
+      request.currentUser,
+    );
+
+    return actividadGrupalActaCorrectionPreviewResponseSchema.parse(preview);
+  }
+
+  @Post("acta-number-corrections/apply")
+  @ApiOkResponse({ description: "Normalizacion de consecutivos aplicada." })
+  @ApiForbiddenResponse({ description: "Solo super administradores pueden normalizar actas." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async applyActaNumberCorrection(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    const command = parseZodSchema(applyActividadGrupalActaCorrectionRequestSchema, body);
+    const result = await this.actividadesGrupalesService.applyActividadGrupalActaCorrection(
+      command,
+      request.currentUser,
+    );
+
+    return applyActividadGrupalActaCorrectionResponseSchema.parse(result);
+  }
+
   @Get(":id")
   @ApiOkResponse({ description: "Detalle editable de la actividad grupal." })
   @ApiNotFoundResponse({ description: "Actividad no encontrada." })
   @ApiForbiddenResponse({ description: "El usuario no puede editar esta actividad." })
   @ApiUnauthorizedResponse({ description: "Sesion requerida." })
-  async getActividadGrupalForEdit(
-    @Param("id") id: string,
-    @Req() request: AuthenticatedRequest,
-  ) {
+  async getActividadGrupalForEdit(@Param("id") id: string, @Req() request: AuthenticatedRequest) {
     const activityId = parseZodSchema(actividadIdParamSchema, id);
     const detail = await this.actividadesGrupalesService.getActividadGrupalForEdit(
       activityId,
@@ -154,6 +188,28 @@ export class ActividadesGrupalesController {
     );
 
     return actividadGrupalEditDetailSchema.parse(detail);
+  }
+
+  @Post(":id/correct-acta-number")
+  @ApiOkResponse({ description: "Consecutivo del acta corregido." })
+  @ApiBadRequestResponse({ description: "Solicitud invalida." })
+  @ApiForbiddenResponse({ description: "Solo super administradores pueden corregir actas." })
+  @ApiNotFoundResponse({ description: "Actividad no encontrada." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async correctActaNumber(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const activityId = parseZodSchema(actividadIdParamSchema, id);
+    const command = parseZodSchema(correctActividadGrupalActaNumberRequestSchema, body);
+    const activity = await this.actividadesGrupalesService.correctActividadGrupalActaNumber(
+      activityId,
+      command,
+      request.currentUser,
+    );
+
+    return actividadGrupalListItemSchema.parse(activity);
   }
 
   @Put(":id")
@@ -185,10 +241,16 @@ export class ActividadesGrupalesController {
   @ApiUnauthorizedResponse({ description: "Sesion requerida." })
   async deleteActividadGrupal(
     @Param("id") id: string,
+    @Body() body: unknown,
     @Req() request: AuthenticatedRequest,
   ) {
     const activityId = parseZodSchema(actividadIdParamSchema, id);
-    await this.actividadesGrupalesTrashService.sendToTrash(activityId, request.currentUser);
+    const command = parseZodSchema(deleteActividadGrupalRequestSchema, body);
+    await this.actividadesGrupalesTrashService.sendToTrash(
+      activityId,
+      command.reason,
+      request.currentUser,
+    );
 
     return deleteActividadGrupalResponseSchema.parse({ success: true });
   }
@@ -198,10 +260,7 @@ export class ActividadesGrupalesController {
   @ApiNotFoundResponse({ description: "Acta eliminada no encontrada." })
   @ApiForbiddenResponse({ description: "El usuario no puede restaurar esta actividad." })
   @ApiUnauthorizedResponse({ description: "Sesion requerida." })
-  async restoreActividadGrupal(
-    @Param("id") id: string,
-    @Req() request: AuthenticatedRequest,
-  ) {
+  async restoreActividadGrupal(@Param("id") id: string, @Req() request: AuthenticatedRequest) {
     const activityId = parseZodSchema(actividadIdParamSchema, id);
     await this.actividadesGrupalesTrashService.restore(activityId, request.currentUser);
 

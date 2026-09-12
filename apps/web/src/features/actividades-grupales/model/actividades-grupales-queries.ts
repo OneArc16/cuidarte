@@ -1,9 +1,12 @@
 import {
+  type ActividadGrupalEditDetail,
   type UpdateActividadGrupalRequest,
   type ActividadGrupalOrganizer,
   type ActividadGrupalType,
   type CreateActividadGrupalRequest,
   type SaveActividadGrupalDiligenciamiento,
+  type ApplyActividadGrupalActaCorrectionRequest,
+  type CorrectActividadGrupalActaNumberRequest,
 } from "@cuidarte/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -31,6 +34,11 @@ type TrashActividadesGrupalesParams = {
 
 type RestoreActividadGrupalMutationRequest = {
   activityId: string;
+};
+
+type DeleteActividadGrupalMutationRequest = {
+  activityId: string;
+  reason: string;
 };
 
 export const actividadesGrupalesQueryKeys = {
@@ -164,17 +172,76 @@ export function useUpdateActividadGrupalMutation() {
   });
 }
 
+export function useCorrectActividadGrupalActaNumberMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: {
+      activityId: string;
+      payload: CorrectActividadGrupalActaNumberRequest;
+    }) =>
+      actividadesGrupalesApi.correctActividadGrupalActaNumber(request.activityId, request.payload),
+    onSuccess: async (updatedActivity, request) => {
+      queryClient.setQueryData<ActividadGrupalEditDetail | undefined>(
+        actividadesGrupalesQueryKeys.editDetail(request.activityId),
+        (current) =>
+          current === undefined
+            ? current
+            : {
+                ...current,
+                actaNumber: updatedActivity.actaNumber,
+                actaOrganizer: updatedActivity.organizer,
+                organizer: updatedActivity.organizer,
+                updatedAt: updatedActivity.updatedAt,
+              },
+      );
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] }),
+        queryClient.invalidateQueries({
+          queryKey: actividadesGrupalesQueryKeys.editDetail(request.activityId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: actividadesGrupalesQueryKeys.detail(request.activityId),
+        }),
+      ]);
+    },
+  });
+}
+
+export function usePreviewActividadGrupalActaCorrectionMutation() {
+  return useMutation({
+    mutationFn: (tenantId: string) =>
+      actividadesGrupalesApi.previewActividadGrupalActaCorrection(tenantId),
+  });
+}
+
+export function useApplyActividadGrupalActaCorrectionMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: ApplyActividadGrupalActaCorrectionRequest) =>
+      actividadesGrupalesApi.applyActividadGrupalActaCorrection(request),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] }),
+        queryClient.invalidateQueries({ queryKey: ["home"] }),
+      ]);
+    },
+  });
+}
+
 export function useDeleteActividadGrupalMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (activityId: string) => actividadesGrupalesApi.deleteActividadGrupal(activityId),
-    onSuccess: async (_, activityId) => {
+    mutationFn: ({ activityId, reason }: DeleteActividadGrupalMutationRequest) =>
+      actividadesGrupalesApi.deleteActividadGrupal(activityId, reason),
+    onSuccess: async (_, request) => {
       queryClient.removeQueries({
-        queryKey: actividadesGrupalesQueryKeys.editDetail(activityId),
+        queryKey: actividadesGrupalesQueryKeys.editDetail(request.activityId),
       });
       queryClient.removeQueries({
-        queryKey: actividadesGrupalesQueryKeys.detail(activityId),
+        queryKey: actividadesGrupalesQueryKeys.detail(request.activityId),
       });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] }),

@@ -8,9 +8,7 @@ import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { ActividadGrupalForm } from "../components/actividad-grupal-form";
 import { CREACION_ACTIVIDADES_PATH } from "../lib/actividades-grupales-paths";
 import { resolveActividadesGrupalesApiError } from "../lib/actividades-grupales-formatters";
-import {
-  toCreateActividadGrupalRequest,
-} from "../schemas/actividad-grupal-form.schema";
+import { toCreateActividadGrupalRequest } from "../schemas/actividad-grupal-form.schema";
 import {
   useActividadGrupalFormOptionsQuery,
   useActividadGrupalTenantOptionsQuery,
@@ -71,8 +69,8 @@ export function ActividadGrupalCreatePage({ navigate, user }: ActividadGrupalCre
         onTenantChange={setSelectedTenantId}
         onSubmit={(values) => {
           createMutation.mutate(toCreateActividadGrupalRequest(values), {
-            onSuccess: () => {
-              toast.success("Actividad creada.");
+            onSuccess: (created) => {
+              toast.success(`Actividad creada con consecutivo ${created.actaNumber}.`);
               navigate(CREACION_ACTIVIDADES_PATH);
             },
           });

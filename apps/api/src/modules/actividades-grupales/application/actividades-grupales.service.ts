@@ -9,10 +9,16 @@ import {
   type ActividadGrupalResponsibleDepartment,
   type ActividadGrupalSupportFile,
   type ActividadGrupalTenantOption,
+  type ActividadGrupalActaCorrectionPreviewResponse,
+  type ApplyActividadGrupalActaCorrectionRequest,
+  type ApplyActividadGrupalActaCorrectionResponse,
+  type CorrectActividadGrupalActaNumberRequest,
   type UpdateActividadGrupalRequest,
   type AuthUser,
   type CreateActividadGrupalRequest,
   type SaveActividadGrupalDiligenciamiento,
+  actividadGrupalActaCorrectionPreviewResponseSchema,
+  applyActividadGrupalActaCorrectionResponseSchema,
   actividadGrupalEditDetailSchema,
   actividadGrupalDiligenciamientoDetailSchema,
   actividadGrupalEmpleadoOptionSchema,
@@ -27,11 +33,14 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  ConflictException,
 } from "@nestjs/common";
 
 import {
   resolveActividadGrupalTenantForCreate,
   canManageActividadesGrupales,
+  canCorrectActividadGrupalActaNumber,
+  canBulkCorrectActividadGrupalActaNumbers,
   canTrashActividadGrupal,
   resolveActividadesGrupalesScope,
 } from "../domain/actividad-grupal.policy";
@@ -40,6 +49,7 @@ import {
   type ActividadGrupalRecord,
   type ActividadGrupalSupportFileRecord,
   type BufferedActividadGrupalUpload,
+  ActaCorrectionConflictError,
 } from "../domain/actividad-grupal.types";
 import {
   ACTIVIDADES_GRUPALES_FILES_STORAGE,
@@ -115,16 +125,12 @@ export class ActividadesGrupalesService {
   async getFormOptions(
     query: { tenantId: string | null },
     actor: AuthUser,
-  ): Promise<{ nextActaNumber: number; empleados: ActividadGrupalEmpleadoOption[] }> {
+  ): Promise<{ empleados: ActividadGrupalEmpleadoOption[] }> {
     this.ensureCanManageActivities(actor);
     const tenantId = this.resolveTenantIdForForm(actor, query.tenantId);
-    const [nextActaNumber, empleados] = await Promise.all([
-      this.actividadesGrupalesRepository.getNextActaNumber(tenantId),
-      this.actividadesGrupalesRepository.findActiveEmpleadoOptions(tenantId),
-    ]);
+    const empleados = await this.actividadesGrupalesRepository.findActiveEmpleadoOptions(tenantId);
 
     return {
-      nextActaNumber,
       empleados: empleados.map((empleado) => actividadGrupalEmpleadoOptionSchema.parse(empleado)),
     };
   }
@@ -153,7 +159,6 @@ export class ActividadesGrupalesService {
     const record = await this.actividadesGrupalesRepository.create({
       tenantId,
       actorUserId: actor.id,
-      actaNumber: command.actaNumber,
       activityName: command.activityName,
       activityType: command.activityType,
       activityDate: command.activityDate,
@@ -175,6 +180,9 @@ export class ActividadesGrupalesService {
 
     return actividadGrupalEditDetailSchema.parse({
       ...this.toListItem(detail.activity, actor),
+      actaOrganizer: detail.activity.actaOrganizer,
+      actaSequence: detail.activity.actaSequence,
+      previousActaNumber: detail.activity.previousActaNumber,
       employeeIds: detail.assignedProfessionals.map((professional) => professional.id),
     });
   }
@@ -203,17 +211,83 @@ export class ActividadesGrupalesService {
     const record = await this.actividadesGrupalesRepository.update({
       activityId,
       actorUserId: actor.id,
-      actaNumber: command.actaNumber,
       activityName: command.activityName,
       activityType: command.activityType,
       activityDate: command.activityDate,
       startTime: command.startTime,
       endTime: command.endTime,
-      organizer: command.organizer,
+      organizer: detail.activity.organizer,
       employeeIds: command.employeeIds,
     });
 
     return this.toListItem(record, actor);
+  }
+
+  async correctActividadGrupalActaNumber(
+    activityId: string,
+    command: CorrectActividadGrupalActaNumberRequest,
+    actor: AuthUser,
+  ): Promise<ActividadGrupalListItem> {
+    this.ensureCanCorrectActa(actor);
+    const detail = await this.getActivityForActaCorrectionOrThrow(activityId);
+
+    if (detail.activity.organizer === command.organizer) {
+      throw new ConflictException("El acta ya pertenece a esa serie.");
+    }
+
+    const record = await this.actividadesGrupalesRepository.correctActaNumber({
+      activityId,
+      actorUserId: actor.id,
+      organizer: command.organizer,
+      reason: command.reason,
+    });
+
+    return this.toListItem(record, actor);
+  }
+
+  async previewActividadGrupalActaCorrection(
+    tenantId: string,
+    actor: AuthUser,
+  ): Promise<ActividadGrupalActaCorrectionPreviewResponse> {
+    this.ensureCanCorrectActa(actor, true);
+    const preview = await this.actividadesGrupalesRepository.previewActaNumberCorrection(
+      tenantId,
+      actor.id,
+    );
+
+    return actividadGrupalActaCorrectionPreviewResponseSchema.parse({
+      operationToken: preview.operationToken,
+      tenantId: preview.tenantId,
+      previewExpiresAt: preview.previewExpiresAt.toISOString(),
+      totalCount: preview.totalCount,
+      changedCount: preview.changedCount,
+      unchangedCount: preview.unchangedCount,
+      warningCount: preview.warningCount,
+      rows: preview.rows,
+    });
+  }
+
+  async applyActividadGrupalActaCorrection(
+    command: ApplyActividadGrupalActaCorrectionRequest,
+    actor: AuthUser,
+  ): Promise<ApplyActividadGrupalActaCorrectionResponse> {
+    this.ensureCanCorrectActa(actor, true);
+
+    try {
+      const result = await this.actividadesGrupalesRepository.applyActaNumberCorrection({
+        operationToken: command.operationToken,
+        actorUserId: actor.id,
+        reason: command.reason,
+      });
+
+      return applyActividadGrupalActaCorrectionResponseSchema.parse(result);
+    } catch (error) {
+      if (error instanceof ActaCorrectionConflictError) {
+        throw new ConflictException(error.message);
+      }
+
+      throw error;
+    }
   }
 
   async getActividadGrupalDiligenciamiento(
@@ -401,6 +475,52 @@ export class ActividadesGrupalesService {
     }
   }
 
+  private ensureCanCorrectActa(actor: Pick<AuthUser, "role">, bulk = false): void {
+    const canCorrect = bulk
+      ? canBulkCorrectActividadGrupalActaNumbers(actor)
+      : canCorrectActividadGrupalActaNumber(actor);
+
+    if (!canCorrect) {
+      throw new ForbiddenException("Solo un super administrador puede corregir consecutivos.");
+    }
+  }
+
+  private async getActivityForActaCorrectionOrThrow(
+    activityId: string,
+  ): Promise<ActividadGrupalDiligenciamientoDetailRecord> {
+    const detail = await this.actividadesGrupalesRepository.findById({
+      activityId,
+      scope: { type: "all" },
+    });
+
+    if (detail !== null) {
+      return detail;
+    }
+
+    const trashDetail = await this.actividadesGrupalesRepository.findTrashById({
+      activityId,
+      scope: { type: "all" },
+    });
+
+    if (trashDetail === null) {
+      throw new NotFoundException("La actividad grupal no fue encontrada.");
+    }
+
+    return {
+      activity: trashDetail,
+      assignedProfessionals: [],
+      objectives: "",
+      development: "",
+      conclusion: "",
+      responsibleDepartment: null,
+      integrantes: [],
+      photoFiles: [],
+      pdfFile: null,
+      diligenciamientoCreatedAt: null,
+      diligenciamientoUpdatedAt: null,
+    };
+  }
+
   private async storeNewUploads(
     detail: ActividadGrupalDiligenciamientoDetailRecord,
     newPhotos: BufferedActividadGrupalUpload[],
@@ -579,6 +699,9 @@ export class ActividadesGrupalesService {
 
     return actividadGrupalDiligenciamientoDetailSchema.parse({
       ...baseItem,
+      actaOrganizer: detail.activity.actaOrganizer,
+      actaSequence: detail.activity.actaSequence,
+      previousActaNumber: detail.activity.previousActaNumber,
       canEdit: this.canEditDiligenciamiento(detail, actor),
       assignedProfessionals: detail.assignedProfessionals.map((professional) =>
         actividadGrupalEmpleadoOptionSchema.parse(professional),

@@ -36,6 +36,7 @@ import {
   CREACION_ACTIVIDADES_PATH,
   getActividadGrupalEditIdFromPath,
   isActividadesGrupalesTrashPath,
+  isActividadesGrupalesCorrectionsPath,
   isActividadesGrupalesPath,
 } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
 import { LoginPage } from "@/features/auth/pages/login-page";
@@ -96,6 +97,11 @@ export function App() {
     }
 
     if (isActividadesGrupalesTrashPath(path) && !canViewActividadesGrupalesTrash(user)) {
+      navigate(HOME_PATH, { replace: true });
+      return;
+    }
+
+    if (isActividadesGrupalesCorrectionsPath(path) && user.role !== "super_admin") {
       navigate(HOME_PATH, { replace: true });
       return;
     }
@@ -212,11 +218,11 @@ export function App() {
         : isBackofficePath(path)
           ? "BackOffice | CuidarTe"
           : isAdultosMayoresPath(path)
-          ? isAdultosMayoresImportPath(path)
-            ? "Importar adultos mayores | CuidarTe"
-            : isAdultosMayoresTrashPath(path)
-              ? "Papelera de adultos mayores | CuidarTe"
-            : "Adultos mayores | CuidarTe"
+            ? isAdultosMayoresImportPath(path)
+              ? "Importar adultos mayores | CuidarTe"
+              : isAdultosMayoresTrashPath(path)
+                ? "Papelera de adultos mayores | CuidarTe"
+                : "Adultos mayores | CuidarTe"
             : isAlimentacionPath(path)
               ? "Registro de alimentacion | CuidarTe"
               : isAtencionesEnfermeriaPath(path)
@@ -225,11 +231,13 @@ export function App() {
                   : "Atenciones de enfermeria | CuidarTe"
                 : isActividadesGrupalesTrashPath(path)
                   ? "Papelera de actas | CuidarTe"
-                  : isActividadesGrupalesPath(path)
-                    ? "Sesiones grupales | CuidarTe"
-                    : isEmpleadosPath(path)
-                      ? "Gestion de empleados | CuidarTe"
-                      : "Inicio | CuidarTe";
+                  : isActividadesGrupalesCorrectionsPath(path)
+                    ? "Correccion de consecutivos | CuidarTe"
+                    : isActividadesGrupalesPath(path)
+                      ? "Sesiones grupales | CuidarTe"
+                      : isEmpleadosPath(path)
+                        ? "Gestion de empleados | CuidarTe"
+                        : "Inicio | CuidarTe";
   }, [path, user]);
 
   if (currentUserQuery.isLoading) {

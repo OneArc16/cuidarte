@@ -10,6 +10,7 @@ import {
   type ActividadGrupalEmpleadoOptionRecord,
   type ActividadGrupalIntegranteOptionRecord,
   type ActividadGrupalRecord,
+  type CorrectActividadGrupalActaNumberCommand,
   type FindActividadesGrupalesQuery,
 } from "../domain/actividad-grupal.types";
 import { type ActividadesGrupalesFilesStorage } from "../domain/actividades-grupales-files.storage";
@@ -74,6 +75,9 @@ const records: ActividadGrupalRecord[] = [
     tenantName: "Centro de Vida Demo",
     createdByUserId: medicoUserId,
     actaNumber: "0003",
+    actaOrganizer: "director",
+    actaSequence: 3,
+    previousActaNumber: null,
     activityName: "Encuentro de bienestar",
     activityType: "centro_vida",
     activityDate: "2026-04-22",
@@ -90,6 +94,9 @@ const records: ActividadGrupalRecord[] = [
     tenantName: "Centro Norte",
     createdByUserId: directorUserId,
     actaNumber: "0005",
+    actaOrganizer: "trabajadora_social",
+    actaSequence: 5,
+    previousActaNumber: null,
     activityName: "Actividad externa",
     activityType: "actividad_campo",
     activityDate: "2026-04-21",
@@ -267,7 +274,6 @@ describe("ActividadesGrupalesService", () => {
     const result = await service.createActividadGrupal(
       {
         tenantId: null,
-        actaNumber: "0004",
         activityName: "Jornada psicomotriz",
         activityType: "fisioterapia",
         activityDate: "2026-04-23",
@@ -280,10 +286,23 @@ describe("ActividadesGrupalesService", () => {
     );
 
     assert.equal(result.tenantId, tenantId);
-    assert.equal(result.actaNumber, "0004");
+    assert.equal(result.actaNumber, "FISIO-001");
     assert.equal(repository.created[0]?.tenantId, tenantId);
-    assert.equal(repository.created[0]?.actaNumber, "0004");
     assert.deepEqual(repository.created[0]?.employeeIds, [medicoUserId, enfermeriaUserId]);
+  });
+
+  it("synchronizes the activity organizer when correcting its acta", async () => {
+    const repository = createRepository();
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+
+    const result = await service.correctActividadGrupalActaNumber(
+      records[0]!.id,
+      { organizer: "enfermeria", reason: "El acta fue registrada por enfermeria." },
+      superAdminUser,
+    );
+
+    assert.equal(result.organizer, "enfermeria");
+    assert.equal(repository.corrections[0]?.organizer, "enfermeria");
   });
 
   it("rejects activities with employees outside the active tenant list", async () => {
@@ -295,7 +314,6 @@ describe("ActividadesGrupalesService", () => {
         service.createActividadGrupal(
           {
             tenantId: null,
-            actaNumber: "0004-A",
             activityName: "Jornada nutricional",
             activityType: "nutricion",
             activityDate: "2026-04-23",
@@ -434,7 +452,6 @@ describe("ActividadesGrupalesService", () => {
         service.createActividadGrupal(
           {
             tenantId: null,
-            actaNumber: "ACTA-LECTURA-01",
             activityName: "Actividad en lectura",
             activityType: "centro_vida",
             activityDate: "2026-04-23",
@@ -473,11 +490,13 @@ describe("ActividadesGrupalesService", () => {
 });
 
 function createRepository(): ActividadesGrupalesRepository & {
-  created: { tenantId: string; actaNumber: string; employeeIds: string[] }[];
+  created: { tenantId: string; employeeIds: string[] }[];
+  corrections: CorrectActividadGrupalActaNumberCommand[];
   queries: FindActividadesGrupalesQuery[];
 } {
   const queries: FindActividadesGrupalesQuery[] = [];
-  const created: { tenantId: string; actaNumber: string; employeeIds: string[] }[] = [];
+  const created: { tenantId: string; employeeIds: string[] }[] = [];
+  const corrections: CorrectActividadGrupalActaNumberCommand[] = [];
   const employeesByTenant = new Map<string, ActividadGrupalEmpleadoOptionRecord[]>([
     [
       tenantId,
@@ -513,6 +532,7 @@ function createRepository(): ActividadesGrupalesRepository & {
 
   return {
     created,
+    corrections,
     queries,
     async findMany(query) {
       queries.push(query);
@@ -579,13 +599,9 @@ function createRepository(): ActividadesGrupalesRepository & {
 
       return integrantes.filter((integrante) => integranteIds.includes(integrante.id));
     },
-    async getNextActaNumber() {
-      return 4;
-    },
     async create(command) {
       created.push({
         tenantId: command.tenantId,
-        actaNumber: command.actaNumber,
         employeeIds: command.employeeIds,
       });
 
@@ -594,7 +610,10 @@ function createRepository(): ActividadesGrupalesRepository & {
         tenantId: command.tenantId,
         tenantName: command.tenantId === tenantId ? "Centro de Vida Demo" : "Centro Norte",
         createdByUserId: command.actorUserId,
-        actaNumber: command.actaNumber,
+        actaNumber: "FISIO-001",
+        actaOrganizer: command.organizer,
+        actaSequence: 1,
+        previousActaNumber: null,
         activityName: command.activityName,
         activityType: command.activityType,
         activityDate: command.activityDate,
@@ -615,7 +634,6 @@ function createRepository(): ActividadesGrupalesRepository & {
 
       return {
         ...record,
-        actaNumber: command.actaNumber,
         activityName: command.activityName,
         activityType: command.activityType,
         activityDate: command.activityDate,
@@ -624,6 +642,38 @@ function createRepository(): ActividadesGrupalesRepository & {
         organizer: command.organizer,
         involvedEmployeesCount: command.employeeIds.length,
         updatedAt: new Date("2026-04-23T12:00:00.000Z"),
+      };
+    },
+    async correctActaNumber(command) {
+      corrections.push(command);
+
+      return {
+        ...records[0]!,
+        actaNumber: "ENFER-001",
+        actaOrganizer: command.organizer,
+        actaSequence: 1,
+        organizer: command.organizer,
+      };
+    },
+    async previewActaNumberCorrection() {
+      return {
+        operationToken: "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
+        operationId: "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
+        tenantId,
+        previewExpiresAt: new Date("2026-04-23T12:15:00.000Z"),
+        totalCount: 0,
+        changedCount: 0,
+        unchangedCount: 0,
+        warningCount: 0,
+        rows: [],
+      };
+    },
+    async applyActaNumberCorrection() {
+      return {
+        operationId: "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
+        totalCount: 0,
+        changedCount: 0,
+        unchangedCount: 0,
       };
     },
     async delete(command) {

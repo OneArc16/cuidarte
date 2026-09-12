@@ -1,6 +1,6 @@
 import { type ActividadGrupalListItem } from "@cuidarte/contracts";
 import { AlertTriangle, LoaderCircle, Trash2, X } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { formatActaNumber } from "../lib/actividades-grupales-formatters";
 
@@ -9,7 +9,7 @@ type ActividadGrupalDeleteDialogProps = {
   errorMessage: string | null;
   isPending: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (reason: string) => void;
 };
 
 export function ActividadGrupalDeleteDialog({
@@ -19,6 +19,8 @@ export function ActividadGrupalDeleteDialog({
   onClose,
   onConfirm,
 }: ActividadGrupalDeleteDialogProps) {
+  const [reason, setReason] = useState("");
+
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape" && !isPending) {
@@ -76,9 +78,23 @@ export function ActividadGrupalDeleteDialog({
         </div>
 
         <p className="actividad-delete-dialog__message">
-          Vas a enviar esta acta a la papelera. La configuracion y los archivos se conservaran
-          para una futura restauracion.
+          Vas a enviar esta acta a la papelera. La configuracion y los archivos se conservaran para
+          una futura restauracion.
         </p>
+
+        <label className="actividad-delete-dialog__reason">
+          <span>
+            Motivo <em>Obligatorio</em>
+          </span>
+          <textarea
+            aria-label="Motivo"
+            value={reason}
+            maxLength={500}
+            disabled={isPending}
+            placeholder="Ej. Registro duplicado"
+            onChange={(event) => setReason(event.target.value)}
+          />
+        </label>
 
         {errorMessage !== null ? (
           <p className="form-error" role="alert">
@@ -98,8 +114,8 @@ export function ActividadGrupalDeleteDialog({
           <button
             className="primary-action actividad-delete-dialog__action-button actividad-delete-dialog__action-button--danger"
             type="button"
-            disabled={isPending}
-            onClick={onConfirm}
+            disabled={isPending || reason.trim() === ""}
+            onClick={() => onConfirm(reason.trim())}
           >
             {isPending ? (
               <>

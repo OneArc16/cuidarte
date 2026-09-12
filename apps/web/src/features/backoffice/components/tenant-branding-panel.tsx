@@ -185,7 +185,7 @@ export function TenantBrandingPanel({ tenantId, tenantName, logo }: TenantBrandi
 
             <div className="tenant-branding-actions">
               <button
-                className="primary-action"
+                className="outline-action tenant-branding-upload-action"
                 type="submit"
                 disabled={selectedFile === null || isBusy}
               >

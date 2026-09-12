@@ -25,6 +25,7 @@ export const actividadGrupalTrashFixture = {
   deletedAt: "2026-04-25T09:15:00.000Z",
   deletedByUserId: empleadoFixture.id,
   deletedByUserFullName: empleadoFixture.fullName,
+  deletionReason: "Registro duplicado",
   canEdit: false,
   canDelete: false,
   canRestore: true,

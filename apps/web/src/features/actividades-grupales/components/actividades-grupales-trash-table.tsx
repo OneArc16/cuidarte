@@ -49,6 +49,7 @@ export function ActividadesGrupalesTrashTable({
           <col className="actividades-trash-col-horario" />
           <col className="actividades-trash-col-organizador" />
           {showTenantColumn ? <col className="actividades-trash-col-centro" /> : null}
+          <col className="actividades-trash-col-motivo" />
           <col className="actividades-trash-col-eliminada-por" />
           <col className="actividades-trash-col-eliminada-el" />
           <col className="actividades-trash-col-acciones" />
@@ -62,6 +63,7 @@ export function ActividadesGrupalesTrashTable({
             <th scope="col">Horario</th>
             <th scope="col">Organizador</th>
             {showTenantColumn ? <th scope="col">Centro</th> : null}
+            <th scope="col">Motivo</th>
             <th scope="col">Eliminada por</th>
             <th scope="col">Eliminada el</th>
             <th scope="col">Acciones</th>
@@ -70,7 +72,7 @@ export function ActividadesGrupalesTrashTable({
         <tbody>
           {actividadesGrupales.length === 0 ? (
             <tr>
-              <td colSpan={showTenantColumn ? 10 : 9}>No hay actas en la papelera.</td>
+              <td colSpan={showTenantColumn ? 11 : 10}>No hay actas en la papelera.</td>
             </tr>
           ) : (
             actividadesGrupales.map((actividad) => (
@@ -92,6 +94,9 @@ export function ActividadesGrupalesTrashTable({
                 {showTenantColumn ? (
                   <td className="actividades-cell-centro">{actividad.tenantName}</td>
                 ) : null}
+                <td className="actividades-cell-reason">
+                  {actividad.deletionReason ?? "Sin motivo registrado"}
+                </td>
                 <td>
                   <strong>{actividad.deletedByUserFullName}</strong>
                   <small className="muted-copy">ID {actividad.deletedByUserId}</small>
@@ -105,7 +110,11 @@ export function ActividadesGrupalesTrashTable({
                       className="actividades-row-action"
                       type="button"
                       aria-label={`Restaurar acta ${formatActaNumber(actividad.actaNumber)}`}
-                      title={actividad.canRestore ? "Restaurar acta" : "No tienes permisos para restaurar"}
+                      title={
+                        actividad.canRestore
+                          ? "Restaurar acta"
+                          : "No tienes permisos para restaurar"
+                      }
                       disabled={!actividad.canRestore}
                       onClick={() => onRestore(actividad)}
                     >

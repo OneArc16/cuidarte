@@ -32,7 +32,7 @@ export class ActividadesGrupalesTrashService {
     private readonly actividadesGrupalesRepository: ActividadesGrupalesRepository,
   ) {}
 
-  async sendToTrash(activityId: string, actor: AuthUser): Promise<void> {
+  async sendToTrash(activityId: string, reason: string, actor: AuthUser): Promise<void> {
     this.ensureCanManageActivities(actor);
     const scope = this.resolveScopeOrThrow(actor);
     const detail = await this.actividadesGrupalesRepository.findById({ activityId, scope });
@@ -48,6 +48,7 @@ export class ActividadesGrupalesTrashService {
     await this.actividadesGrupalesRepository.delete({
       activityId,
       actorUserId: actor.id,
+      reason,
     });
   }
 
@@ -150,6 +151,7 @@ export class ActividadesGrupalesTrashService {
       deletedAt: record.deletedAt.toISOString(),
       deletedByUserId: record.deletedByUserId,
       deletedByUserFullName: record.deletedByUserFullName,
+      deletionReason: record.deletionReason,
       canRestore: canRestoreActividadGrupal(record, actor),
     });
   }

@@ -8,6 +8,10 @@ import {
   type ActividadGrupalOrganizer,
   type ActividadGrupalTrashListResponse,
   type ActividadGrupalTenantOptionsResponse,
+  type ActividadGrupalActaCorrectionPreviewResponse,
+  type ApplyActividadGrupalActaCorrectionRequest,
+  type ApplyActividadGrupalActaCorrectionResponse,
+  type CorrectActividadGrupalActaNumberRequest,
   type ActividadGrupalType,
   type CreateActividadGrupalRequest,
   type SaveActividadGrupalDiligenciamiento,
@@ -21,6 +25,8 @@ import {
   actividadGrupalListResponseSchema,
   actividadGrupalTrashListResponseSchema,
   actividadGrupalTenantOptionsResponseSchema,
+  actividadGrupalActaCorrectionPreviewResponseSchema,
+  applyActividadGrupalActaCorrectionResponseSchema,
   deleteActividadGrupalResponseSchema,
   restoreActividadGrupalResponseSchema,
 } from "@cuidarte/contracts";
@@ -102,12 +108,47 @@ export function updateActividadGrupal(activityId: string, request: UpdateActivid
   );
 }
 
-export function deleteActividadGrupal(activityId: string): Promise<DeleteActividadGrupalResponse> {
+export function correctActividadGrupalActaNumber(
+  activityId: string,
+  request: CorrectActividadGrupalActaNumberRequest,
+) {
+  return fetchJson(
+    `${getApiBaseUrl()}/actividades-grupales/${activityId}/correct-acta-number`,
+    actividadGrupalListItemSchema,
+    { method: "POST", body: request },
+  );
+}
+
+export function previewActividadGrupalActaCorrection(
+  tenantId: string,
+): Promise<ActividadGrupalActaCorrectionPreviewResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/actividades-grupales/acta-number-corrections/preview`,
+    actividadGrupalActaCorrectionPreviewResponseSchema,
+    { method: "POST", body: { tenantId, scope: "all" } },
+  );
+}
+
+export function applyActividadGrupalActaCorrection(
+  request: ApplyActividadGrupalActaCorrectionRequest,
+): Promise<ApplyActividadGrupalActaCorrectionResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/actividades-grupales/acta-number-corrections/apply`,
+    applyActividadGrupalActaCorrectionResponseSchema,
+    { method: "POST", body: request },
+  );
+}
+
+export function deleteActividadGrupal(
+  activityId: string,
+  reason: string,
+): Promise<DeleteActividadGrupalResponse> {
   return fetchJson(
     `${getApiBaseUrl()}/actividades-grupales/${activityId}`,
     deleteActividadGrupalResponseSchema,
     {
       method: "DELETE",
+      body: { reason },
     },
   );
 }

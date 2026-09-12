@@ -35,7 +35,7 @@ const auditorUser: AuthUser = {
 
 describe("ActividadesGrupalesTrashService", () => {
   it("moves an active acta to the trash without touching files", async () => {
-    let deletedCommand: { activityId: string; actorUserId: string } | null = null;
+    let deletedCommand: { activityId: string; actorUserId: string; reason: string } | null = null;
     const repository = createRepository({
       delete: async (command) => {
         deletedCommand = command;
@@ -43,11 +43,16 @@ describe("ActividadesGrupalesTrashService", () => {
     });
     const service = new ActividadesGrupalesTrashService(repository);
 
-    await service.sendToTrash("bd962778-117e-4275-aa07-1ea2f7a1d6f8", directorUser);
+    await service.sendToTrash(
+      "bd962778-117e-4275-aa07-1ea2f7a1d6f8",
+      "Registro duplicado",
+      directorUser,
+    );
 
     assert.deepEqual(deletedCommand, {
       activityId: "bd962778-117e-4275-aa07-1ea2f7a1d6f8",
       actorUserId: directorUser.id,
+      reason: "Registro duplicado",
     });
   });
 
@@ -94,7 +99,12 @@ describe("ActividadesGrupalesTrashService", () => {
     const service = new ActividadesGrupalesTrashService(createRepository());
 
     await assert.rejects(
-      () => service.sendToTrash("bd962778-117e-4275-aa07-1ea2f7a1d6f8", auditorUser),
+      () =>
+        service.sendToTrash(
+          "bd962778-117e-4275-aa07-1ea2f7a1d6f8",
+          "Registro duplicado",
+          auditorUser,
+        ),
       {
         constructor: ForbiddenException,
       },
@@ -180,7 +190,12 @@ describe("ActividadesGrupalesTrashService", () => {
     const service = new ActividadesGrupalesTrashService(repository);
 
     await assert.rejects(
-      () => service.sendToTrash("bd962778-117e-4275-aa07-1ea2f7a1d6f8", directorUser),
+      () =>
+        service.sendToTrash(
+          "bd962778-117e-4275-aa07-1ea2f7a1d6f8",
+          "Registro duplicado",
+          directorUser,
+        ),
       {
         constructor: NotFoundException,
       },
@@ -220,14 +235,35 @@ function createRepository(
     async findIntegrantesByIds() {
       return [];
     },
-    async getNextActaNumber() {
-      return 4;
-    },
     async create() {
       return activity;
     },
     async update() {
       return activity;
+    },
+    async correctActaNumber() {
+      return activity;
+    },
+    async previewActaNumberCorrection() {
+      return {
+        operationToken: "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
+        operationId: "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
+        tenantId,
+        previewExpiresAt: new Date("2026-04-23T12:15:00.000Z"),
+        totalCount: 0,
+        changedCount: 0,
+        unchangedCount: 0,
+        warningCount: 0,
+        rows: [],
+      };
+    },
+    async applyActaNumberCorrection() {
+      return {
+        operationId: "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
+        totalCount: 0,
+        changedCount: 0,
+        unchangedCount: 0,
+      };
     },
     async delete() {
       return;
@@ -252,6 +288,9 @@ function createActivityRecord(): ActividadGrupalRecord {
     tenantName: "Centro de Vida Demo",
     createdByUserId: directorUser.id,
     actaNumber: "0003",
+    actaOrganizer: "director",
+    actaSequence: 3,
+    previousActaNumber: null,
     activityName: "Encuentro de bienestar",
     activityType: "centro_vida",
     activityDate: "2026-04-22",
@@ -270,6 +309,7 @@ function createTrashActivityRecord(): ActividadGrupalTrashRecord {
     deletedAt: new Date("2026-04-24T12:00:00.000Z"),
     deletedByUserId: directorUser.id,
     deletedByUserFullName: directorUser.fullName,
+    deletionReason: "Registro duplicado",
   };
 }
 

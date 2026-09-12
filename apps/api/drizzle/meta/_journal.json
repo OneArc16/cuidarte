@@ -260,6 +260,20 @@
       "when": 1789232400000,
       "tag": "0036_adultos_mayores_trash",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1789250400000,
+      "tag": "0037_actividades_grupales_acta_series",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1789253093000,
+      "tag": "0038_actividades_grupales_deletion_reason",
+      "breakpoints": true
     }
   ]
 }

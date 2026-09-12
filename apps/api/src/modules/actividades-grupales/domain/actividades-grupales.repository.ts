@@ -6,6 +6,10 @@ import {
   type ActividadGrupalReportCandidateRecord,
   type ActividadGrupalTrashRecord,
   type ActividadGrupalSupportFileRecord,
+  type ActaCorrectionPreview,
+  type AppliedActaCorrection,
+  type ApplyActaCorrectionCommand,
+  type CorrectActividadGrupalActaNumberCommand,
   type ActividadGrupalTenantOptionRecord,
   type CreateActividadGrupalRecordCommand,
   type DeleteActividadGrupalRecordCommand,
@@ -41,9 +45,16 @@ export type ActividadesGrupalesRepository = {
     tenantId: string,
     integranteIds: string[],
   ): Promise<ActividadGrupalIntegranteOptionRecord[]>;
-  getNextActaNumber(tenantId: string): Promise<number>;
   create(command: CreateActividadGrupalRecordCommand): Promise<ActividadGrupalRecord>;
   update(command: UpdateActividadGrupalRecordCommand): Promise<ActividadGrupalRecord>;
+  correctActaNumber(
+    command: CorrectActividadGrupalActaNumberCommand,
+  ): Promise<ActividadGrupalRecord>;
+  previewActaNumberCorrection(
+    tenantId: string,
+    actorUserId: string,
+  ): Promise<ActaCorrectionPreview>;
+  applyActaNumberCorrection(command: ApplyActaCorrectionCommand): Promise<AppliedActaCorrection>;
   delete(command: DeleteActividadGrupalRecordCommand): Promise<void>;
   restore(command: RestoreActividadGrupalRecordCommand): Promise<boolean>;
   saveDiligenciamiento(

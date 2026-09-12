@@ -9,12 +9,14 @@ import {
   getActividadGrupalEditIdFromPath,
   getActividadGrupalDiligenciamientoIdFromPath,
   CREACION_ACTIVIDADES_TRASH_PATH,
+  CREACION_ACTIVIDADES_CORRECTIONS_PATH,
 } from "../lib/actividades-grupales-paths";
 import { ActividadGrupalCreatePage } from "./actividad-grupal-create-page";
 import { ActividadGrupalDiligenciamientoPage } from "./actividad-grupal-diligenciamiento-page";
 import { ActividadGrupalEditPage } from "./actividad-grupal-edit-page";
 import { ActividadesGrupalesIndexPage } from "./actividades-grupales-index-page";
 import { ActividadesGrupalesTrashPage } from "./actividades-grupales-trash-page";
+import { ActividadesGrupalesCorrectionsPage } from "./actividades-grupales-corrections-page";
 
 type ActividadesGrupalesPageProps = {
   navigate: Navigate;
@@ -31,6 +33,10 @@ export function ActividadesGrupalesPage({ navigate, path, user }: ActividadesGru
     return <ActividadesGrupalesTrashPage navigate={navigate} user={user} />;
   }
 
+  if (path === CREACION_ACTIVIDADES_CORRECTIONS_PATH) {
+    return <ActividadesGrupalesCorrectionsPage navigate={navigate} user={user} />;
+  }
+
   if (path === CREACION_ACTIVIDADES_NEW_PATH) {
     return <ActividadGrupalCreatePage navigate={navigate} user={user} />;
   }
@@ -38,7 +44,7 @@ export function ActividadesGrupalesPage({ navigate, path, user }: ActividadesGru
   const editActivityId = getActividadGrupalEditIdFromPath(path);
 
   if (editActivityId !== null) {
-    return <ActividadGrupalEditPage activityId={editActivityId} navigate={navigate} />;
+    return <ActividadGrupalEditPage activityId={editActivityId} navigate={navigate} user={user} />;
   }
 
   const activityId = getActividadGrupalDiligenciamientoIdFromPath(path);

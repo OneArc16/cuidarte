@@ -68,6 +68,20 @@ export const atencionesEnfermeriaFormSchema = z
       });
     }
 
+    const glucometria = Number(value.glucometriaMgDl.trim());
+
+    if (
+      value.glucometriaMgDl.trim() !== "" &&
+      Number.isFinite(glucometria) &&
+      (glucometria < 20 || glucometria > 600)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["glucometriaMgDl"],
+        message: "La glucometria debe estar entre 20 y 600 mg/dL.",
+      });
+    }
+
     if (value.glucometriaMgDl.trim() !== "" && value.glucometriaContext === "") {
       context.addIssue({
         code: "custom",

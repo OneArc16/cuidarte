@@ -1,9 +1,12 @@
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
+import { type AuthUser } from "@cuidarte/contracts";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
 import { ActividadGrupalForm } from "../components/actividad-grupal-form";
+import { ActividadGrupalActaCorrectionDialog } from "../components/actividad-grupal-acta-correction-dialog";
 import { resolveActividadesGrupalesApiError } from "../lib/actividades-grupales-formatters";
 import { CREACION_ACTIVIDADES_PATH } from "../lib/actividades-grupales-paths";
 import {
@@ -14,21 +17,26 @@ import {
   useActividadGrupalEditQuery,
   useActividadGrupalFormOptionsQuery,
   useUpdateActividadGrupalMutation,
+  useCorrectActividadGrupalActaNumberMutation,
 } from "../model/actividades-grupales-queries";
 
 type ActividadGrupalEditPageProps = {
   activityId: string;
   navigate: Navigate;
+  user: AuthUser;
 };
 
 export function ActividadGrupalEditPage({
   activityId,
   navigate,
+  user,
 }: ActividadGrupalEditPageProps) {
   const detailQuery = useActividadGrupalEditQuery(activityId);
   const tenantId = detailQuery.data?.tenantId ?? null;
   const formOptionsQuery = useActividadGrupalFormOptionsQuery(tenantId, tenantId !== null);
   const updateMutation = useUpdateActividadGrupalMutation();
+  const correctionMutation = useCorrectActividadGrupalActaNumberMutation();
+  const [showCorrection, setShowCorrection] = useState(false);
 
   if (detailQuery.isLoading) {
     return (
@@ -75,6 +83,19 @@ export function ActividadGrupalEditPage({
           <span>Volver</span>
         </button>
         <span className="actividades-form-nav__context">Editar actividad</span>
+        {user.role === "super_admin" ? (
+          <button
+            className="outline-action"
+            type="button"
+            onClick={() => {
+              correctionMutation.reset();
+              setShowCorrection(true);
+            }}
+          >
+            <RefreshCw aria-hidden="true" />
+            <span>Corregir consecutivo</span>
+          </button>
+        ) : null}
       </div>
 
       <ActividadGrupalForm
@@ -108,6 +129,27 @@ export function ActividadGrupalEditPage({
           );
         }}
       />
+      {showCorrection ? (
+        <ActividadGrupalActaCorrectionDialog
+          activity={detailQuery.data}
+          errorMessage={resolveActividadesGrupalesApiError(correctionMutation.error)}
+          isPending={correctionMutation.isPending}
+          onClose={() => {
+            if (!correctionMutation.isPending) setShowCorrection(false);
+          }}
+          onConfirm={(organizer, reason) =>
+            correctionMutation.mutate(
+              { activityId, payload: { organizer, reason } },
+              {
+                onSuccess: () => {
+                  setShowCorrection(false);
+                  toast.success("Consecutivo corregido.");
+                },
+              },
+            )
+          }
+        />
+      ) : null}
     </section>
   );
 }

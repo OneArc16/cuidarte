@@ -1,15 +1,11 @@
-import {
-  type ActividadGrupalListItem,
-  type ActividadGrupalOrganizer,
-  type ActividadGrupalType,
-  type AuthUser,
-} from "@cuidarte/contracts";
-import { CalendarPlus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { type ActividadGrupalListItem, type AuthUser } from "@cuidarte/contracts";
+import { CalendarPlus, ListRestart, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { ReportExportButton } from "@/features/reports/components/report-export-button";
+import { getCurrentMonthInputValue } from "@/features/alimentacion/lib/alimentacion-formatters";
 
 import { ActividadGrupalDeleteDialog } from "../components/actividad-grupal-delete-dialog";
 import { ActividadesGrupalesTable } from "../components/actividades-grupales-table";
@@ -19,14 +15,19 @@ import {
   buildActividadGrupalDiligenciamientoPath,
   CREACION_ACTIVIDADES_TRASH_PATH,
   CREACION_ACTIVIDADES_NEW_PATH,
+  CREACION_ACTIVIDADES_CORRECTIONS_PATH,
 } from "../lib/actividades-grupales-paths";
 import {
   canManageActividadesGrupales,
   canViewActividadesGrupalesTrash,
 } from "../lib/actividades-grupales-permissions";
-import { getCurrentMonthInputValue } from "@/features/alimentacion/lib/alimentacion-formatters";
 import { resolveActividadesGrupalesApiError } from "../lib/actividades-grupales-formatters";
 import { openActividadGrupalActaPdf } from "../lib/open-actividad-grupal-acta-pdf";
+import {
+  type ActividadesGrupalesFilterState,
+  loadActividadesGrupalesFilters,
+  saveActividadesGrupalesFilters,
+} from "../lib/actividades-grupales-filter-state";
 import {
   useDeleteActividadGrupalMutation,
   useActividadGrupalTenantOptionsQuery,
@@ -42,13 +43,21 @@ export function ActividadesGrupalesIndexPage({
   navigate,
   user,
 }: ActividadesGrupalesIndexPageProps) {
-  const [search, setSearch] = useState("");
-  const [activityMonth, setActivityMonth] = useState(getCurrentMonthInputValue());
+  const defaultFilters: ActividadesGrupalesFilterState = {
+    search: "",
+    activityMonth: getCurrentMonthInputValue(),
+    activityType: "",
+    organizer: "",
+    tenantId: "",
+  };
+  const [filters, setFilters] = useState(() =>
+    loadActividadesGrupalesFilters(user.id, defaultFilters),
+  );
   const [activityPendingDelete, setActivityPendingDelete] =
     useState<ActividadGrupalListItem | null>(null);
-  const [selectedActivityType, setSelectedActivityType] = useState<ActividadGrupalType | "">("");
-  const [selectedOrganizer, setSelectedOrganizer] = useState<ActividadGrupalOrganizer | "">("");
-  const [selectedTenantId, setSelectedTenantId] = useState("");
+  const { activityMonth, activityType, organizer, search, tenantId: selectedTenantId } = filters;
+  const selectedActivityType = activityType;
+  const selectedOrganizer = organizer;
   const showTenantFilter = user.role === "super_admin";
   const effectiveActivityMonth = activityMonth.trim() === "" ? null : activityMonth;
   const reportPeriod = effectiveActivityMonth ?? "ALL";
@@ -60,6 +69,17 @@ export function ActividadesGrupalesIndexPage({
   const canViewTrash = canViewActividadesGrupalesTrash(user);
   const tenantOptionsQuery = useActividadGrupalTenantOptionsQuery(showTenantFilter);
   const deleteMutation = useDeleteActividadGrupalMutation();
+  const updateFilter = <T extends keyof ActividadesGrupalesFilterState>(
+    key: T,
+    value: ActividadesGrupalesFilterState[T],
+  ) => {
+    setFilters((current) => ({ ...current, [key]: value }));
+  };
+
+  useEffect(() => {
+    saveActividadesGrupalesFilters(user.id, filters);
+  }, [filters, user.id]);
+
   const actividadesQuery = useActividadesGrupalesQuery({
     search,
     activityType: selectedActivityType === "" ? null : selectedActivityType,
@@ -75,6 +95,18 @@ export function ActividadesGrupalesIndexPage({
       </h1>
 
       <div className="actividades-form-nav">
+        {user.role === "super_admin" ? (
+          <button
+            className="outline-action actividades-correction-nav-action"
+            type="button"
+            aria-label="Normalizar consecutivos"
+            title="Normalizar consecutivos"
+            onClick={() => navigate(CREACION_ACTIVIDADES_CORRECTIONS_PATH)}
+          >
+            <ListRestart aria-hidden="true" />
+            <span className="visually-hidden">Normalizar consecutivos</span>
+          </button>
+        ) : null}
         {canViewTrash ? (
           <button
             className="outline-action actividades-back-action actividades-trash-action"
@@ -106,12 +138,12 @@ export function ActividadesGrupalesIndexPage({
         selectedTenantId={selectedTenantId}
         showTenantFilter={showTenantFilter}
         tenantOptions={tenantOptionsQuery.data?.tenants ?? []}
-        onActivityMonthChange={setActivityMonth}
+        onActivityMonthChange={(value) => updateFilter("activityMonth", value)}
         isTenantOptionsLoading={tenantOptionsQuery.isLoading}
-        onActivityTypeChange={setSelectedActivityType}
-        onOrganizerChange={setSelectedOrganizer}
-        onSearchChange={setSearch}
-        onTenantChange={setSelectedTenantId}
+        onActivityTypeChange={(value) => updateFilter("activityType", value)}
+        onOrganizerChange={(value) => updateFilter("organizer", value)}
+        onSearchChange={(value) => updateFilter("search", value)}
+        onTenantChange={(value) => updateFilter("tenantId", value)}
       />
 
       {actividadesQuery.isError ? (
@@ -146,14 +178,17 @@ export function ActividadesGrupalesIndexPage({
               setActivityPendingDelete(null);
             }
           }}
-          onConfirm={() => {
-            deleteMutation.mutate(activityPendingDelete.id, {
-              onSuccess: () => {
-                deleteMutation.reset();
-                setActivityPendingDelete(null);
-                toast.success("Acta enviada a la papelera.");
+          onConfirm={(reason) => {
+            deleteMutation.mutate(
+              { activityId: activityPendingDelete.id, reason },
+              {
+                onSuccess: () => {
+                  deleteMutation.reset();
+                  setActivityPendingDelete(null);
+                  toast.success("Acta enviada a la papelera.");
+                },
               },
-            });
+            );
           }}
         />
       ) : null}

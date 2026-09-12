@@ -638,6 +638,43 @@ export const actividadGrupalActaCounters = pgTable(
   (table) => [index("actividad_grupal_acta_counters_updated_at_idx").on(table.updatedAt)],
 );
 
+export const actividadGrupalActaOrganizerCounters = pgTable(
+  "actividad_grupal_acta_organizer_counters",
+  {
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    organizer: actividadGrupalOrganizer("organizer").notNull(),
+    lastValue: integer("last_value").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.tenantId, table.organizer] }),
+    index("actividad_grupal_acta_organizer_counters_updated_at_idx").on(table.updatedAt),
+  ],
+);
+
+export const actividadGrupalActaCorrectionOperations = pgTable(
+  "actividad_grupal_acta_correction_operations",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    requestedByUserId: uuid("requested_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    snapshotHash: varchar("snapshot_hash", { length: 64 }).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("actividad_grupal_acta_correction_operations_tenant_idx").on(table.tenantId),
+    index("actividad_grupal_acta_correction_operations_expires_idx").on(table.expiresAt),
+  ],
+);
+
 export const actividadesGrupales = pgTable(
   "actividades_grupales",
   {
@@ -646,6 +683,14 @@ export const actividadesGrupales = pgTable(
       .notNull()
       .references(() => tenants.id, { onDelete: "restrict" }),
     actaNumber: varchar("acta_number", { length: 40 }).notNull(),
+    actaOrganizer: actividadGrupalOrganizer("acta_organizer").notNull(),
+    actaSequence: integer("acta_sequence").notNull(),
+    previousActaNumber: varchar("previous_acta_number", { length: 40 }),
+    actaNumberCorrectedAt: timestamp("acta_number_corrected_at", { withTimezone: true }),
+    actaNumberCorrectedByUserId: uuid("acta_number_corrected_by_user_id").references(
+      () => users.id,
+      { onDelete: "restrict" },
+    ),
     activityName: varchar("activity_name", { length: 160 }).notNull(),
     activityType: actividadGrupalType("activity_type").notNull(),
     activityDate: date("activity_date", { mode: "string" }).notNull(),
@@ -659,11 +704,23 @@ export const actividadesGrupales = pgTable(
     deletedByUserId: uuid("deleted_by_user_id").references(() => users.id, {
       onDelete: "restrict",
     }),
+    deletionReason: varchar("deletion_reason", { length: 500 }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("actividades_grupales_tenant_acta_unique").on(table.tenantId, table.actaNumber),
+    uniqueIndex("actividades_grupales_tenant_acta_series_unique").on(
+      table.tenantId,
+      table.actaOrganizer,
+      table.actaSequence,
+    ),
+    index("actividades_grupales_tenant_acta_series_idx").on(
+      table.tenantId,
+      table.actaOrganizer,
+      table.actaSequence,
+    ),
+    check("actividades_grupales_acta_sequence_positive", sql`${table.actaSequence} > 0`),
     index("actividades_grupales_tenant_date_idx").on(table.tenantId, table.activityDate),
     index("actividades_grupales_tenant_deleted_at_idx").on(table.tenantId, table.deletedAt),
     index("actividades_grupales_created_by_user_idx").on(table.createdByUserId),
@@ -996,7 +1053,9 @@ export const atencionesEnfermeria = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
-    deletedByUserId: uuid("deleted_by_user_id").references(() => users.id, { onDelete: "restrict" }),
+    deletedByUserId: uuid("deleted_by_user_id").references(() => users.id, {
+      onDelete: "restrict",
+    }),
   },
   (table) => [
     index("atenciones_enfermeria_tenant_date_idx").on(table.tenantId, table.attentionDate),

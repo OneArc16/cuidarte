@@ -38,7 +38,10 @@ describe("ActividadesGrupalesActaExportService", () => {
       },
     });
 
-    assert.equal(detail.assignedProfessionals[0]?.signatureDataUrl, "data:image/png;base64,ZmlybWE=");
+    assert.equal(
+      detail.assignedProfessionals[0]?.signatureDataUrl,
+      "data:image/png;base64,ZmlybWE=",
+    );
     assert.equal(detail.assignedProfessionals[1]?.signatureDataUrl, null);
   });
 });
@@ -49,6 +52,9 @@ function createDetail(): ActividadGrupalDiligenciamientoDetail {
     tenantId: "tenant-1",
     tenantName: "Centro Demo",
     actaNumber: "0001",
+    actaOrganizer: "director",
+    actaSequence: 1,
+    previousActaNumber: null,
     activityName: "Sesion de prueba",
     activityType: "salud_preventiva",
     activityDate: "2026-08-16",

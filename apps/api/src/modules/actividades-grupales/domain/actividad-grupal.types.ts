@@ -67,7 +67,6 @@ export type ActividadGrupalSupportFileRecord = {
 export type CreateActividadGrupalRecordCommand = {
   tenantId: string;
   actorUserId: string;
-  actaNumber: string;
   activityName: string;
   activityType: ActividadGrupalType;
   activityDate: string;
@@ -80,7 +79,6 @@ export type CreateActividadGrupalRecordCommand = {
 export type UpdateActividadGrupalRecordCommand = {
   activityId: string;
   actorUserId: string;
-  actaNumber: string;
   activityName: string;
   activityType: ActividadGrupalType;
   activityDate: string;
@@ -93,12 +91,64 @@ export type UpdateActividadGrupalRecordCommand = {
 export type DeleteActividadGrupalRecordCommand = {
   activityId: string;
   actorUserId: string;
+  reason: string;
 };
 
 export type RestoreActividadGrupalRecordCommand = {
   activityId: string;
   actorUserId: string;
 };
+
+export type CorrectActividadGrupalActaNumberCommand = {
+  activityId: string;
+  actorUserId: string;
+  organizer: ActividadGrupalOrganizer;
+  reason: string;
+};
+
+export type ActaCorrectionPreviewRow = {
+  activityId: string;
+  activityDate: string;
+  startTime: string;
+  endTime: string;
+  organizer: ActividadGrupalOrganizer;
+  currentActaNumber: string;
+  proposedActaNumber: string;
+  sequence: number;
+  isDeleted: boolean;
+};
+
+export type ActaCorrectionPreview = {
+  operationToken: string;
+  operationId: string;
+  tenantId: string;
+  previewExpiresAt: Date;
+  totalCount: number;
+  changedCount: number;
+  unchangedCount: number;
+  warningCount: number;
+  rows: ActaCorrectionPreviewRow[];
+};
+
+export type ApplyActaCorrectionCommand = {
+  operationToken: string;
+  actorUserId: string;
+  reason: string;
+};
+
+export type AppliedActaCorrection = {
+  operationId: string;
+  totalCount: number;
+  changedCount: number;
+  unchangedCount: number;
+};
+
+export class ActaCorrectionConflictError extends Error {
+  constructor(message = "La vista previa de correccion ya no esta vigente.") {
+    super(message);
+    this.name = "ActaCorrectionConflictError";
+  }
+}
 
 export type PersistActividadGrupalSupportFile = {
   kind: ActividadGrupalSupportFileKind;
@@ -132,6 +182,9 @@ export type ActividadGrupalRecord = {
   tenantName: string;
   createdByUserId: string;
   actaNumber: string;
+  actaOrganizer: ActividadGrupalOrganizer;
+  actaSequence: number;
+  previousActaNumber: string | null;
   activityName: string;
   activityType: ActividadGrupalType;
   activityDate: string;
@@ -147,6 +200,7 @@ export type ActividadGrupalTrashRecord = ActividadGrupalRecord & {
   deletedAt: Date;
   deletedByUserId: string;
   deletedByUserFullName: string;
+  deletionReason: string | null;
 };
 
 export type ActividadGrupalDiligenciamientoDetailRecord = {

@@ -183,12 +183,22 @@ export function AtencionesEnfermeriaForm(props: AtencionesEnfermeriaFormProps) {
     };
   }, [activeSection, createDraftStorageKey, form, props.mode]);
 
-  function handleInvalidSubmit() {
-    const firstSectionWithError = findFirstSectionWithError(formState.errors);
+  function showValidationError(errors: FieldErrors<AtencionesEnfermeriaFormValues>) {
+    const message = getFirstValidationErrorMessage(errors);
+
+    toast.error(message ?? "Revisa los campos marcados antes de continuar.", {
+      id: "atenciones-enfermeria-validation-error",
+    });
+  }
+
+  function handleInvalidSubmit(errors: FieldErrors<AtencionesEnfermeriaFormValues>) {
+    const firstSectionWithError = findFirstSectionWithError(errors);
 
     if (firstSectionWithError !== null) {
       setActiveSection(firstSectionWithError);
     }
+
+    showValidationError(errors);
   }
 
   async function goToNextSection() {
@@ -208,6 +218,7 @@ export function AtencionesEnfermeriaForm(props: AtencionesEnfermeriaFormProps) {
     const isSectionValid = await form.trigger(sectionFields, { shouldFocus: true });
 
     if (!isSectionValid) {
+      showValidationError(form.formState.errors);
       return;
     }
 
@@ -562,6 +573,22 @@ function getError<TField extends keyof AtencionesEnfermeriaFormValues>(
   const message = errors[field]?.message;
 
   return typeof message === "string" ? message : undefined;
+}
+
+function getFirstValidationErrorMessage(
+  errors: FieldErrors<AtencionesEnfermeriaFormValues>,
+): string | undefined {
+  for (const section of FORM_SECTIONS) {
+    for (const field of section.fields) {
+      const message = errors[field as keyof AtencionesEnfermeriaFormValues]?.message;
+
+      if (typeof message === "string") {
+        return message;
+      }
+    }
+  }
+
+  return undefined;
 }
 
 function findFirstSectionWithError(
