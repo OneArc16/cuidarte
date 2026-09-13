@@ -23,11 +23,13 @@ export type FindActividadesGrupalesQuery = {
   activityMonth: string | null;
   tenantId: string | null;
   scope: ActividadesGrupalesScope;
+  permittedOrganizers: readonly ActividadGrupalOrganizer[] | null;
 };
 
 export type FindActividadGrupalByIdQuery = {
   activityId: string;
   scope: ActividadesGrupalesScope;
+  permittedOrganizers: readonly ActividadGrupalOrganizer[] | null;
 };
 
 export type FindActividadesGrupalesTrashQuery = FindActividadesGrupalesQuery;

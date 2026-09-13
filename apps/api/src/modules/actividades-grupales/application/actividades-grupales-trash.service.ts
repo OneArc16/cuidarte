@@ -17,7 +17,9 @@ import {
   canManageActividadesGrupales,
   canRestoreActividadGrupal,
   canTrashActividadGrupal,
+  canViewActividadGrupal,
   resolveActividadesGrupalesScope,
+  resolvePermittedActividadGrupalOrganizers,
 } from "../domain/actividad-grupal.policy";
 import {
   ACTIVIDADES_GRUPALES_REPOSITORY,
@@ -35,7 +37,11 @@ export class ActividadesGrupalesTrashService {
   async sendToTrash(activityId: string, reason: string, actor: AuthUser): Promise<void> {
     this.ensureCanManageActivities(actor);
     const scope = this.resolveScopeOrThrow(actor);
-    const detail = await this.actividadesGrupalesRepository.findById({ activityId, scope });
+    const detail = await this.actividadesGrupalesRepository.findById({
+      activityId,
+      scope,
+      permittedOrganizers: resolvePermittedActividadGrupalOrganizers(actor),
+    });
 
     if (detail === null) {
       throw new NotFoundException("La actividad grupal no fue encontrada.");
@@ -63,14 +69,21 @@ export class ActividadesGrupalesTrashService {
       activityMonth: query.activityMonth,
       tenantId: effectiveTenantId,
       scope,
+      permittedOrganizers: resolvePermittedActividadGrupalOrganizers(actor),
     });
 
-    return records.map((record) => this.toTrashListItem(record, actor));
+    return records
+      .filter((record) => canViewActividadGrupal(record, actor))
+      .map((record) => this.toTrashListItem(record, actor));
   }
 
   async restore(activityId: string, actor: AuthUser): Promise<void> {
     const scope = this.resolveScopeOrThrow(actor);
-    const detail = await this.actividadesGrupalesRepository.findTrashById({ activityId, scope });
+    const detail = await this.actividadesGrupalesRepository.findTrashById({
+      activityId,
+      scope,
+      permittedOrganizers: resolvePermittedActividadGrupalOrganizers(actor),
+    });
 
     if (detail === null) {
       throw new NotFoundException("La acta eliminada no fue encontrada.");

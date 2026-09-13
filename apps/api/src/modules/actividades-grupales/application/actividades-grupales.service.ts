@@ -41,7 +41,9 @@ import {
   canManageActividadesGrupales,
   canCorrectActividadGrupalActaNumber,
   canBulkCorrectActividadGrupalActaNumbers,
+  canViewActividadGrupal,
   canTrashActividadGrupal,
+  resolvePermittedActividadGrupalOrganizers,
   resolveActividadesGrupalesScope,
 } from "../domain/actividad-grupal.policy";
 import { assertAdultoMayorRecordDateAllowed } from "../../adultos-mayores/domain/adulto-mayor-status-policy";
@@ -101,6 +103,7 @@ export class ActividadesGrupalesService {
   ): Promise<ActividadGrupalListItem[]> {
     const scope = this.resolveScopeOrThrow(actor);
     const effectiveTenantId = this.resolveListTenantId(scope, query.tenantId);
+    const permittedOrganizers = resolvePermittedActividadGrupalOrganizers(actor);
     const records = await this.actividadesGrupalesRepository.findMany({
       search: query.search,
       activityType: query.activityType,
@@ -108,9 +111,12 @@ export class ActividadesGrupalesService {
       activityMonth: query.activityMonth,
       tenantId: effectiveTenantId,
       scope,
+      permittedOrganizers,
     });
 
-    return records.map((record) => this.toListItem(record, actor));
+    return records
+      .filter((record) => canViewActividadGrupal(record, actor))
+      .map((record) => this.toListItem(record, actor));
   }
 
   async listTenantOptions(actor: AuthUser): Promise<ActividadGrupalTenantOption[]> {
@@ -422,7 +428,11 @@ export class ActividadesGrupalesService {
     actor: AuthUser,
   ): Promise<ActividadGrupalDiligenciamientoDetailRecord> {
     const scope = this.resolveScopeOrThrow(actor);
-    const detail = await this.actividadesGrupalesRepository.findById({ activityId, scope });
+    const detail = await this.actividadesGrupalesRepository.findById({
+      activityId,
+      scope,
+      permittedOrganizers: resolvePermittedActividadGrupalOrganizers(actor),
+    });
 
     if (detail === null) {
       throw new NotFoundException("La sesion grupal no fue encontrada.");
@@ -438,7 +448,11 @@ export class ActividadesGrupalesService {
     actor: AuthUser,
   ): Promise<ActividadGrupalDiligenciamientoDetailRecord> {
     const scope = this.resolveScopeOrThrow(actor);
-    const detail = await this.actividadesGrupalesRepository.findById({ activityId, scope });
+    const detail = await this.actividadesGrupalesRepository.findById({
+      activityId,
+      scope,
+      permittedOrganizers: resolvePermittedActividadGrupalOrganizers(actor),
+    });
 
     if (detail === null) {
       throw new NotFoundException("La actividad grupal no fue encontrada.");
@@ -496,6 +510,7 @@ export class ActividadesGrupalesService {
     const detail = await this.actividadesGrupalesRepository.findById({
       activityId,
       scope: { type: "all" },
+      permittedOrganizers: null,
     });
 
     if (detail !== null) {
@@ -505,6 +520,7 @@ export class ActividadesGrupalesService {
     const trashDetail = await this.actividadesGrupalesRepository.findTrashById({
       activityId,
       scope: { type: "all" },
+      permittedOrganizers: null,
     });
 
     if (trashDetail === null) {

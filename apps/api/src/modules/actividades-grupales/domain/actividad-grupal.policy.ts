@@ -1,9 +1,41 @@
-import { type AuthUser } from "@cuidarte/contracts";
+import { type ActividadGrupalOrganizer, type AuthUser, type UserRole } from "@cuidarte/contracts";
 
 import {
   type ActividadGrupalRecord,
   type ActividadesGrupalesScope,
 } from "./actividad-grupal.types";
+
+const ORGANIZERS_BY_PROFESSIONAL_ROLE: Partial<
+  Record<UserRole, readonly ActividadGrupalOrganizer[]>
+> = {
+  enfermeria: ["medico", "enfermeria"],
+  fisioterapeuta: ["fisioterapeuta"],
+  medico: ["medico", "enfermeria"],
+  nutricionista: ["nutricionista"],
+  psicologo: ["psicologa", "trabajadora_social"],
+  recreacionista: ["recreacionista"],
+  trabajadora_social: ["psicologa", "trabajadora_social"],
+};
+
+/**
+ * Null means that the role is allowed to see every organizing team.
+ * Professional teams are intentionally defined by the activity organizer, which
+ * is the persisted source of truth for a session's responsible area.
+ */
+export function resolvePermittedActividadGrupalOrganizers(
+  user: Pick<AuthUser, "role">,
+): readonly ActividadGrupalOrganizer[] | null {
+  return ORGANIZERS_BY_PROFESSIONAL_ROLE[user.role] ?? null;
+}
+
+export function canViewActividadGrupal(
+  activity: Pick<ActividadGrupalRecord, "organizer">,
+  user: Pick<AuthUser, "role">,
+): boolean {
+  const permittedOrganizers = resolvePermittedActividadGrupalOrganizers(user);
+
+  return permittedOrganizers === null || permittedOrganizers.includes(activity.organizer);
+}
 
 export function resolveActividadesGrupalesScope(user: AuthUser): ActividadesGrupalesScope | null {
   if (user.role === "super_admin") {

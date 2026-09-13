@@ -143,9 +143,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       .select(this.getActivitySelection())
       .from(actividadesGrupales)
       .innerJoin(tenants, eq(tenants.id, actividadesGrupales.tenantId))
-      .where(
-        this.buildActivityScopedWhere(query.scope, [eq(actividadesGrupales.id, query.activityId)]),
-      )
+      .where(this.buildActivityScopedWhere(query, [eq(actividadesGrupales.id, query.activityId)]))
       .limit(1);
 
     if (activityRow === undefined) {
@@ -191,9 +189,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       .innerJoin(tenants, eq(tenants.id, actividadesGrupales.tenantId))
       .innerJoin(users, eq(users.id, actividadesGrupales.deletedByUserId))
       .where(
-        this.buildTrashActivityScopedWhere(query.scope, [
-          eq(actividadesGrupales.id, query.activityId),
-        ]),
+        this.buildTrashActivityScopedWhere(query, [eq(actividadesGrupales.id, query.activityId)]),
       )
       .limit(1);
 
@@ -1051,6 +1047,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     const detail = await this.findById({
       activityId: command.activityId,
       scope: { type: "all" },
+      permittedOrganizers: null,
     });
 
     if (detail === null) {
@@ -1206,6 +1203,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       conditions.push(eq(actividadesGrupales.organizer, query.organizer));
     }
 
+    if (query.permittedOrganizers !== null) {
+      conditions.push(inArray(actividadesGrupales.organizer, [...query.permittedOrganizers]));
+    }
+
     if (query.activityMonth !== null) {
       const monthRange = resolveMonthRange(query.activityMonth);
 
@@ -1250,6 +1251,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       conditions.push(eq(actividadesGrupales.organizer, query.organizer));
     }
 
+    if (query.permittedOrganizers !== null) {
+      conditions.push(inArray(actividadesGrupales.organizer, [...query.permittedOrganizers]));
+    }
+
     if (query.activityMonth !== null) {
       const monthRange = resolveMonthRange(query.activityMonth);
 
@@ -1278,24 +1283,29 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     return conditions.length === 0 ? undefined : and(...conditions);
   }
 
-  private buildActivityScopedWhere(scope: FindActividadGrupalByIdQuery["scope"], extra: SQL[]) {
+  private buildActivityScopedWhere(query: FindActividadGrupalByIdQuery, extra: SQL[]) {
     const conditions = [...extra, isNull(actividadesGrupales.deletedAt)];
 
-    if (scope.type === "tenant") {
-      conditions.push(eq(actividadesGrupales.tenantId, scope.tenantId));
+    if (query.scope.type === "tenant") {
+      conditions.push(eq(actividadesGrupales.tenantId, query.scope.tenantId));
+    }
+
+    if (query.permittedOrganizers !== null) {
+      conditions.push(inArray(actividadesGrupales.organizer, [...query.permittedOrganizers]));
     }
 
     return and(...conditions);
   }
 
-  private buildTrashActivityScopedWhere(
-    scope: FindActividadGrupalByIdQuery["scope"],
-    extra: SQL[],
-  ) {
+  private buildTrashActivityScopedWhere(query: FindActividadGrupalByIdQuery, extra: SQL[]) {
     const conditions = [...extra, isNotNull(actividadesGrupales.deletedAt)];
 
-    if (scope.type === "tenant") {
-      conditions.push(eq(actividadesGrupales.tenantId, scope.tenantId));
+    if (query.scope.type === "tenant") {
+      conditions.push(eq(actividadesGrupales.tenantId, query.scope.tenantId));
+    }
+
+    if (query.permittedOrganizers !== null) {
+      conditions.push(inArray(actividadesGrupales.organizer, [...query.permittedOrganizers]));
     }
 
     return and(...conditions);

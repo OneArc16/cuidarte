@@ -8,6 +8,8 @@ import {
   canManageActividadesGrupales,
   canRestoreActividadGrupal,
   canTrashActividadGrupal,
+  canViewActividadGrupal,
+  resolvePermittedActividadGrupalOrganizers,
 } from "./actividad-grupal.policy";
 
 const tenantId = "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054";
@@ -34,6 +36,29 @@ describe("actividad-grupal.policy", () => {
   it("blocks auditors from managing activities", () => {
     assert.equal(canManageActividadesGrupales(auditorUser), false);
     assert.equal(canManageActividadesGrupales(adminUser), true);
+  });
+
+  it("limits professional teams to their own organizers and their paired team", () => {
+    assert.deepEqual(resolvePermittedActividadGrupalOrganizers({ role: "fisioterapeuta" }), [
+      "fisioterapeuta",
+    ]);
+    assert.deepEqual(resolvePermittedActividadGrupalOrganizers({ role: "nutricionista" }), [
+      "nutricionista",
+    ]);
+    assert.deepEqual(resolvePermittedActividadGrupalOrganizers({ role: "recreacionista" }), [
+      "recreacionista",
+    ]);
+    assert.deepEqual(resolvePermittedActividadGrupalOrganizers({ role: "medico" }), [
+      "medico",
+      "enfermeria",
+    ]);
+    assert.deepEqual(resolvePermittedActividadGrupalOrganizers({ role: "trabajadora_social" }), [
+      "psicologa",
+      "trabajadora_social",
+    ]);
+    assert.equal(canViewActividadGrupal({ organizer: "enfermeria" }, { role: "medico" }), true);
+    assert.equal(canViewActividadGrupal({ organizer: "nutricionista" }, { role: "medico" }), false);
+    assert.equal(canViewActividadGrupal({ organizer: "nutricionista" }, adminUser), true);
   });
 
   it("allows the creator or tenant admins to send an acta to trash", () => {

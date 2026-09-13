@@ -74,8 +74,8 @@ const records: ActividadGrupalRecord[] = [
     tenantId,
     tenantName: "Centro de Vida Demo",
     createdByUserId: medicoUserId,
-    actaNumber: "0003",
-    actaOrganizer: "director",
+    actaNumber: "MED-003",
+    actaOrganizer: "medico",
     actaSequence: 3,
     previousActaNumber: null,
     activityName: "Encuentro de bienestar",
@@ -83,7 +83,7 @@ const records: ActividadGrupalRecord[] = [
     activityDate: "2026-04-22",
     startTime: "08:00",
     endTime: "10:00",
-    organizer: "director",
+    organizer: "medico",
     involvedEmployeesCount: 2,
     createdAt: new Date("2026-04-22T12:00:00.000Z"),
     updatedAt: new Date("2026-04-22T12:00:00.000Z"),
@@ -134,6 +134,7 @@ describe("ActividadesGrupalesService", () => {
       activityMonth: null,
       tenantId,
       scope: { type: "tenant", tenantId },
+      permittedOrganizers: ["medico", "enfermeria"],
     });
   });
 
@@ -161,6 +162,7 @@ describe("ActividadesGrupalesService", () => {
       activityMonth: null,
       tenantId: otherTenantId,
       scope: { type: "all" },
+      permittedOrganizers: null,
     });
   });
 
@@ -181,6 +183,7 @@ describe("ActividadesGrupalesService", () => {
       activityMonth: null,
       tenantId,
       scope: { type: "tenant", tenantId },
+      permittedOrganizers: null,
     });
   });
 
@@ -208,6 +211,7 @@ describe("ActividadesGrupalesService", () => {
       activityMonth: null,
       tenantId: null,
       scope: { type: "all" },
+      permittedOrganizers: null,
     });
   });
 
@@ -235,6 +239,7 @@ describe("ActividadesGrupalesService", () => {
       activityMonth: null,
       tenantId: null,
       scope: { type: "all" },
+      permittedOrganizers: null,
     });
   });
 
