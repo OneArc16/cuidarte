@@ -3,7 +3,6 @@ import { ClipboardPenLine, Eye, FileText, PencilLine, Trash2 } from "lucide-reac
 
 import {
   formatActividadGrupalOrganizer,
-  formatActividadGrupalType,
   formatActivitySchedule,
   formatActaNumber,
 } from "../lib/actividades-grupales-formatters";
@@ -90,7 +89,8 @@ export function ActividadesGrupalesTable({
                   </button>
                 </td>
                 <td className="actividades-cell-type">
-                  {formatActividadGrupalType(actividad.activityType)}
+                  {actividad.activityTypeCatalog.name}
+                  {actividad.activityTypeCatalog.isActive ? "" : " (Inactiva)"}
                 </td>
                 <td>{actividad.activityDate}</td>
                 <td>{formatActivitySchedule(actividad.startTime, actividad.endTime)}</td>

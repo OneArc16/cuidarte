@@ -10,6 +10,7 @@ const fallbackFilters: ActividadesGrupalesFilterState = {
   search: "",
   activityMonth: "2026-09",
   activityType: "",
+  activityTypeId: "",
   organizer: "",
   tenantId: "",
 };
@@ -20,6 +21,7 @@ describe("actividades grupales filter state", () => {
       search: "pausas",
       activityMonth: "",
       activityType: "salud_preventiva",
+      activityTypeId: "5fce6a65-c7f4-43d5-884c-f017d51319b3",
       organizer: "enfermeria",
       tenantId: "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054",
     };

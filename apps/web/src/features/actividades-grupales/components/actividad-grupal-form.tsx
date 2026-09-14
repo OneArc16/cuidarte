@@ -1,5 +1,6 @@
 import {
   type ActividadGrupalFormOptionsResponse,
+  type ActividadGrupalTipoSummary,
   type ActividadGrupalTenantOption,
 } from "@cuidarte/contracts";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,9 +12,7 @@ import { formatEmpleadoRole } from "@/features/empleados/lib/empleados-formatter
 
 import {
   formatActividadGrupalOrganizer,
-  formatActividadGrupalType,
   getActividadGrupalOrganizerOptions,
-  getActividadGrupalTypeOptions,
 } from "../lib/actividades-grupales-formatters";
 import {
   type ActividadGrupalFormValues,
@@ -27,6 +26,7 @@ type ActividadGrupalFormProps = {
   error: string | null;
   formOptions: ActividadGrupalFormOptionsResponse | null;
   initialValues?: ActividadGrupalFormValues;
+  currentActivityType?: ActividadGrupalTipoSummary | null;
   isFormOptionsLoading: boolean;
   isPending: boolean;
   isTenantOptionsLoading: boolean;
@@ -43,6 +43,7 @@ export function ActividadGrupalForm({
   error,
   formOptions,
   initialValues,
+  currentActivityType = null,
   isFormOptionsLoading,
   isPending,
   isTenantOptionsLoading,
@@ -64,6 +65,25 @@ export function ActividadGrupalForm({
   const organizerValue = watch("organizer");
   const isTenantSelected = !shouldSelectTenant || selectedTenantId.trim() !== "";
   const availableEmployees = formOptions?.empleados ?? [];
+  const activityTypeOptions = useMemo(() => {
+    const options = [...(formOptions?.activityTypes ?? [])];
+
+    if (
+      currentActivityType !== null &&
+      !options.some((option) => option.id === currentActivityType.id)
+    ) {
+      options.push({
+        ...currentActivityType,
+        tenantId: selectedTenantId,
+        normalizedName: currentActivityType.name.toLowerCase(),
+        createdAt: "",
+        updatedAt: "",
+        deactivatedAt: null,
+      });
+    }
+
+    return options;
+  }, [currentActivityType, formOptions?.activityTypes, selectedTenantId]);
   const filteredEmployees = useMemo(() => {
     const search = employeeSearch.trim().toLowerCase();
 
@@ -85,7 +105,7 @@ export function ActividadGrupalForm({
   }, [
     initialValues?.tenantId,
     initialValues?.activityName,
-    initialValues?.activityType,
+    initialValues?.activityTypeId,
     initialValues?.activityDate,
     initialValues?.startTime,
     initialValues?.endTime,
@@ -204,6 +224,7 @@ export function ActividadGrupalForm({
 
                       onTenantChange(nextTenantId);
                       resetField("employeeIds", { defaultValue: [] });
+                      resetField("activityTypeId", { defaultValue: "" });
                     },
                   })}
                 >
@@ -237,14 +258,17 @@ export function ActividadGrupalForm({
               />
             </ActividadGrupalFieldGroup>
 
-            <ActividadGrupalFieldGroup label="Tipo de actividad" error={getError("activityType")}>
+            <ActividadGrupalFieldGroup label="Tipo de actividad" error={getError("activityTypeId")}>
               <select
-                aria-invalid={getError("activityType") === undefined ? "false" : "true"}
-                {...form.register("activityType")}
+                aria-invalid={getError("activityTypeId") === undefined ? "false" : "true"}
+                disabled={!isTenantSelected || isFormOptionsLoading}
+                {...form.register("activityTypeId")}
               >
-                {getActividadGrupalTypeOptions().map((option) => (
-                  <option key={option} value={option}>
-                    {formatActividadGrupalType(option)}
+                <option value="">Seleccionar</option>
+                {activityTypeOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                    {option.isActive ? "" : " (Inactiva)"}
                   </option>
                 ))}
               </select>

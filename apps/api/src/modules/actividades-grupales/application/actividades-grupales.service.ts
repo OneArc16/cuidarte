@@ -9,6 +9,7 @@ import {
   type ActividadGrupalResponsibleDepartment,
   type ActividadGrupalSupportFile,
   type ActividadGrupalTenantOption,
+  type ActividadGrupalFormOptionsResponse,
   type ActividadGrupalActaCorrectionPreviewResponse,
   type ApplyActividadGrupalActaCorrectionRequest,
   type ApplyActividadGrupalActaCorrectionResponse,
@@ -26,6 +27,7 @@ import {
   actividadGrupalListItemSchema,
   actividadGrupalSupportFileSchema,
   actividadGrupalTenantOptionSchema,
+  actividadGrupalTipoSchema,
 } from "@cuidarte/contracts";
 import {
   BadRequestException,
@@ -47,6 +49,7 @@ import {
   resolveActividadesGrupalesScope,
 } from "../domain/actividad-grupal.policy";
 import { assertAdultoMayorRecordDateAllowed } from "../../adultos-mayores/domain/adulto-mayor-status-policy";
+import { ActividadGrupalTiposService } from "../../actividad-grupal-tipos/application/actividad-grupal-tipos.service";
 import {
   type ActividadGrupalDiligenciamientoDetailRecord,
   type ActividadGrupalRecord,
@@ -95,6 +98,39 @@ export class ActividadesGrupalesService {
     private readonly actividadesGrupalesRepository: ActividadesGrupalesRepository,
     @Inject(ACTIVIDADES_GRUPALES_FILES_STORAGE)
     private readonly filesStorage: ActividadesGrupalesFilesStorage,
+    @Inject(ActividadGrupalTiposService)
+    private readonly actividadGrupalTiposService: Pick<
+      ActividadGrupalTiposService,
+      "listForSessionForm" | "resolveForSessionCreate" | "resolveForSessionUpdate"
+    > = {
+      async listForSessionForm() {
+        return [];
+      },
+      async resolveForSessionCreate(activityTypeId, tenantId) {
+        return {
+          id: activityTypeId,
+          tenantId,
+          name: "Actividad",
+          normalizedName: "actividad",
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          deactivatedAt: null,
+        };
+      },
+      async resolveForSessionUpdate(activityTypeId, tenantId) {
+        return {
+          id: activityTypeId,
+          tenantId,
+          name: "Actividad",
+          normalizedName: "actividad",
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          deactivatedAt: null,
+        };
+      },
+    },
   ) {}
 
   async listActividadesGrupales(
@@ -107,6 +143,7 @@ export class ActividadesGrupalesService {
     const records = await this.actividadesGrupalesRepository.findMany({
       search: query.search,
       activityType: query.activityType,
+      activityTypeId: query.activityTypeId,
       organizer: query.organizer,
       activityMonth: query.activityMonth,
       tenantId: effectiveTenantId,
@@ -132,13 +169,19 @@ export class ActividadesGrupalesService {
   async getFormOptions(
     query: { tenantId: string | null },
     actor: AuthUser,
-  ): Promise<{ empleados: ActividadGrupalEmpleadoOption[] }> {
+  ): Promise<ActividadGrupalFormOptionsResponse> {
     this.ensureCanManageActivities(actor);
     const tenantId = this.resolveTenantIdForForm(actor, query.tenantId);
-    const empleados = await this.actividadesGrupalesRepository.findActiveEmpleadoOptions(tenantId);
+    const [empleados, activityTypes] = await Promise.all([
+      this.actividadesGrupalesRepository.findActiveEmpleadoOptions(tenantId),
+      this.actividadGrupalTiposService.listForSessionForm(tenantId),
+    ]);
 
     return {
       empleados: empleados.map((empleado) => actividadGrupalEmpleadoOptionSchema.parse(empleado)),
+      activityTypes: activityTypes.map((activityType) =>
+        actividadGrupalTipoSchema.parse(activityType),
+      ),
     };
   }
 
@@ -150,6 +193,10 @@ export class ActividadesGrupalesService {
     this.resolveScopeOrThrow(actor);
 
     const tenantId = this.resolveTenantIdForCreate(actor, command.tenantId);
+    await this.actividadGrupalTiposService.resolveForSessionCreate(
+      command.activityTypeId,
+      tenantId,
+    );
     const activeEmpleados =
       await this.actividadesGrupalesRepository.findActiveEmpleadoOptions(tenantId);
     const activeEmpleadoIds = new Set(activeEmpleados.map((empleado) => empleado.id));
@@ -167,7 +214,8 @@ export class ActividadesGrupalesService {
       tenantId,
       actorUserId: actor.id,
       activityName: command.activityName,
-      activityType: command.activityType,
+      activityType: null,
+      activityTypeId: command.activityTypeId,
       activityDate: command.activityDate,
       startTime: command.startTime,
       endTime: command.endTime,
@@ -201,6 +249,11 @@ export class ActividadesGrupalesService {
   ): Promise<ActividadGrupalListItem> {
     this.ensureCanManageActivities(actor);
     const detail = await this.getEditableActivityOrThrow(activityId, actor);
+    await this.actividadGrupalTiposService.resolveForSessionUpdate(
+      command.activityTypeId,
+      detail.activity.tenantId,
+      detail.activity.activityTypeId,
+    );
     const activeEmpleados = await this.actividadesGrupalesRepository.findActiveEmpleadoOptions(
       detail.activity.tenantId,
     );
@@ -221,7 +274,8 @@ export class ActividadesGrupalesService {
       activityId,
       actorUserId: actor.id,
       activityName: command.activityName,
-      activityType: command.activityType,
+      activityType: detail.activity.activityType,
+      activityTypeId: command.activityTypeId,
       activityDate: command.activityDate,
       startTime: command.startTime,
       endTime: command.endTime,
@@ -713,6 +767,12 @@ export class ActividadesGrupalesService {
       actaNumber: record.actaNumber,
       activityName: record.activityName,
       activityType: record.activityType,
+      activityTypeId: record.activityTypeId,
+      activityTypeCatalog: {
+        id: record.activityTypeId,
+        name: record.activityTypeName,
+        isActive: record.activityTypeIsActive,
+      },
       activityDate: record.activityDate,
       startTime: record.startTime,
       endTime: record.endTime,

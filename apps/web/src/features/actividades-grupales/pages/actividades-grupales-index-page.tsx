@@ -33,6 +33,7 @@ import {
   useActividadGrupalTenantOptionsQuery,
   useActividadesGrupalesQuery,
 } from "../model/actividades-grupales-queries";
+import { useActividadGrupalTiposQuery } from "@/features/actividad-grupal-tipos/model/actividad-grupal-tipos-queries";
 
 type ActividadesGrupalesIndexPageProps = {
   navigate: Navigate;
@@ -47,6 +48,7 @@ export function ActividadesGrupalesIndexPage({
     search: "",
     activityMonth: getCurrentMonthInputValue(),
     activityType: "",
+    activityTypeId: "",
     organizer: "",
     tenantId: "",
   };
@@ -55,7 +57,14 @@ export function ActividadesGrupalesIndexPage({
   );
   const [activityPendingDelete, setActivityPendingDelete] =
     useState<ActividadGrupalListItem | null>(null);
-  const { activityMonth, activityType, organizer, search, tenantId: selectedTenantId } = filters;
+  const {
+    activityMonth,
+    activityType,
+    activityTypeId,
+    organizer,
+    search,
+    tenantId: selectedTenantId,
+  } = filters;
   const selectedActivityType = activityType;
   const selectedOrganizer = organizer;
   const showTenantFilter = user.role === "super_admin";
@@ -68,6 +77,10 @@ export function ActividadesGrupalesIndexPage({
     : user.tenantId;
   const canViewTrash = canViewActividadesGrupalesTrash(user);
   const tenantOptionsQuery = useActividadGrupalTenantOptionsQuery(showTenantFilter);
+  const activityTypesQuery = useActividadGrupalTiposQuery(
+    { tenantId: reportTenantId, includeInactive: true },
+    !showTenantFilter || reportTenantId !== null,
+  );
   const deleteMutation = useDeleteActividadGrupalMutation();
   const updateFilter = <T extends keyof ActividadesGrupalesFilterState>(
     key: T,
@@ -83,6 +96,7 @@ export function ActividadesGrupalesIndexPage({
   const actividadesQuery = useActividadesGrupalesQuery({
     search,
     activityType: selectedActivityType === "" ? null : selectedActivityType,
+    activityTypeId: activityTypeId === "" ? null : activityTypeId,
     organizer: selectedOrganizer === "" ? null : selectedOrganizer,
     activityMonth: effectiveActivityMonth,
     tenantId: reportTenantId,
@@ -133,14 +147,15 @@ export function ActividadesGrupalesIndexPage({
           />
         }
         search={search}
-        selectedActivityType={selectedActivityType}
+        selectedActivityTypeId={activityTypeId}
         selectedOrganizer={selectedOrganizer}
         selectedTenantId={selectedTenantId}
         showTenantFilter={showTenantFilter}
         tenantOptions={tenantOptionsQuery.data?.tenants ?? []}
+        activityTypeOptions={activityTypesQuery.data?.activityTypes ?? []}
         onActivityMonthChange={(value) => updateFilter("activityMonth", value)}
         isTenantOptionsLoading={tenantOptionsQuery.isLoading}
-        onActivityTypeChange={(value) => updateFilter("activityType", value)}
+        onActivityTypeIdChange={(value) => updateFilter("activityTypeId", value)}
         onOrganizerChange={(value) => updateFilter("organizer", value)}
         onSearchChange={(value) => updateFilter("search", value)}
         onTenantChange={(value) => updateFilter("tenantId", value)}

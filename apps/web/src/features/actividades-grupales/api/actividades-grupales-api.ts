@@ -37,6 +37,7 @@ import { fetchJson } from "@/shared/api/fetch-json";
 type ListActividadesGrupalesParams = {
   search: string;
   activityType: ActividadGrupalType | null;
+  activityTypeId: string | null;
   organizer: ActividadGrupalOrganizer | null;
   activityMonth: string | null;
   tenantId: string | null;
@@ -246,6 +247,10 @@ function buildActividadesGrupalesUrl(params: ListActividadesGrupalesParams): str
     searchParams.set("activityType", params.activityType);
   }
 
+  if (params.activityTypeId !== null) {
+    searchParams.set("activityTypeId", params.activityTypeId);
+  }
+
   if (params.organizer !== null) {
     searchParams.set("organizer", params.organizer);
   }
@@ -272,6 +277,10 @@ function buildActividadesGrupalesTrashUrl(params: TrashActividadesGrupalesParams
 
   if (params.activityType !== null) {
     searchParams.set("activityType", params.activityType);
+  }
+
+  if (params.activityTypeId !== null) {
+    searchParams.set("activityTypeId", params.activityTypeId);
   }
 
   if (params.organizer !== null) {

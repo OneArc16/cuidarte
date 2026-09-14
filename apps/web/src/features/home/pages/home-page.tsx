@@ -10,6 +10,8 @@ import { AlimentacionPage } from "@/features/alimentacion/pages/alimentacion-pag
 import { isAlimentacionPath } from "@/features/alimentacion/lib/alimentacion-paths";
 import { ActividadesGrupalesPage } from "@/features/actividades-grupales/pages/actividades-grupales-page";
 import { isActividadesGrupalesPath } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
+import { AjustesPage } from "@/features/ajustes/pages/ajustes-page";
+import { isAjustesPath } from "@/features/ajustes/lib/ajustes-paths";
 import { BackofficePage } from "@/features/backoffice/pages/backoffice-page";
 import { isBackofficePath } from "@/features/backoffice/lib/backoffice-paths";
 import { isAtencionesEnfermeriaPath } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-paths";
@@ -51,7 +53,9 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
               ? "sesiones-grupales"
               : isEmpleadosPath(path)
                 ? "gestion-empleados"
-                : "inicio";
+                : isAjustesPath(path)
+                  ? "ajustes"
+                  : "inicio";
 
   return (
     <main className="home-shell">
@@ -79,7 +83,9 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
                     ? "actividades-title"
                     : isEmpleadosPath(path)
                       ? "empleados-title"
-                      : "home-title"
+                      : isAjustesPath(path)
+                        ? "ajustes-title"
+                        : "home-title"
         }
       >
         {isBackofficePath(path) ? (
@@ -94,6 +100,8 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
           <ActividadesGrupalesPage path={path} navigate={navigate} user={user} />
         ) : isEmpleadosPath(path) ? (
           <EmpleadosPage path={path} navigate={navigate} user={user} />
+        ) : isAjustesPath(path) ? (
+          <AjustesPage user={user} />
         ) : canViewDashboard ? (
           <HomeDashboard navigate={navigate} user={user} />
         ) : (

@@ -65,6 +65,7 @@ export class ActividadesGrupalesTrashService {
     const records = await this.actividadesGrupalesRepository.findTrashMany({
       search: query.search,
       activityType: query.activityType,
+      activityTypeId: query.activityTypeId,
       organizer: query.organizer,
       activityMonth: query.activityMonth,
       tenantId: effectiveTenantId,
@@ -151,6 +152,12 @@ export class ActividadesGrupalesTrashService {
         actaNumber: record.actaNumber,
         activityName: record.activityName,
         activityType: record.activityType,
+        activityTypeId: record.activityTypeId,
+        activityTypeCatalog: {
+          id: record.activityTypeId,
+          name: record.activityTypeName,
+          isActive: record.activityTypeIsActive,
+        },
         activityDate: record.activityDate,
         startTime: record.startTime,
         endTime: record.endTime,

@@ -4,7 +4,6 @@ import { RotateCcw } from "lucide-react";
 import {
   formatActividadGrupalOrganizer,
   formatActividadGrupalTrashTimestamp,
-  formatActividadGrupalType,
   formatActivitySchedule,
   formatActaNumber,
 } from "../lib/actividades-grupales-formatters";
@@ -84,7 +83,8 @@ export function ActividadesGrupalesTrashTable({
                   <strong>{actividad.activityName}</strong>
                 </td>
                 <td className="actividades-cell-type">
-                  {formatActividadGrupalType(actividad.activityType)}
+                  {actividad.activityTypeCatalog.name}
+                  {actividad.activityTypeCatalog.isActive ? "" : " (Inactiva)"}
                 </td>
                 <td>{actividad.activityDate}</td>
                 <td>{formatActivitySchedule(actividad.startTime, actividad.endTime)}</td>

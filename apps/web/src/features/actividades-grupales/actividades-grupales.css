@@ -36,13 +36,68 @@
 
 .actividades-search__control {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
+  grid-template-columns: 38px minmax(0, 1fr) auto;
   align-items: center;
   min-height: 40px;
   border: 1px solid var(--color-border);
   border-radius: 8px;
   background: rgb(255 255 255 / 88%);
   box-shadow: 0 10px 24px rgb(8 80 65 / 5%);
+}
+
+.actividades-search__control .primary-action {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  margin: 0;
+  padding: 0 16px;
+  border-radius: 7px;
+  white-space: nowrap;
+}
+
+.actividades-search__control .primary-action svg {
+  width: 16px;
+  height: 16px;
+  color: currentColor;
+}
+
+.ajustes-page__activity-control {
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  gap: 4px;
+  min-height: 46px;
+  padding: 3px 4px 3px 0;
+  border: 1px solid rgb(8 80 65 / 18%);
+  background: rgb(255 255 255 / 94%);
+  box-shadow: inset 0 1px 2px rgb(8 80 65 / 4%);
+}
+
+.ajustes-page__activity-control .primary-action {
+  min-height: 38px;
+  margin-left: 10px;
+  border: 1px solid rgb(29 158 117 / 24%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 90%);
+  color: var(--color-deep);
+  box-shadow: 0 5px 12px rgb(8 80 65 / 7%);
+  font-size: 0.86rem;
+}
+
+.ajustes-page__activity-control .primary-action:not(:disabled):hover,
+.ajustes-page__activity-control .primary-action:not(:disabled):focus-visible {
+  border-color: var(--color-care);
+  background: rgb(29 158 117 / 9%);
+  color: var(--color-deep);
+  box-shadow: 0 8px 18px rgb(8 80 65 / 10%);
+}
+
+.ajustes-page__activity-input {
+  min-height: 38px !important;
+  padding-left: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none;
 }
 
 .actividades-search__control svg {
@@ -388,6 +443,27 @@
   word-break: normal;
 }
 
+.ajustes-page__activity-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ajustes-page__activity-meta {
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  padding: 0 8px;
+  border: 1px solid rgb(29 158 117 / 18%);
+  border-radius: 999px;
+  background: rgb(233 249 242 / 72%);
+  color: #087c64;
+  font-size: 0.7rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
 .actividades-cell-acta strong {
   max-width: none;
 }
@@ -450,9 +526,9 @@
 
 .actividades-row-action {
   display: inline-grid;
-  width: 30px;
-  height: 30px;
-  min-height: 30px;
+  width: 34px;
+  height: 34px;
+  min-height: 34px;
   place-items: center;
   border: 1px solid rgb(8 80 65 / 13%);
   border-radius: 7px;
@@ -473,6 +549,45 @@
   background: var(--color-soft);
   color: var(--color-deep);
   transform: translateY(-1px);
+}
+
+.actividades-row-action--editar {
+  border-color: rgb(44 112 166 / 24%);
+  background: rgb(238 247 255 / 72%);
+  color: #2c70a6;
+}
+
+.actividades-row-action--editar:not(:disabled):hover,
+.actividades-row-action--editar:not(:disabled):focus-visible {
+  border-color: rgb(44 112 166 / 46%);
+  background: #eef7ff;
+  color: #205b89;
+}
+
+.actividades-row-action--activar {
+  border-color: rgb(29 158 117 / 28%);
+  background: rgb(233 249 242 / 72%);
+  color: #087c64;
+}
+
+.actividades-row-action--activar:not(:disabled):hover,
+.actividades-row-action--activar:not(:disabled):focus-visible {
+  border-color: rgb(29 158 117 / 50%);
+  background: #e9f9f2;
+  color: #05634f;
+}
+
+.actividades-row-action--desactivar {
+  border-color: rgb(193 142 43 / 28%);
+  background: rgb(255 248 231 / 72%);
+  color: #a26f12;
+}
+
+.actividades-row-action--desactivar:not(:disabled):hover,
+.actividades-row-action--desactivar:not(:disabled):focus-visible {
+  border-color: rgb(193 142 43 / 50%);
+  background: #fff8e7;
+  color: #85580b;
 }
 
 .actividades-row-action--diligenciar {
@@ -497,18 +612,6 @@
   border-color: rgb(44 112 166 / 46%);
   background: #eef7ff;
   color: #205b89;
-}
-
-.actividades-row-action--editar {
-  border-color: rgb(193 142 43 / 28%);
-  color: #a26f12;
-}
-
-.actividades-row-action--editar:not(:disabled):hover,
-.actividades-row-action--editar:not(:disabled):focus-visible {
-  border-color: rgb(193 142 43 / 48%);
-  background: #fff8e7;
-  color: #85580b;
 }
 
 .actividades-row-action--acta {
@@ -608,6 +711,13 @@
 
 .actividad-correction-dialog {
   width: min(100%, 500px);
+  gap: 14px;
+  padding: 18px;
+  border-radius: 16px;
+}
+
+.actividad-catalog-confirm-dialog {
+  width: min(100%, 430px);
   gap: 14px;
   padding: 18px;
   border-radius: 16px;
@@ -1040,6 +1150,10 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+.ajustes-page .actividad-form-grid {
+  align-items: end;
 }
 
 .actividad-form-field {
@@ -1975,6 +2089,12 @@
 
   .actividad-diligenciamiento-summary__professionals {
     grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1280px) {
+  .ajustes-page .actividad-form-grid {
+    grid-template-columns: 1fr;
   }
 }
 

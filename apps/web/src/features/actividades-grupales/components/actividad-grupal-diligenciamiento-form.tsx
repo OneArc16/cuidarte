@@ -27,7 +27,6 @@ import {
   formatActividadGrupalFileSize,
   formatActividadGrupalOrganizer,
   formatActividadGrupalResponsibleDepartment,
-  formatActividadGrupalType,
   formatActivitySchedule,
   formatActaNumber,
   getActividadGrupalResponsibleDepartmentOptions,
@@ -326,7 +325,6 @@ export function ActividadGrupalDiligenciamientoForm({
           <div className="actividad-form-summary__acta">
             <span className="eyebrow">Acta</span>
             <strong>{formatActaNumber(detail.actaNumber)}</strong>
-            <small>La planeacion queda fija y aqui registras su ejecucion.</small>
           </div>
 
           <div className="actividad-form-summary__note">
@@ -356,7 +354,7 @@ export function ActividadGrupalDiligenciamientoForm({
             <ReadOnlyField label="Actividad" value={detail.activityName} isWide />
             <ReadOnlyField
               label="Tipo de actividad"
-              value={formatActividadGrupalType(detail.activityType)}
+              value={`${detail.activityTypeCatalog.name}${detail.activityTypeCatalog.isActive ? "" : " (Inactiva)"}`}
             />
             <ReadOnlyField label="Fecha" value={detail.activityDate} />
             <ReadOnlyField
@@ -818,7 +816,11 @@ function PhotoCarousel({
               }
               onClick={() => onRemoveSlide(activeSlide)}
             >
-              {activeSlide.kind === "draft" ? <X aria-hidden="true" /> : <Trash2 aria-hidden="true" />}
+              {activeSlide.kind === "draft" ? (
+                <X aria-hidden="true" />
+              ) : (
+                <Trash2 aria-hidden="true" />
+              )}
             </button>
           ) : null}
         </div>

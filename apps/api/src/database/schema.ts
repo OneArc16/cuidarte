@@ -713,6 +713,35 @@ export const actividadGrupalActaCorrectionOperations = pgTable(
   ],
 );
 
+export const actividadGrupalTipos = pgTable(
+  "actividad_grupal_tipos",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    normalizedName: varchar("normalized_name", { length: 120 }).notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdByUserId: uuid("created_by_user_id").references(() => users.id, {
+      onDelete: "restrict",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
+    deactivatedByUserId: uuid("deactivated_by_user_id").references(() => users.id, {
+      onDelete: "restrict",
+    }),
+  },
+  (table) => [
+    uniqueIndex("actividad_grupal_tipos_tenant_normalized_name_unique").on(
+      table.tenantId,
+      table.normalizedName,
+    ),
+    index("actividad_grupal_tipos_tenant_active_idx").on(table.tenantId, table.isActive),
+  ],
+);
+
 export const actividadesGrupales = pgTable(
   "actividades_grupales",
   {
@@ -730,7 +759,10 @@ export const actividadesGrupales = pgTable(
       { onDelete: "restrict" },
     ),
     activityName: varchar("activity_name", { length: 160 }).notNull(),
-    activityType: actividadGrupalType("activity_type").notNull(),
+    activityType: actividadGrupalType("activity_type"),
+    activityTypeId: uuid("activity_type_id")
+      .notNull()
+      .references(() => actividadGrupalTipos.id, { onDelete: "restrict" }),
     activityDate: date("activity_date", { mode: "string" }).notNull(),
     startTime: varchar("start_time", { length: 5 }).notNull(),
     endTime: varchar("end_time", { length: 5 }).notNull(),
@@ -760,6 +792,7 @@ export const actividadesGrupales = pgTable(
     ),
     check("actividades_grupales_acta_sequence_positive", sql`${table.actaSequence} > 0`),
     index("actividades_grupales_tenant_date_idx").on(table.tenantId, table.activityDate),
+    index("actividades_grupales_activity_type_id_idx").on(table.activityTypeId),
     index("actividades_grupales_tenant_deleted_at_idx").on(table.tenantId, table.deletedAt),
     index("actividades_grupales_created_by_user_idx").on(table.createdByUserId),
   ],

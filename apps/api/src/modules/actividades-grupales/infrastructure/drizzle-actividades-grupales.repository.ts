@@ -24,6 +24,7 @@ import {
   actividadGrupalDiligenciamientoIntegrantes,
   actividadGrupalDiligenciamientos,
   actividadGrupalEmpleados,
+  actividadGrupalTipos,
   actividadesGrupales,
   adultosMayores,
   auditLogs,
@@ -70,6 +71,9 @@ type ActividadGrupalSelectionRow = {
   previousActaNumber: string | null;
   activityName: string;
   activityType: ActividadGrupalRecord["activityType"];
+  activityTypeId: string;
+  activityTypeName: string;
+  activityTypeIsActive: boolean;
   activityDate: string;
   startTime: string;
   endTime: string;
@@ -87,6 +91,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       .select(this.getActivitySelection())
       .from(actividadesGrupales)
       .innerJoin(tenants, eq(tenants.id, actividadesGrupales.tenantId))
+      .innerJoin(
+        actividadGrupalTipos,
+        eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
+      )
       .where(this.buildWhere(query))
       .orderBy(desc(actividadesGrupales.activityDate), desc(actividadesGrupales.startTime));
 
@@ -105,6 +113,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       .select(this.getTrashActivitySelection())
       .from(actividadesGrupales)
       .innerJoin(tenants, eq(tenants.id, actividadesGrupales.tenantId))
+      .innerJoin(
+        actividadGrupalTipos,
+        eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
+      )
       .innerJoin(users, eq(users.id, actividadesGrupales.deletedByUserId))
       .where(this.buildTrashWhere(query))
       .orderBy(desc(actividadesGrupales.deletedAt), desc(actividadesGrupales.activityDate));
@@ -122,6 +134,9 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       previousActaNumber: row.previousActaNumber,
       activityName: row.activityName,
       activityType: row.activityType,
+      activityTypeId: row.activityTypeId,
+      activityTypeName: row.activityTypeName,
+      activityTypeIsActive: row.activityTypeIsActive,
       activityDate: row.activityDate,
       startTime: row.startTime,
       endTime: row.endTime,
@@ -143,6 +158,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       .select(this.getActivitySelection())
       .from(actividadesGrupales)
       .innerJoin(tenants, eq(tenants.id, actividadesGrupales.tenantId))
+      .innerJoin(
+        actividadGrupalTipos,
+        eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
+      )
       .where(this.buildActivityScopedWhere(query, [eq(actividadesGrupales.id, query.activityId)]))
       .limit(1);
 
@@ -187,6 +206,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       .select(this.getTrashActivitySelection())
       .from(actividadesGrupales)
       .innerJoin(tenants, eq(tenants.id, actividadesGrupales.tenantId))
+      .innerJoin(
+        actividadGrupalTipos,
+        eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
+      )
       .innerJoin(users, eq(users.id, actividadesGrupales.deletedByUserId))
       .where(
         this.buildTrashActivityScopedWhere(query, [eq(actividadesGrupales.id, query.activityId)]),
@@ -392,6 +415,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           actaSequence: counter.lastValue,
           activityName: command.activityName,
           activityType: command.activityType,
+          activityTypeId: command.activityTypeId,
           activityDate: command.activityDate,
           startTime: command.startTime,
           endTime: command.endTime,
@@ -432,6 +456,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .select(this.getActivitySelection())
         .from(actividadesGrupales)
         .innerJoin(tenants, eq(tenants.id, actividadesGrupales.tenantId))
+        .innerJoin(
+          actividadGrupalTipos,
+          eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
+        )
         .where(eq(actividadesGrupales.id, created.id))
         .limit(1);
 
@@ -455,6 +483,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .set({
           activityName: command.activityName,
           activityType: command.activityType,
+          activityTypeId: command.activityTypeId,
           activityDate: command.activityDate,
           startTime: command.startTime,
           endTime: command.endTime,
@@ -496,6 +525,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .select(this.getActivitySelection())
         .from(actividadesGrupales)
         .innerJoin(tenants, eq(tenants.id, actividadesGrupales.tenantId))
+        .innerJoin(
+          actividadGrupalTipos,
+          eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
+        )
         .where(eq(actividadesGrupales.id, command.activityId))
         .limit(1);
 
@@ -593,6 +626,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .select(this.getActivitySelection())
         .from(actividadesGrupales)
         .innerJoin(tenants, eq(tenants.id, actividadesGrupales.tenantId))
+        .innerJoin(
+          actividadGrupalTipos,
+          eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
+        )
         .where(eq(actividadesGrupales.id, command.activityId))
         .limit(1);
 
@@ -1146,6 +1183,9 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       previousActaNumber: actividadesGrupales.previousActaNumber,
       activityName: actividadesGrupales.activityName,
       activityType: actividadesGrupales.activityType,
+      activityTypeId: actividadesGrupales.activityTypeId,
+      activityTypeName: actividadGrupalTipos.name,
+      activityTypeIsActive: actividadGrupalTipos.isActive,
       activityDate: actividadesGrupales.activityDate,
       startTime: actividadesGrupales.startTime,
       endTime: actividadesGrupales.endTime,
@@ -1199,6 +1239,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       conditions.push(eq(actividadesGrupales.activityType, query.activityType));
     }
 
+    if (query.activityTypeId !== null) {
+      conditions.push(eq(actividadesGrupales.activityTypeId, query.activityTypeId));
+    }
+
     if (query.organizer !== null) {
       conditions.push(eq(actividadesGrupales.organizer, query.organizer));
     }
@@ -1222,6 +1266,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       conditions.push(
         or(
           ilike(actividadesGrupales.activityName, searchPattern),
+          ilike(actividadGrupalTipos.name, searchPattern),
           ilike(tenants.name, searchPattern),
           sql`${actividadesGrupales.actaNumber}::text ilike ${searchPattern}`,
           sql`${actividadesGrupales.previousActaNumber}::text ilike ${searchPattern}`,
@@ -1247,6 +1292,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       conditions.push(eq(actividadesGrupales.activityType, query.activityType));
     }
 
+    if (query.activityTypeId !== null) {
+      conditions.push(eq(actividadesGrupales.activityTypeId, query.activityTypeId));
+    }
+
     if (query.organizer !== null) {
       conditions.push(eq(actividadesGrupales.organizer, query.organizer));
     }
@@ -1270,6 +1319,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       conditions.push(
         or(
           ilike(actividadesGrupales.activityName, searchPattern),
+          ilike(actividadGrupalTipos.name, searchPattern),
           ilike(tenants.name, searchPattern),
           sql`${actividadesGrupales.actaNumber}::text ilike ${searchPattern}`,
           sql`${actividadesGrupales.previousActaNumber}::text ilike ${searchPattern}`,

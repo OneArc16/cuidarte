@@ -2,8 +2,8 @@ import { CalendarDays, Search } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
   type ActividadGrupalOrganizer,
+  type ActividadGrupalTipo,
   type ActividadGrupalTenantOption,
-  type ActividadGrupalType,
 } from "@cuidarte/contracts";
 
 import { Button } from "@/components/ui/button";
@@ -11,13 +11,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 
 import {
   formatActividadGrupalOrganizer,
-  formatActividadGrupalType,
   getActividadGrupalOrganizerOptions,
-  getActividadGrupalTypeOptions,
 } from "../lib/actividades-grupales-formatters";
 
 type ActividadesGrupalesToolbarProps = {
-  selectedActivityType: ActividadGrupalType | "";
+  selectedActivityTypeId: string;
   selectedOrganizer: ActividadGrupalOrganizer | "";
   activityMonth: string;
   search: string;
@@ -25,9 +23,10 @@ type ActividadesGrupalesToolbarProps = {
   showMonthFilter?: boolean;
   showTenantFilter: boolean;
   tenantOptions: ActividadGrupalTenantOption[];
+  activityTypeOptions: ActividadGrupalTipo[];
   isTenantOptionsLoading: boolean;
   exportButton?: ReactNode;
-  onActivityTypeChange: (activityType: ActividadGrupalType | "") => void;
+  onActivityTypeIdChange: (activityTypeId: string) => void;
   onActivityMonthChange: (activityMonth: string) => void;
   onOrganizerChange: (organizer: ActividadGrupalOrganizer | "") => void;
   onSearchChange: (search: string) => void;
@@ -38,18 +37,19 @@ export function ActividadesGrupalesToolbar({
   activityMonth,
   exportButton,
   isTenantOptionsLoading,
-  onActivityTypeChange,
+  onActivityTypeIdChange,
   onActivityMonthChange,
   onOrganizerChange,
   onSearchChange,
   onTenantChange,
   search,
-  selectedActivityType,
+  selectedActivityTypeId,
   selectedOrganizer,
   selectedTenantId,
   showMonthFilter = true,
   showTenantFilter,
   tenantOptions,
+  activityTypeOptions,
 }: ActividadesGrupalesToolbarProps) {
   const [isMonthPickerOpen, setIsMonthPickerOpen] = useState(false);
   const selectedMonth = useMemo(() => parseActivityMonth(activityMonth), [activityMonth]);
@@ -60,6 +60,25 @@ export function ActividadesGrupalesToolbar({
     selectedMonth?.getFullYear() ?? new Date().getFullYear(),
   );
   const yearOptions = useMemo(() => buildYearOptions(), []);
+  const unifiedActivityTypeOptions = useMemo(() => {
+    const byName = new Map<string, ActividadGrupalTipo>();
+
+    for (const activityType of activityTypeOptions) {
+      const key = activityType.normalizedName || activityType.name.trim().toLocaleLowerCase();
+      const current = byName.get(key);
+
+      if (current === undefined) {
+        byName.set(key, activityType);
+        continue;
+      }
+
+      if (!current.isActive && activityType.isActive) {
+        byName.set(key, { ...current, isActive: true });
+      }
+    }
+
+    return [...byName.values()];
+  }, [activityTypeOptions]);
 
   useEffect(() => {
     if (selectedMonth === null) {
@@ -193,13 +212,14 @@ export function ActividadesGrupalesToolbar({
       <label className="actividades-filter">
         <span>Tipo de actividad</span>
         <select
-          value={selectedActivityType}
-          onChange={(event) => onActivityTypeChange(event.target.value as ActividadGrupalType | "")}
+          value={selectedActivityTypeId}
+          onChange={(event) => onActivityTypeIdChange(event.target.value)}
         >
           <option value="">Todos los tipos</option>
-          {getActividadGrupalTypeOptions().map((activityType) => (
-            <option key={activityType} value={activityType}>
-              {formatActividadGrupalType(activityType)}
+          {unifiedActivityTypeOptions.map((activityType) => (
+            <option key={activityType.id} value={activityType.id}>
+              {activityType.name}
+              {activityType.isActive ? "" : " (Inactiva)"}
             </option>
           ))}
         </select>

@@ -105,6 +105,7 @@ export function ActividadGrupalEditPage({
           resolveActividadesGrupalesApiError(formOptionsQuery.error)
         }
         formOptions={formOptionsQuery.data ?? null}
+        currentActivityType={detailQuery.data.activityTypeCatalog}
         initialValues={toActividadGrupalFormValues(detailQuery.data)}
         isFormOptionsLoading={formOptionsQuery.isLoading}
         isPending={updateMutation.isPending}

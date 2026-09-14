@@ -9,6 +9,7 @@ export type ActividadesGrupalesFilterState = {
   search: string;
   activityMonth: string;
   activityType: ActividadGrupalType | "";
+  activityTypeId: string;
   organizer: ActividadGrupalOrganizer | "";
   tenantId: string;
 };
@@ -36,6 +37,7 @@ export function loadActividadesGrupalesFilters(
       search: readString(parsedValue.search, fallback.search),
       activityMonth: readActivityMonth(parsedValue.activityMonth, fallback.activityMonth),
       activityType: readEnum(parsedValue.activityType, actividadGrupalTypeValues),
+      activityTypeId: readUuid(parsedValue.activityTypeId, fallback.activityTypeId),
       organizer: readEnum(parsedValue.organizer, actividadGrupalOrganizerValues),
       tenantId: readString(parsedValue.tenantId, fallback.tenantId),
     };
@@ -73,6 +75,13 @@ function readActivityMonth(value: unknown, fallback: string): string {
   }
 
   return fallback;
+}
+
+function readUuid(value: unknown, fallback: string): string {
+  return typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+    ? value
+    : fallback;
 }
 
 function readEnum<T extends string>(value: unknown, allowedValues: readonly T[]): T | "" {

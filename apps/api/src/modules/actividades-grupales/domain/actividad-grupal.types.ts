@@ -19,6 +19,7 @@ export type ActividadesGrupalesScope =
 export type FindActividadesGrupalesQuery = {
   search: string | null;
   activityType: ActividadGrupalType | null;
+  activityTypeId: string | null;
   organizer: ActividadGrupalOrganizer | null;
   activityMonth: string | null;
   tenantId: string | null;
@@ -73,7 +74,8 @@ export type CreateActividadGrupalRecordCommand = {
   tenantId: string;
   actorUserId: string;
   activityName: string;
-  activityType: ActividadGrupalType;
+  activityType: ActividadGrupalType | null;
+  activityTypeId: string;
   activityDate: string;
   startTime: string;
   endTime: string;
@@ -85,7 +87,8 @@ export type UpdateActividadGrupalRecordCommand = {
   activityId: string;
   actorUserId: string;
   activityName: string;
-  activityType: ActividadGrupalType;
+  activityType: ActividadGrupalType | null;
+  activityTypeId: string;
   activityDate: string;
   startTime: string;
   endTime: string;
@@ -191,7 +194,10 @@ export type ActividadGrupalRecord = {
   actaSequence: number;
   previousActaNumber: string | null;
   activityName: string;
-  activityType: ActividadGrupalType;
+  activityType: ActividadGrupalType | null;
+  activityTypeId: string;
+  activityTypeName: string;
+  activityTypeIsActive: boolean;
   activityDate: string;
   startTime: string;
   endTime: string;

@@ -1,8 +1,4 @@
-import {
-  type ActividadGrupalDiligenciamientoDetail,
-  type ActividadGrupalType,
-  type UserRole,
-} from "@cuidarte/contracts";
+import { type ActividadGrupalDiligenciamientoDetail, type UserRole } from "@cuidarte/contracts";
 
 import { type PreparedActividadGrupalActaPhotoAsset } from "./actividad-grupal-acta-photo-assets";
 
@@ -21,18 +17,6 @@ export type ActividadGrupalActaPdfProfessional =
 const EMPTY_FIELD_LABEL = "Pendiente de diligenciar.";
 const EMPTY_ATTENDEES_LABEL = "Sin asistentes registrados.";
 const EMPTY_PROFESSIONALS_LABEL = "Sin profesionales registrados.";
-
-const TYPE_LABELS = {
-  centro_vida: "Centro de Vida",
-  actividad_campo: "Actividad de Campo",
-  sesiones_psicosocial: "Sesiones Psicosocial",
-  salud_preventiva: "Salud Preventiva",
-  nutricion: "Nutricion",
-  fisioterapia: "Fisioterapia",
-  encuentro_intergeneracional: "Encuentro intergeneracional",
-  actividades_manualidad: "Actividades de manualidad",
-  actividades_recreacion: "Actividades de recreacion",
-} satisfies Record<ActividadGrupalType, string>;
 
 const ROLE_LABELS = {
   super_admin: "SuperAdmin",
@@ -369,7 +353,7 @@ export function buildActividadGrupalActaPdfHtml({
           </tr>
           <tr>
             <th scope="row">TIPO ACTIVIDAD:</th>
-            <td colspan="5">${escapeHtml(formatUpper(TYPE_LABELS[detail.activityType]))}</td>
+            <td colspan="5">${escapeHtml(formatUpper(detail.activityTypeCatalog.name))}</td>
           </tr>
           <tr>
             <th scope="row">ACTIVIDAD:</th>

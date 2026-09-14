@@ -1,0 +1,92 @@
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from "@nestjs/common";
+import { ApiConflictResponse, ApiForbiddenResponse, ApiOkResponse, ApiTags } from "@nestjs/swagger";
+import {
+  actividadGrupalTipoSchema,
+  actividadGrupalTiposListQuerySchema,
+  actividadGrupalTiposListResponseSchema,
+  createActividadGrupalTipoRequestSchema,
+  updateActividadGrupalTipoRequestSchema,
+  updateActividadGrupalTipoStatusRequestSchema,
+} from "@cuidarte/contracts";
+import { z } from "zod";
+
+import { parseZodSchema } from "../../../common/parse-zod-schema";
+import { type AuthenticatedRequest } from "../../auth/authenticated-request";
+import { RolesGuard } from "../../auth/roles.guard";
+import { SessionGuard } from "../../auth/session.guard";
+import { ActividadGrupalTiposService } from "../application/actividad-grupal-tipos.service";
+
+const idParamSchema = z.uuid();
+
+@ApiTags("actividad-grupal-tipos")
+@Controller("actividad-grupal-tipos")
+@UseGuards(SessionGuard, RolesGuard)
+export class ActividadGrupalTiposController {
+  constructor(private readonly actividadGrupalTiposService: ActividadGrupalTiposService) {}
+
+  @Get()
+  @ApiOkResponse({ description: "Listado de tipos de actividad grupal." })
+  @ApiForbiddenResponse({ description: "El usuario no tiene permisos." })
+  async list(@Query() query: unknown, @Req() request: AuthenticatedRequest) {
+    const parsedQuery = parseZodSchema(actividadGrupalTiposListQuerySchema, query);
+    const activityTypes = await this.actividadGrupalTiposService.list(
+      parsedQuery,
+      request.currentUser,
+    );
+
+    return actividadGrupalTiposListResponseSchema.parse({ activityTypes });
+  }
+
+  @Post()
+  @ApiOkResponse({ description: "Tipo de actividad creado." })
+  @ApiConflictResponse({ description: "Nombre duplicado en el centro." })
+  @ApiForbiddenResponse({ description: "El usuario no tiene permisos." })
+  async create(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    const command = parseZodSchema(createActividadGrupalTipoRequestSchema, body);
+    const activityType = await this.actividadGrupalTiposService.create(
+      command,
+      request.currentUser,
+    );
+
+    return actividadGrupalTipoSchema.parse(activityType);
+  }
+
+  @Patch(":id")
+  @ApiOkResponse({ description: "Tipo de actividad actualizado." })
+  @ApiConflictResponse({ description: "Nombre duplicado en el centro." })
+  @ApiForbiddenResponse({ description: "El usuario no tiene permisos." })
+  async update(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const activityTypeId = parseZodSchema(idParamSchema, id);
+    const command = parseZodSchema(updateActividadGrupalTipoRequestSchema, body);
+    const activityType = await this.actividadGrupalTiposService.update(
+      activityTypeId,
+      command,
+      request.currentUser,
+    );
+
+    return actividadGrupalTipoSchema.parse(activityType);
+  }
+
+  @Patch(":id/status")
+  @ApiOkResponse({ description: "Estado del tipo de actividad actualizado." })
+  @ApiForbiddenResponse({ description: "El usuario no tiene permisos." })
+  async updateStatus(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const activityTypeId = parseZodSchema(idParamSchema, id);
+    const command = parseZodSchema(updateActividadGrupalTipoStatusRequestSchema, body);
+    const activityType = await this.actividadGrupalTiposService.updateStatus(
+      activityTypeId,
+      command,
+      request.currentUser,
+    );
+
+    return actividadGrupalTipoSchema.parse(activityType);
+  }
+}

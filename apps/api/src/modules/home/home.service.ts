@@ -1,5 +1,6 @@
 import {
   type AuthUser,
+  type HomeDashboardActivityIndicator,
   type HomeDashboardIndicator,
   type HomeDashboardIndicatorId,
   type HomeDashboardResponse,
@@ -21,6 +22,7 @@ import {
   atencionesIndividuales,
   atencionesEnfermeria,
   alimentacionRegistros,
+  actividadGrupalTipos,
   tenants,
   users,
 } from "../../database/schema";
@@ -38,25 +40,13 @@ type TenantScope = { type: "all" } | { type: "tenant"; tenantId: string };
 type ActivitySummary = {
   total: number;
   byIndicatorId: Partial<Record<HomeDashboardIndicatorId, number>>;
+  activityIndicators: HomeDashboardActivityIndicator[];
 };
 
 type AlimentacionSummary = {
   recordsTotal: number;
   deliveredRationsTotal: number;
 };
-
-const ACTIVITY_INDICATOR_IDS = [
-  "salud_preventiva",
-  "sesiones_psicosocial",
-  "encuentro_intergeneracional",
-  "nutricion",
-  "actividades_manualidad",
-  "fisioterapia",
-  "actividad_campo",
-  "actividades_recreacion",
-] as const satisfies readonly HomeDashboardIndicatorId[];
-
-type ActivityIndicatorId = (typeof ACTIVITY_INDICATOR_IDS)[number];
 
 @Injectable()
 export class HomeService {
@@ -161,6 +151,7 @@ export class HomeService {
     return homeDashboardResponseSchema.parse({
       shortcuts: this.buildShortcuts(shortcutTotals),
       indicators: this.buildIndicators(indicatorTotals),
+      activityIndicators: actividadesSummary?.activityIndicators ?? [],
     });
   }
 
@@ -233,6 +224,7 @@ export class HomeService {
 
   private async summarizeActividades(scope: TenantScope): Promise<ActivitySummary> {
     const scopeCondition = this.buildScopeCondition(scope, actividadesGrupales.tenantId);
+    const typeScopeCondition = this.buildScopeCondition(scope, actividadGrupalTipos.tenantId);
     const activeCondition =
       scopeCondition === undefined
         ? isNull(actividadesGrupales.deletedAt)
@@ -244,33 +236,40 @@ export class HomeService {
       .from(actividadesGrupales);
     const groupedQuery = this.database.db
       .select({
-        activityType: actividadesGrupales.activityType,
-        total: sql<number>`count(*)::int`,
+        activityTypeId: actividadGrupalTipos.id,
+        label: actividadGrupalTipos.name,
+        isActive: actividadGrupalTipos.isActive,
+        total: sql<number>`count(${actividadesGrupales.id})::int`,
       })
-      .from(actividadesGrupales)
-      .groupBy(actividadesGrupales.activityType);
+      .from(actividadGrupalTipos)
+      .leftJoin(
+        actividadesGrupales,
+        and(
+          eq(actividadesGrupales.activityTypeId, actividadGrupalTipos.id),
+          isNull(actividadesGrupales.deletedAt),
+        ),
+      )
+      .groupBy(actividadGrupalTipos.id);
     const [totalRow, groupedRows] = await Promise.all([
       activeCondition === undefined ? totalQuery : totalQuery.where(activeCondition),
-      activeCondition === undefined
-        ? groupedQuery
-        : groupedQuery.where(activeCondition),
+      typeScopeCondition === undefined ? groupedQuery : groupedQuery.where(typeScopeCondition),
     ]);
 
     const byIndicatorId: Partial<Record<HomeDashboardIndicatorId, number>> = {};
 
-    for (const indicatorId of ACTIVITY_INDICATOR_IDS) {
-      byIndicatorId[indicatorId] = 0;
-    }
-
-    for (const row of groupedRows) {
-      if (isActivityIndicatorId(row.activityType)) {
-        byIndicatorId[row.activityType] = row.total;
-      }
-    }
+    const activityIndicators = groupedRows
+      .filter((row) => row.isActive || row.total > 0)
+      .map((row) => ({
+        activityTypeId: row.activityTypeId,
+        label: row.label,
+        isActive: row.isActive,
+        total: row.total,
+      }));
 
     return {
       total: totalRow[0]?.total ?? 0,
       byIndicatorId,
+      activityIndicators,
     };
   }
 
@@ -386,10 +385,4 @@ export class HomeService {
 
     return indicators;
   }
-}
-
-function isActivityIndicatorId(
-  value: typeof actividadesGrupales.$inferSelect.activityType,
-): value is ActivityIndicatorId {
-  return ACTIVITY_INDICATOR_IDS.includes(value as ActivityIndicatorId);
 }

@@ -45,13 +45,22 @@ export const homeDashboardIndicatorSchema = z.object({
   total: z.number().int().min(0),
 });
 
+export const homeDashboardActivityIndicatorSchema = z.object({
+  activityTypeId: z.uuid(),
+  label: z.string().min(1).max(120),
+  isActive: z.boolean(),
+  total: z.number().int().min(0),
+});
+
 export const homeDashboardResponseSchema = z.object({
   shortcuts: z.array(homeDashboardShortcutSchema),
   indicators: z.array(homeDashboardIndicatorSchema),
+  activityIndicators: z.array(homeDashboardActivityIndicatorSchema).default([]),
 });
 
 export type HomeDashboardShortcutModuleId = z.infer<typeof homeDashboardShortcutModuleIdSchema>;
 export type HomeDashboardIndicatorId = z.infer<typeof homeDashboardIndicatorIdSchema>;
 export type HomeDashboardShortcut = z.infer<typeof homeDashboardShortcutSchema>;
 export type HomeDashboardIndicator = z.infer<typeof homeDashboardIndicatorSchema>;
+export type HomeDashboardActivityIndicator = z.infer<typeof homeDashboardActivityIndicatorSchema>;
 export type HomeDashboardResponse = z.infer<typeof homeDashboardResponseSchema>;

@@ -9,6 +9,7 @@ import {
   CalendarPlus,
   HeartPulse,
   Home,
+  Settings,
   Upload,
   type LucideIcon,
   UserRoundCog,
@@ -22,10 +23,15 @@ import { ADULTOS_MAYORES_PATH } from "@/features/adultos-mayores/lib/adultos-may
 import { ADULTOS_MAYORES_IMPORT_PATH } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
 import { REGISTRO_ALIMENTACION_PATH } from "@/features/alimentacion/lib/alimentacion-paths";
 import { CREACION_ACTIVIDADES_PATH } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
+import { AJUSTES_PATH } from "@/features/ajustes/lib/ajustes-paths";
 import { BACKOFFICE_PATH } from "@/features/backoffice/lib/backoffice-paths";
 import { EMPLEADOS_PATH } from "@/features/empleados/lib/empleados-paths";
 
-export type HomeModuleId = "inicio" | HomeDashboardShortcutModuleId | "atenciones-enfermeria";
+export type HomeModuleId =
+  | "inicio"
+  | HomeDashboardShortcutModuleId
+  | "atenciones-enfermeria"
+  | "ajustes";
 
 export type HomeModule = {
   id: HomeModuleId;
@@ -101,6 +107,13 @@ export const HOME_MODULES = [
     roles: ["super_admin", "admin", "auditor", "director"],
     summaryLabel: "Usuarios activos",
     directAccessDescription: "Equipo y perfiles",
+  },
+  {
+    id: "ajustes",
+    label: "Ajustes",
+    icon: Settings,
+    path: AJUSTES_PATH,
+    roles: ["super_admin", "admin"],
   },
   {
     id: "backoffice",

@@ -27,6 +27,7 @@ type UpdateActividadGrupalMutationRequest = {
 type TrashActividadesGrupalesParams = {
   search: string;
   activityType: ActividadGrupalType | null;
+  activityTypeId: string | null;
   organizer: ActividadGrupalOrganizer | null;
   activityMonth: string | null;
   tenantId: string | null;
@@ -45,6 +46,7 @@ export const actividadesGrupalesQueryKeys = {
   list: (params: {
     search: string;
     activityType: ActividadGrupalType | null;
+    activityTypeId: string | null;
     organizer: ActividadGrupalOrganizer | null;
     activityMonth: string | null;
     tenantId: string | null;
@@ -63,6 +65,7 @@ export const actividadesGrupalesQueryKeys = {
 export function useActividadesGrupalesQuery(params: {
   search: string;
   activityType: ActividadGrupalType | null;
+  activityTypeId: string | null;
   organizer: ActividadGrupalOrganizer | null;
   activityMonth: string | null;
   tenantId: string | null;

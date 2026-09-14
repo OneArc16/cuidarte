@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 
 import { AdultosMayoresModule } from "./modules/adultos-mayores/adultos-mayores.module";
 import { AlimentacionModule } from "./modules/alimentacion/alimentacion.module";
+import { ActividadGrupalTiposModule } from "./modules/actividad-grupal-tipos/actividad-grupal-tipos.module";
 import { ActividadesGrupalesModule } from "./modules/actividades-grupales/actividades-grupales.module";
 import { AtencionesIndividualesModule } from "./modules/atenciones-individuales/atenciones-individuales.module";
 import { AtencionesEnfermeriaModule } from "./modules/atenciones-enfermeria/atenciones-enfermeria.module";
@@ -19,6 +20,7 @@ import { UbicacionesModule } from "./modules/ubicaciones/ubicaciones.module";
   imports: [
     AdultosMayoresModule,
     AlimentacionModule,
+    ActividadGrupalTiposModule,
     ActividadesGrupalesModule,
     AtencionesIndividualesModule,
     AtencionesEnfermeriaModule,

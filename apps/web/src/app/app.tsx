@@ -31,6 +31,8 @@ import {
   canManageActividadesGrupales,
   canViewActividadesGrupalesTrash,
 } from "@/features/actividades-grupales/lib/actividades-grupales-permissions";
+import { canManageAjustes } from "@/features/ajustes/lib/ajustes-permissions";
+import { isAjustesPath } from "@/features/ajustes/lib/ajustes-paths";
 import {
   CREACION_ACTIVIDADES_NEW_PATH,
   CREACION_ACTIVIDADES_PATH,
@@ -82,6 +84,11 @@ export function App() {
     }
 
     if (isBackofficePath(path) && user.role !== "super_admin") {
+      navigate(HOME_PATH, { replace: true });
+      return;
+    }
+
+    if (isAjustesPath(path) && !canManageAjustes(user)) {
       navigate(HOME_PATH, { replace: true });
       return;
     }
@@ -205,6 +212,7 @@ export function App() {
       !isAlimentacionPath(path) &&
       !isAtencionesEnfermeriaPath(path) &&
       !isActividadesGrupalesPath(path) &&
+      !isAjustesPath(path) &&
       !isEmpleadosPath(path)
     ) {
       navigate(HOME_PATH, { replace: true });
@@ -235,9 +243,11 @@ export function App() {
                     ? "Correccion de consecutivos | CuidarTe"
                     : isActividadesGrupalesPath(path)
                       ? "Sesiones grupales | CuidarTe"
-                      : isEmpleadosPath(path)
-                        ? "Gestion de empleados | CuidarTe"
-                        : "Inicio | CuidarTe";
+                      : isAjustesPath(path)
+                        ? "Ajustes | CuidarTe"
+                        : isEmpleadosPath(path)
+                          ? "Gestion de empleados | CuidarTe"
+                          : "Inicio | CuidarTe";
   }, [path, user]);
 
   if (currentUserQuery.isLoading) {

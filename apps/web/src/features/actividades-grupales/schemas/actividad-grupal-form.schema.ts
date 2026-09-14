@@ -3,22 +3,27 @@ import {
   type CreateActividadGrupalRequest,
   type UpdateActividadGrupalRequest,
   actividadGrupalOrganizerSchema,
-  actividadGrupalTypeSchema,
   createActividadGrupalRequestSchema,
   updateActividadGrupalRequestSchema,
 } from "@cuidarte/contracts";
 import { z } from "zod";
 
-const requiredTextSchema = (maxLength: number) => z.string().trim().min(1).max(maxLength);
+const requiredTextSchema = (maxLength: number, message?: string) =>
+  z.string().trim().min(1, message).max(maxLength);
+const requiredUuidSchema = (message: string) => z.string().trim().min(1, message).uuid({ message });
 
 export const actividadGrupalFormSchema = z
   .object({
     tenantId: z.string().trim(),
-    activityName: requiredTextSchema(160),
-    activityType: actividadGrupalTypeSchema,
-    activityDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
-    endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+    activityName: requiredTextSchema(160, "Ingresa el nombre de la actividad."),
+    activityTypeId: requiredUuidSchema("Selecciona el tipo de actividad."),
+    activityDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Ingresa una fecha válida." }),
+    startTime: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, { message: "Ingresa una hora de inicio válida." }),
+    endTime: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, { message: "Ingresa una hora final válida." }),
     organizer: actividadGrupalOrganizerSchema,
     employeeIds: z.array(z.string().uuid()).min(1),
   })
@@ -40,7 +45,7 @@ export function createDefaultActividadGrupalFormValues(): ActividadGrupalFormVal
   return {
     tenantId: "",
     activityName: "",
-    activityType: "centro_vida",
+    activityTypeId: "",
     activityDate: "",
     startTime: "",
     endTime: "",
@@ -63,7 +68,7 @@ export function toUpdateActividadGrupalRequest(
 ): UpdateActividadGrupalRequest {
   return updateActividadGrupalRequestSchema.parse({
     activityName: values.activityName,
-    activityType: values.activityType,
+    activityTypeId: values.activityTypeId,
     activityDate: values.activityDate,
     startTime: values.startTime,
     endTime: values.endTime,
@@ -78,7 +83,7 @@ export function toActividadGrupalFormValues(
   return {
     tenantId: detail.tenantId,
     activityName: detail.activityName,
-    activityType: detail.activityType,
+    activityTypeId: detail.activityTypeId,
     activityDate: detail.activityDate,
     startTime: detail.startTime,
     endTime: detail.endTime,

@@ -1,7 +1,6 @@
 import {
   type ActividadGrupalOrganizer,
   type ActividadGrupalTrashListItem,
-  type ActividadGrupalType,
   type AuthUser,
 } from "@cuidarte/contracts";
 import { ChevronLeft } from "lucide-react";
@@ -21,6 +20,7 @@ import {
   useActividadesGrupalesTrashQuery,
   useRestoreActividadGrupalMutation,
 } from "../model/actividades-grupales-queries";
+import { useActividadGrupalTiposQuery } from "@/features/actividad-grupal-tipos/model/actividad-grupal-tipos-queries";
 
 type ActividadesGrupalesTrashPageProps = {
   navigate: Navigate;
@@ -32,25 +32,31 @@ export function ActividadesGrupalesTrashPage({
   user,
 }: ActividadesGrupalesTrashPageProps) {
   const [search, setSearch] = useState("");
-  const [selectedActivityType, setSelectedActivityType] = useState<ActividadGrupalType | "">("");
+  const [selectedActivityTypeId, setSelectedActivityTypeId] = useState("");
   const [selectedOrganizer, setSelectedOrganizer] = useState<ActividadGrupalOrganizer | "">("");
   const [selectedTenantId, setSelectedTenantId] = useState("");
   const [activityPendingRestore, setActivityPendingRestore] =
     useState<ActividadGrupalTrashListItem | null>(null);
   const showTenantFilter = user.role === "super_admin";
   const canViewTrash = canViewActividadesGrupalesTrash(user);
+  const effectiveTenantId = showTenantFilter
+    ? selectedTenantId === ""
+      ? null
+      : selectedTenantId
+    : user.tenantId;
   const tenantOptionsQuery = useActividadGrupalTenantOptionsQuery(showTenantFilter && canViewTrash);
+  const activityTypesQuery = useActividadGrupalTiposQuery(
+    { tenantId: effectiveTenantId, includeInactive: true },
+    canViewTrash && (!showTenantFilter || effectiveTenantId !== null),
+  );
   const trashQuery = useActividadesGrupalesTrashQuery(
     {
       search,
-      activityType: selectedActivityType === "" ? null : selectedActivityType,
+      activityType: null,
+      activityTypeId: selectedActivityTypeId === "" ? null : selectedActivityTypeId,
       organizer: selectedOrganizer === "" ? null : selectedOrganizer,
       activityMonth: null,
-      tenantId: showTenantFilter
-        ? selectedTenantId === ""
-          ? null
-          : selectedTenantId
-        : user.tenantId,
+      tenantId: effectiveTenantId,
     },
     canViewTrash,
   );
@@ -98,15 +104,16 @@ export function ActividadesGrupalesTrashPage({
       <ActividadesGrupalesToolbar
         activityMonth=""
         search={search}
-        selectedActivityType={selectedActivityType}
+        selectedActivityTypeId={selectedActivityTypeId}
         selectedOrganizer={selectedOrganizer}
         selectedTenantId={selectedTenantId}
         showMonthFilter={false}
         showTenantFilter={showTenantFilter}
         tenantOptions={tenantOptionsQuery.data?.tenants ?? []}
+        activityTypeOptions={activityTypesQuery.data?.activityTypes ?? []}
         onActivityMonthChange={() => undefined}
         isTenantOptionsLoading={tenantOptionsQuery.isLoading}
-        onActivityTypeChange={setSelectedActivityType}
+        onActivityTypeIdChange={setSelectedActivityTypeId}
         onOrganizerChange={setSelectedOrganizer}
         onSearchChange={setSearch}
         onTenantChange={setSelectedTenantId}
