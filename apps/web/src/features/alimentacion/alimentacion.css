@@ -13,11 +13,11 @@
 }
 
 .alimentacion-toolbar--without-tenant {
-  grid-template-columns: minmax(240px, 1.6fr) minmax(180px, 220px) 42px;
+  grid-template-columns: minmax(180px, 1.25fr) minmax(180px, 220px) 88px;
 }
 
 .alimentacion-toolbar--with-tenant {
-  grid-template-columns: minmax(240px, 1.6fr) minmax(180px, 220px) minmax(220px, 280px) 42px;
+  grid-template-columns: minmax(180px, 1.25fr) minmax(180px, 220px) minmax(220px, 280px) 88px;
 }
 
 .alimentacion-search,

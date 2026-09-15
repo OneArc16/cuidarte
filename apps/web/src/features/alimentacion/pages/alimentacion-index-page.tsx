@@ -19,6 +19,7 @@ import { AlimentacionImportedPdfVersionsDialog } from "../components/alimentacio
 import { AlimentacionTable } from "../components/alimentacion-table";
 import { AlimentacionToolbar } from "../components/alimentacion-toolbar";
 import { ReportExportButton } from "@/features/reports/components/report-export-button";
+import { ReportHistoryButton } from "@/features/reports/components/report-history-button";
 import {
   REGISTRO_ALIMENTACION_NEW_PATH,
   buildAlimentacionEditPath,
@@ -274,12 +275,10 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
         showTenantFilter={showTenantFilter}
         tenantOptions={tenantOptionsQuery.data?.tenants ?? []}
         exportButton={
-          <ReportExportButton
-            className="alimentacion-zip-action"
-            period={reportPeriod}
-            tenantId={reportTenantId}
-            type="FORMATOS_ENTREGA_ALIMENTACION"
-          />
+          <div className="module-report-actions">
+            <ReportExportButton className="alimentacion-zip-action" period={reportPeriod} tenantId={reportTenantId} type="FORMATOS_ENTREGA_ALIMENTACION" />
+            <ReportHistoryButton period={reportPeriod} tenantId={reportTenantId} type="FORMATOS_ENTREGA_ALIMENTACION" />
+          </div>
         }
         onMonthChange={setDeliveryMonth}
         onSearchChange={setSearch}

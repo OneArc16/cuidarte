@@ -9,16 +9,16 @@
 .actividades-toolbar {
   display: grid;
   grid-template-columns:
-    minmax(300px, 430px) minmax(180px, 220px) minmax(210px, 260px)
-    minmax(210px, 270px) 42px;
+    minmax(220px, 360px) minmax(180px, 220px) minmax(210px, 260px)
+    minmax(210px, 270px) 88px;
   gap: 12px;
   align-items: end;
 }
 
 .actividades-toolbar--with-tenant {
   grid-template-columns:
-    minmax(300px, 430px) minmax(180px, 220px) minmax(210px, 260px)
-    minmax(210px, 270px) minmax(160px, 220px) 42px;
+    minmax(220px, 360px) minmax(180px, 220px) minmax(210px, 260px)
+    minmax(210px, 270px) minmax(160px, 220px) 88px;
 }
 
 .actividades-search,

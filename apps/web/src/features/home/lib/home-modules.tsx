@@ -7,6 +7,7 @@ import {
 import {
   BriefcaseBusiness,
   CalendarPlus,
+  BarChart3,
   HeartPulse,
   Home,
   Settings,
@@ -26,11 +27,13 @@ import { CREACION_ACTIVIDADES_PATH } from "@/features/actividades-grupales/lib/a
 import { AJUSTES_PATH } from "@/features/ajustes/lib/ajustes-paths";
 import { BACKOFFICE_PATH } from "@/features/backoffice/lib/backoffice-paths";
 import { EMPLEADOS_PATH } from "@/features/empleados/lib/empleados-paths";
+import { REPORTS_PATH } from "@/features/reports/lib/reports-paths";
 
 export type HomeModuleId =
   | "inicio"
   | HomeDashboardShortcutModuleId
   | "atenciones-enfermeria"
+  | "reportes"
   | "ajustes";
 
 export type HomeModule = {
@@ -107,6 +110,15 @@ export const HOME_MODULES = [
     roles: ["super_admin", "admin", "auditor", "director"],
     summaryLabel: "Usuarios activos",
     directAccessDescription: "Equipo y perfiles",
+  },
+  {
+    id: "reportes",
+    label: "Reportes",
+    icon: BarChart3,
+    path: REPORTS_PATH,
+    roles: ["super_admin", "admin", "director"],
+    summaryLabel: "Estadísticas y exportaciones",
+    directAccessDescription: "Indicadores por periodo",
   },
   {
     id: "ajustes",

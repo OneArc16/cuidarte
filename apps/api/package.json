@@ -46,6 +46,7 @@
     "pdf-lib": "^1.17.1",
     "playwright": "^1.59.1",
     "postgres": "^3.4.9",
+    "pptxgenjs": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "sharp": "^0.35.3",

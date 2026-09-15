@@ -125,6 +125,10 @@ export const reportStatus = pgEnum("report_status", [
   "cancelled",
   "expired",
 ]);
+export const reportAnalyticsExportFormat = pgEnum("report_analytics_export_format", ["xlsx", "pdf", "pptx"]);
+export const reportAnalyticsExportStatus = pgEnum("report_analytics_export_status", [
+  "pending", "processing", "ready", "failed", "cancelled", "expired",
+]);
 export const atencionEnfermeriaCareType = pgEnum("atencion_enfermeria_care_type", [
   "control_signos_vitales",
   "seguimiento",
@@ -1279,6 +1283,35 @@ export const reportJobs = pgTable(
       "report_jobs_processed_not_greater_than_total",
       sql`${table.totalDocuments} is null or ${table.processedDocuments} <= ${table.totalDocuments}`,
     ),
+  ],
+);
+
+export const reportAnalyticsExports = pgTable(
+  "report_analytics_exports",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "restrict" }),
+    tenantName: varchar("tenant_name", { length: 160 }),
+    requestedByUserId: uuid("requested_by_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+    requestedByRole: userRole("requested_by_role").notNull(),
+    format: reportAnalyticsExportFormat("format").notNull(),
+    from: date("from").notNull(),
+    to: date("to").notNull(),
+    status: reportAnalyticsExportStatus("status").notNull().default("pending"),
+    progress: integer("progress").notNull().default(0),
+    storageKey: varchar("storage_key", { length: 500 }),
+    downloadFilename: varchar("download_filename", { length: 260 }),
+    errorMessage: text("error_message"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("report_analytics_exports_tenant_created_idx").on(table.tenantId, table.createdAt),
+    index("report_analytics_exports_status_created_idx").on(table.status, table.createdAt),
+    check("report_analytics_exports_progress_range", sql`${table.progress} between 0 and 100`),
   ],
 );
 

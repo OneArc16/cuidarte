@@ -8,7 +8,17 @@ export const reportsQueryKeys = {
     ["reports", "availability", params] as const,
   list: (params: { type: ReportType | null; period: string | null; tenantId: string | null }) =>
     ["reports", "list", params] as const,
+  dashboard: (params: { from: string; to: string }) => ["reports", "dashboard", params] as const,
 };
+
+export function useReportsDashboardQuery(params: { from: string; to: string }, enabled = true) {
+  return useQuery({
+    queryKey: reportsQueryKeys.dashboard(params),
+    queryFn: () => reportsApi.getReportsDashboard(params),
+    enabled,
+    retry: false,
+  });
+}
 
 export function useReportAvailabilityQuery(
   params: { type: ReportType; period: string; tenantId: string | null },

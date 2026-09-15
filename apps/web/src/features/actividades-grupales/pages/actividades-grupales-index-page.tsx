@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { ReportExportButton } from "@/features/reports/components/report-export-button";
+import { ReportHistoryButton } from "@/features/reports/components/report-history-button";
 import { getCurrentMonthInputValue } from "@/features/alimentacion/lib/alimentacion-formatters";
 
 import { ActividadGrupalDeleteDialog } from "../components/actividad-grupal-delete-dialog";
@@ -139,12 +140,10 @@ export function ActividadesGrupalesIndexPage({
       <ActividadesGrupalesToolbar
         activityMonth={activityMonth}
         exportButton={
-          <ReportExportButton
-            className="actividades-zip-action"
-            period={reportPeriod}
-            tenantId={reportTenantId}
-            type="ACTAS_SESIONES_GRUPALES"
-          />
+          <div className="module-report-actions">
+            <ReportExportButton className="actividades-zip-action" period={reportPeriod} tenantId={reportTenantId} type="ACTAS_SESIONES_GRUPALES" />
+            <ReportHistoryButton period={reportPeriod} tenantId={reportTenantId} type="ACTAS_SESIONES_GRUPALES" />
+          </div>
         }
         search={search}
         selectedActivityTypeId={activityTypeId}

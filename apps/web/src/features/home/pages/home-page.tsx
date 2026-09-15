@@ -18,6 +18,8 @@ import { isAtencionesEnfermeriaPath } from "@/features/atenciones-enfermeria/lib
 import { AtencionesEnfermeriaPage } from "@/features/atenciones-enfermeria/pages/atenciones-enfermeria-page";
 import { EmpleadosPage } from "@/features/empleados/pages/empleados-page";
 import { isEmpleadosPath } from "@/features/empleados/lib/empleados-paths";
+import { isReportsPath } from "@/features/reports/lib/reports-paths";
+import { ReportsPage } from "@/features/reports/pages/reports-page";
 
 import { HomeDashboard } from "../components/home-dashboard";
 import { HomeDirectAccess } from "../components/home-direct-access";
@@ -53,9 +55,11 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
               ? "sesiones-grupales"
               : isEmpleadosPath(path)
                 ? "gestion-empleados"
-                : isAjustesPath(path)
-                  ? "ajustes"
-                  : "inicio";
+                : isReportsPath(path)
+                  ? "reportes"
+                  : isAjustesPath(path)
+                    ? "ajustes"
+                    : "inicio";
 
   return (
     <main className="home-shell">
@@ -83,9 +87,11 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
                     ? "actividades-title"
                     : isEmpleadosPath(path)
                       ? "empleados-title"
-                      : isAjustesPath(path)
-                        ? "ajustes-title"
-                        : "home-title"
+                      : isReportsPath(path)
+                        ? "reports-title"
+                        : isAjustesPath(path)
+                          ? "ajustes-title"
+                          : "home-title"
         }
       >
         {isBackofficePath(path) ? (
@@ -100,6 +106,8 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
           <ActividadesGrupalesPage path={path} navigate={navigate} user={user} />
         ) : isEmpleadosPath(path) ? (
           <EmpleadosPage path={path} navigate={navigate} user={user} />
+        ) : isReportsPath(path) ? (
+          <ReportsPage user={user} />
         ) : isAjustesPath(path) ? (
           <AjustesPage user={user} />
         ) : canViewDashboard ? (

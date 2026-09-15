@@ -4,16 +4,22 @@ import {
   type CreateReportResponse,
   type ReportAvailabilityResponse,
   type ReportListResponse,
+  type ReportsDashboardResponse,
+  type ReportAnalyticsExportFormat,
   type ReportType,
   cancelReportResponseSchema,
   createReportResponseSchema,
   reportAvailabilityResponseSchema,
   reportListResponseSchema,
+  reportsDashboardResponseSchema,
+  reportsDashboardExportResponseSchema,
+  reportsDashboardExportListResponseSchema,
   reportStatusResponseSchema,
 } from "@cuidarte/contracts";
 
 import { ApiError } from "@/shared/api/api-error";
 import { getApiBaseUrl } from "@/shared/api/api-config";
+import { fetchBlob } from "@/shared/api/fetch-blob";
 import { fetchJson } from "@/shared/api/fetch-json";
 
 export function getReportAvailability(params: {
@@ -63,6 +69,50 @@ export function listReports(params: {
   );
 }
 
+export function getReportsDashboard(params: {
+  from: string;
+  to: string;
+}): Promise<ReportsDashboardResponse> {
+  const searchParams = new URLSearchParams({ from: params.from, to: params.to });
+  return fetchJson(
+    `${getApiBaseUrl()}/reports/dashboard?${searchParams.toString()}`,
+    reportsDashboardResponseSchema,
+  );
+}
+
+export function exportReportsDashboardExcel(params: { from: string; to: string }): Promise<Blob> {
+  const searchParams = new URLSearchParams({ from: params.from, to: params.to });
+  return fetchBlob(`${getApiBaseUrl()}/reports/dashboard.xlsx?${searchParams.toString()}`);
+}
+
+export function exportReportsDashboardFile(
+  format: "pdf" | "pptx",
+  params: { from: string; to: string },
+): Promise<Blob> {
+  const searchParams = new URLSearchParams({ from: params.from, to: params.to });
+  return fetchBlob(`${getApiBaseUrl()}/reports/dashboard.${format}?${searchParams.toString()}`);
+}
+
+export function createReportsDashboardExport(request: { from: string; to: string; format: ReportAnalyticsExportFormat }) {
+  return fetchJson(`${getApiBaseUrl()}/reports/exports`, reportsDashboardExportResponseSchema, { method: "POST", body: request });
+}
+
+export function listReportsDashboardExports() {
+  return fetchJson(`${getApiBaseUrl()}/reports/exports`, reportsDashboardExportListResponseSchema);
+}
+
+export function getReportsDashboardExport(exportId: string) {
+  return fetchJson(`${getApiBaseUrl()}/reports/exports/${exportId}`, reportsDashboardExportResponseSchema);
+}
+
+export function cancelReportsDashboardExport(exportId: string) {
+  return fetchJson(`${getApiBaseUrl()}/reports/exports/${exportId}/cancel`, reportsDashboardExportResponseSchema, { method: "POST" });
+}
+
+export function downloadReportsDashboardExport(exportId: string, options: DownloadReportOptions = {}) {
+  return downloadFile(`${getApiBaseUrl()}/reports/exports/${exportId}/download`, options);
+}
+
 export function createReport(request: CreateReportRequest): Promise<CreateReportResponse> {
   return fetchJson(`${getApiBaseUrl()}/reports`, createReportResponseSchema, {
     method: "POST",
@@ -94,18 +144,13 @@ export async function downloadReport(
   reportId: string,
   options: DownloadReportOptions = {},
 ): Promise<DownloadReportFile> {
-  const requestInit: RequestInit = {
-    credentials: "include",
-    headers: {
-      Accept: "application/zip",
-    },
-  };
+  return downloadFile(`${getApiBaseUrl()}/reports/${reportId}/download`, options);
+}
 
-  if (options.signal !== undefined) {
-    requestInit.signal = options.signal;
-  }
-
-  const response = await fetch(`${getApiBaseUrl()}/reports/${reportId}/download`, requestInit);
+async function downloadFile(url: string, options: DownloadReportOptions = {}): Promise<DownloadReportFile> {
+  const requestInit: RequestInit = { credentials: "include" };
+  if (options.signal !== undefined) requestInit.signal = options.signal;
+  const response = await fetch(url, requestInit);
 
   if (!response.ok) {
     throw new ApiError(await resolveErrorMessage(response), response.status);
