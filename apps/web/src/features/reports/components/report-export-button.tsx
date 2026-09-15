@@ -1,10 +1,10 @@
 import { Download, LoaderCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { type ReportType } from "@cuidarte/contracts";
 
 import * as reportsApi from "../api/reports-api";
-import { downloadReportFile } from "../lib/download-report-file";
+import { useReportDownloads } from "../model/report-downloads-context";
 
 type ReportExportButtonProps = {
   type: ReportType;
@@ -14,50 +14,14 @@ type ReportExportButtonProps = {
 };
 
 export function ReportExportButton({ type, period, tenantId, className }: ReportExportButtonProps) {
-  const [reportId, setReportId] = useState<string | null>(null);
   const [isRequesting, setIsRequesting] = useState(false);
-
-  useEffect(() => {
-    if (reportId === null) return;
-    let cancelled = false;
-    const poll = async () => {
-      try {
-        const { report } = await reportsApi.getReport(reportId);
-        if (cancelled) return;
-        if (report.status === "ready") {
-          const download = await reportsApi.downloadReport(report.id);
-          downloadReportFile(
-            download.blob,
-            download.filename ?? report.downloadFilename ?? `${report.id}.zip`,
-          );
-          setReportId(null);
-          toast.success("ZIP descargado correctamente.");
-        } else if (["failed", "empty", "cancelled", "expired"].includes(report.status)) {
-          setReportId(null);
-          toast.error(report.message ?? "No fue posible generar el ZIP.");
-        } else {
-          window.setTimeout(() => void poll(), 3000);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setReportId(null);
-          toast.error(
-            error instanceof Error ? error.message : "No fue posible consultar la exportación.",
-          );
-        }
-      }
-    };
-    void poll();
-    return () => {
-      cancelled = true;
-    };
-  }, [reportId]);
+  const { tasks, registerReport } = useReportDownloads();
 
   async function exportReport() {
     setIsRequesting(true);
     try {
       const response = await reportsApi.createReport({ type, period, tenantId });
-      setReportId(response.report.id);
+      registerReport(response.report);
       toast.info("Exportación iniciada. El ZIP se descargará al estar listo.");
     } catch (error) {
       toast.error(
@@ -68,7 +32,14 @@ export function ReportExportButton({ type, period, tenantId, className }: Report
     }
   }
 
-  const isBusy = isRequesting || reportId !== null;
+  const isBusy =
+    isRequesting ||
+    tasks.some(
+      (task) =>
+        task.type === type &&
+        task.period === period &&
+        (task.status === "pending" || task.status === "processing" || task.status === "ready"),
+    );
   const isDisabled = isBusy || tenantId === null;
   return (
     <button

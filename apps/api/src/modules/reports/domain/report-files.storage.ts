@@ -22,4 +22,5 @@ export type ReportFilesStorage = {
   ): Promise<StoredReportFile>;
   read(storageKey: string): Promise<ReadReportFile>;
   delete(storageKey: string): Promise<void>;
+  deleteTemporaryFiles(reportId: string): Promise<number>;
 };

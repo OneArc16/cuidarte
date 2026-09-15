@@ -132,6 +132,7 @@ export const alimentacionAdultoOptionSchema = z.object({
   tenantName: z.string().min(1),
   documentNumber: z.string().min(1).max(80),
   fullName: z.string().min(1).max(180),
+  alreadyRegistered: z.boolean().default(false),
 });
 
 export const alimentacionListItemSchema = z.object({

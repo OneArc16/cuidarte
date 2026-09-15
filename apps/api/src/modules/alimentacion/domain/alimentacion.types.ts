@@ -88,6 +88,7 @@ export type AlimentacionAdultoOptionRecord = {
   tenantDepartment: string | null;
   documentNumber: string;
   fullName: string;
+  alreadyRegistered?: boolean;
   status?: AdultoMayorStatus;
   deathDate?: string | null;
 };

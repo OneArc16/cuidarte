@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Check, CheckCheck, Eraser, Search, Trash2, UsersRound } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { type Resolver, useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { useAlimentacionAdultosMayoresOptionsQuery } from "../model/alimentacion-queries";
 import {
@@ -154,6 +155,13 @@ export function AlimentacionBatchForm({
   }
 
   function addAdultoMayor(adultoMayor: AlimentacionAdultoOption) {
+    if (adultoMayor.alreadyRegistered) {
+      toast.warning(
+        `${adultoMayor.fullName} ya tiene alimentos registrados para la fecha seleccionada.`,
+      );
+      return;
+    }
+
     setSelectedRows((currentRows) => [
       ...currentRows,
       createDefaultAlimentacionBatchRow(adultoMayor),
@@ -165,10 +173,14 @@ export function AlimentacionBatchForm({
   async function addAllAdultosMayores() {
     const result = await allAdultosOptionsQuery.refetch();
     const adultosMayores = result.data?.adultosMayores ?? [];
+    const alreadyRegisteredCount = adultosMayores.filter(
+      (adultoMayor) => adultoMayor.alreadyRegistered,
+    ).length;
 
     setSelectedRows((currentRows) => {
       const selectedIds = new Set(currentRows.map((row) => row.adultoMayor.id));
       const newRows = adultosMayores
+        .filter((adultoMayor) => !adultoMayor.alreadyRegistered)
         .filter((adultoMayor) => !selectedIds.has(adultoMayor.id))
         .map((adultoMayor) => createDefaultAlimentacionBatchRow(adultoMayor));
 
@@ -176,6 +188,12 @@ export function AlimentacionBatchForm({
     });
     setSelectedRowsError(null);
     setAdultoSearch("");
+
+    if (alreadyRegisteredCount > 0) {
+      toast.warning(
+        `${alreadyRegisteredCount} adulto${alreadyRegisteredCount === 1 ? "" : "s"} mayor${alreadyRegisteredCount === 1 ? "" : "es"} ya tiene${alreadyRegisteredCount === 1 ? "" : "n"} alimentos registrados para la fecha seleccionada y fue${alreadyRegisteredCount === 1 ? "" : "ron"} omitido${alreadyRegisteredCount === 1 ? "" : "s"}.`,
+      );
+    }
   }
 
   function removeAdultoMayor(adultoMayorId: string) {

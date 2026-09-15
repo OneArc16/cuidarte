@@ -12,11 +12,14 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   OnModuleInit,
   StreamableFile,
 } from "@nestjs/common";
 
+import { getEnv } from "../../../config/env";
+import { ReportJobsQueue, type ReportJobAttemptContext } from "./report-jobs.queue";
 import { REPORT_ARCHIVE_WRITER, type ReportArchiveWriter } from "../domain/report-archive-writer";
 import { REPORT_FILES_STORAGE, type ReportFilesStorage } from "../domain/report-files.storage";
 import { buildReportZipFilename, deduplicateFilename } from "../domain/report-filenames";
@@ -34,58 +37,9 @@ import { AlimentacionReportSource } from "../infrastructure/alimentacion-report.
 const READY_TTL_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
-export class LocalReportsQueue {
-  private readonly pendingReportIds: string[] = [];
-  private readonly activeReportIds = new Set<string>();
-  private processor: ((reportId: string) => Promise<void>) | null = null;
-  private isDraining = false;
-
-  registerProcessor(processor: (reportId: string) => Promise<void>): void {
-    this.processor = processor;
-  }
-
-  enqueue(reportId: string): void {
-    if (this.pendingReportIds.includes(reportId) || this.activeReportIds.has(reportId)) {
-      return;
-    }
-
-    this.pendingReportIds.push(reportId);
-    setImmediate(() => {
-      void this.drain();
-    });
-  }
-
-  private async drain(): Promise<void> {
-    if (this.isDraining || this.processor === null) {
-      return;
-    }
-
-    this.isDraining = true;
-
-    try {
-      while (this.pendingReportIds.length > 0) {
-        const reportId = this.pendingReportIds.shift();
-
-        if (reportId === undefined || this.activeReportIds.has(reportId)) {
-          continue;
-        }
-
-        this.activeReportIds.add(reportId);
-
-        try {
-          await this.processor(reportId);
-        } finally {
-          this.activeReportIds.delete(reportId);
-        }
-      }
-    } finally {
-      this.isDraining = false;
-    }
-  }
-}
-
-@Injectable()
 export class ReportsService implements OnModuleInit {
+  private readonly logger = new Logger(ReportsService.name);
+
   constructor(
     @Inject(REPORTS_REPOSITORY)
     private readonly reportsRepository: ReportsRepository,
@@ -95,16 +49,23 @@ export class ReportsService implements OnModuleInit {
     private readonly archiveWriter: ReportArchiveWriter,
     private readonly alimentacionSource: AlimentacionReportSource,
     private readonly actividadesSource: ActividadesGrupalesReportSource,
-    private readonly queue: LocalReportsQueue,
+    private readonly queue: ReportJobsQueue,
   ) {
-    this.queue.registerProcessor((reportId) => this.processReport(reportId));
+    this.queue.registerProcessor((reportId, context) => this.processReport(reportId, context));
   }
 
   onModuleInit(): void {
     void this.cleanupExpiredReports().catch(() => undefined);
+    void this.recoverAbandonedReports().catch((error) => {
+      this.logger.error(
+        `event=reports_recovery_failed reason=${error instanceof Error ? error.message : "UnknownError"}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    });
     setInterval(
       () => {
         void this.cleanupExpiredReports().catch(() => undefined);
+        void this.recoverAbandonedReports().catch(() => undefined);
       },
       60 * 60 * 1000,
     ).unref();
@@ -166,7 +127,7 @@ export class ReportsService implements OnModuleInit {
         availableDocuments: availability.availableDocuments,
       },
     });
-    this.queue.enqueue(report.id);
+    await this.queue.enqueue(report.id);
 
     return this.toResponseJob(report);
   }
@@ -249,7 +210,10 @@ export class ReportsService implements OnModuleInit {
     };
   }
 
-  async processReport(reportId: string): Promise<void> {
+  async processReport(
+    reportId: string,
+    context: ReportJobAttemptContext = { attempt: 1, maxAttempts: 1 },
+  ): Promise<void> {
     const startedAt = new Date();
     const report = await this.reportsRepository.markProcessing(reportId, startedAt);
 
@@ -267,6 +231,9 @@ export class ReportsService implements OnModuleInit {
     };
     const source = this.resolveSource(report.type);
     const availability = await source.count(report, report.period);
+    this.logger.log(
+      `reportId=${report.id} tenantId=${report.tenantId} type=${report.type} period=${report.period} event=report_started attempt=${context.attempt}/${context.maxAttempts} availableDocuments=${availability.availableDocuments}`,
+    );
 
     if (availability.availableDocuments === 0) {
       await this.reportsRepository.markFinished({
@@ -282,6 +249,13 @@ export class ReportsService implements OnModuleInit {
       return;
     }
 
+    const deletedTemporaryFiles = await this.filesStorage.deleteTemporaryFiles(report.id);
+    if (deletedTemporaryFiles > 0) {
+      this.logger.warn(
+        `reportId=${report.id} tenantId=${report.tenantId} type=${report.type} period=${report.period} event=temporary_files_cleaned count=${deletedTemporaryFiles}`,
+      );
+    }
+
     const reservedFile = await this.filesStorage.reserve(report.id);
     let processedDocuments = 0;
     let failedDocuments = 0;
@@ -289,6 +263,7 @@ export class ReportsService implements OnModuleInit {
     try {
       const usedFilenames = new Set<string>();
       const repository = this.reportsRepository;
+      const logger = this.logger;
       const entries = async function* (
         documents: AsyncIterable<{ filename: string; buffer: Buffer }>,
       ) {
@@ -301,6 +276,11 @@ export class ReportsService implements OnModuleInit {
 
           processedDocuments += 1;
           await repository.updateProgress(report.id, processedDocuments, failedDocuments);
+          if (processedDocuments === 1 || processedDocuments % 50 === 0) {
+            logger.log(
+              `reportId=${report.id} tenantId=${report.tenantId} type=${report.type} period=${report.period} event=report_progress processedDocuments=${processedDocuments} failedDocuments=${failedDocuments}`,
+            );
+          }
 
           yield {
             filename: deduplicateFilename(document.filename, usedFilenames),
@@ -313,11 +293,27 @@ export class ReportsService implements OnModuleInit {
         entries(source.documents(report, report.period, actor)),
         reservedFile.temporaryPath,
       );
+      const currentBeforeCommit = await this.reportsRepository.findJobById(report.id);
+
+      if (currentBeforeCommit?.status === "cancelled") {
+        throw new ReportCancelledError();
+      }
+
       const stored = await this.filesStorage.commit(
         reservedFile.temporaryPath,
         reservedFile.absolutePath,
         reservedFile.storageKey,
       );
+      const currentAfterCommit = await this.reportsRepository.findJobById(report.id);
+
+      if (currentAfterCommit?.status === "cancelled") {
+        await this.filesStorage.delete(stored.storageKey).catch(() => undefined);
+        this.logger.warn(
+          `reportId=${report.id} tenantId=${report.tenantId} type=${report.type} period=${report.period} event=report_cancelled_after_commit`,
+        );
+        return;
+      }
+
       const completedAt = new Date();
       const expiresAt = new Date(completedAt.getTime() + READY_TTL_MS);
 
@@ -345,15 +341,41 @@ export class ReportsService implements OnModuleInit {
           sizeBytes: stored.sizeBytes,
         },
       });
+      this.logger.log(
+        `reportId=${report.id} tenantId=${report.tenantId} type=${report.type} period=${report.period} event=report_ready durationMs=${completedAt.getTime() - startedAt.getTime()} processedDocuments=${processedDocuments} failedDocuments=${failedDocuments} sizeBytes=${stored.sizeBytes}`,
+      );
     } catch (error) {
+      await this.filesStorage.deleteTemporaryFiles(report.id).catch(() => undefined);
+
       if (error instanceof ReportCancelledError) {
         await this.filesStorage.delete(reservedFile.storageKey).catch(() => undefined);
+        this.logger.warn(
+          `reportId=${report.id} tenantId=${report.tenantId} type=${report.type} period=${report.period} event=report_cancelled attempt=${context.attempt}/${context.maxAttempts}`,
+        );
         return;
       }
 
       failedDocuments += 1;
       await this.filesStorage.delete(reservedFile.storageKey).catch(() => undefined);
-      await this.reportsRepository.markFailed(report.id, "REPORT_GENERATION_FAILED", new Date());
+
+      if (context.attempt < context.maxAttempts) {
+        this.logger.warn(
+          `reportId=${report.id} tenantId=${report.tenantId} type=${report.type} period=${report.period} event=report_retry_scheduled attempt=${context.attempt}/${context.maxAttempts} reason=${error instanceof Error ? error.message : "UnknownError"}`,
+        );
+        throw error;
+      }
+
+      const current = await this.reportsRepository.findJobById(report.id);
+      if (current?.status === "cancelled") {
+        this.logger.warn(
+          `reportId=${report.id} tenantId=${report.tenantId} type=${report.type} period=${report.period} event=report_failed_after_cancel_preserved`,
+        );
+        return;
+      }
+
+      const errorCode =
+        context.maxAttempts > 1 ? "REPORT_RETRY_EXHAUSTED" : "REPORT_GENERATION_FAILED";
+      await this.reportsRepository.markFailed(report.id, errorCode, new Date());
       await this.reportsRepository.createAudit({
         actorUserId: report.requestedByUserId,
         targetTenantId: report.tenantId,
@@ -366,6 +388,24 @@ export class ReportsService implements OnModuleInit {
           errorName: error instanceof Error ? error.name : "UnknownError",
         },
       });
+      this.logger.error(
+        `reportId=${report.id} tenantId=${report.tenantId} type=${report.type} period=${report.period} event=report_failed attempt=${context.attempt}/${context.maxAttempts} processedDocuments=${processedDocuments} failedDocuments=${failedDocuments} reason=${error instanceof Error ? error.message : "UnknownError"}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
+  }
+
+  private async recoverAbandonedReports(): Promise<void> {
+    const env = getEnv();
+    const staleBefore = new Date(Date.now() - env.REPORT_JOB_STALE_TIMEOUT_MS);
+    const recoverableReports = await this.reportsRepository.findRecoverableJobs(staleBefore);
+
+    for (const report of recoverableReports) {
+      const deletedTemporaryFiles = await this.filesStorage.deleteTemporaryFiles(report.id);
+      await this.queue.enqueue(report.id);
+      this.logger.warn(
+        `reportId=${report.id} tenantId=${report.tenantId} type=${report.type} period=${report.period} event=report_recovery_enqueued status=${report.status} staleTimeoutMs=${env.REPORT_JOB_STALE_TIMEOUT_MS} deletedTemporaryFiles=${deletedTemporaryFiles}`,
+      );
     }
   }
 

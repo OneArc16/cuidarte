@@ -85,22 +85,77 @@ export type DownloadReportFile = {
   filename: string | null;
 };
 
-export async function downloadReport(reportId: string): Promise<DownloadReportFile> {
-  const response = await fetch(`${getApiBaseUrl()}/reports/${reportId}/download`, {
+export type DownloadReportOptions = {
+  signal?: AbortSignal;
+  onProgress?: (downloadedBytes: number, totalBytes: number | null) => void;
+};
+
+export async function downloadReport(
+  reportId: string,
+  options: DownloadReportOptions = {},
+): Promise<DownloadReportFile> {
+  const requestInit: RequestInit = {
     credentials: "include",
     headers: {
       Accept: "application/zip",
     },
-  });
+  };
+
+  if (options.signal !== undefined) {
+    requestInit.signal = options.signal;
+  }
+
+  const response = await fetch(`${getApiBaseUrl()}/reports/${reportId}/download`, requestInit);
 
   if (!response.ok) {
     throw new ApiError(await resolveErrorMessage(response), response.status);
   }
 
+  const filename = parseContentDispositionFilename(response.headers.get("Content-Disposition"));
+  const totalBytes = parseContentLength(response.headers.get("Content-Length"));
+
+  if (response.body === null) {
+    return {
+      blob: await response.blob(),
+      filename,
+    };
+  }
+
+  const reader = response.body.getReader();
+  const chunks: ArrayBuffer[] = [];
+  let downloadedBytes = 0;
+
+  options.onProgress?.(downloadedBytes, totalBytes);
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      break;
+    }
+
+    if (value !== undefined) {
+      chunks.push(value.slice().buffer as ArrayBuffer);
+      downloadedBytes += value.byteLength;
+      options.onProgress?.(downloadedBytes, totalBytes);
+    }
+  }
+
   return {
-    blob: await response.blob(),
-    filename: parseContentDispositionFilename(response.headers.get("Content-Disposition")),
+    blob: new Blob(chunks, {
+      type: response.headers.get("Content-Type") ?? "application/zip",
+    }),
+    filename,
   };
+}
+
+function parseContentLength(value: string | null): number | null {
+  if (value === null) {
+    return null;
+  }
+
+  const length = Number(value);
+  return Number.isSafeInteger(length) && length >= 0 ? length : null;
 }
 
 function parseContentDispositionFilename(value: string | null): string | null {

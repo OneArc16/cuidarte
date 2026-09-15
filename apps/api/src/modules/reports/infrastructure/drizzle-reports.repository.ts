@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { and, desc, eq, inArray, lt, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, or, type SQL } from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
 import { auditLogs, reportJobs, tenants } from "../../../database/schema";
@@ -88,6 +88,21 @@ export class DrizzleReportsRepository implements ReportsRepository {
     return rows.map((row) => this.toRecord(row));
   }
 
+  async findRecoverableJobs(staleBefore: Date): Promise<ReportJobRecord[]> {
+    const rows = await this.database.db
+      .select()
+      .from(reportJobs)
+      .where(
+        or(
+          eq(reportJobs.status, "pending"),
+          and(eq(reportJobs.status, "processing"), lt(reportJobs.updatedAt, staleBefore)),
+        ),
+      )
+      .orderBy(desc(reportJobs.createdAt));
+
+    return rows.map((row) => this.toRecord(row));
+  }
+
   async listJobs(
     filters: ReportListFilters & { scopeTenantId: string | null },
   ): Promise<ReportJobRecord[]> {
@@ -120,19 +135,30 @@ export class DrizzleReportsRepository implements ReportsRepository {
   async markProcessing(reportId: string, startedAt: Date): Promise<ReportJobRecord | null> {
     const current = await this.findJobById(reportId);
 
-    if (current === null || current.status !== "pending") {
+    if (current === null || (current.status !== "pending" && current.status !== "processing")) {
       return current;
     }
 
-    assertReportStatusTransition(current.status, "processing");
+    if (current.status === "pending") {
+      assertReportStatusTransition(current.status, "processing");
+    }
 
     const [row] = await this.database.db
       .update(reportJobs)
-      .set({ status: "processing", startedAt, updatedAt: startedAt })
-      .where(eq(reportJobs.id, reportId))
+      .set({
+        status: "processing",
+        processedDocuments: 0,
+        failedDocuments: 0,
+        storageKey: null,
+        errorCode: null,
+        startedAt,
+        completedAt: null,
+        updatedAt: startedAt,
+      })
+      .where(and(eq(reportJobs.id, reportId), eq(reportJobs.status, current.status)))
       .returning();
 
-    return row === undefined ? null : this.toRecord(row);
+    return row === undefined ? await this.findJobById(reportId) : this.toRecord(row);
   }
 
   async updateProgress(

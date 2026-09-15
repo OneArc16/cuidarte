@@ -80,6 +80,7 @@ type AlimentacionAdultoOptionRow = {
   documentNumber: string;
   names: string;
   surnames: string;
+  alreadyRegistered?: boolean;
   status: AlimentacionAdultoOptionRecord["status"];
   deathDate: string | null;
 };
@@ -188,7 +189,6 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
     const conditions: SQL[] = [
       eq(adultosMayores.tenantId, query.tenantId),
       isNull(adultosMayores.deletedAt),
-      isNull(alimentacionRegistros.id),
       or(isNull(adultosMayores.deathDate), gte(adultosMayores.deathDate, query.deliveryDate))!,
     ];
 
@@ -214,6 +214,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         documentNumber: adultosMayores.documentNumber,
         names: adultosMayores.names,
         surnames: adultosMayores.surnames,
+        alreadyRegistered: sql<boolean>`${alimentacionRegistros.id} is not null`,
         status: adultosMayores.status,
         deathDate: adultosMayores.deathDate,
       })
@@ -1069,6 +1070,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       tenantDepartment: row.tenantDepartment,
       documentNumber: row.documentNumber,
       fullName: `${row.names} ${row.surnames}`.trim(),
+      alreadyRegistered: row.alreadyRegistered ?? false,
       ...(row.status === undefined ? {} : { status: row.status }),
       deathDate: row.deathDate,
     };

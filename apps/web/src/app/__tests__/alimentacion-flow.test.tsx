@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { toast } from "sonner";
 
 import {
   adultoMayorFixture,
@@ -186,6 +187,25 @@ describe("App alimentacion flow", () => {
     expect(screen.getByText(alimentacionAdultoOptionFixture.fullName)).toBeInTheDocument();
   });
 
+  it("warns when the adult already has feeding registered for the selected day", async () => {
+    const warningToastSpy = vi.spyOn(toast, "warning");
+    server.use(
+      mockAuthMe(authUserFixture),
+      mockAlimentacionLookup({
+        adultoMayor: alimentacionAdultoOptionFixture,
+        existingRecordId: alimentacionFixture.id,
+      }),
+    );
+
+    renderAppAtPath(`/registro-alimentacion/new/${adultoMayorFixture.id}`);
+
+    await waitFor(() => {
+      expect(warningToastSpy).toHaveBeenCalledWith(
+        "Este adulto mayor ya tiene un registro de alimentación para el día seleccionado.",
+      );
+    });
+  });
+
   it("shows the feeding list when navigating to Registro de alimentación", async () => {
     server.use(mockAuthMe(authUserFixture), mockAlimentacionListForTests());
     renderAppAtPath("/registro-alimentacion");
@@ -252,10 +272,7 @@ describe("App alimentacion flow", () => {
     vi.setSystemTime(new Date("2026-04-24T12:00:00.000Z"));
 
     const openSpy = vi.spyOn(window, "open").mockReturnValue({} as Window);
-    server.use(
-      mockAuthMe(authUserFixture),
-      mockAlimentacionListForTests(),
-    );
+    server.use(mockAuthMe(authUserFixture), mockAlimentacionListForTests());
     const user = userEvent.setup();
     renderAppAtPath("/registro-alimentacion");
 

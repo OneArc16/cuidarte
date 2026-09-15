@@ -1,14 +1,13 @@
 import { type AuthUser } from "@cuidarte/contracts";
 import { ChevronLeft } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
+import { ApiError } from "@/shared/api/api-error";
 
 import { AlimentacionBatchForm } from "../components/alimentacion-batch-form";
-import {
-  REGISTRO_ALIMENTACION_PATH,
-  buildAlimentacionEditPath,
-} from "../lib/alimentacion-paths";
+import { REGISTRO_ALIMENTACION_PATH, buildAlimentacionEditPath } from "../lib/alimentacion-paths";
 import {
   getTodayDateInputValue,
   resolveAlimentacionApiError,
@@ -43,7 +42,13 @@ export function AlimentacionCreatePage({
   const createMutation = useCreateAlimentacionBatchMutation();
 
   useEffect(() => {
-    if (lookupQuery.data?.existingRecordId !== null && lookupQuery.data?.existingRecordId !== undefined) {
+    if (
+      lookupQuery.data?.existingRecordId !== null &&
+      lookupQuery.data?.existingRecordId !== undefined
+    ) {
+      toast.warning(
+        "Este adulto mayor ya tiene un registro de alimentación para el día seleccionado.",
+      );
       navigate(buildAlimentacionEditPath(lookupQuery.data.existingRecordId), { replace: true });
     }
   }, [lookupQuery.data?.existingRecordId, navigate]);
@@ -56,7 +61,9 @@ export function AlimentacionCreatePage({
     const tenantId = lookupQuery.data?.adultoMayor.tenantId;
 
     if (tenantId !== undefined && tenantId !== "") {
-      setSelectedTenantId((currentTenantId) => (currentTenantId === "" ? tenantId : currentTenantId));
+      setSelectedTenantId((currentTenantId) =>
+        currentTenantId === "" ? tenantId : currentTenantId,
+      );
     }
   }, [lookupQuery.data?.adultoMayor.tenantId, shouldSelectTenant]);
 
@@ -97,6 +104,13 @@ export function AlimentacionCreatePage({
           createMutation.mutate(request, {
             onSuccess: () => {
               navigate(REGISTRO_ALIMENTACION_PATH);
+            },
+            onError: (error) => {
+              if (error instanceof ApiError && error.status === 409) {
+                toast.warning(
+                  "Uno o más adultos mayores ya tienen alimentos registrados para el día seleccionado.",
+                );
+              }
             },
           });
         }}

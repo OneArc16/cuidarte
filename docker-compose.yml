@@ -23,6 +23,7 @@ services:
     image: redis:8-alpine
     container_name: cuidarte-redis
     restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
     ports:
       - "6379:6379"
     volumes:

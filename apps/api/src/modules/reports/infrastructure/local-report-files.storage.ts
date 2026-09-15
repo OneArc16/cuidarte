@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, rename, stat, unlink } from "node:fs/promises";
+import { mkdir, readdir, rename, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 
 import { Injectable } from "@nestjs/common";
@@ -62,6 +62,30 @@ export class LocalReportFilesStorage implements ReportFilesStorage {
         throw error;
       }
     }
+  }
+
+  async deleteTemporaryFiles(reportId: string): Promise<number> {
+    const reportDir = this.resolveStoredPath(reportId);
+    let deletedFiles = 0;
+
+    try {
+      const entries = await readdir(reportDir, { withFileTypes: true });
+
+      for (const entry of entries) {
+        if (!entry.isFile() || !entry.name.endsWith(".part")) {
+          continue;
+        }
+
+        await unlink(path.join(reportDir, entry.name));
+        deletedFiles += 1;
+      }
+    } catch (error) {
+      if (!isFileNotFoundError(error)) {
+        throw error;
+      }
+    }
+
+    return deletedFiles;
   }
 
   private resolveStoredPath(storageKey: string): string {

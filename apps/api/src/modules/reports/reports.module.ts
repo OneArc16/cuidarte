@@ -4,7 +4,8 @@ import { DatabaseModule } from "../../database/database.module";
 import { ActividadesGrupalesModule } from "../actividades-grupales/actividades-grupales.module";
 import { AlimentacionModule } from "../alimentacion/alimentacion.module";
 import { AuthModule } from "../auth/auth.module";
-import { ReportsService, LocalReportsQueue } from "./application/reports.service";
+import { ReportJobsQueue } from "./application/report-jobs.queue";
+import { ReportsService } from "./application/reports.service";
 import { REPORT_ARCHIVE_WRITER } from "./domain/report-archive-writer";
 import { REPORT_FILES_STORAGE } from "./domain/report-files.storage";
 import { REPORTS_REPOSITORY } from "./domain/reports.repository";
@@ -20,7 +21,7 @@ import { ReportsController } from "./presentation/reports.controller";
   controllers: [ReportsController],
   providers: [
     ReportsService,
-    LocalReportsQueue,
+    ReportJobsQueue,
     AlimentacionReportSource,
     ActividadesGrupalesReportSource,
     {

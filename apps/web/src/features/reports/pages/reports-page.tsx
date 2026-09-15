@@ -5,14 +5,12 @@ import { toast } from "sonner";
 
 import { useAlimentacionTenantOptionsQuery } from "@/features/alimentacion/model/alimentacion-queries";
 
-import * as reportsApi from "../api/reports-api";
-import { downloadReportFile } from "../lib/download-report-file";
 import {
-  useCancelReportMutation,
   useCreateReportMutation,
   useReportAvailabilityQuery,
   useReportsListQuery,
 } from "../model/reports-queries";
+import { useReportDownloads } from "../model/report-downloads-context";
 import "../reports.css";
 
 type ReportsPageProps = {
@@ -52,7 +50,7 @@ export function ReportsPage({ user }: ReportsPageProps) {
     tenantId: effectiveTenantId,
   });
   const createReportMutation = useCreateReportMutation();
-  const cancelReportMutation = useCancelReportMutation();
+  const { startReportDownload, registerReport, cancelReport } = useReportDownloads();
 
   const reportsByType = useMemo(() => {
     const map = new Map<ReportType, ReportJob | null>();
@@ -81,22 +79,20 @@ export function ReportsPage({ user }: ReportsPageProps) {
     }
 
     try {
-      await createReportMutation.mutateAsync({ type, period, tenantId: effectiveTenantId });
+      const response = await createReportMutation.mutateAsync({
+        type,
+        period,
+        tenantId: effectiveTenantId,
+      });
+      registerReport(response.report);
       toast.success("Reporte solicitado. Puedes seguir trabajando mientras se genera.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "No fue posible solicitar el reporte.");
     }
   };
 
-  const handleDownloadReport = async (report: ReportJob) => {
-    try {
-      const download = await reportsApi.downloadReport(report.id);
-      const filename = download.filename ?? report.downloadFilename ?? `${report.id}.zip`;
-
-      downloadReportFile(download.blob, filename);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "No fue posible descargar el reporte.");
-    }
+  const handleDownloadReport = (report: ReportJob) => {
+    startReportDownload(report);
   };
 
   return (
@@ -217,9 +213,8 @@ export function ReportsPage({ user }: ReportsPageProps) {
                           type="button"
                           aria-label={`Cancelar ${formatReportType(report.type)}`}
                           title="Cancelar"
-                          disabled={cancelReportMutation.isPending}
                           onClick={() => {
-                            void cancelReportMutation.mutateAsync(report.id);
+                            void cancelReport(report.id);
                           }}
                         >
                           <XCircle aria-hidden="true" />

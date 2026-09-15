@@ -18,6 +18,7 @@ export type ReportsRepository = {
   createJob(command: CreateReportJobCommand): Promise<ReportJobRecord>;
   findJobById(reportId: string): Promise<ReportJobRecord | null>;
   findExpiredReadyJobs(now: Date): Promise<ReportJobRecord[]>;
+  findRecoverableJobs(staleBefore: Date): Promise<ReportJobRecord[]>;
   listJobs(
     filters: ReportListFilters & { scopeTenantId: string | null },
   ): Promise<ReportJobRecord[]>;
