@@ -941,7 +941,7 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
                   target="_blank"
                   rel="noreferrer"
                   aria-label="Ver PDF actual"
-                  title="Ver PDF"
+                  data-tooltip="Ver PDF"
                 >
                   <Eye aria-hidden="true" />
                 </a>
@@ -949,7 +949,7 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
                   className="adulto-document-card__action adulto-document-card__action--delete"
                   type="button"
                   aria-label="Eliminar PDF actual"
-                  title="Eliminar PDF"
+                  data-tooltip="Eliminar PDF"
                   onClick={() => {
                     void props.onDeleteDocument?.();
                   }}

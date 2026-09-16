@@ -11,3 +11,49 @@
 @import "../features/empleados/empleados.css";
 @import "../shared/components/searchable-combobox.css";
 @import "./responsive.css";
+
+/* Tooltips visuales renderizados fuera de tablas, modales y contenedores con overflow. */
+.app-tooltip {
+  position: fixed;
+  z-index: 2000;
+  width: max-content;
+  max-width: min(280px, calc(100vw - 24px));
+  padding: 7px 10px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 7px;
+  background: #123b31;
+  box-shadow: 0 8px 20px rgb(8 80 65 / 18%);
+  color: #fff;
+  font-size: 0.74rem;
+  font-weight: 700;
+  line-height: 1.25;
+  pointer-events: none;
+  white-space: normal;
+  transform: translate(-50%, -100%);
+}
+
+.app-tooltip::before {
+  position: absolute;
+  bottom: -5px;
+  left: var(--tooltip-arrow-left);
+  border-right: 5px solid transparent;
+  border-top: 5px solid #123b31;
+  border-left: 5px solid transparent;
+  content: "";
+  transform: translateX(-50%);
+}
+
+.app-tooltip--bottom {
+  transform: translateX(-50%);
+}
+
+.app-tooltip--bottom::before {
+  top: -5px;
+  bottom: auto;
+  border-top: 0;
+  border-bottom: 5px solid #123b31;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-tooltip { transition: none; }
+}

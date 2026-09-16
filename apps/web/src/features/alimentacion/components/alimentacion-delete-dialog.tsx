@@ -55,7 +55,7 @@ export function AlimentacionDeleteDialog({
             className="alimentacion-row-action alimentacion-delete-dialog__close-button"
             type="button"
             aria-label="Cerrar confirmación de eliminación"
-            title="Cerrar"
+            data-tooltip="Cerrar"
             disabled={isPending}
             onClick={onClose}
           >

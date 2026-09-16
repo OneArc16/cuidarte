@@ -70,7 +70,7 @@ export function HistoriaClinicaTable({
                     className="outline-action atencion-history-action"
                     type="button"
                     aria-label={actionLabel}
-                    title={actionLabel}
+                    data-tooltip={actionLabel}
                     onClick={() => onOpenAtencion(atencion)}
                   >
                     {atencion.access === "edit" ? (

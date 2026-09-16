@@ -151,7 +151,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
           className="adultos-floating-action"
           type="button"
           aria-label="Crear adulto mayor"
-          title="Crear adulto mayor"
+          data-tooltip="Crear adulto mayor"
           onClick={() => navigate(ADULTOS_MAYORES_NEW_PATH)}
         >
           <Plus aria-hidden="true" />

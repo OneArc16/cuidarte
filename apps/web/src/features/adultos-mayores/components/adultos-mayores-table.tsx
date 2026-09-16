@@ -94,7 +94,7 @@ export function AdultosMayoresTable({
                       className="adultos-row-action adultos-row-action--alimentacion"
                       type="button"
                       aria-label={`Alimentacion de ${adultoMayor.names} ${adultoMayor.surnames}`}
-                      title="Alimentacion"
+                      data-tooltip="Alimentacion"
                       onClick={() => onOpenAlimentacion(adultoMayor.id)}
                     >
                       <Utensils aria-hidden="true" />
@@ -105,7 +105,7 @@ export function AdultosMayoresTable({
                       className="adultos-row-action adultos-row-action--atencion"
                       type="button"
                       aria-label={`Atencion individual de ${adultoMayor.names} ${adultoMayor.surnames}`}
-                      title="Atencion individual"
+                      data-tooltip="Atencion individual"
                       disabled={!canCreateAtencionIndividual}
                       onClick={() => onOpenAtencionIndividual(adultoMayor.id)}
                     >
@@ -117,7 +117,7 @@ export function AdultosMayoresTable({
                       className="adultos-row-action adultos-row-action--editar"
                       type="button"
                       aria-label={`Editar ${adultoMayor.names} ${adultoMayor.surnames}`}
-                      title="Editar"
+                      data-tooltip="Editar"
                       onClick={() => onEdit(adultoMayor.id)}
                     >
                       <Pencil aria-hidden="true" />
@@ -128,7 +128,7 @@ export function AdultosMayoresTable({
                       className="adultos-row-action adultos-row-action--trash"
                       type="button"
                       aria-label={`Enviar a papelera ${adultoMayor.names} ${adultoMayor.surnames}`}
-                      title="Enviar a papelera"
+                      data-tooltip="Enviar a papelera"
                       onClick={() => onSendToTrash(adultoMayor)}
                     >
                       <Trash2 aria-hidden="true" />
@@ -138,7 +138,7 @@ export function AdultosMayoresTable({
                     className="adultos-row-action adultos-row-action--historia"
                     type="button"
                     aria-label={`Historia clinica de ${adultoMayor.names} ${adultoMayor.surnames}`}
-                    title="Historia clinica"
+                    data-tooltip="Historia clinica"
                     disabled={!canOpenHistoriaClinica}
                     onClick={() => onOpenHistoriaClinica(adultoMayor.id)}
                   >

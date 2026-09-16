@@ -182,6 +182,7 @@ export class AtencionesIndividualesService {
 
       const record = await this.atencionesRepository.create({
         ...command,
+        analisis: command.analisis ?? null,
         id: atencionId,
         tenantId: adultoMayor.tenantId,
         actorUserId: actor.id,
@@ -245,6 +246,7 @@ export class AtencionesIndividualesService {
 
       const saved = await this.atencionesRepository.update({
         ...command,
+        analisis: command.analisis ?? null,
         id,
         actorUserId: actor.id,
         removedSupportFileIds,

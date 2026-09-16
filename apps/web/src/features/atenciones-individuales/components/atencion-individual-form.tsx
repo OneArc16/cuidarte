@@ -66,7 +66,11 @@ const FORM_SECTIONS = [
       "causaExterna",
     ],
   },
-  { id: "enfermedad", label: "Enfermedad actual", fields: ["motivoConsulta", "enfermedadActual"] },
+  {
+    id: "enfermedad",
+    label: "Enfermedad actual",
+    fields: ["motivoConsulta", "enfermedadActual", "analisis"],
+  },
   {
     id: "antecedentes",
     label: "Antecedentes",
@@ -486,6 +490,12 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
           error={getError("enfermedadActual")}
           readOnly={isReadOnly}
           registration={form.register("enfermedadActual")}
+        />
+        <TextAreaField
+          label="Análisis"
+          error={getError("analisis")}
+          readOnly={isReadOnly}
+          registration={form.register("analisis")}
         />
       </section>
 

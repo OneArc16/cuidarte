@@ -52,7 +52,7 @@ export function AlimentacionImportedPdfVersionsDialog({
             className="alimentacion-row-action"
             type="button"
             aria-label="Cerrar historial de versiones"
-            title="Cerrar"
+            data-tooltip="Cerrar"
             onClick={onClose}
           >
             <X aria-hidden="true" />
@@ -91,7 +91,7 @@ export function AlimentacionImportedPdfVersionsDialog({
                     className="alimentacion-row-action alimentacion-row-action--imported"
                     type="button"
                     aria-label={`Descargar version ${version.version}`}
-                    title={`Descargar version ${version.version}`}
+                    data-tooltip={`Descargar version ${version.version}`}
                     disabled={isDownloading}
                     onClick={() => onDownload(version)}
                   >

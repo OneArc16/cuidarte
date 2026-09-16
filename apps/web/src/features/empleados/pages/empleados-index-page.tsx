@@ -54,7 +54,7 @@ export function EmpleadosIndexPage({ navigate, user }: EmpleadosIndexPageProps) 
           className="empleados-floating-action"
           type="button"
           aria-label="Crear usuario"
-          title="Crear usuario"
+          data-tooltip="Crear usuario"
           onClick={() => navigate(EMPLEADOS_NEW_PATH)}
         >
           <Plus aria-hidden="true" />

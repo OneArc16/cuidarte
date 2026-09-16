@@ -104,7 +104,7 @@ export function ActividadesGrupalesCorrectionsPage({ navigate, user }: Props) {
           className="outline-action actividades-corrections__preview-action"
           type="button"
           aria-label="Generar vista previa"
-          title="Generar vista previa"
+          data-tooltip="Generar vista previa"
           onClick={loadPreview}
           disabled={tenantId === "" || previewMutation.isPending || applyMutation.isPending}
         >

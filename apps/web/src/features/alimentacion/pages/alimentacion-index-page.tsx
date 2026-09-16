@@ -335,7 +335,7 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
           className="alimentacion-floating-action"
           type="button"
           aria-label="Agregar registro de alimentación"
-          title="Agregar registro de alimentación"
+          data-tooltip="Agregar registro de alimentación"
           onClick={() => navigate(REGISTRO_ALIMENTACION_NEW_PATH)}
         >
           <Plus aria-hidden="true" />

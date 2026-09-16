@@ -198,6 +198,7 @@ export const atencionIndividualCommandSchema = z.object({
   causaExterna: atencionIndividualCausaExternaSchema,
   motivoConsulta: requiredTextSchema(1000),
   enfermedadActual: requiredTextSchema(3000),
+  analisis: nullableTextSchema(4000).optional(),
   antecedentesPersonales: nullableTextSchema(3000),
   antecedentesFamiliares: nullableTextSchema(3000),
   tensionSistolica: nullableIntegerSchema,

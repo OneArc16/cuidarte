@@ -82,7 +82,7 @@ export function ActividadesGrupalesTable({
                   <button
                     className="actividades-activity-trigger"
                     type="button"
-                    title={actividad.canEdit ? "Diligenciar actividad" : "Ver actividad"}
+                    data-tooltip={actividad.canEdit ? "Diligenciar actividad" : "Ver actividad"}
                     onClick={() => onOpenDiligenciamiento(actividad)}
                   >
                     <strong>{actividad.activityName}</strong>
@@ -110,7 +110,7 @@ export function ActividadesGrupalesTable({
                           ? `Diligenciar actividad ${actividad.activityName}`
                           : `Ver actividad ${actividad.activityName}`
                       }
-                      title={actividad.canEdit ? "Diligenciar actividad" : "Ver actividad"}
+                      data-tooltip={actividad.canEdit ? "Diligenciar actividad" : "Ver actividad"}
                       onClick={() => onOpenDiligenciamiento(actividad)}
                     >
                       {actividad.canEdit ? (
@@ -124,7 +124,7 @@ export function ActividadesGrupalesTable({
                         className="actividades-row-action actividades-row-action--editar"
                         type="button"
                         aria-label={`Editar actividad ${actividad.activityName}`}
-                        title="Editar actividad"
+                        data-tooltip="Editar actividad"
                         onClick={() => onEdit(actividad)}
                       >
                         <PencilLine aria-hidden="true" />
@@ -134,7 +134,7 @@ export function ActividadesGrupalesTable({
                       className="actividades-row-action actividades-row-action--acta"
                       type="button"
                       aria-label={`Ver PDF del acta ${formatActaNumber(actividad.actaNumber)}`}
-                      title="Ver PDF del acta"
+                      data-tooltip="Ver PDF del acta"
                       onClick={() => onOpenActaPdf(actividad)}
                     >
                       <FileText aria-hidden="true" />
@@ -144,7 +144,7 @@ export function ActividadesGrupalesTable({
                         className="actividades-row-action actividades-row-action--papelera"
                         type="button"
                         aria-label={`Enviar a la papelera la actividad ${actividad.activityName}`}
-                        title="Enviar a la papelera"
+                        data-tooltip="Enviar a la papelera"
                         onClick={() => onDelete(actividad)}
                       >
                         <Trash2 aria-hidden="true" />

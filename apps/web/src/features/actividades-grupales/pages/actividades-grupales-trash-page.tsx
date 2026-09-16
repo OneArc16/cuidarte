@@ -71,7 +71,7 @@ export function ActividadesGrupalesTrashPage({
           className="outline-action actividades-trash-back-action"
           type="button"
           aria-label="Volver al listado"
-          title="Volver al listado"
+          data-tooltip="Volver al listado"
           onClick={() => navigate(CREACION_ACTIVIDADES_PATH)}
         >
           <ChevronLeft aria-hidden="true" />
@@ -92,7 +92,7 @@ export function ActividadesGrupalesTrashPage({
           className="outline-action actividades-back-action actividades-trash-back-action"
           type="button"
           aria-label="Volver al listado"
-          title="Volver al listado"
+          data-tooltip="Volver al listado"
           onClick={() => navigate(CREACION_ACTIVIDADES_PATH)}
         >
           <ChevronLeft aria-hidden="true" />

@@ -327,7 +327,7 @@ export function AjustesPage({ user }: AjustesPageProps) {
                           <button
                             className="actividades-row-action"
                             type="button"
-                            title="Guardar nombre"
+                            data-tooltip="Guardar nombre"
                             disabled={updateMutation.isPending || editingName.trim() === ""}
                             onClick={() => void updateActivityRowName(activityRow)}
                           >
@@ -337,7 +337,7 @@ export function AjustesPage({ user }: AjustesPageProps) {
                           <button
                             className="actividades-row-action actividades-row-action--editar"
                             type="button"
-                            title="Editar actividad"
+                            data-tooltip="Editar actividad"
                             aria-label={`Editar actividad ${activityRow.name}`}
                             onClick={() => {
                               setEditingActivityTypeId(activityRow.id);
@@ -354,7 +354,7 @@ export function AjustesPage({ user }: AjustesPageProps) {
                               : "actividades-row-action--activar"
                           }`}
                           type="button"
-                          title={isActive ? "Desactivar" : "Activar"}
+                          data-tooltip={isActive ? "Desactivar" : "Activar"}
                           aria-label={`${isActive ? "Desactivar" : "Activar"} actividad ${activityRow.name}`}
                           disabled={statusMutation.isPending}
                           onClick={() => {
@@ -407,7 +407,7 @@ export function AjustesPage({ user }: AjustesPageProps) {
                 className="actividades-row-action actividad-delete-dialog__close-button"
                 type="button"
                 aria-label="Cerrar confirmación"
-                title="Cerrar"
+                data-tooltip="Cerrar"
                 disabled={statusMutation.isPending}
                 onClick={() => setActivityPendingDeactivation(null)}
               >

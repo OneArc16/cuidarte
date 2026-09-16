@@ -92,7 +92,7 @@ export function AtencionesEnfermeriaHistoryTable({
                       type="button"
                       className="outline-action atencion-history-action atenciones-enfermeria-history-action--access"
                       aria-label={`${accessLabel} atención`}
-                      title={`${accessLabel} atención`}
+                      data-tooltip={`${accessLabel} atención`}
                       onClick={() => onOpenAtencion(atencion.id)}
                     >
                       {atencion.access === "edit" ? (
@@ -108,7 +108,7 @@ export function AtencionesEnfermeriaHistoryTable({
                       type="button"
                       className="outline-action atencion-history-action atenciones-enfermeria-history-action--restore"
                       aria-label="Restaurar atención"
-                      title="Restaurar atención"
+                      data-tooltip="Restaurar atención"
                       onClick={() => onRestore?.(atencion.id)}
                     >
                       <RotateCcw aria-hidden="true" />
@@ -120,7 +120,7 @@ export function AtencionesEnfermeriaHistoryTable({
                       type="button"
                       className="danger-action atencion-history-action atenciones-enfermeria-history-action--delete"
                       aria-label="Eliminar atención"
-                      title="Eliminar atención"
+                      data-tooltip="Eliminar atención"
                       onClick={() => onDelete?.(atencion.id)}
                     >
                       <Trash2 aria-hidden="true" />

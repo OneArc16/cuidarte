@@ -45,7 +45,7 @@ export function ReportDownloadDialog() {
               className="report-download-dialog__icon-button"
               type="button"
               aria-label="Minimizar descargas de reportes"
-              title="Minimizar"
+              data-tooltip="Minimizar"
               onClick={minimizeReportDownloads}
             >
               <Minimize2 aria-hidden="true" />
@@ -152,7 +152,7 @@ function ReportDownloadTaskRow({
                 className="report-download-task__dismiss"
                 type="button"
                 aria-label={`Quitar ${formatReportType(task.type)}`}
-                title="Quitar"
+                data-tooltip="Quitar"
                 onClick={() => onRemove(task.reportId)}
               >
                 <CheckCircle2 aria-hidden="true" />

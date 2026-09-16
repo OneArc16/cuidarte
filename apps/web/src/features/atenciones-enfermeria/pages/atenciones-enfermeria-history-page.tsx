@@ -124,7 +124,7 @@ export function AtencionesEnfermeriaHistoryPage({
             className="outline-action atencion-history-trash-toggle"
             type="button"
             aria-label={showTrash ? "Ver atenciones activas" : "Abrir papelera"}
-            title={showTrash ? "Ver atenciones activas" : "Abrir papelera"}
+            data-tooltip={showTrash ? "Ver atenciones activas" : "Abrir papelera"}
             onClick={() => setShowTrash((value) => !value)}
           >
             {showTrash ? <RotateCcw aria-hidden="true" /> : <Trash2 aria-hidden="true" />}

@@ -178,7 +178,7 @@ export function AlimentacionRecordForm({
           className="primary-action alimentacion-form-action alimentacion-form-action--save"
           type="submit"
           aria-label="Guardar cambios"
-          title="Guardar"
+          data-tooltip="Guardar"
           disabled={isPending}
         >
           <Save aria-hidden="true" />

@@ -81,7 +81,7 @@ export function EmpleadosTable({
                     className="empleados-row-action empleados-row-action--ver"
                     type="button"
                     aria-label={`Ver ${empleado.fullName}`}
-                    title="Ver"
+                    data-tooltip="Ver"
                     onClick={() => onView(empleado.id)}
                   >
                     <Eye aria-hidden="true" />
@@ -91,7 +91,7 @@ export function EmpleadosTable({
                       className="empleados-row-action empleados-row-action--editar"
                       type="button"
                       aria-label={`Editar ${empleado.fullName}`}
-                      title="Editar"
+                      data-tooltip="Editar"
                       onClick={() => onEdit(empleado.id)}
                     >
                       <Pencil aria-hidden="true" />

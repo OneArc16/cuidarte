@@ -21,7 +21,7 @@ export function ReportHistoryButton({ type, period, tenantId }: ReportHistoryBut
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <button className="report-history-button" type="button" aria-label="Ver historial de descargas" title="Historial de descargas">
+        <button className="report-history-button" type="button" aria-label="Ver historial de descargas" data-tooltip="Historial de descargas">
           <History aria-hidden="true" />
           <span className="visually-hidden">Ver historial de descargas</span>
         </button>
@@ -54,8 +54,8 @@ function HistoryRow({ report, onDownload, onCancel }: { report: ReportJob; onDow
       <div><strong>{formatReportType(report.type)}</strong><span>{report.tenantName}</span><span>{report.period}</span></div>
       <span className={`report-history-row__status report-history-row__status--${report.status}`}>{formatStatus(report.status)}</span>
       <div className="report-history-row__actions">
-        {report.downloadAvailable ? <button className="report-history-row__icon" type="button" aria-label="Descargar reporte" title="Descargar" onClick={onDownload}><Download aria-hidden="true" /></button> : null}
-        {active ? <button className="report-history-row__icon report-history-row__icon--danger" type="button" aria-label="Cancelar reporte" title="Cancelar" onClick={onCancel}><XCircle aria-hidden="true" /></button> : null}
+        {report.downloadAvailable ? <button className="report-history-row__icon" type="button" aria-label="Descargar reporte" data-tooltip="Descargar" onClick={onDownload}><Download aria-hidden="true" /></button> : null}
+        {active ? <button className="report-history-row__icon report-history-row__icon--danger" type="button" aria-label="Cancelar reporte" data-tooltip="Cancelar" onClick={onCancel}><XCircle aria-hidden="true" /></button> : null}
         {report.status === "ready" && !report.downloadAvailable ? <CheckCircle2 aria-label="Reporte listo pero expirado" /> : null}
       </div>
     </article>

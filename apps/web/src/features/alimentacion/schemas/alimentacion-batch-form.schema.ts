@@ -34,7 +34,7 @@ export function createDefaultAlimentacionBatchFormValues(): AlimentacionBatchFor
   return {
     tenantId: "",
     deliveryDate: getTodayDateInputValue(),
-    organizer: "nutricionista",
+    organizer: "director",
   };
 }
 

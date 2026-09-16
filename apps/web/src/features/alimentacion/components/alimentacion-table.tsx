@@ -220,7 +220,7 @@ export function AlimentacionTable({
                             type="button"
                             aria-controls={detailRowsRegionId}
                             aria-expanded={isExpanded}
-                            title="Mostrar registros del adulto mayor en el mes"
+                            data-tooltip="Mostrar registros del adulto mayor en el mes"
                             onClick={() => toggleGroupRows(group.id)}
                           >
                             <strong>{group.fullName}</strong>
@@ -261,7 +261,7 @@ export function AlimentacionTable({
                                   ? `Exportando formato de ${group.fullName}`
                                   : `Exportar formato de ${group.fullName}`
                               }
-                              title={isExporting ? "Exportando formato..." : "Exportar formato"}
+                              data-tooltip={isExporting ? "Exportando formato..." : "Exportar formato"}
                               disabled={isExporting}
                               onClick={() =>
                                 onExportFormato({
@@ -286,7 +286,7 @@ export function AlimentacionTable({
                                   ? `Importando formato diligenciado de ${group.fullName}`
                                   : `Importar formato diligenciado de ${group.fullName}`
                               }
-                              title={
+                              data-tooltip={
                                 isImporting
                                   ? "Importando formato..."
                                   : "Importar formato diligenciado"
@@ -314,7 +314,7 @@ export function AlimentacionTable({
                                   className="alimentacion-row-action alimentacion-row-action--imported"
                                   type="button"
                                   aria-label={`Descargar PDF importado v${importedFormato.version} de ${group.fullName}`}
-                                  title={`Descargar PDF importado v${importedFormato.version}`}
+                                  data-tooltip={`Descargar PDF importado v${importedFormato.version}`}
                                   disabled={downloadingImportedVersionId === importedFormato.id}
                                   onClick={() =>
                                     onDownloadImportedFormato({
@@ -337,7 +337,7 @@ export function AlimentacionTable({
                                   className="alimentacion-row-action alimentacion-row-action--imported"
                                   type="button"
                                   aria-label={`Ver versiones de PDF importado de ${group.fullName}`}
-                                  title={`PDF importado v${importedFormato.version}: ver historial`}
+                                  data-tooltip={`PDF importado v${importedFormato.version}: ver historial`}
                                   onClick={() =>
                                     onOpenImportedFormatoHistory({
                                       adultoMayorId: group.adultoMayorId,
@@ -358,7 +358,7 @@ export function AlimentacionTable({
                           aria-controls={detailRowsRegionId}
                           aria-expanded={isExpanded}
                           aria-label={`${isExpanded ? "Ocultar" : "Mostrar"} registros de ${group.fullName}`}
-                          title={isExpanded ? "Ocultar registros" : "Mostrar registros"}
+                          data-tooltip={isExpanded ? "Ocultar registros" : "Mostrar registros"}
                           onClick={() => toggleGroupRows(group.id)}
                         >
                           <motion.span
@@ -403,7 +403,7 @@ export function AlimentacionTable({
                                   className="alimentacion-row-action"
                                   type="button"
                                   aria-label={`Editar alimentación de ${record.fullName} del día ${record.deliveryDate}`}
-                                  title="Editar registro"
+                                  data-tooltip="Editar registro"
                                   onClick={() => onOpenEdit(record.id)}
                                 >
                                   <Pencil aria-hidden="true" />
@@ -414,7 +414,7 @@ export function AlimentacionTable({
                                   className="alimentacion-row-action alimentacion-row-action--danger"
                                   type="button"
                                   aria-label={`Eliminar alimentación de ${record.fullName} del día ${record.deliveryDate}`}
-                                  title="Eliminar registro"
+                                  data-tooltip="Eliminar registro"
                                   onClick={() => onDelete(record)}
                                 >
                                   <Trash2 aria-hidden="true" />

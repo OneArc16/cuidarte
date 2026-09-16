@@ -54,7 +54,7 @@ export function EmpleadoDetailModal({
             className="empleados-row-action"
             type="button"
             aria-label="Cerrar detalle"
-            title="Cerrar"
+            data-tooltip="Cerrar"
             onClick={onClose}
           >
             <X aria-hidden="true" />

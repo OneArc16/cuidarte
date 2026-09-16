@@ -251,9 +251,7 @@ export const tenants = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("tenants_document_unique")
-      .on(table.documentType, table.documentNumber)
-      .where(sql`${table.documentNumber} is not null`),
+    index("tenants_document_idx").on(table.documentType, table.documentNumber),
     uniqueIndex("tenants_email_unique")
       .on(table.email)
       .where(sql`${table.email} is not null`),
@@ -1047,6 +1045,7 @@ export const atencionesIndividuales = pgTable(
     causaExterna: varchar("causa_externa", { length: 60 }).notNull(),
     motivoConsulta: text("motivo_consulta").notNull(),
     enfermedadActual: text("enfermedad_actual").notNull(),
+    analisis: text("analisis"),
     antecedentesPersonales: text("antecedentes_personales"),
     antecedentesFamiliares: text("antecedentes_familiares"),
     tensionSistolica: integer("tension_sistolica"),

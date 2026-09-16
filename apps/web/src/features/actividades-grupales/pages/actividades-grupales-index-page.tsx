@@ -115,7 +115,7 @@ export function ActividadesGrupalesIndexPage({
             className="outline-action actividades-correction-nav-action"
             type="button"
             aria-label="Normalizar consecutivos"
-            title="Normalizar consecutivos"
+            data-tooltip="Normalizar consecutivos"
             onClick={() => navigate(CREACION_ACTIVIDADES_CORRECTIONS_PATH)}
           >
             <ListRestart aria-hidden="true" />
@@ -127,7 +127,7 @@ export function ActividadesGrupalesIndexPage({
             className="outline-action actividades-back-action actividades-trash-action"
             type="button"
             aria-label="Ver papelera"
-            title="Ver papelera"
+            data-tooltip="Ver papelera"
             onClick={() => navigate(CREACION_ACTIVIDADES_TRASH_PATH)}
           >
             <Trash2 aria-hidden="true" />
@@ -212,7 +212,7 @@ export function ActividadesGrupalesIndexPage({
           className="actividades-floating-action"
           type="button"
           aria-label="Crear actividad"
-          title="Crear actividad"
+          data-tooltip="Crear actividad"
           onClick={() => navigate(CREACION_ACTIVIDADES_NEW_PATH)}
         >
           <CalendarPlus aria-hidden="true" />

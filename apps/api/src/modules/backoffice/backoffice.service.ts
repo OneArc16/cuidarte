@@ -153,7 +153,7 @@ export class BackofficeService {
       command.tenant.municipalityId,
     );
 
-    await this.ensureTenantIsUnique(command.tenant, tenantId);
+    await this.ensureTenantIsUnique(command.tenant);
     await this.ensureOwnerEmailIsUnique(command.owner, currentDetail.owner.id);
 
     try {
@@ -293,28 +293,7 @@ export class BackofficeService {
     return conditions.length === 0 ? undefined : and(...conditions);
   }
 
-  private async ensureTenantIsUnique(command: TenantCommand, currentTenantId?: string) {
-    if (command.documentNumber !== null) {
-      const documentConditions = [
-        eq(tenants.documentType, command.documentType),
-        eq(tenants.documentNumber, command.documentNumber),
-      ];
-
-      if (currentTenantId !== undefined) {
-        documentConditions.push(ne(tenants.id, currentTenantId));
-      }
-
-      const [existingDocumentTenant] = await this.database.db
-        .select({ id: tenants.id })
-        .from(tenants)
-        .where(and(...documentConditions))
-        .limit(1);
-
-      if (existingDocumentTenant !== undefined) {
-        throw new ConflictException("Ya existe un tenant con ese documento.");
-      }
-    }
-
+  private async ensureTenantIsUnique(command: TenantCommand) {
     if (command.email !== null) {
       const emailConditions = [eq(tenants.email, command.email)];
 
@@ -536,10 +515,6 @@ export class BackofficeService {
     }
 
     const constraintName = error.constraint_name ?? error.constraint ?? "";
-
-    if (constraintName === "tenants_document_unique") {
-      throw new ConflictException("Ya existe un tenant con ese documento.");
-    }
 
     if (constraintName === "tenants_email_unique") {
       throw new ConflictException("Ya existe un tenant con ese correo.");

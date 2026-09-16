@@ -46,7 +46,7 @@ export function AtencionEnfermeriaDeleteDialog({
             className="atencion-delete-dialog__close-button"
             type="button"
             aria-label="Cerrar confirmación"
-            title="Cerrar"
+            data-tooltip="Cerrar"
             disabled={isPending}
             onClick={onClose}
           >

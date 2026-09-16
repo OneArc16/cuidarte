@@ -77,7 +77,7 @@ export function AtencionesEnfermeriaAdultosTable({
                     type="button"
                     className="atenciones-enfermeria-row-action atenciones-enfermeria-row-action--historia"
                     aria-label={`Historia de enfermería de ${adultoMayor.names} ${adultoMayor.surnames}`}
-                    title="Historia de enfermería"
+                    data-tooltip="Historia de enfermería"
                     onClick={() => onOpenHistory(adultoMayor.id)}
                   >
                     <ClipboardPlus aria-hidden="true" />
@@ -87,7 +87,7 @@ export function AtencionesEnfermeriaAdultosTable({
                       type="button"
                       className="atenciones-enfermeria-row-action atenciones-enfermeria-row-action--atencion"
                       aria-label={`Nueva atención de enfermería de ${adultoMayor.names} ${adultoMayor.surnames}`}
-                      title="Nueva atención de enfermería"
+                      data-tooltip="Nueva atención de enfermería"
                       onClick={() => onOpenAtencion(adultoMayor.id)}
                     >
                       <HeartPulse aria-hidden="true" />

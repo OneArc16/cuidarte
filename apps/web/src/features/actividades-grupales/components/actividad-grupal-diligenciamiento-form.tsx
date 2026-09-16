@@ -717,7 +717,7 @@ function FileCard({
             target="_blank"
             rel="noreferrer"
             aria-label={`Abrir ${title}`}
-            title="Ver PDF"
+            data-tooltip="Ver PDF"
           >
             <Eye aria-hidden="true" />
           </a>
@@ -727,7 +727,7 @@ function FileCard({
             className="actividades-row-action actividad-diligenciamiento-file-card__remove"
             type="button"
             aria-label={actionLabel}
-            title={actionLabel}
+            data-tooltip={actionLabel}
             onClick={onAction}
           >
             {actionIcon}

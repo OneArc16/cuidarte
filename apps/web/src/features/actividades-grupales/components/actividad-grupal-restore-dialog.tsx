@@ -57,7 +57,7 @@ export function ActividadGrupalRestoreDialog({
             className="actividades-row-action actividad-delete-dialog__close-button"
             type="button"
             aria-label="Cerrar confirmacion de restauracion"
-            title="Cerrar"
+            data-tooltip="Cerrar"
             disabled={isPending}
             onClick={onClose}
           >

@@ -44,6 +44,7 @@ export type AtencionIndividualRecord = {
   causaExterna: AtencionIndividualCausaExterna;
   motivoConsulta: string;
   enfermedadActual: string;
+  analisis?: string | null;
   antecedentesPersonales: string | null;
   antecedentesFamiliares: string | null;
   tensionSistolica: number | null;
@@ -133,6 +134,7 @@ export type AtencionIndividualMutableCommand = {
   causaExterna: AtencionIndividualCausaExterna;
   motivoConsulta: string;
   enfermedadActual: string;
+  analisis?: string | null;
   antecedentesPersonales: string | null;
   antecedentesFamiliares: string | null;
   tensionSistolica: number | null;

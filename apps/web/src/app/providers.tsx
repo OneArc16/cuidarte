@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 
 import { ReportDownloadDialog } from "@/features/reports/components/report-download-dialog";
 import { ReportDownloadsProvider } from "@/features/reports/model/report-downloads-context";
+import { TooltipLayer } from "@/shared/components/tooltip-layer";
 
 import { createQueryClient } from "./query-client";
 
@@ -19,6 +20,7 @@ export function AppProviders({ children }: AppProvidersProps) {
       <ReportDownloadsProvider>
         {children}
         <ReportDownloadDialog />
+        <TooltipLayer />
         <Toaster closeButton position="top-right" richColors toastOptions={{ duration: 3500 }} />
       </ReportDownloadsProvider>
     </QueryClientProvider>

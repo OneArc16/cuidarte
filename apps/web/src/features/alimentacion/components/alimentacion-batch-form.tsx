@@ -429,7 +429,7 @@ export function AlimentacionBatchForm({
                 className="alimentacion-row-action alimentacion-row-action--success"
                 type="button"
                 aria-label="Marcar todos como entregados"
-                title="Marcar todos como entregados"
+                data-tooltip="Marcar todos como entregados"
                 disabled={selectedRows.length === 0}
                 onClick={markAllRowsAsDelivered}
               >
@@ -439,7 +439,7 @@ export function AlimentacionBatchForm({
                 className="alimentacion-row-action alimentacion-row-action--reset"
                 type="button"
                 aria-label="Desmarcar todos"
-                title="Desmarcar todos"
+                data-tooltip="Desmarcar todos"
                 disabled={selectedRows.length === 0}
                 onClick={clearAllRowsStatuses}
               >
@@ -583,7 +583,7 @@ export function AlimentacionBatchForm({
                           className="alimentacion-row-action alimentacion-row-action--success"
                           type="button"
                           aria-label={`Marcar entregado ${row.adultoMayor.fullName}`}
-                          title="Marcar entregado"
+                          data-tooltip="Marcar entregado"
                           onClick={() => markAdultoMayorAsDelivered(row.adultoMayor.id)}
                         >
                           <Check aria-hidden="true" />
@@ -592,7 +592,7 @@ export function AlimentacionBatchForm({
                           className="alimentacion-row-action alimentacion-row-action--reset"
                           type="button"
                           aria-label={`Desmarcar ${row.adultoMayor.fullName}`}
-                          title="Desmarcar"
+                          data-tooltip="Desmarcar"
                           onClick={() => clearAdultoMayorStatuses(row.adultoMayor.id)}
                         >
                           <Eraser aria-hidden="true" />
@@ -601,7 +601,7 @@ export function AlimentacionBatchForm({
                           className="alimentacion-row-action alimentacion-row-action--danger"
                           type="button"
                           aria-label={`Eliminar ${row.adultoMayor.fullName}`}
-                          title="Eliminar"
+                          data-tooltip="Eliminar"
                           onClick={() => removeAdultoMayor(row.adultoMayor.id)}
                         >
                           <Trash2 aria-hidden="true" />

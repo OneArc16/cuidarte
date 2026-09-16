@@ -62,7 +62,7 @@ export function AlimentacionImportedPdfDialog({
             className="alimentacion-row-action alimentacion-import-dialog__close-button"
             type="button"
             aria-label="Cerrar importacion"
-            title="Cerrar"
+            data-tooltip="Cerrar"
             disabled={isPending}
             onClick={onClose}
           >

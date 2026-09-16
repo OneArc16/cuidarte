@@ -110,7 +110,7 @@ export function ActividadesGrupalesTrashTable({
                       className="actividades-row-action"
                       type="button"
                       aria-label={`Restaurar acta ${formatActaNumber(actividad.actaNumber)}`}
-                      title={
+                      data-tooltip={
                         actividad.canRestore
                           ? "Restaurar acta"
                           : "No tienes permisos para restaurar"

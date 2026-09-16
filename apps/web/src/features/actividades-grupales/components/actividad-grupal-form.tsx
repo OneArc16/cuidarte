@@ -413,7 +413,7 @@ export function ActividadGrupalForm({
           className="primary-action actividad-form-action actividad-form-action--save"
           type="submit"
           aria-label={mode === "create" ? "Guardar actividad" : "Guardar cambios"}
-          title="Guardar"
+          data-tooltip="Guardar"
           disabled={isPending}
         >
           <Save aria-hidden="true" />
