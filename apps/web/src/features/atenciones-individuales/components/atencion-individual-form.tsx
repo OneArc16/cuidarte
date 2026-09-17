@@ -174,7 +174,9 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
   const pesoKg = watch("pesoKg");
   const tallaCm = watch("tallaCm");
   const activeSectionIndex = FORM_SECTIONS.findIndex((section) => section.id === activeSection);
-  const isLastSection = activeSectionIndex === FORM_SECTIONS.length - 1;
+  const isFinalSubmitSection = activeSection === "soportes";
+  const shouldShowStepActions =
+    props.mode !== "view" && activeSection !== "soportes" && activeSection !== "enfermeria";
   const createDraftStorageKey =
     props.mode === "create" ? buildCreateDraftStorageKey(props.adultoMayor.id) : null;
   const formError = "error" in props ? props.error ?? null : null;
@@ -259,7 +261,7 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
       return;
     }
 
-    if (!isLastSection) {
+    if (!isFinalSubmitSection) {
       const sectionFields: Array<keyof AtencionIndividualFormValues> = [...currentSection.fields];
       const isSectionValid = await form.trigger(
         sectionFields,
@@ -753,6 +755,17 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
           items={supportItems}
           onRemove={removeSupportItem}
         />
+
+        {props.mode !== "view" ? (
+          <div className="adulto-form-actions atencion-supports-actions">
+            <button className="outline-action" type="button" onClick={props.onCancel}>
+              Cancelar
+            </button>
+            <button className="primary-action" type="submit" disabled={props.isPending}>
+              {props.isPending ? "Guardando..." : "Guardar atencion"}
+            </button>
+          </div>
+        ) : null}
       </section>
 
       <section
@@ -787,20 +800,16 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
             Volver
           </button>
         </div>
-      ) : (
+      ) : shouldShowStepActions ? (
         <div className="adulto-form-actions">
           <button className="outline-action" type="button" onClick={props.onCancel}>
             Cancelar
           </button>
           <button className="primary-action" type="submit" disabled={props.isPending}>
-            {props.isPending
-              ? "Guardando..."
-              : isLastSection
-                ? "Guardar atencion"
-                : "Guardar y continuar"}
+            {props.isPending ? "Guardando..." : "Guardar y continuar"}
           </button>
         </div>
-      )}
+      ) : null}
     </form>
   );
 }

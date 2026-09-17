@@ -170,6 +170,7 @@ export class HomeService {
       atencionesEnfermeria.tenantId,
       atencionesEnfermeria.adultoMayorId,
       scope,
+      isNull(atencionesEnfermeria.deletedAt),
     );
   }
 
@@ -331,12 +332,18 @@ export class HomeService {
     tenantColumn: AnyPgColumn,
     adultoMayorIdColumn: AnyPgColumn,
     scope: TenantScope,
+    extraCondition?: SQL,
   ): Promise<number> {
     const scopeCondition = this.buildScopeCondition(scope, tenantColumn);
-    const where =
+    const activeAdultCondition = isNull(adultosMayores.deletedAt);
+    const conditions =
       scopeCondition === undefined
-        ? isNull(adultosMayores.deletedAt)
-        : and(scopeCondition, isNull(adultosMayores.deletedAt));
+        ? [activeAdultCondition]
+        : [scopeCondition, activeAdultCondition];
+    if (extraCondition !== undefined) {
+      conditions.push(extraCondition);
+    }
+    const where = and(...conditions);
     const [row] = await this.database.db
       .select({ total: sql<number>`count(*)::int` })
       .from(table)

@@ -95,7 +95,8 @@ describe("HomeService", () => {
     const result = await service.getDashboard(superAdminUser);
 
     assert.equal(result.shortcuts.length, 6);
-    assert.equal(result.indicators.length, 12);
+    assert.equal(result.indicators.length, 4);
+    assert.equal(result.activityIndicators.length, 8);
   });
 
   it("uses the tenant scope for clinical attention totals", async () => {
@@ -158,6 +159,34 @@ describe("HomeService", () => {
     });
   });
 
+  it("excludes trashed nursing attentions from the dashboard total", async () => {
+    const service = new HomeService({} as never);
+    let receivedExtraCondition: unknown;
+
+    Object.assign(service as unknown as Record<string, unknown>, {
+      countRelatedRows: async (
+        _table: unknown,
+        _tenantColumn: unknown,
+        _adultoMayorIdColumn: unknown,
+        _scope: unknown,
+        extraCondition: unknown,
+      ) => {
+        receivedExtraCondition = extraCondition;
+
+        return 7;
+      },
+    });
+
+    const result = await (
+      service as unknown as {
+        countAtencionesEnfermeria(scope: unknown): Promise<number>;
+      }
+    ).countAtencionesEnfermeria({ type: "tenant", tenantId });
+
+    assert.equal(result, 7);
+    assert.ok(receivedExtraCondition, "Expected nursing counter to receive a deletedAt filter.");
+  });
+
   it("rejects roles without dashboard access", async () => {
     const service = new HomeService({} as never);
 
@@ -203,10 +232,21 @@ function createDashboardDatabase() {
   return {
     db: {
       select(selection: Record<string, unknown>) {
-        const queryKind = "activityType" in selection ? "actividades" : "alimentacion";
+        const queryKind =
+          "recordsTotal" in selection
+            ? "alimentacion"
+            : "activityTypeId" in selection
+              ? "actividadesGrouped"
+              : "actividadesTotal";
 
         return {
           from() {
+            return this;
+          },
+          leftJoin() {
+            return this;
+          },
+          innerJoin() {
             return this;
           },
           groupBy() {
@@ -217,18 +257,12 @@ function createDashboardDatabase() {
               throw new Error("Dashboard query used an undefined where condition.");
             }
 
-            if (queryKind === "actividades") {
-              return Promise.resolve([
-                { total: 469 },
-                { activityType: "salud_preventiva", total: 140 },
-                { activityType: "sesiones_psicosocial", total: 140 },
-                { activityType: "encuentro_intergeneracional", total: 7 },
-                { activityType: "nutricion", total: 56 },
-                { activityType: "actividades_manualidad", total: 42 },
-                { activityType: "fisioterapia", total: 56 },
-                { activityType: "actividad_campo", total: 112 },
-                { activityType: "actividades_recreacion", total: 56 },
-              ]);
+            if (queryKind === "actividadesTotal") {
+              return Promise.resolve([{ total: 469 }]);
+            }
+
+            if (queryKind === "actividadesGrouped") {
+              return Promise.resolve(buildActivityTypeRows());
             }
 
             return Promise.resolve([
@@ -239,21 +273,15 @@ function createDashboardDatabase() {
             ]);
           },
           then(
-            resolve: (value: Array<Record<string, number | string>>) => unknown,
+            resolve: (value: Array<Record<string, unknown>>) => unknown,
             reject?: (reason: unknown) => unknown,
           ) {
-            if (queryKind === "actividades") {
-              return Promise.resolve([
-                { total: 469 },
-                { activityType: "salud_preventiva", total: 140 },
-                { activityType: "sesiones_psicosocial", total: 140 },
-                { activityType: "encuentro_intergeneracional", total: 7 },
-                { activityType: "nutricion", total: 56 },
-                { activityType: "actividades_manualidad", total: 42 },
-                { activityType: "fisioterapia", total: 56 },
-                { activityType: "actividad_campo", total: 112 },
-                { activityType: "actividades_recreacion", total: 56 },
-              ]).then(resolve, reject);
+            if (queryKind === "actividadesTotal") {
+              return Promise.resolve([{ total: 469 }]).then(resolve, reject);
+            }
+
+            if (queryKind === "actividadesGrouped") {
+              return Promise.resolve(buildActivityTypeRows()).then(resolve, reject);
             }
 
             return Promise.resolve([
@@ -267,4 +295,28 @@ function createDashboardDatabase() {
       },
     },
   };
+}
+
+function buildActivityTypeRows() {
+  const activityTypeIds = [
+    "00000000-0000-4000-8000-000000000101",
+    "00000000-0000-4000-8000-000000000102",
+    "00000000-0000-4000-8000-000000000103",
+    "00000000-0000-4000-8000-000000000104",
+    "00000000-0000-4000-8000-000000000105",
+    "00000000-0000-4000-8000-000000000106",
+    "00000000-0000-4000-8000-000000000107",
+    "00000000-0000-4000-8000-000000000108",
+  ];
+
+  return [
+    { activityTypeId: activityTypeIds[0], label: "Salud preventiva", isActive: true, total: 140 },
+    { activityTypeId: activityTypeIds[1], label: "Psicosocial", isActive: true, total: 140 },
+    { activityTypeId: activityTypeIds[2], label: "Intergeneracional", isActive: true, total: 7 },
+    { activityTypeId: activityTypeIds[3], label: "Nutricion", isActive: true, total: 56 },
+    { activityTypeId: activityTypeIds[4], label: "Manualidad", isActive: true, total: 42 },
+    { activityTypeId: activityTypeIds[5], label: "Fisioterapia", isActive: true, total: 56 },
+    { activityTypeId: activityTypeIds[6], label: "Actividad de campo", isActive: true, total: 112 },
+    { activityTypeId: activityTypeIds[7], label: "Recreacion", isActive: true, total: 56 },
+  ];
 }

@@ -74,9 +74,9 @@ describe("App atenciones flow", () => {
 
     await user.click(screen.getByRole("tab", { name: "Atenciones de enfermería" }));
 
-    const accessButtons = await screen.findAllByRole("button", { name: "Acceso Ver" });
+    const accessButtons = await screen.findAllByRole("button", { name: "Ver atención" });
     expect(accessButtons.length).toBeGreaterThan(0);
-    expect(screen.queryByRole("button", { name: "Acceso Editar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Editar atención" })).not.toBeInTheDocument();
   });
 
   it("opens historia clinica for a professional and shows only editable owned attentions", async () => {
@@ -209,7 +209,7 @@ describe("App atenciones flow", () => {
     expect(screen.getByDisplayValue(cie10OptionsFixture[0].title)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Guardar y continuar" }));
-    await user.click(screen.getByRole("tab", { name: "Atenciones de enfermería" }));
+    await user.click(screen.getByRole("tab", { name: "Soportes" }));
     await user.click(screen.getByRole("button", { name: "Guardar atencion" }));
 
     await waitFor(() => {

@@ -251,6 +251,10 @@
   gap: 10px;
 }
 
+.atencion-supports-actions {
+  margin-top: 4px;
+}
+
 .atencion-support-row {
   display: grid;
   grid-template-columns: 54px minmax(0, 1fr) auto;

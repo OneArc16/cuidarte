@@ -128,9 +128,11 @@ function CalendarMonth({
   onSelect: (value: string) => void;
 }) {
   const days = useMemo(() => buildMonthDays(month), [month]);
-  const label = new Intl.DateTimeFormat("es-CO", { month: "long", year: "numeric" }).format(
-    parseDate(month),
-  );
+  const label = new Intl.DateTimeFormat("es-CO", {
+    month: "long",
+    timeZone: "UTC",
+    year: "numeric",
+  }).format(parseDate(month));
 
   return (
     <section className="reports-calendar-month" aria-label={label}>
@@ -193,7 +195,12 @@ function parseDate(value: string): Date {
 }
 
 function formatShortDate(value: string): string {
-  return new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", year: "numeric" })
+  return new Intl.DateTimeFormat("es-CO", {
+    day: "2-digit",
+    month: "short",
+    timeZone: "UTC",
+    year: "numeric",
+  })
     .format(parseDate(value))
     .replaceAll(" de ", " ");
 }
