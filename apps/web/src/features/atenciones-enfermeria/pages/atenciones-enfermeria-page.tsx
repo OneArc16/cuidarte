@@ -1,7 +1,7 @@
 import { type AuthUser } from "@cuidarte/contracts";
 import { ChevronLeft } from "lucide-react";
 
-import { type Navigate } from "@/app/hooks/use-app-navigation";
+import { type GoBack, type Navigate } from "@/app/hooks/use-app-navigation";
 
 import {
   ATENCIONES_ENFERMERIA_PATH,
@@ -16,11 +16,12 @@ import { AtencionesEnfermeriaHistoryPage } from "./atenciones-enfermeria-history
 
 type AtencionesEnfermeriaPageProps = {
   navigate: Navigate;
+  goBack: GoBack;
   path: string;
   user: AuthUser;
 };
 
-export function AtencionesEnfermeriaPage({ navigate, path, user }: AtencionesEnfermeriaPageProps) {
+export function AtencionesEnfermeriaPage({ goBack, navigate, path, user }: AtencionesEnfermeriaPageProps) {
   if (path === ATENCIONES_ENFERMERIA_PATH) {
     return <AtencionesEnfermeriaIndexPage navigate={navigate} user={user} />;
   }
@@ -34,7 +35,14 @@ export function AtencionesEnfermeriaPage({ navigate, path, user }: AtencionesEnf
   const historyAdultoId = getAtencionesEnfermeriaHistoryAdultoIdFromPath(path);
 
   if (historyAdultoId !== null) {
-    return <AtencionesEnfermeriaHistoryPage adultoMayorId={historyAdultoId} navigate={navigate} user={user} />;
+    return (
+      <AtencionesEnfermeriaHistoryPage
+        adultoMayorId={historyAdultoId}
+        goBack={goBack}
+        navigate={navigate}
+        user={user}
+      />
+    );
   }
 
   const atencionId = getAtencionEnfermeriaDetailIdFromPath(path);

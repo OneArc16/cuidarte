@@ -2,9 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 
 export type NavigateOptions = {
   replace?: boolean;
+  state?: Record<string, unknown>;
 };
 
 export type Navigate = (nextPath: string, options?: NavigateOptions) => void;
+export type GoBack = (fallbackPath: string) => void;
 
 export function useAppNavigation() {
   const [path, setPath] = useState(() => window.location.pathname);
@@ -23,11 +25,24 @@ export function useAppNavigation() {
 
   const navigate = useCallback((nextPath: string, options: NavigateOptions = {}) => {
     if (window.location.pathname !== nextPath) {
-      window.history[options.replace === true ? "replaceState" : "pushState"]({}, "", nextPath);
+      window.history[options.replace === true ? "replaceState" : "pushState"](
+        options.state ?? {},
+        "",
+        nextPath,
+      );
     }
 
     setPath(nextPath);
   }, []);
 
-  return { path, navigate };
+  const goBack = useCallback((fallbackPath: string) => {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    navigate(fallbackPath);
+  }, [navigate]);
+
+  return { goBack, path, navigate };
 }

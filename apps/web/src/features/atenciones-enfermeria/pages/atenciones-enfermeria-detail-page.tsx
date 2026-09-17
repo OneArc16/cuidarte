@@ -28,6 +28,10 @@ export function AtencionesEnfermeriaDetailPage({
 }: AtencionesEnfermeriaDetailPageProps) {
   const detailQuery = useAtencionEnfermeriaQuery(atencionId);
   const updateMutation = useUpdateAtencionEnfermeriaMutation(atencionId);
+  const returnPath =
+    typeof window.history.state?.returnTo === "string"
+      ? window.history.state.returnTo
+      : ATENCIONES_ENFERMERIA_PATH;
 
   useEffect(() => {
     if (!updateMutation.isSuccess) {
@@ -59,7 +63,7 @@ export function AtencionesEnfermeriaDetailPage({
         <button
           className="outline-action"
           type="button"
-          onClick={() => navigate(ATENCIONES_ENFERMERIA_PATH)}
+          onClick={() => navigate(returnPath)}
         >
           <ChevronLeft aria-hidden="true" />
           <span>Volver</span>
@@ -84,7 +88,7 @@ export function AtencionesEnfermeriaDetailPage({
         <button
           className="outline-action"
           type="button"
-          onClick={() => navigate(ATENCIONES_ENFERMERIA_PATH)}
+          onClick={() => navigate(returnPath)}
         >
           <ChevronLeft aria-hidden="true" />
           <span>Volver</span>
@@ -118,7 +122,7 @@ export function AtencionesEnfermeriaDetailPage({
               ? null
               : resolveAtencionesEnfermeriaApiError(updateMutation.error)
           }
-          onCancel={() => navigate(ATENCIONES_ENFERMERIA_PATH)}
+          onCancel={() => navigate(returnPath)}
           onOpenMedicalAttention={(atencionId) =>
             navigate(buildAtencionIndividualDetailPath(detail.adultoMayor.id, atencionId))
           }
@@ -131,7 +135,7 @@ export function AtencionesEnfermeriaDetailPage({
         <AtencionesEnfermeriaForm
           mode="view"
           detail={detail}
-          onCancel={() => navigate(ATENCIONES_ENFERMERIA_PATH)}
+          onCancel={() => navigate(returnPath)}
           onOpenMedicalAttention={(atencionId) =>
             navigate(buildAtencionIndividualDetailPath(detail.adultoMayor.id, atencionId))
           }

@@ -68,7 +68,7 @@ import { canOpenReports } from "@/features/reports/lib/reports-permissions";
 
 export function App() {
   const currentUserQuery = useCurrentUserQuery();
-  const { path, navigate } = useAppNavigation();
+  const { goBack, path, navigate } = useAppNavigation();
   const user = currentUserQuery.data?.user ?? null;
 
   useEffect(() => {
@@ -266,6 +266,7 @@ export function App() {
     <HomePage
       path={path}
       user={user}
+      goBack={goBack}
       navigate={navigate}
       onLogoutSuccess={() => navigate(LOGIN_PATH, { replace: true })}
     />

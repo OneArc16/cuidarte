@@ -153,7 +153,7 @@ export class BackofficeService {
       command.tenant.municipalityId,
     );
 
-    await this.ensureTenantIsUnique(command.tenant);
+    await this.ensureTenantIsUnique(command.tenant, tenantId);
     await this.ensureOwnerEmailIsUnique(command.owner, currentDetail.owner.id);
 
     try {
@@ -293,7 +293,7 @@ export class BackofficeService {
     return conditions.length === 0 ? undefined : and(...conditions);
   }
 
-  private async ensureTenantIsUnique(command: TenantCommand) {
+  private async ensureTenantIsUnique(command: TenantCommand, currentTenantId?: string) {
     if (command.email !== null) {
       const emailConditions = [eq(tenants.email, command.email)];
 

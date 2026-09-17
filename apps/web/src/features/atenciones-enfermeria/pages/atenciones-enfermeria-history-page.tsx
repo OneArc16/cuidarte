@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { type AuthUser } from "@cuidarte/contracts";
 import { useState } from "react";
 
-import { type Navigate } from "@/app/hooks/use-app-navigation";
+import { type GoBack, type Navigate } from "@/app/hooks/use-app-navigation";
 
 import { AtencionEnfermeriaDeleteDialog } from "../components/atencion-enfermeria-delete-dialog";
 import { AtencionesEnfermeriaHistoryTable } from "../components/atenciones-enfermeria-history-table";
@@ -21,12 +21,14 @@ import {
 
 type AtencionesEnfermeriaHistoryPageProps = {
   adultoMayorId: string;
+  goBack: GoBack;
   navigate: Navigate;
   user: AuthUser;
 };
 
 export function AtencionesEnfermeriaHistoryPage({
   adultoMayorId,
+  goBack,
   navigate,
   user,
 }: AtencionesEnfermeriaHistoryPageProps) {
@@ -59,7 +61,7 @@ export function AtencionesEnfermeriaHistoryPage({
         <button
           className="outline-action"
           type="button"
-          onClick={() => navigate(ATENCIONES_ENFERMERIA_PATH)}
+          onClick={() => goBack(ATENCIONES_ENFERMERIA_PATH)}
         >
           <ChevronLeft aria-hidden="true" />
           <span>Volver</span>
@@ -81,7 +83,7 @@ export function AtencionesEnfermeriaHistoryPage({
         <button
           className="outline-action adultos-back-action"
           type="button"
-          onClick={() => navigate(ATENCIONES_ENFERMERIA_PATH)}
+          onClick={() => goBack(ATENCIONES_ENFERMERIA_PATH)}
         >
           <ChevronLeft aria-hidden="true" />
           <span>Volver</span>

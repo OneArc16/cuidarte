@@ -1,6 +1,6 @@
 import { type AuthUser } from "@cuidarte/contracts";
 
-import { type Navigate } from "@/app/hooks/use-app-navigation";
+import { type GoBack, type Navigate } from "@/app/hooks/use-app-navigation";
 import { AdultosMayoresPage } from "@/features/adultos-mayores/pages/adultos-mayores-page";
 import {
   isAdultosMayoresImportPath,
@@ -33,11 +33,12 @@ const MOBILE_HOME_QUERY = "(max-width: 800px)";
 type HomePageProps = {
   path: string;
   user: AuthUser;
+  goBack: GoBack;
   navigate: Navigate;
   onLogoutSuccess: () => void;
 };
 
-export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProps) {
+export function HomePage({ goBack, navigate, onLogoutSuccess, path, user }: HomePageProps) {
   const isMobileViewport = useMediaQuery(MOBILE_HOME_QUERY);
   const canViewDashboard = canViewHomeDashboard(user);
 
@@ -62,7 +63,7 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
                     : "inicio";
 
   return (
-    <main className="home-shell">
+    <main className={`home-shell${isReportsPath(path) ? " home-shell--reports" : ""}`}>
       {isMobileViewport ? null : (
         <HomeDesktopSidebar
           activeModuleId={activeModuleId}
@@ -101,7 +102,7 @@ export function HomePage({ navigate, onLogoutSuccess, path, user }: HomePageProp
         ) : isAlimentacionPath(path) ? (
           <AlimentacionPage path={path} navigate={navigate} user={user} />
         ) : isAtencionesEnfermeriaPath(path) ? (
-          <AtencionesEnfermeriaPage path={path} navigate={navigate} user={user} />
+          <AtencionesEnfermeriaPage path={path} goBack={goBack} navigate={navigate} user={user} />
         ) : isActividadesGrupalesPath(path) ? (
           <ActividadesGrupalesPage path={path} navigate={navigate} user={user} />
         ) : isEmpleadosPath(path) ? (

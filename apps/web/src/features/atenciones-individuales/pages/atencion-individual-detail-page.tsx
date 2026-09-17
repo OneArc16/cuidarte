@@ -7,7 +7,10 @@ import { ADULTOS_MAYORES_PATH } from "@/features/adultos-mayores/lib/adultos-may
 
 import { AtencionIndividualForm } from "../components/atencion-individual-form";
 import { resolveAtencionIndividualApiError } from "../lib/atenciones-individuales-formatters";
-import { buildHistoriaClinicaPath } from "../lib/atenciones-individuales-paths";
+import {
+  buildAtencionIndividualDetailPath,
+  buildHistoriaClinicaPath,
+} from "../lib/atenciones-individuales-paths";
 import { buildAtencionEnfermeriaDetailPath } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-paths";
 import {
   useAtencionIndividualQuery,
@@ -64,6 +67,7 @@ export function AtencionIndividualDetailPage({
 
   const access = atencionQuery.data.access;
   const historyPath = buildHistoriaClinicaPath(atencionQuery.data.adultoMayorId);
+  const returnPath = buildAtencionIndividualDetailPath(atencionQuery.data.adultoMayorId, atencionId);
 
   if (access === null) {
     return (
@@ -117,7 +121,11 @@ export function AtencionIndividualDetailPage({
               : resolveAtencionIndividualApiError(updateMutation.error)
           }
           onCancel={() => navigate(historyPath)}
-          onOpenNursingAttention={(atencionId) => navigate(buildAtencionEnfermeriaDetailPath(atencionId))}
+          onOpenNursingAttention={(atencionId) =>
+            navigate(buildAtencionEnfermeriaDetailPath(atencionId), {
+              state: { returnTo: returnPath },
+            })
+          }
           onSubmit={async (values) => {
             await updateMutation.mutateAsync(values);
           }}
@@ -127,7 +135,11 @@ export function AtencionIndividualDetailPage({
           mode="view"
           detail={atencionQuery.data}
           onCancel={() => navigate(historyPath)}
-          onOpenNursingAttention={(atencionId) => navigate(buildAtencionEnfermeriaDetailPath(atencionId))}
+          onOpenNursingAttention={(atencionId) =>
+            navigate(buildAtencionEnfermeriaDetailPath(atencionId), {
+              state: { returnTo: returnPath },
+            })
+          }
         />
       )}
     </section>
