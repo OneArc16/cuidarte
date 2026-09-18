@@ -16,7 +16,6 @@ import {
   type FindActividadesGrupalesQuery,
   type FindActividadesGrupalesTrashQuery,
   type FindActividadGrupalByIdQuery,
-  type RestoreActividadGrupalRecordCommand,
   type SaveActividadGrupalDiligenciamientoRecordCommand,
   type SavedActividadGrupalDiligenciamientoRecord,
   type SearchActividadGrupalIntegrantesOptionsQuery,
@@ -56,7 +55,6 @@ export type ActividadesGrupalesRepository = {
   ): Promise<ActaCorrectionPreview>;
   applyActaNumberCorrection(command: ApplyActaCorrectionCommand): Promise<AppliedActaCorrection>;
   delete(command: DeleteActividadGrupalRecordCommand): Promise<void>;
-  restore(command: RestoreActividadGrupalRecordCommand): Promise<boolean>;
   saveDiligenciamiento(
     command: SaveActividadGrupalDiligenciamientoRecordCommand,
   ): Promise<SavedActividadGrupalDiligenciamientoRecord>;

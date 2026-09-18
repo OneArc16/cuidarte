@@ -176,6 +176,12 @@ function createDetail(
     previousActaNumber: null,
     activityName: "Sesion grupal de ejemplo",
     activityType: "salud_preventiva",
+    activityTypeId: "55555555-5555-4555-8555-555555555555",
+    activityTypeCatalog: {
+      id: "55555555-5555-4555-8555-555555555555",
+      name: "Salud preventiva",
+      isActive: true,
+    },
     activityDate: "2026-04-23",
     startTime: "08:00",
     endTime: "10:00",

@@ -11,5 +11,5 @@ export function canViewActividadesGrupalesTrash(
     return true;
   }
 
-  return user.role !== "auditor" && user.tenantId !== null;
+  return user.role === "admin" && user.tenantId !== null;
 }

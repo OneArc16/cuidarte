@@ -40,6 +40,7 @@ import {
 
 import {
   resolveActividadGrupalTenantForCreate,
+  canEditActividadGrupal,
   canManageActividadesGrupales,
   canCorrectActividadGrupalActaNumber,
   canBulkCorrectActividadGrupalActaNumbers,
@@ -537,7 +538,7 @@ export class ActividadesGrupalesService {
   }
 
   private assertCanEditActivity(activity: ActividadGrupalRecord, actor: AuthUser): void {
-    if (!canTrashActividadGrupal(activity, actor)) {
+    if (!canEditActividadGrupal(activity, actor)) {
       throw new ForbiddenException("No tienes permisos para editar o eliminar esta actividad.");
     }
   }
@@ -779,7 +780,7 @@ export class ActividadesGrupalesService {
       organizer: record.organizer,
       involvedEmployeesCount: record.involvedEmployeesCount,
       canEdit: this.canEditActivity(record, actor),
-      canDelete: this.canEditActivity(record, actor),
+      canDelete: canTrashActividadGrupal(record, actor),
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
     });
@@ -821,17 +822,7 @@ export class ActividadesGrupalesService {
   }
 
   private canEditActivity(activity: ActividadGrupalRecord, actor: AuthUser): boolean {
-    if (actor.role === "super_admin") {
-      return true;
-    }
-
-    if (activity.createdByUserId === actor.id) {
-      return true;
-    }
-
-    return (
-      (actor.role === "admin" || actor.role === "director") && actor.tenantId === activity.tenantId
-    );
+    return canEditActividadGrupal(activity, actor);
   }
 
   private canEditDiligenciamiento(

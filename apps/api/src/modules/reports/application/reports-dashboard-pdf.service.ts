@@ -70,19 +70,6 @@ function buildPdfHtml(dashboard: ReportsDashboardResponse): string {
         `<div class="metric"><span>${escapeHtml(String(label))}</span><strong>${value}</strong></div>`,
     )
     .join("");
-  const dailyRows = dashboard.dailySeries
-    .map(
-      (point) =>
-        `<tr><td>${point.date}</td><td>${point.nursingAttendances}</td><td>${point.medicalAttendances}</td><td>${point.activities}</td><td>${point.transportAllowancesDelivered}</td><td>${point.snacksDelivered}</td><td>${point.lunchesDelivered}</td></tr>`,
-    )
-    .join("");
-  const activityRows = dashboard.activitiesByType
-    .map(
-      (activity) =>
-        `<tr><td>${escapeHtml(activity.activityTypeName)}</td><td>${activity.count}</td></tr>`,
-    )
-    .join("");
-
   return `<!doctype html><html><head><meta charset="utf-8"><style>
     @page { size: A4 landscape; margin: 14mm 12mm; }
     * { box-sizing: border-box; } body { margin: 0; color: #123b31; font: 11px Arial, sans-serif; }
@@ -90,22 +77,122 @@ function buildPdfHtml(dashboard: ReportsDashboardResponse): string {
     .meta { color: #657a72; margin-bottom: 18px; } .metrics { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
     .metric { border: 1px solid #dce9e2; border-radius: 6px; padding: 10px; background: #f7fbf9; }
     .metric span { display: block; color: #657a72; font-size: 10px; margin-bottom: 7px; } .metric strong { font-size: 21px; }
-    table { width: 100%; border-collapse: collapse; } th { color: white; background: #085041; text-align: left; } th, td { border: 1px solid #dce9e2; padding: 5px 7px; }
-    tr:nth-child(even) { background: #f7fbf9; } .columns { display: grid; grid-template-columns: 1.7fr 1fr; gap: 18px; }
-    .bar { display: flex; align-items: center; gap: 8px; margin: 5px 0; } .bar-label { width: 155px; } .bar-track { flex: 1; height: 10px; background: #e4eee9; } .bar-fill { height: 100%; background: #168362; }
-    .footer { margin-top: 22px; color: #657a72; font-size: 9px; }
+    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+    .chart-panel { border: 1px solid #dce9e2; border-radius: 7px; padding: 10px 12px 8px; background: #fff; break-inside: avoid; }
+    .chart-panel--wide { grid-column: 1 / -1; }
+    .chart-panel h3 { margin: 0 0 3px; font-size: 13px; } .chart-panel p { margin: 0 0 5px; color: #657a72; font-size: 9px; }
+    .chart-svg { display: block; width: 100%; height: auto; } .empty-chart { color: #657a72; padding: 28px 0; text-align: center; }
+    .footer { margin-top: 12px; color: #657a72; font-size: 9px; }
   </style></head><body>
     <h1>Reporte ejecutivo de estadísticas</h1><div class="meta">${escapeHtml(scope)} · ${dashboard.range.from} a ${dashboard.range.to}</div>
     <div class="metrics">${cards}</div>
-    <div class="columns"><div><h2>Atenciones, actividades y entregas por día</h2><table><thead><tr><th>Fecha</th><th>Enfermería</th><th>Medicina</th><th>Actividades</th><th>Transporte</th><th>Refrigerios</th><th>Almuerzos</th></tr></thead><tbody>${dailyRows}</tbody></table></div>
-    <div><h2>Actividades por tipo</h2>${dashboard.activitiesByType.map((activity) => `<div class="bar"><span class="bar-label">${escapeHtml(activity.activityTypeName)}</span><span class="bar-track"><span class="bar-fill" style="width:${barWidth(activity.count, dashboard.summary.activities)}%"></span></span><strong>${activity.count}</strong></div>`).join("") || "<p>Sin actividades en el periodo.</p>"}</div></div>
-    <h2>Metodología</h2><p>Las fechas son inclusivas. Los días sin registros se incluyen con valor cero. Las atenciones médicas consideran únicamente registros creados por usuarios con rol médico; las actividades eliminadas se excluyen.</p>
-    <div class="footer">Generado por CuidarTe · Refrigerios totales = refrigerio 1 + refrigerio 2 · Actividades por tipo: ${activityRows ? "incluidas" : "sin registros"}</div>
+    <section class="charts">
+      <article class="chart-panel"><h3>Atenciones por día</h3><p>Comparación diaria de enfermería y medicina.</p>${buildAttendanceChart(dashboard)}</article>
+      <article class="chart-panel"><h3>Actividades por tipo</h3><p>Sesiones grupales registradas en el periodo.</p>${buildActivityChart(dashboard)}</article>
+      <article class="chart-panel chart-panel--wide"><h3>Entregas por día</h3><p>Transporte, refrigerios y almuerzos entregados.</p>${buildDeliveryChart(dashboard)}</article>
+    </section>
+    <div class="footer">Generado por CuidarTe · Refrigerios totales = refrigerio 1 + refrigerio 2</div>
   </body></html>`;
 }
 
-function barWidth(value: number, total: number): number {
-  return total === 0 ? 0 : Math.max(4, Math.round((value / total) * 100));
+function buildAttendanceChart(dashboard: ReportsDashboardResponse): string {
+  const points = dashboard.dailySeries;
+  if (points.length === 0) {
+    return '<div class="empty-chart">Sin datos en el periodo.</div>';
+  }
+
+  const width = 680;
+  const height = 230;
+  const left = 42;
+  const right = 16;
+  const top = 18;
+  const bottom = 40;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const maxValue = Math.max(
+    1,
+    ...points.map((point) => Math.max(point.nursingAttendances, point.medicalAttendances)),
+  );
+  const x = (index: number) => left + (points.length === 1 ? plotWidth / 2 : (index * plotWidth) / (points.length - 1));
+  const y = (value: number) => top + plotHeight - (value / maxValue) * plotHeight;
+  const line = (key: "nursingAttendances" | "medicalAttendances", color: string) =>
+    `<polyline fill="none" stroke="${color}" stroke-width="3" points="${points.map((point, index) => `${x(index)},${y(point[key])}`).join(" ")}"/>`;
+  const dots = (key: "nursingAttendances" | "medicalAttendances", color: string) =>
+    points.map((point, index) => `<circle cx="${x(index)}" cy="${y(point[key])}" r="3.5" fill="${color}"/>`).join("");
+  const grid = [0, 0.5, 1].map((ratio) => {
+    const value = Math.round(maxValue * ratio);
+    const lineY = y(value);
+    return `<line x1="${left}" y1="${lineY}" x2="${width - right}" y2="${lineY}" stroke="#e6eee9" stroke-dasharray="3 3"/><text x="${left - 8}" y="${lineY + 3}" text-anchor="end" fill="#657a72" font-size="10">${value}</text>`;
+  }).join("");
+  const labels = points.map((point, index) => `<text x="${x(index)}" y="${height - 13}" text-anchor="middle" fill="#657a72" font-size="9">${escapeHtml(formatChartDate(point.date))}</text>`).join("");
+
+  return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Atenciones por día"><g>${grid}</g>${line("nursingAttendances", "#168362")}${dots("nursingAttendances", "#168362")}${line("medicalAttendances", "#2b6b99")}${dots("medicalAttendances", "#2b6b99")}${labels}<g><circle cx="${left}" cy="${height - 2}" r="4" fill="#168362"/><text x="${left + 9}" y="${height + 1}" fill="#123b31" font-size="10">Enfermería</text><circle cx="${left + 110}" cy="${height - 2}" r="4" fill="#2b6b99"/><text x="${left + 119}" y="${height + 1}" fill="#123b31" font-size="10">Medicina</text></g></svg>`;
+}
+
+function buildActivityChart(dashboard: ReportsDashboardResponse): string {
+  const activities = dashboard.activitiesByType;
+  if (activities.length === 0) {
+    return '<div class="empty-chart">Sin actividades en el periodo.</div>';
+  }
+
+  const width = 680;
+  const rowHeight = 30;
+  const height = Math.max(170, activities.length * rowHeight + 28);
+  const left = 190;
+  const right = 38;
+  const top = 10;
+  const plotWidth = width - left - right;
+  const maxValue = Math.max(1, ...activities.map((activity) => activity.count));
+  const rows = activities.map((activity, index) => {
+    const y = top + index * rowHeight;
+    const barWidth = (activity.count / maxValue) * plotWidth;
+    return `<text x="${left - 8}" y="${y + 16}" text-anchor="end" fill="#657a72" font-size="10">${escapeHtml(activity.activityTypeName)}</text><rect x="${left}" y="${y + 5}" width="${plotWidth}" height="16" rx="3" fill="#e6eee9"/><rect x="${left}" y="${y + 5}" width="${barWidth}" height="16" rx="3" fill="#b47a25"/><text x="${Math.min(width - 4, left + barWidth + 8)}" y="${y + 17}" fill="#123b31" font-size="10">${activity.count}</text>`;
+  }).join("");
+
+  return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Actividades por tipo">${rows}</svg>`;
+}
+
+function buildDeliveryChart(dashboard: ReportsDashboardResponse): string {
+  const points = dashboard.dailySeries;
+  if (points.length === 0) {
+    return '<div class="empty-chart">Sin entregas en el periodo.</div>';
+  }
+
+  const width = 1380;
+  const height = 260;
+  const left = 44;
+  const right = 18;
+  const top = 18;
+  const bottom = 45;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const maxValue = Math.max(1, ...points.flatMap((point) => [point.transportAllowancesDelivered, point.snacksDelivered, point.lunchesDelivered]));
+  const groupWidth = plotWidth / points.length;
+  const barWidth = Math.max(2, Math.min(13, groupWidth * 0.18));
+  const y = (value: number) => top + plotHeight - (value / maxValue) * plotHeight;
+  const grid = [0, 0.5, 1].map((ratio) => {
+    const value = Math.round(maxValue * ratio);
+    const lineY = y(value);
+    return `<line x1="${left}" y1="${lineY}" x2="${width - right}" y2="${lineY}" stroke="#e6eee9" stroke-dasharray="3 3"/><text x="${left - 8}" y="${lineY + 3}" text-anchor="end" fill="#657a72" font-size="10">${value}</text>`;
+  }).join("");
+  const bars = points.map((point, index) => {
+    const center = left + index * groupWidth + groupWidth / 2;
+    const values = [point.transportAllowancesDelivered, point.snacksDelivered, point.lunchesDelivered];
+    const colors = ["#a24b48", "#70549a", "#4d7b38"];
+    const rects = values.map((value, barIndex) => {
+      const barHeight = (value / maxValue) * plotHeight;
+      return `<rect x="${center + (barIndex - 1) * (barWidth + 2) - barWidth / 2}" y="${top + plotHeight - barHeight}" width="${barWidth}" height="${barHeight}" rx="2" fill="${colors[barIndex]}"/>`;
+    }).join("");
+    return `${rects}<text x="${center}" y="${height - 17}" text-anchor="middle" fill="#657a72" font-size="9">${escapeHtml(formatChartDate(point.date))}</text>`;
+  }).join("");
+
+  return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Entregas por día"><g>${grid}</g>${bars}<g><circle cx="${left}" cy="${height - 2}" r="4" fill="#a24b48"/><text x="${left + 9}" y="${height + 1}" fill="#123b31" font-size="10">Transporte</text><circle cx="${left + 105}" cy="${height - 2}" r="4" fill="#70549a"/><text x="${left + 114}" y="${height + 1}" fill="#123b31" font-size="10">Refrigerios</text><circle cx="${left + 210}" cy="${height - 2}" r="4" fill="#4d7b38"/><text x="${left + 219}" y="${height + 1}" fill="#123b31" font-size="10">Almuerzos</text></g></svg>`;
+}
+
+function formatChartDate(value: string): string {
+  return new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", timeZone: "UTC" }).format(
+    new Date(`${value}T00:00:00Z`),
+  );
 }
 
 function escapeHtml(value: string): string {

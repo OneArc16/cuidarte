@@ -1,5 +1,5 @@
 import { type ActividadGrupalListItem, type AuthUser } from "@cuidarte/contracts";
-import { CalendarPlus, ListRestart, Trash2 } from "lucide-react";
+import { CalendarPlus, History, ListRestart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -126,12 +126,12 @@ export function ActividadesGrupalesIndexPage({
           <button
             className="outline-action actividades-back-action actividades-trash-action"
             type="button"
-            aria-label="Ver papelera"
-            data-tooltip="Ver papelera"
+            aria-label="Ver log de eliminaciones"
+            data-tooltip="Ver log de eliminaciones"
             onClick={() => navigate(CREACION_ACTIVIDADES_TRASH_PATH)}
           >
-            <Trash2 aria-hidden="true" />
-            <span className="visually-hidden">Ver papelera</span>
+            <History aria-hidden="true" />
+            <span className="visually-hidden">Ver log de eliminaciones</span>
           </button>
         ) : null}
         <span className="actividades-form-nav__context">Listado activo</span>
@@ -199,7 +199,7 @@ export function ActividadesGrupalesIndexPage({
                 onSuccess: () => {
                   deleteMutation.reset();
                   setActivityPendingDelete(null);
-                  toast.success("Acta enviada a la papelera.");
+                  toast.success("Acta eliminada y registrada en el log.");
                 },
               },
             );

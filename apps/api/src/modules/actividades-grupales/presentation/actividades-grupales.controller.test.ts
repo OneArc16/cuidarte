@@ -13,6 +13,12 @@ const currentUser: AuthUser = {
   role: "admin",
   passwordSetByAdmin: true,
 };
+const activityTypeId = "55555555-5555-4555-8555-555555555555";
+const activityTypeCatalog = {
+  id: activityTypeId,
+  name: "Actividad",
+  isActive: true,
+};
 
 describe("ActividadesGrupalesController", () => {
   it("passes list queries and current user to the service", async () => {
@@ -31,6 +37,8 @@ describe("ActividadesGrupalesController", () => {
             actaNumber: "0003",
             activityName: "Encuentro de bienestar",
             activityType: "centro_vida",
+            activityTypeId,
+            activityTypeCatalog,
             activityDate: "2026-04-22",
             startTime: "08:00",
             endTime: "10:00",
@@ -61,6 +69,7 @@ describe("ActividadesGrupalesController", () => {
     assert.deepEqual(receivedQuery, {
       search: "bienestar",
       activityType: null,
+      activityTypeId: null,
       activityMonth: null,
       organizer: "director",
       tenantId: null,
@@ -85,6 +94,8 @@ describe("ActividadesGrupalesController", () => {
             actaNumber: "0003",
             activityName: "Encuentro de bienestar",
             activityType: "centro_vida",
+            activityTypeId,
+            activityTypeCatalog,
             activityDate: "2026-04-22",
             startTime: "08:00",
             endTime: "10:00",
@@ -98,7 +109,6 @@ describe("ActividadesGrupalesController", () => {
             deletedByUserId: currentUser.id,
             deletedByUserFullName: currentUser.fullName,
             deletionReason: "Registro duplicado",
-            canRestore: true,
           },
         ];
       },
@@ -119,6 +129,7 @@ describe("ActividadesGrupalesController", () => {
     assert.deepEqual(receivedQuery, {
       search: "bienestar",
       activityType: null,
+      activityTypeId: null,
       activityMonth: null,
       organizer: null,
       tenantId: null,
@@ -143,6 +154,8 @@ describe("ActividadesGrupalesController", () => {
           previousActaNumber: null,
           activityName: "Jornada psicomotriz",
           activityType: "fisioterapia",
+          activityTypeId,
+          activityTypeCatalog,
           activityDate: "2026-04-23",
           startTime: "08:30",
           endTime: "10:00",
@@ -167,6 +180,7 @@ describe("ActividadesGrupalesController", () => {
         actaNumber: "0004",
         activityName: "Jornada psicomotriz",
         activityType: "fisioterapia",
+        activityTypeId,
         activityDate: "2026-04-23",
         startTime: "08:30",
         endTime: "10:00",
@@ -202,6 +216,8 @@ describe("ActividadesGrupalesController", () => {
           previousActaNumber: null,
           activityName: "Jornada psicomotriz",
           activityType: "fisioterapia",
+          activityTypeId,
+          activityTypeCatalog,
           activityDate: "2026-04-23",
           startTime: "08:30",
           endTime: "10:00",
@@ -325,27 +341,4 @@ describe("ActividadesGrupalesController", () => {
     assert.deepEqual(result, { success: true });
   });
 
-  it("restores the acta from the trash with the current user", async () => {
-    let receivedActivityId: string | null = null;
-    let receivedActorId: string | null = null;
-    const trashService = {
-      restore: async (activityId: string, actor: AuthUser) => {
-        receivedActivityId = activityId;
-        receivedActorId = actor.id;
-      },
-    };
-    const controller = new ActividadesGrupalesController(
-      {} as never,
-      {} as never,
-      trashService as never,
-    );
-
-    const result = await controller.restoreActividadGrupal("5f0361fb-ff51-43d7-a6e8-83c58df345b6", {
-      currentUser,
-    } as never);
-
-    assert.equal(receivedActivityId, "5f0361fb-ff51-43d7-a6e8-83c58df345b6");
-    assert.equal(receivedActorId, currentUser.id);
-    assert.deepEqual(result, { success: true });
-  });
 });

@@ -164,7 +164,7 @@ export function ActividadesGrupalesCorrectionsPage({ navigate, user }: Props) {
                     <td>
                       <strong>{row.proposedActaNumber}</strong>
                     </td>
-                    <td>{row.isDeleted ? "Papelera" : "Activa"}</td>
+                    <td>{row.isDeleted ? "Eliminada" : "Activa"}</td>
                   </tr>
                 ))}
               </tbody>

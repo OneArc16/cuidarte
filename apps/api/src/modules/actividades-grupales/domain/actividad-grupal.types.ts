@@ -102,11 +102,6 @@ export type DeleteActividadGrupalRecordCommand = {
   reason: string;
 };
 
-export type RestoreActividadGrupalRecordCommand = {
-  activityId: string;
-  actorUserId: string;
-};
-
 export type CorrectActividadGrupalActaNumberCommand = {
   activityId: string;
   actorUserId: string;

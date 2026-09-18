@@ -350,7 +350,6 @@ export const actividadGrupalTrashListItemSchema = actividadGrupalListItemSchema.
   deletedByUserId: z.uuid(),
   deletedByUserFullName: z.string().min(1).max(180),
   deletionReason: z.string().max(500).nullable(),
-  canRestore: z.boolean(),
 });
 
 export const actividadGrupalTrashListQuerySchema = actividadGrupalListQuerySchema;
@@ -370,7 +369,7 @@ export const correctActividadGrupalActaNumberRequestSchema = z.object({
 });
 
 export const deleteActividadGrupalRequestSchema = z.object({
-  reason: z.string().trim().min(1, "Indica el motivo de enviar el acta a la papelera.").max(500),
+  reason: z.string().trim().min(1, "Indica el motivo de eliminar el acta.").max(500),
 });
 
 export const actividadGrupalActaCorrectionPreviewRowSchema = z.object({
@@ -425,10 +424,6 @@ export const deleteActividadGrupalResponseSchema = z.object({
   success: z.literal(true),
 });
 
-export const restoreActividadGrupalResponseSchema = z.object({
-  success: z.literal(true),
-});
-
 export type ActividadGrupalType = z.infer<typeof actividadGrupalTypeSchema>;
 export type ActividadGrupalOrganizer = z.infer<typeof actividadGrupalOrganizerSchema>;
 export type ActividadGrupalResponsibleDepartment = z.infer<
@@ -459,7 +454,6 @@ export type ActividadGrupalTrashListItem = z.infer<typeof actividadGrupalTrashLi
 export type ActividadGrupalTrashListResponse = z.infer<
   typeof actividadGrupalTrashListResponseSchema
 >;
-export type RestoreActividadGrupalResponse = z.infer<typeof restoreActividadGrupalResponseSchema>;
 export type ActividadGrupalListItem = z.infer<typeof actividadGrupalListItemSchema>;
 export type CreateActividadGrupalRequest = z.infer<typeof createActividadGrupalRequestSchema>;
 export type UpdateActividadGrupalRequest = z.infer<typeof updateActividadGrupalRequestSchema>;

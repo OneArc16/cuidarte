@@ -21,3 +21,18 @@ export function formatActividadGrupalActaNumber(
 
   return `${ACTIVIDAD_GRUPAL_ACTA_PREFIX[organizer]}-${String(sequence).padStart(3, "0")}`;
 }
+
+export function findNextAvailableActividadGrupalActaSequence(
+  usedSequences: Iterable<number>,
+): number {
+  const used = new Set(usedSequences);
+  const highestUsedSequence = Math.max(0, ...used);
+
+  for (let sequence = highestUsedSequence - 1; sequence >= 1; sequence -= 1) {
+    if (!used.has(sequence)) {
+      return sequence;
+    }
+  }
+
+  return highestUsedSequence + 1;
+}

@@ -781,12 +781,14 @@ export const actividadesGrupales = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("actividades_grupales_tenant_acta_unique").on(table.tenantId, table.actaNumber),
+    uniqueIndex("actividades_grupales_tenant_acta_unique")
+      .on(table.tenantId, table.actaNumber)
+      .where(sql`${table.deletedAt} is null`),
     uniqueIndex("actividades_grupales_tenant_acta_series_unique").on(
       table.tenantId,
       table.actaOrganizer,
       table.actaSequence,
-    ),
+    ).where(sql`${table.deletedAt} is null`),
     index("actividades_grupales_tenant_acta_series_idx").on(
       table.tenantId,
       table.actaOrganizer,

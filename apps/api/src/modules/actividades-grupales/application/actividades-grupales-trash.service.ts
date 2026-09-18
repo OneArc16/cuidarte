@@ -4,18 +4,11 @@ import {
   actividadGrupalTrashListItemSchema,
   type AuthUser,
 } from "@cuidarte/contracts";
-import {
-  ConflictException,
-  ForbiddenException,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from "@nestjs/common";
+import { ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 
 import {
   canListTrashActividadesGrupales,
   canManageActividadesGrupales,
-  canRestoreActividadGrupal,
   canTrashActividadGrupal,
   canViewActividadGrupal,
   resolveActividadesGrupalesScope,
@@ -75,33 +68,7 @@ export class ActividadesGrupalesTrashService {
 
     return records
       .filter((record) => canViewActividadGrupal(record, actor))
-      .map((record) => this.toTrashListItem(record, actor));
-  }
-
-  async restore(activityId: string, actor: AuthUser): Promise<void> {
-    const scope = this.resolveScopeOrThrow(actor);
-    const detail = await this.actividadesGrupalesRepository.findTrashById({
-      activityId,
-      scope,
-      permittedOrganizers: resolvePermittedActividadGrupalOrganizers(actor),
-    });
-
-    if (detail === null) {
-      throw new NotFoundException("La acta eliminada no fue encontrada.");
-    }
-
-    if (!canRestoreActividadGrupal(detail, actor)) {
-      throw new ForbiddenException("No tienes permisos para restaurar esta acta.");
-    }
-
-    const restored = await this.actividadesGrupalesRepository.restore({
-      activityId,
-      actorUserId: actor.id,
-    });
-
-    if (!restored) {
-      throw new ConflictException("El acta ya fue restaurada o cambió de estado.");
-    }
+      .map((record) => this.toTrashListItem(record));
   }
 
   private ensureCanManageActivities(actor: Pick<AuthUser, "role">) {
@@ -112,7 +79,7 @@ export class ActividadesGrupalesTrashService {
 
   private ensureCanListTrash(actor: Pick<AuthUser, "role" | "tenantId">) {
     if (!canListTrashActividadesGrupales(actor)) {
-      throw new ForbiddenException("No tienes permisos para consultar la papelera.");
+      throw new ForbiddenException("No tienes permisos para consultar el log de eliminacion.");
     }
   }
 
@@ -143,7 +110,7 @@ export class ActividadesGrupalesTrashService {
     return scope.tenantId;
   }
 
-  private toTrashListItem(record: ActividadGrupalTrashRecord, actor: AuthUser) {
+  private toTrashListItem(record: ActividadGrupalTrashRecord) {
     return actividadGrupalTrashListItemSchema.parse({
       ...actividadGrupalListItemSchema.parse({
         id: record.id,
@@ -172,7 +139,6 @@ export class ActividadesGrupalesTrashService {
       deletedByUserId: record.deletedByUserId,
       deletedByUserFullName: record.deletedByUserFullName,
       deletionReason: record.deletionReason,
-      canRestore: canRestoreActividadGrupal(record, actor),
     });
   }
 }

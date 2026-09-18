@@ -1,7 +1,10 @@
 import { strict as assert } from "node:assert";
 import test from "node:test";
 
-import { formatActividadGrupalActaNumber } from "./actividad-grupal-acta-number";
+import {
+  findNextAvailableActividadGrupalActaSequence,
+  formatActividadGrupalActaNumber,
+} from "./actividad-grupal-acta-number";
 
 test("genera consecutivos por prefijo de organizador", () => {
   assert.equal(formatActividadGrupalActaNumber("enfermeria", 1), "ENFER-001");
@@ -12,4 +15,9 @@ test("genera consecutivos por prefijo de organizador", () => {
 test("rechaza secuencias invalidas", () => {
   assert.throws(() => formatActividadGrupalActaNumber("enfermeria", 0));
   assert.throws(() => formatActividadGrupalActaNumber("enfermeria", 1.5));
+});
+
+test("reutiliza el primer consecutivo libre aunque existan consecutivos posteriores", () => {
+  assert.equal(findNextAvailableActividadGrupalActaSequence([1, 2, 3, 5]), 4);
+  assert.equal(findNextAvailableActividadGrupalActaSequence([2, 3, 5]), 4);
 });

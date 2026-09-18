@@ -35,7 +35,7 @@ export const actividadesHandlers = [
 
     return HttpResponse.json({ actividadesGrupales: actividades });
   }),
-  http.get("http://localhost:3001/api/actividades-grupales/papelera", ({ request }) => {
+  http.get("http://localhost:3001/api/actividades-grupales/log-eliminaciones", ({ request }) => {
     const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? null;
     const activityType = new URL(request.url).searchParams.get("activityType");
     const organizer = new URL(request.url).searchParams.get("organizer");
@@ -65,11 +65,22 @@ export const actividadesHandlers = [
   http.get("http://localhost:3001/api/actividades-grupales/form-options", () =>
     HttpResponse.json(actividadGrupalFormOptionsFixture),
   ),
+  http.get("http://localhost:3001/api/actividad-grupal-tipos", () =>
+    HttpResponse.json({
+      activityTypes: [
+        {
+          ...actividadGrupalFixture.activityTypeCatalog,
+          tenantId: actividadGrupalFixture.tenantId,
+          normalizedName: "fisioterapia",
+          createdAt: "2026-04-23T12:00:00.000Z",
+          updatedAt: "2026-04-23T12:00:00.000Z",
+          deactivatedAt: null,
+        },
+      ],
+    }),
+  ),
   http.post("http://localhost:3001/api/actividades-grupales", () =>
     HttpResponse.json(actividadGrupalFixture),
-  ),
-  http.post("http://localhost:3001/api/actividades-grupales/:activityId/restaurar", () =>
-    HttpResponse.json({ success: true }),
   ),
   http.get("http://localhost:3001/api/actividades-grupales/:activityId/diligenciamiento", () =>
     HttpResponse.json(actividadGrupalDiligenciamientoFixture),

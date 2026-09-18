@@ -33,10 +33,6 @@ type TrashActividadesGrupalesParams = {
   tenantId: string | null;
 };
 
-type RestoreActividadGrupalMutationRequest = {
-  activityId: string;
-};
-
 type DeleteActividadGrupalMutationRequest = {
   activityId: string;
   reason: string;
@@ -59,7 +55,7 @@ export const actividadesGrupalesQueryKeys = {
     ["actividades-grupales", "form-options", tenantId] as const,
   editDetail: (activityId: string) => ["actividades-grupales", activityId, "edit"] as const,
   trashList: (params: TrashActividadesGrupalesParams) =>
-    ["actividades-grupales", "papelera", params] as const,
+    ["actividades-grupales", "log-eliminaciones", params] as const,
 };
 
 export function useActividadesGrupalesQuery(params: {
@@ -248,26 +244,7 @@ export function useDeleteActividadGrupalMutation() {
       });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] }),
-        queryClient.invalidateQueries({ queryKey: ["actividades-grupales", "papelera"] }),
-        queryClient.invalidateQueries({ queryKey: ["home"] }),
-      ]);
-    },
-  });
-}
-
-export function useRestoreActividadGrupalMutation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (request: RestoreActividadGrupalMutationRequest) =>
-      actividadesGrupalesApi.restoreActividadGrupal(request.activityId),
-    onSuccess: async (_, request) => {
-      queryClient.removeQueries({
-        queryKey: actividadesGrupalesQueryKeys.editDetail(request.activityId),
-      });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] }),
-        queryClient.invalidateQueries({ queryKey: ["actividades-grupales", "papelera"] }),
+        queryClient.invalidateQueries({ queryKey: ["actividades-grupales", "log-eliminaciones"] }),
         queryClient.invalidateQueries({ queryKey: ["home"] }),
       ]);
     },

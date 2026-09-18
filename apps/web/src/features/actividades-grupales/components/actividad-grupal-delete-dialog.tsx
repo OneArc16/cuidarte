@@ -53,7 +53,7 @@ export function ActividadGrupalDeleteDialog({
         <header className="actividad-delete-dialog__header">
           <div>
             <p className="actividad-delete-dialog__eyebrow">Accion sensible</p>
-            <h2 id="actividad-delete-dialog-title">Enviar a la papelera</h2>
+            <h2 id="actividad-delete-dialog-title">Eliminar acta</h2>
           </div>
           <button
             className="actividades-row-action actividad-delete-dialog__close-button"
@@ -78,8 +78,8 @@ export function ActividadGrupalDeleteDialog({
         </div>
 
         <p className="actividad-delete-dialog__message">
-          Vas a enviar esta acta a la papelera. La configuracion y los archivos se conservaran para
-          una futura restauracion.
+          Vas a eliminar esta acta del listado activo. El registro quedara disponible solo en el log
+          de eliminaciones.
         </p>
 
         <label className="actividad-delete-dialog__reason">
@@ -125,7 +125,7 @@ export function ActividadGrupalDeleteDialog({
             ) : (
               <>
                 <Trash2 aria-hidden="true" />
-                Enviar a la papelera
+                Eliminar acta
               </>
             )}
           </button>

@@ -71,10 +71,21 @@ export function canListTrashActividadesGrupales(
     return true;
   }
 
-  return user.role !== "auditor" && user.tenantId !== null;
+  return user.role === "admin" && user.tenantId !== null;
 }
 
 export function canTrashActividadGrupal(
+  activity: Pick<ActividadGrupalRecord, "tenantId">,
+  actor: AuthUser,
+): boolean {
+  if (actor.role === "super_admin") {
+    return true;
+  }
+
+  return actor.role === "admin" && actor.tenantId === activity.tenantId;
+}
+
+export function canEditActividadGrupal(
   activity: Pick<ActividadGrupalRecord, "createdByUserId" | "tenantId">,
   actor: AuthUser,
 ): boolean {
@@ -89,13 +100,6 @@ export function canTrashActividadGrupal(
   return (
     (actor.role === "admin" || actor.role === "director") && actor.tenantId === activity.tenantId
   );
-}
-
-export function canRestoreActividadGrupal(
-  activity: Pick<ActividadGrupalRecord, "createdByUserId" | "tenantId">,
-  actor: AuthUser,
-): boolean {
-  return canTrashActividadGrupal(activity, actor);
 }
 
 export function resolveActividadGrupalTenantForCreate(

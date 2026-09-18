@@ -240,7 +240,7 @@ export function App() {
                   ? "Historia de enfermeria | CuidarTe"
                   : "Atenciones de enfermeria | CuidarTe"
                 : isActividadesGrupalesTrashPath(path)
-                  ? "Papelera de actas | CuidarTe"
+                  ? "Log de eliminaciones | CuidarTe"
                   : isActividadesGrupalesCorrectionsPath(path)
                     ? "Correccion de consecutivos | CuidarTe"
                     : isActividadesGrupalesPath(path)

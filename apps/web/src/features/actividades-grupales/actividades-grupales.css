@@ -626,13 +626,13 @@
   color: #5b4388;
 }
 
-.actividades-row-action--papelera {
+.actividades-row-action--delete {
   border-color: rgb(211 91 91 / 26%);
   color: #c25353;
 }
 
-.actividades-row-action--papelera:not(:disabled):hover,
-.actividades-row-action--papelera:not(:disabled):focus-visible {
+.actividades-row-action--delete:not(:disabled):hover,
+.actividades-row-action--delete:not(:disabled):focus-visible {
   border-color: rgb(211 91 91 / 46%);
   background: #fff1f1;
   color: #a83e3e;

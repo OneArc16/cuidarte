@@ -57,6 +57,12 @@ function createDetail(): ActividadGrupalDiligenciamientoDetail {
     previousActaNumber: null,
     activityName: "Sesion de prueba",
     activityType: "salud_preventiva",
+    activityTypeId: "55555555-5555-4555-8555-555555555555",
+    activityTypeCatalog: {
+      id: "55555555-5555-4555-8555-555555555555",
+      name: "Salud preventiva",
+      isActive: true,
+    },
     activityDate: "2026-08-16",
     startTime: "09:00",
     endTime: "10:00",

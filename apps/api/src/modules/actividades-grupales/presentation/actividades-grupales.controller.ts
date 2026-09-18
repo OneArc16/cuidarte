@@ -40,7 +40,6 @@ import {
   createActividadGrupalRequestSchema,
   deleteActividadGrupalRequestSchema,
   deleteActividadGrupalResponseSchema,
-  restoreActividadGrupalResponseSchema,
   saveActividadGrupalDiligenciamientoSchema,
   updateActividadGrupalRequestSchema,
 } from "@cuidarte/contracts";
@@ -88,10 +87,12 @@ export class ActividadesGrupalesController {
     return actividadGrupalListResponseSchema.parse({ actividadesGrupales });
   }
 
-  @Get("papelera")
-  @ApiOkResponse({ description: "Listado de actas eliminadas." })
+  @Get("log-eliminaciones")
+  @ApiOkResponse({ description: "Log de actas eliminadas." })
   @ApiUnauthorizedResponse({ description: "Sesion requerida." })
-  @ApiForbiddenResponse({ description: "El usuario no tiene permisos para consultar la papelera." })
+  @ApiForbiddenResponse({
+    description: "El usuario no tiene permisos para consultar el log de eliminacion.",
+  })
   async listActividadesGrupalesTrash(
     @Query() query: unknown,
     @Req() request: AuthenticatedRequest,
@@ -235,7 +236,7 @@ export class ActividadesGrupalesController {
   }
 
   @Delete(":id")
-  @ApiOkResponse({ description: "Acta enviada a la papelera." })
+  @ApiOkResponse({ description: "Acta eliminada y registrada en el log." })
   @ApiNotFoundResponse({ description: "Actividad no encontrada." })
   @ApiForbiddenResponse({ description: "El usuario no puede eliminar esta actividad." })
   @ApiUnauthorizedResponse({ description: "Sesion requerida." })
@@ -253,18 +254,6 @@ export class ActividadesGrupalesController {
     );
 
     return deleteActividadGrupalResponseSchema.parse({ success: true });
-  }
-
-  @Post(":id/restaurar")
-  @ApiOkResponse({ description: "Acta restaurada desde la papelera." })
-  @ApiNotFoundResponse({ description: "Acta eliminada no encontrada." })
-  @ApiForbiddenResponse({ description: "El usuario no puede restaurar esta actividad." })
-  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
-  async restoreActividadGrupal(@Param("id") id: string, @Req() request: AuthenticatedRequest) {
-    const activityId = parseZodSchema(actividadIdParamSchema, id);
-    await this.actividadesGrupalesTrashService.restore(activityId, request.currentUser);
-
-    return restoreActividadGrupalResponseSchema.parse({ success: true });
   }
 
   @Get(":id/diligenciamiento")

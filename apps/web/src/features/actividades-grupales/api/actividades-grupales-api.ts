@@ -15,7 +15,6 @@ import {
   type ActividadGrupalType,
   type CreateActividadGrupalRequest,
   type SaveActividadGrupalDiligenciamiento,
-  type RestoreActividadGrupalResponse,
   type UpdateActividadGrupalRequest,
   actividadGrupalEditDetailSchema,
   actividadGrupalDiligenciamientoDetailSchema,
@@ -28,7 +27,6 @@ import {
   actividadGrupalActaCorrectionPreviewResponseSchema,
   applyActividadGrupalActaCorrectionResponseSchema,
   deleteActividadGrupalResponseSchema,
-  restoreActividadGrupalResponseSchema,
 } from "@cuidarte/contracts";
 
 import { getApiBaseUrl } from "@/shared/api/api-config";
@@ -150,18 +148,6 @@ export function deleteActividadGrupal(
     {
       method: "DELETE",
       body: { reason },
-    },
-  );
-}
-
-export function restoreActividadGrupal(
-  activityId: string,
-): Promise<RestoreActividadGrupalResponse> {
-  return fetchJson(
-    `${getApiBaseUrl()}/actividades-grupales/${activityId}/restaurar`,
-    restoreActividadGrupalResponseSchema,
-    {
-      method: "POST",
     },
   );
 }
@@ -297,5 +283,5 @@ function buildActividadesGrupalesTrashUrl(params: TrashActividadesGrupalesParams
 
   const queryString = searchParams.toString();
 
-  return `${getApiBaseUrl()}/actividades-grupales/papelera${queryString === "" ? "" : `?${queryString}`}`;
+  return `${getApiBaseUrl()}/actividades-grupales/log-eliminaciones${queryString === "" ? "" : `?${queryString}`}`;
 }

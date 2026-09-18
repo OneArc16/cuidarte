@@ -4,9 +4,9 @@ import { describe, it } from "node:test";
 import { type AuthUser } from "@cuidarte/contracts";
 
 import {
+  canEditActividadGrupal,
   canListTrashActividadesGrupales,
   canManageActividadesGrupales,
-  canRestoreActividadGrupal,
   canTrashActividadGrupal,
   canViewActividadGrupal,
   resolvePermittedActividadGrupalOrganizers,
@@ -61,7 +61,7 @@ describe("actividad-grupal.policy", () => {
     assert.equal(canViewActividadGrupal({ organizer: "nutricionista" }, adminUser), true);
   });
 
-  it("allows the creator or tenant admins to send an acta to trash", () => {
+  it("allows only admins and super admins to delete an acta", () => {
     const activity = {
       createdByUserId: adminUser.id,
       tenantId,
@@ -74,33 +74,46 @@ describe("actividad-grupal.policy", () => {
         id: "33333333-3333-4333-8333-333333333333",
         role: "director",
       }),
-      true,
+      false,
     );
     assert.equal(canTrashActividadGrupal(activity, auditorUser), false);
   });
 
-  it("allows tenant users to list the trash and restore their own actas", () => {
+  it("keeps edit permissions broader than delete permissions", () => {
     const activity = {
       createdByUserId: adminUser.id,
       tenantId,
     };
 
-    assert.equal(canListTrashActividadesGrupales(adminUser), true);
-    assert.equal(canListTrashActividadesGrupales(auditorUser), false);
-    assert.equal(canRestoreActividadGrupal(activity, adminUser), true);
+    assert.equal(canEditActividadGrupal(activity, adminUser), true);
     assert.equal(
-      canRestoreActividadGrupal(activity, {
+      canEditActividadGrupal(activity, {
         ...adminUser,
-        id: "44444444-4444-4444-8444-444444444444",
+        id: "33333333-3333-4333-8333-333333333333",
         role: "director",
       }),
       true,
     );
     assert.equal(
-      canRestoreActividadGrupal(activity, {
-        ...adminUser,
-        id: "55555555-5555-4555-8555-555555555555",
-        role: "medico",
+      canEditActividadGrupal(
+        { ...activity, createdByUserId: "33333333-3333-4333-8333-333333333333" },
+        {
+          ...adminUser,
+          id: "33333333-3333-4333-8333-333333333333",
+          role: "medico",
+        },
+      ),
+      true,
+    );
+  });
+
+  it("allows only admins and super admins to list the deletion log", () => {
+    assert.equal(canListTrashActividadesGrupales(adminUser), true);
+    assert.equal(canListTrashActividadesGrupales(auditorUser), false);
+    assert.equal(
+      canListTrashActividadesGrupales({
+        tenantId: adminUser.tenantId,
+        role: "director",
       }),
       false,
     );

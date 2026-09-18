@@ -22,6 +22,7 @@ const medicoUserId = "11111111-1111-4111-8111-111111111111";
 const enfermeriaUserId = "22222222-2222-4222-8222-222222222222";
 const directorUserId = "33333333-3333-4333-8333-333333333333";
 const inactiveEmpleadoId = "44444444-4444-4444-8444-444444444444";
+const activityTypeId = "55555555-5555-4555-8555-555555555555";
 
 const medicoUser: AuthUser = {
   id: medicoUserId,
@@ -80,6 +81,9 @@ const records: ActividadGrupalRecord[] = [
     previousActaNumber: null,
     activityName: "Encuentro de bienestar",
     activityType: "centro_vida",
+    activityTypeId,
+    activityTypeName: "Centro vida",
+    activityTypeIsActive: true,
     activityDate: "2026-04-22",
     startTime: "08:00",
     endTime: "10:00",
@@ -99,6 +103,9 @@ const records: ActividadGrupalRecord[] = [
     previousActaNumber: null,
     activityName: "Actividad externa",
     activityType: "actividad_campo",
+    activityTypeId,
+    activityTypeName: "Actividad de campo",
+    activityTypeIsActive: true,
     activityDate: "2026-04-21",
     startTime: "09:00",
     endTime: "11:00",
@@ -118,6 +125,7 @@ describe("ActividadesGrupalesService", () => {
       {
         search: "bienestar",
         activityType: null,
+        activityTypeId: null,
         organizer: null,
         activityMonth: null,
         tenantId: null,
@@ -130,6 +138,7 @@ describe("ActividadesGrupalesService", () => {
     assert.deepEqual(repository.queries[0], {
       search: "bienestar",
       activityType: null,
+      activityTypeId: null,
       organizer: null,
       activityMonth: null,
       tenantId,
@@ -146,6 +155,7 @@ describe("ActividadesGrupalesService", () => {
       {
         search: null,
         activityType: null,
+        activityTypeId: null,
         organizer: null,
         activityMonth: null,
         tenantId: otherTenantId,
@@ -158,6 +168,7 @@ describe("ActividadesGrupalesService", () => {
     assert.deepEqual(repository.queries[0], {
       search: null,
       activityType: null,
+      activityTypeId: null,
       organizer: null,
       activityMonth: null,
       tenantId: otherTenantId,
@@ -171,7 +182,14 @@ describe("ActividadesGrupalesService", () => {
     const service = new ActividadesGrupalesService(repository, createFilesStorage());
 
     const result = await service.listActividadesGrupales(
-      { search: null, activityType: null, organizer: null, activityMonth: null, tenantId: null },
+      {
+        search: null,
+        activityType: null,
+        activityTypeId: null,
+        organizer: null,
+        activityMonth: null,
+        tenantId: null,
+      },
       auditorUser,
     );
 
@@ -179,6 +197,7 @@ describe("ActividadesGrupalesService", () => {
     assert.deepEqual(repository.queries[0], {
       search: null,
       activityType: null,
+      activityTypeId: null,
       organizer: null,
       activityMonth: null,
       tenantId,
@@ -195,6 +214,7 @@ describe("ActividadesGrupalesService", () => {
       {
         search: null,
         activityType: "actividad_campo",
+        activityTypeId: null,
         organizer: null,
         activityMonth: null,
         tenantId: null,
@@ -207,6 +227,7 @@ describe("ActividadesGrupalesService", () => {
     assert.deepEqual(repository.queries[0], {
       search: null,
       activityType: "actividad_campo",
+      activityTypeId: null,
       organizer: null,
       activityMonth: null,
       tenantId: null,
@@ -223,6 +244,7 @@ describe("ActividadesGrupalesService", () => {
       {
         search: null,
         activityType: null,
+        activityTypeId: null,
         organizer: "trabajadora_social",
         activityMonth: null,
         tenantId: null,
@@ -235,6 +257,7 @@ describe("ActividadesGrupalesService", () => {
     assert.deepEqual(repository.queries[0], {
       search: null,
       activityType: null,
+      activityTypeId: null,
       organizer: "trabajadora_social",
       activityMonth: null,
       tenantId: null,
@@ -253,6 +276,7 @@ describe("ActividadesGrupalesService", () => {
           {
             search: null,
             activityType: null,
+            activityTypeId: null,
             organizer: null,
             activityMonth: null,
             tenantId: otherTenantId,
@@ -281,6 +305,7 @@ describe("ActividadesGrupalesService", () => {
         tenantId: null,
         activityName: "Jornada psicomotriz",
         activityType: "fisioterapia",
+        activityTypeId,
         activityDate: "2026-04-23",
         startTime: "08:30",
         endTime: "10:00",
@@ -321,6 +346,7 @@ describe("ActividadesGrupalesService", () => {
             tenantId: null,
             activityName: "Jornada nutricional",
             activityType: "nutricion",
+            activityTypeId,
             activityDate: "2026-04-23",
             startTime: "10:00",
             endTime: "11:00",
@@ -343,6 +369,7 @@ describe("ActividadesGrupalesService", () => {
           {
             search: null,
             activityType: null,
+            activityTypeId: null,
             organizer: null,
             activityMonth: null,
             tenantId: null,
@@ -459,6 +486,7 @@ describe("ActividadesGrupalesService", () => {
             tenantId: null,
             activityName: "Actividad en lectura",
             activityType: "centro_vida",
+            activityTypeId,
             activityDate: "2026-04-23",
             startTime: "08:30",
             endTime: "10:00",
@@ -621,6 +649,9 @@ function createRepository(): ActividadesGrupalesRepository & {
         previousActaNumber: null,
         activityName: command.activityName,
         activityType: command.activityType,
+        activityTypeId: command.activityTypeId,
+        activityTypeName: "Actividad",
+        activityTypeIsActive: true,
         activityDate: command.activityDate,
         startTime: command.startTime,
         endTime: command.endTime,
@@ -641,6 +672,9 @@ function createRepository(): ActividadesGrupalesRepository & {
         ...record,
         activityName: command.activityName,
         activityType: command.activityType,
+        activityTypeId: command.activityTypeId,
+        activityTypeName: "Actividad",
+        activityTypeIsActive: true,
         activityDate: command.activityDate,
         startTime: command.startTime,
         endTime: command.endTime,
@@ -689,9 +723,6 @@ function createRepository(): ActividadesGrupalesRepository & {
       }
 
       return;
-    },
-    async restore() {
-      return true;
     },
     async saveDiligenciamiento(command) {
       const record = records.find((item) => item.id === command.activityId);

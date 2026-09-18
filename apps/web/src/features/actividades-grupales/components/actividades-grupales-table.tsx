@@ -141,10 +141,10 @@ export function ActividadesGrupalesTable({
                     </button>
                     {actividad.canDelete ? (
                       <button
-                        className="actividades-row-action actividades-row-action--papelera"
+                        className="actividades-row-action actividades-row-action--delete"
                         type="button"
-                        aria-label={`Enviar a la papelera la actividad ${actividad.activityName}`}
-                        data-tooltip="Enviar a la papelera"
+                        aria-label={`Eliminar la actividad ${actividad.activityName}`}
+                        data-tooltip="Eliminar acta"
                         onClick={() => onDelete(actividad)}
                       >
                         <Trash2 aria-hidden="true" />

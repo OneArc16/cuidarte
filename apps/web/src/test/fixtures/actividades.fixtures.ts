@@ -9,6 +9,12 @@ export const actividadGrupalFixture = {
   actaNumber: "0004",
   activityName: "Jornada psicomotriz",
   activityType: "fisioterapia",
+  activityTypeId: "55555555-5555-4555-8555-555555555555",
+  activityTypeCatalog: {
+    id: "55555555-5555-4555-8555-555555555555",
+    name: "Fisioterapia",
+    isActive: true,
+  },
   activityDate: "2026-04-23",
   startTime: "08:30",
   endTime: "10:00",
@@ -28,7 +34,6 @@ export const actividadGrupalTrashFixture = {
   deletionReason: "Registro duplicado",
   canEdit: false,
   canDelete: false,
-  canRestore: true,
 } as const;
 
 export const actividadGrupalFormOptionsFixture = {
