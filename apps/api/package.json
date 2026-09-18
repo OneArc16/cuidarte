@@ -7,6 +7,7 @@
     "build": "nest build",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:verify-team-acta-migrations": "node scripts/verify-team-acta-migrations.mjs",
     "db:reference-data": "tsx src/database/import-cie10.ts",
     "db:reference-data:ubicaciones": "tsx src/database/import-ubicaciones.ts",
     "db:reference-data:eps": "tsx src/database/import-eps.ts",

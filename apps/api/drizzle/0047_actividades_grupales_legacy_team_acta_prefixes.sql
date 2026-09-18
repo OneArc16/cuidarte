@@ -23,6 +23,7 @@ WITH identified AS (
         THEN 'psicologa'::"actividad_grupal_organizer"
     END AS "team_acta_organizer"
   FROM "actividades_grupales"
+  WHERE "deleted_at" IS NULL
 ), ordered AS (
   SELECT
     "id",
@@ -45,7 +46,12 @@ SET
       THEN 'PSICO-' || lpad(ordered."acta_sequence"::text, 3, '0')
   END
 FROM ordered
-WHERE activity."id" = ordered."id";
+WHERE
+  activity."id" = ordered."id"
+  AND activity."deleted_at" IS NULL;
+--> statement-breakpoint
+DELETE FROM "actividad_grupal_acta_organizer_counters"
+WHERE "organizer" IN ('medico', 'psicologa');
 --> statement-breakpoint
 INSERT INTO "actividad_grupal_acta_organizer_counters" (
   "tenant_id",
@@ -59,15 +65,10 @@ SELECT
   max("acta_sequence"),
   now()
 FROM "actividades_grupales"
-WHERE "acta_organizer" IN ('medico', 'psicologa')
-GROUP BY "tenant_id", "acta_organizer"
-ON CONFLICT ("tenant_id", "organizer") DO UPDATE
-SET
-  "last_value" = GREATEST(
-    "actividad_grupal_acta_organizer_counters"."last_value",
-    EXCLUDED."last_value"
-  ),
-  "updated_at" = EXCLUDED."updated_at";
+WHERE
+  "deleted_at" IS NULL
+  AND "acta_organizer" IN ('medico', 'psicologa')
+GROUP BY "tenant_id", "acta_organizer";
 --> statement-breakpoint
 CREATE UNIQUE INDEX "actividades_grupales_tenant_acta_unique"
 ON "actividades_grupales" USING btree ("tenant_id", "acta_number")
