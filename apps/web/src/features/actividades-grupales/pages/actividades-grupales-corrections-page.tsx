@@ -1,5 +1,7 @@
 import {
   type ActividadGrupalActaCorrectionPreviewResponse,
+  type ActividadGrupalOrganizer,
+  actividadGrupalOrganizerValues,
   type AuthUser,
 } from "@cuidarte/contracts";
 import { ChevronLeft, LoaderCircle, RefreshCw, ShieldAlert } from "lucide-react";
@@ -23,6 +25,7 @@ type Props = { navigate: Navigate; user: AuthUser };
 
 export function ActividadesGrupalesCorrectionsPage({ navigate, user }: Props) {
   const [tenantId, setTenantId] = useState("");
+  const [organizer, setOrganizer] = useState<ActividadGrupalOrganizer | null>(null);
   const [reason, setReason] = useState("Normalizacion inicial de consecutivos por organizador");
   const [preview, setPreview] = useState<ActividadGrupalActaCorrectionPreviewResponse | null>(null);
   const tenantOptionsQuery = useActividadGrupalTenantOptionsQuery(user.role === "super_admin");
@@ -38,7 +41,7 @@ export function ActividadesGrupalesCorrectionsPage({ navigate, user }: Props) {
       return;
     }
 
-    previewMutation.mutate(tenantId, {
+    previewMutation.mutate({ tenantId, organizer }, {
       onSuccess: setPreview,
       onError: (error) =>
         toast.error(
@@ -96,6 +99,27 @@ export function ActividadesGrupalesCorrectionsPage({ navigate, user }: Props) {
             {(tenantOptionsQuery.data?.tenants ?? []).map((tenant) => (
               <option key={tenant.id} value={tenant.id}>
                 {tenant.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="actividades-corrections__tenant-field">
+          <span>Organizador</span>
+          <select
+            value={organizer ?? ""}
+            onChange={(event) => {
+              const value = event.target.value;
+              setOrganizer(value === "" ? null : (value as ActividadGrupalOrganizer));
+              setPreview(null);
+            }}
+            disabled={
+              tenantOptionsQuery.isLoading || previewMutation.isPending || applyMutation.isPending
+            }
+          >
+            <option value="">Todos los organizadores</option>
+            {actividadGrupalOrganizerValues.map((value) => (
+              <option key={value} value={value}>
+                {formatActividadGrupalOrganizer(value)}
               </option>
             ))}
           </select>

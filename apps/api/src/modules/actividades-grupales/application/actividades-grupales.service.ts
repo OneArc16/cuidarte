@@ -6,6 +6,7 @@ import {
   type ActividadGrupalIntegranteOptionsQuery,
   type ActividadGrupalListItem,
   type ActividadGrupalListQuery,
+  type ActividadGrupalOrganizer,
   type ActividadGrupalResponsibleDepartment,
   type ActividadGrupalSupportFile,
   type ActividadGrupalTenantOption,
@@ -311,12 +312,14 @@ export class ActividadesGrupalesService {
 
   async previewActividadGrupalActaCorrection(
     tenantId: string,
+    organizer: ActividadGrupalOrganizer | null,
     actor: AuthUser,
   ): Promise<ActividadGrupalActaCorrectionPreviewResponse> {
     this.ensureCanCorrectActa(actor, true);
     const preview = await this.actividadesGrupalesRepository.previewActaNumberCorrection(
       tenantId,
       actor.id,
+      organizer,
     );
 
     return actividadGrupalActaCorrectionPreviewResponseSchema.parse({

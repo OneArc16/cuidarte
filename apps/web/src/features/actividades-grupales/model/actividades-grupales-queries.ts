@@ -209,8 +209,11 @@ export function useCorrectActividadGrupalActaNumberMutation() {
 
 export function usePreviewActividadGrupalActaCorrectionMutation() {
   return useMutation({
-    mutationFn: (tenantId: string) =>
-      actividadesGrupalesApi.previewActividadGrupalActaCorrection(tenantId),
+    mutationFn: (request: { tenantId: string; organizer: ActividadGrupalOrganizer | null }) =>
+      actividadesGrupalesApi.previewActividadGrupalActaCorrection(
+        request.tenantId,
+        request.organizer,
+      ),
   });
 }
 

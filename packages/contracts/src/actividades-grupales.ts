@@ -398,6 +398,7 @@ export const actividadGrupalActaCorrectionPreviewResponseSchema = z.object({
 export const actividadGrupalActaCorrectionPreviewRequestSchema = z.object({
   tenantId: z.uuid(),
   scope: z.literal("all"),
+  organizer: actividadGrupalOrganizerSchema.nullable().default(null),
 });
 
 export const applyActividadGrupalActaCorrectionRequestSchema = z.object({

@@ -704,6 +704,7 @@ export const actividadGrupalActaCorrectionOperations = pgTable(
     requestedByUserId: uuid("requested_by_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
+    organizer: actividadGrupalOrganizer("organizer"),
     snapshotHash: varchar("snapshot_hash", { length: 64 }).notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     usedAt: timestamp("used_at", { withTimezone: true }),

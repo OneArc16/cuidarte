@@ -52,6 +52,7 @@ export type ActividadesGrupalesRepository = {
   previewActaNumberCorrection(
     tenantId: string,
     actorUserId: string,
+    organizer: import("@cuidarte/contracts").ActividadGrupalOrganizer | null,
   ): Promise<ActaCorrectionPreview>;
   applyActaNumberCorrection(command: ApplyActaCorrectionCommand): Promise<AppliedActaCorrection>;
   delete(command: DeleteActividadGrupalRecordCommand): Promise<void>;

@@ -156,6 +156,7 @@ export class ActividadesGrupalesController {
     const command = parseZodSchema(actividadGrupalActaCorrectionPreviewRequestSchema, body);
     const preview = await this.actividadesGrupalesService.previewActividadGrupalActaCorrection(
       command.tenantId,
+      command.organizer,
       request.currentUser,
     );
 

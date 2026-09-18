@@ -120,11 +120,12 @@ export function correctActividadGrupalActaNumber(
 
 export function previewActividadGrupalActaCorrection(
   tenantId: string,
+  organizer: ActividadGrupalOrganizer | null,
 ): Promise<ActividadGrupalActaCorrectionPreviewResponse> {
   return fetchJson(
     `${getApiBaseUrl()}/actividades-grupales/acta-number-corrections/preview`,
     actividadGrupalActaCorrectionPreviewResponseSchema,
-    { method: "POST", body: { tenantId, scope: "all" } },
+    { method: "POST", body: { tenantId, scope: "all", organizer } },
   );
 }
 

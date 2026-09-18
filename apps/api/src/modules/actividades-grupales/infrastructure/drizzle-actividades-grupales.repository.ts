@@ -663,6 +663,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
   async previewActaNumberCorrection(
     tenantId: string,
     actorUserId: string,
+    organizer: import("@cuidarte/contracts").ActividadGrupalOrganizer | null,
   ): Promise<ActaCorrectionPreview> {
     const rows = await this.database.db
       .select({
@@ -681,6 +682,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         and(
           eq(actividadesGrupales.tenantId, tenantId),
           isNull(actividadesGrupales.deletedAt),
+          organizer === null ? undefined : eq(actividadesGrupales.organizer, organizer),
         ),
       )
       .orderBy(
@@ -696,7 +698,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
     const [operation] = await this.database.db
       .insert(actividadGrupalActaCorrectionOperations)
-      .values({ tenantId, requestedByUserId: actorUserId, snapshotHash, expiresAt })
+      .values({ tenantId, requestedByUserId: actorUserId, organizer, snapshotHash, expiresAt })
       .returning({ id: actividadGrupalActaCorrectionOperations.id });
 
     if (operation === undefined) {
@@ -778,6 +780,9 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           and(
             eq(actividadesGrupales.tenantId, lockedOperation.tenantId),
             isNull(actividadesGrupales.deletedAt),
+            lockedOperation.organizer === null
+              ? undefined
+              : eq(actividadesGrupales.organizer, lockedOperation.organizer),
           ),
         )
         .orderBy(
