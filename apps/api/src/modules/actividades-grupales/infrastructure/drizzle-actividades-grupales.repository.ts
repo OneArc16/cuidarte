@@ -673,6 +673,8 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         endTime: actividadesGrupales.endTime,
         organizer: actividadesGrupales.organizer,
         actaNumber: actividadesGrupales.actaNumber,
+        actaOrganizer: actividadesGrupales.actaOrganizer,
+        actaSequence: actividadesGrupales.actaSequence,
         createdAt: actividadesGrupales.createdAt,
         updatedAt: actividadesGrupales.updatedAt,
         deletedAt: actividadesGrupales.deletedAt,
@@ -771,6 +773,8 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           endTime: actividadesGrupales.endTime,
           organizer: actividadesGrupales.organizer,
           actaNumber: actividadesGrupales.actaNumber,
+          actaOrganizer: actividadesGrupales.actaOrganizer,
+          actaSequence: actividadesGrupales.actaSequence,
           createdAt: actividadesGrupales.createdAt,
           updatedAt: actividadesGrupales.updatedAt,
           deletedAt: actividadesGrupales.deletedAt,
@@ -798,15 +802,43 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       }
 
       const previewRows = buildCorrectionPreviewRows(rows);
-      const changedRows = previewRows.filter(
-        (row) => row.currentActaNumber !== row.proposedActaNumber,
+      const sourceRowsById = new Map(rows.map((row) => [row.id, row]));
+      const changedRows = previewRows.filter((row) =>
+        hasCorrectionTargetChanged(sourceRowsById.get(row.activityId), row),
       );
-      const temporaryPrefix = `TMP-${lockedOperation.id.slice(0, 8)}`;
 
-      for (const [index, row] of rows.entries()) {
+      const activeTenantRows = await tx
+        .select({
+          id: actividadesGrupales.id,
+          actaNumber: actividadesGrupales.actaNumber,
+          actaOrganizer: actividadesGrupales.actaOrganizer,
+          actaSequence: actividadesGrupales.actaSequence,
+        })
+        .from(actividadesGrupales)
+        .where(
+          and(
+            eq(actividadesGrupales.tenantId, lockedOperation.tenantId),
+            isNull(actividadesGrupales.deletedAt),
+          ),
+        );
+
+      assertCorrectionFinalStateIsUnique(activeTenantRows, previewRows);
+
+      const temporaryRows = buildTemporaryCorrectionRows({
+        operationId: lockedOperation.id,
+        activeRows: activeTenantRows,
+        changedRows,
+      });
+
+      for (const row of temporaryRows) {
         await tx
           .update(actividadesGrupales)
-          .set({ actaNumber: `${temporaryPrefix}-${index}`, updatedAt: new Date() })
+          .set({
+            actaNumber: row.temporaryActaNumber,
+            actaOrganizer: row.organizer,
+            actaSequence: row.temporaryActaSequence,
+            updatedAt: new Date(),
+          })
           .where(eq(actividadesGrupales.id, row.id));
       }
 
@@ -816,6 +848,9 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           row.organizer,
           Math.max(maxByOrganizer.get(row.organizer) ?? 0, row.sequence),
         );
+      }
+
+      for (const row of changedRows) {
         await tx
           .update(actividadesGrupales)
           .set({
@@ -1355,10 +1390,26 @@ type ActaCorrectionSourceRow = {
   endTime: string;
   organizer: ActividadGrupalRecord["organizer"];
   actaNumber: string;
+  actaOrganizer: ActividadGrupalRecord["actaOrganizer"];
+  actaSequence: number;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
 };
+
+type ActaCorrectionFinalStateRow = Pick<
+  ActaCorrectionSourceRow,
+  "id" | "actaNumber" | "actaOrganizer" | "actaSequence"
+>;
+
+type TemporaryCorrectionRow = {
+  id: string;
+  organizer: ActividadGrupalRecord["organizer"];
+  temporaryActaNumber: string;
+  temporaryActaSequence: number;
+};
+
+const POSTGRES_INTEGER_MAX = 2_147_483_647;
 
 function buildCorrectionPreviewRows(rows: ActaCorrectionSourceRow[]): ActaCorrectionPreviewRow[] {
   const sequenceByOrganizer = new Map<ActividadGrupalRecord["organizer"], number>();
@@ -1381,7 +1432,7 @@ function buildCorrectionPreviewRows(rows: ActaCorrectionSourceRow[]): ActaCorrec
   });
 }
 
-function hashCorrectionSnapshot(rows: ActaCorrectionSourceRow[]): string {
+export function hashCorrectionSnapshot(rows: ActaCorrectionSourceRow[]): string {
   const snapshot = rows.map((row) => [
     row.id,
     row.activityDate,
@@ -1395,6 +1446,130 @@ function hashCorrectionSnapshot(rows: ActaCorrectionSourceRow[]): string {
   ]);
 
   return createHash("sha256").update(JSON.stringify(snapshot)).digest("hex");
+}
+
+function hasCorrectionTargetChanged(
+  sourceRow: ActaCorrectionSourceRow | undefined,
+  targetRow: ActaCorrectionPreviewRow,
+): boolean {
+  if (sourceRow === undefined) {
+    throw new ActaCorrectionConflictError("La vista previa ya no coincide con las actas activas.");
+  }
+
+  return (
+    sourceRow.actaNumber !== targetRow.proposedActaNumber ||
+    sourceRow.actaOrganizer !== targetRow.organizer ||
+    sourceRow.actaSequence !== targetRow.sequence
+  );
+}
+
+export function assertCorrectionFinalStateIsUnique(
+  activeRows: ActaCorrectionFinalStateRow[],
+  targetRows: ActaCorrectionPreviewRow[],
+): void {
+  const targetById = new Map(targetRows.map((row) => [row.activityId, row]));
+  const actaNumbers = new Set<string>();
+  const actaSeries = new Set<string>();
+
+  for (const row of activeRows) {
+    const target = targetById.get(row.id);
+    const actaNumber = target?.proposedActaNumber ?? row.actaNumber;
+    const actaOrganizer = target?.organizer ?? row.actaOrganizer;
+    const actaSequence = target?.sequence ?? row.actaSequence;
+    const seriesKey = `${actaOrganizer}\u0000${actaSequence}`;
+
+    if (actaNumbers.has(actaNumber)) {
+      throw new ActaCorrectionConflictError(
+        `La normalizacion produciria una acta duplicada (${actaNumber}) entre actas activas del centro.`,
+      );
+    }
+
+    if (actaSeries.has(seriesKey)) {
+      throw new ActaCorrectionConflictError(
+        `La normalizacion produciria una secuencia duplicada para ${actaOrganizer} (${actaSequence}).`,
+      );
+    }
+
+    actaNumbers.add(actaNumber);
+    actaSeries.add(seriesKey);
+  }
+}
+
+export function buildTemporaryCorrectionRows({
+  operationId,
+  activeRows,
+  changedRows,
+}: {
+  operationId: string;
+  activeRows: ActaCorrectionFinalStateRow[];
+  changedRows: ActaCorrectionPreviewRow[];
+}): TemporaryCorrectionRow[] {
+  const maxSequenceByOrganizer = new Map<ActividadGrupalRecord["organizer"], number>();
+  const changedCountByOrganizer = new Map<ActividadGrupalRecord["organizer"], number>();
+
+  for (const row of activeRows) {
+    maxSequenceByOrganizer.set(
+      row.actaOrganizer,
+      Math.max(maxSequenceByOrganizer.get(row.actaOrganizer) ?? 0, row.actaSequence),
+    );
+  }
+
+  for (const row of changedRows) {
+    changedCountByOrganizer.set(row.organizer, (changedCountByOrganizer.get(row.organizer) ?? 0) + 1);
+  }
+
+  for (const [organizer, changedCount] of changedCountByOrganizer) {
+    const maxSequence = maxSequenceByOrganizer.get(organizer) ?? 0;
+    if (maxSequence > POSTGRES_INTEGER_MAX - changedCount) {
+      throw new ActaCorrectionConflictError(
+        `No hay secuencias temporales disponibles para ${organizer} sin exceder el limite de PostgreSQL.`,
+      );
+    }
+  }
+
+  const usedActaNumbers = new Set(activeRows.map((row) => row.actaNumber));
+  const nextTemporarySequenceByOrganizer = new Map(maxSequenceByOrganizer);
+
+  return changedRows.map((row, index) => {
+    const temporaryActaNumber = buildUniqueTemporaryActaNumber({
+      operationId,
+      index,
+      usedActaNumbers,
+    });
+    const temporaryActaSequence = (nextTemporarySequenceByOrganizer.get(row.organizer) ?? 0) + 1;
+    nextTemporarySequenceByOrganizer.set(row.organizer, temporaryActaSequence);
+
+    return {
+      id: row.activityId,
+      organizer: row.organizer,
+      temporaryActaNumber,
+      temporaryActaSequence,
+    };
+  });
+}
+
+function buildUniqueTemporaryActaNumber({
+  operationId,
+  index,
+  usedActaNumbers,
+}: {
+  operationId: string;
+  index: number;
+  usedActaNumbers: Set<string>;
+}): string {
+  const operationFragment = operationId.replaceAll("-", "").slice(0, 20);
+
+  for (let attempt = 0; ; attempt += 1) {
+    const candidate = `TMP-${operationFragment}-${index.toString(36)}-${attempt.toString(36)}`;
+    if (candidate.length > 40) {
+      throw new ActaCorrectionConflictError("No fue posible generar un numero temporal de acta valido.");
+    }
+
+    if (!usedActaNumbers.has(candidate)) {
+      usedActaNumbers.add(candidate);
+      return candidate;
+    }
+  }
 }
 
 function escapeLikePattern(value: string): string {
