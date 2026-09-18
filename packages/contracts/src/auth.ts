@@ -19,6 +19,8 @@ export const userRoleSchema = z.enum(userRoleValues);
 export const authUserSchema = z.object({
   id: z.uuid(),
   tenantId: z.uuid().nullable(),
+  tenantMunicipality: z.string().min(1).nullable().optional(),
+  tenantDepartment: z.string().min(1).nullable().optional(),
   email: z.email(),
   fullName: z.string().min(1),
   role: userRoleSchema,
@@ -26,9 +28,7 @@ export const authUserSchema = z.object({
 });
 
 export const loginRequestSchema = z.object({
-  email: z
-    .email("Ingresa un correo electrónico válido.")
-    .transform((value) => value.toLowerCase()),
+  email: z.email("Ingresa un correo electrónico válido.").transform((value) => value.toLowerCase()),
   password: z.string().min(1, "La contraseña es obligatoria."),
 });
 

@@ -197,6 +197,22 @@
   font-weight: 800;
 }
 
+.home-user__details .home-user__location {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-care);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
+
+.home-user__location svg {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+}
+
 .home-nav ul {
   display: grid;
   gap: 10px;

@@ -59,6 +59,8 @@ import { ActaCorrectionConflictError } from "../domain/actividad-grupal.types";
 import {
   findNextAvailableActividadGrupalActaSequence,
   formatActividadGrupalActaNumber,
+  resolveActividadGrupalActaOrganizer,
+  usesSharedActividadGrupalActaSeries,
 } from "../domain/actividad-grupal-acta-number";
 import { type ActividadesGrupalesRepository } from "../domain/actividades-grupales.repository";
 
@@ -377,6 +379,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
   async create(command: CreateActividadGrupalRecordCommand): Promise<ActividadGrupalRecord> {
     return await this.database.db.transaction(async (tx) => {
       const now = new Date();
+      const actaOrganizer = resolveActividadGrupalActaOrganizer(command.organizer);
       await tx.execute(
         sql`select pg_advisory_xact_lock(hashtext(${`actividades-grupales-acta:${command.tenantId}`}))`,
       );
@@ -386,7 +389,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .where(
           and(
             eq(actividadesGrupales.tenantId, command.tenantId),
-            eq(actividadesGrupales.organizer, command.organizer),
+            eq(actividadesGrupales.actaOrganizer, actaOrganizer),
             isNull(actividadesGrupales.deletedAt),
           ),
         );
@@ -402,7 +405,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .insert(actividadGrupalActaOrganizerCounters)
         .values({
           tenantId: command.tenantId,
-          organizer: command.organizer,
+          organizer: actaOrganizer,
           lastValue: counterFloor,
           updatedAt: now,
         })
@@ -417,14 +420,14 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           },
         });
 
-      const actaNumber = formatActividadGrupalActaNumber(command.organizer, nextSequence);
+      const actaNumber = formatActividadGrupalActaNumber(actaOrganizer, nextSequence);
 
       const [created] = await tx
         .insert(actividadesGrupales)
         .values({
           tenantId: command.tenantId,
           actaNumber,
-          actaOrganizer: command.organizer,
+          actaOrganizer,
           actaSequence: nextSequence,
           activityName: command.activityName,
           activityType: command.activityType,
@@ -457,7 +460,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         summary: `Actividad grupal creada #${actaNumber}: ${command.activityName}`,
         metadata: {
           actaNumber,
-          actaOrganizer: command.organizer,
+          actaOrganizer,
           actaSequence: nextSequence,
           activityType: command.activityType,
           organizer: command.organizer,
@@ -577,6 +580,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         throw new Error("La actividad grupal no fue encontrada.");
       }
 
+      const actaOrganizer = resolveActividadGrupalActaOrganizer(command.organizer);
       await tx.execute(
         sql`select pg_advisory_xact_lock(hashtext(${`actividades-grupales-acta:${current.tenantId}`}))`,
       );
@@ -585,7 +589,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .insert(actividadGrupalActaOrganizerCounters)
         .values({
           tenantId: current.tenantId,
-          organizer: command.organizer,
+          organizer: actaOrganizer,
           lastValue: 1,
           updatedAt: now,
         })
@@ -605,12 +609,12 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         throw new Error("No fue posible generar el consecutivo corregido.");
       }
 
-      const actaNumber = formatActividadGrupalActaNumber(command.organizer, counter.lastValue);
+      const actaNumber = formatActividadGrupalActaNumber(actaOrganizer, counter.lastValue);
       await tx
         .update(actividadesGrupales)
         .set({
           organizer: command.organizer,
-          actaOrganizer: command.organizer,
+          actaOrganizer,
           actaSequence: counter.lastValue,
           actaNumber,
           previousActaNumber: current.actaNumber,
@@ -665,6 +669,8 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     actorUserId: string,
     organizer: import("@cuidarte/contracts").ActividadGrupalOrganizer | null,
   ): Promise<ActaCorrectionPreview> {
+    const actaOrganizer =
+      organizer === null ? null : resolveActividadGrupalActaOrganizer(organizer);
     const rows = await this.database.db
       .select({
         id: actividadesGrupales.id,
@@ -684,7 +690,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         and(
           eq(actividadesGrupales.tenantId, tenantId),
           isNull(actividadesGrupales.deletedAt),
-          organizer === null ? undefined : eq(actividadesGrupales.organizer, organizer),
+          actaOrganizer === null ? undefined : eq(actividadesGrupales.actaOrganizer, actaOrganizer),
         ),
       )
       .orderBy(
@@ -700,7 +706,13 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
     const [operation] = await this.database.db
       .insert(actividadGrupalActaCorrectionOperations)
-      .values({ tenantId, requestedByUserId: actorUserId, organizer, snapshotHash, expiresAt })
+      .values({
+        tenantId,
+        requestedByUserId: actorUserId,
+        organizer: actaOrganizer,
+        snapshotHash,
+        expiresAt,
+      })
       .returning({ id: actividadGrupalActaCorrectionOperations.id });
 
     if (operation === undefined) {
@@ -786,7 +798,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
             isNull(actividadesGrupales.deletedAt),
             lockedOperation.organizer === null
               ? undefined
-              : eq(actividadesGrupales.organizer, lockedOperation.organizer),
+              : eq(actividadesGrupales.actaOrganizer, lockedOperation.organizer),
           ),
         )
         .orderBy(
@@ -835,18 +847,19 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           .update(actividadesGrupales)
           .set({
             actaNumber: row.temporaryActaNumber,
-            actaOrganizer: row.organizer,
+            actaOrganizer: row.actaOrganizer,
             actaSequence: row.temporaryActaSequence,
             updatedAt: new Date(),
           })
           .where(eq(actividadesGrupales.id, row.id));
       }
 
-      const maxByOrganizer = new Map<ActividadGrupalRecord["organizer"], number>();
+      const maxByOrganizer = new Map<ActividadGrupalRecord["actaOrganizer"], number>();
       for (const row of previewRows) {
+        const actaOrganizer = resolveActividadGrupalActaOrganizer(row.organizer);
         maxByOrganizer.set(
-          row.organizer,
-          Math.max(maxByOrganizer.get(row.organizer) ?? 0, row.sequence),
+          actaOrganizer,
+          Math.max(maxByOrganizer.get(actaOrganizer) ?? 0, row.sequence),
         );
       }
 
@@ -855,7 +868,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           .update(actividadesGrupales)
           .set({
             actaNumber: row.proposedActaNumber,
-            actaOrganizer: row.organizer,
+            actaOrganizer: resolveActividadGrupalActaOrganizer(row.organizer),
             actaSequence: row.sequence,
             previousActaNumber:
               row.currentActaNumber === row.proposedActaNumber ? undefined : row.currentActaNumber,
@@ -1265,7 +1278,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     }
 
     if (query.organizer !== null) {
-      conditions.push(eq(actividadesGrupales.organizer, query.organizer));
+      conditions.push(this.buildOrganizerFilterCondition(query.organizer));
     }
 
     if (query.permittedOrganizers !== null) {
@@ -1318,7 +1331,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     }
 
     if (query.organizer !== null) {
-      conditions.push(eq(actividadesGrupales.organizer, query.organizer));
+      conditions.push(this.buildOrganizerFilterCondition(query.organizer));
     }
 
     if (query.permittedOrganizers !== null) {
@@ -1352,6 +1365,14 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     }
 
     return conditions.length === 0 ? undefined : and(...conditions);
+  }
+
+  private buildOrganizerFilterCondition(organizer: ActividadGrupalRecord["organizer"]): SQL {
+    if (!usesSharedActividadGrupalActaSeries(organizer)) {
+      return eq(actividadesGrupales.organizer, organizer);
+    }
+
+    return eq(actividadesGrupales.actaOrganizer, resolveActividadGrupalActaOrganizer(organizer));
   }
 
   private buildActivityScopedWhere(query: FindActividadGrupalByIdQuery, extra: SQL[]) {
@@ -1404,19 +1425,22 @@ type ActaCorrectionFinalStateRow = Pick<
 
 type TemporaryCorrectionRow = {
   id: string;
-  organizer: ActividadGrupalRecord["organizer"];
+  actaOrganizer: ActividadGrupalRecord["actaOrganizer"];
   temporaryActaNumber: string;
   temporaryActaSequence: number;
 };
 
 const POSTGRES_INTEGER_MAX = 2_147_483_647;
 
-function buildCorrectionPreviewRows(rows: ActaCorrectionSourceRow[]): ActaCorrectionPreviewRow[] {
-  const sequenceByOrganizer = new Map<ActividadGrupalRecord["organizer"], number>();
+export function buildCorrectionPreviewRows(
+  rows: ActaCorrectionSourceRow[],
+): ActaCorrectionPreviewRow[] {
+  const sequenceByOrganizer = new Map<ActividadGrupalRecord["actaOrganizer"], number>();
 
   return rows.map((row) => {
-    const sequence = (sequenceByOrganizer.get(row.organizer) ?? 0) + 1;
-    sequenceByOrganizer.set(row.organizer, sequence);
+    const actaOrganizer = resolveActividadGrupalActaOrganizer(row.organizer);
+    const sequence = (sequenceByOrganizer.get(actaOrganizer) ?? 0) + 1;
+    sequenceByOrganizer.set(actaOrganizer, sequence);
 
     return {
       activityId: row.id,
@@ -1425,7 +1449,7 @@ function buildCorrectionPreviewRows(rows: ActaCorrectionSourceRow[]): ActaCorrec
       endTime: row.endTime,
       organizer: row.organizer,
       currentActaNumber: row.actaNumber,
-      proposedActaNumber: formatActividadGrupalActaNumber(row.organizer, sequence),
+      proposedActaNumber: formatActividadGrupalActaNumber(actaOrganizer, sequence),
       sequence,
       isDeleted: row.deletedAt !== null,
     };
@@ -1458,7 +1482,7 @@ function hasCorrectionTargetChanged(
 
   return (
     sourceRow.actaNumber !== targetRow.proposedActaNumber ||
-    sourceRow.actaOrganizer !== targetRow.organizer ||
+    sourceRow.actaOrganizer !== resolveActividadGrupalActaOrganizer(targetRow.organizer) ||
     sourceRow.actaSequence !== targetRow.sequence
   );
 }
@@ -1474,7 +1498,10 @@ export function assertCorrectionFinalStateIsUnique(
   for (const row of activeRows) {
     const target = targetById.get(row.id);
     const actaNumber = target?.proposedActaNumber ?? row.actaNumber;
-    const actaOrganizer = target?.organizer ?? row.actaOrganizer;
+    const actaOrganizer =
+      target === undefined
+        ? row.actaOrganizer
+        : resolveActividadGrupalActaOrganizer(target.organizer);
     const actaSequence = target?.sequence ?? row.actaSequence;
     const seriesKey = `${actaOrganizer}\u0000${actaSequence}`;
 
@@ -1504,8 +1531,8 @@ export function buildTemporaryCorrectionRows({
   activeRows: ActaCorrectionFinalStateRow[];
   changedRows: ActaCorrectionPreviewRow[];
 }): TemporaryCorrectionRow[] {
-  const maxSequenceByOrganizer = new Map<ActividadGrupalRecord["organizer"], number>();
-  const changedCountByOrganizer = new Map<ActividadGrupalRecord["organizer"], number>();
+  const maxSequenceByOrganizer = new Map<ActividadGrupalRecord["actaOrganizer"], number>();
+  const changedCountByOrganizer = new Map<ActividadGrupalRecord["actaOrganizer"], number>();
 
   for (const row of activeRows) {
     maxSequenceByOrganizer.set(
@@ -1515,14 +1542,18 @@ export function buildTemporaryCorrectionRows({
   }
 
   for (const row of changedRows) {
-    changedCountByOrganizer.set(row.organizer, (changedCountByOrganizer.get(row.organizer) ?? 0) + 1);
+    const actaOrganizer = resolveActividadGrupalActaOrganizer(row.organizer);
+    changedCountByOrganizer.set(
+      actaOrganizer,
+      (changedCountByOrganizer.get(actaOrganizer) ?? 0) + 1,
+    );
   }
 
-  for (const [organizer, changedCount] of changedCountByOrganizer) {
-    const maxSequence = maxSequenceByOrganizer.get(organizer) ?? 0;
+  for (const [actaOrganizer, changedCount] of changedCountByOrganizer) {
+    const maxSequence = maxSequenceByOrganizer.get(actaOrganizer) ?? 0;
     if (maxSequence > POSTGRES_INTEGER_MAX - changedCount) {
       throw new ActaCorrectionConflictError(
-        `No hay secuencias temporales disponibles para ${organizer} sin exceder el limite de PostgreSQL.`,
+        `No hay secuencias temporales disponibles para ${actaOrganizer} sin exceder el limite de PostgreSQL.`,
       );
     }
   }
@@ -1536,12 +1567,13 @@ export function buildTemporaryCorrectionRows({
       index,
       usedActaNumbers,
     });
-    const temporaryActaSequence = (nextTemporarySequenceByOrganizer.get(row.organizer) ?? 0) + 1;
-    nextTemporarySequenceByOrganizer.set(row.organizer, temporaryActaSequence);
+    const actaOrganizer = resolveActividadGrupalActaOrganizer(row.organizer);
+    const temporaryActaSequence = (nextTemporarySequenceByOrganizer.get(actaOrganizer) ?? 0) + 1;
+    nextTemporarySequenceByOrganizer.set(actaOrganizer, temporaryActaSequence);
 
     return {
       id: row.activityId,
-      organizer: row.organizer,
+      actaOrganizer,
       temporaryActaNumber,
       temporaryActaSequence,
     };
@@ -1562,7 +1594,9 @@ function buildUniqueTemporaryActaNumber({
   for (let attempt = 0; ; attempt += 1) {
     const candidate = `TMP-${operationFragment}-${index.toString(36)}-${attempt.toString(36)}`;
     if (candidate.length > 40) {
-      throw new ActaCorrectionConflictError("No fue posible generar un numero temporal de acta valido.");
+      throw new ActaCorrectionConflictError(
+        "No fue posible generar un numero temporal de acta valido.",
+      );
     }
 
     if (!usedActaNumbers.has(candidate)) {

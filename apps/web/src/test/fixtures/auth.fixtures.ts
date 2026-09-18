@@ -1,6 +1,8 @@
 export const authUserFixture = {
   id: "9f75c51f-74ab-40b7-84ef-9e4a93d14af1",
   tenantId: "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054",
+  tenantMunicipality: "Bogota",
+  tenantDepartment: "Cundinamarca",
   email: "admin@centro-demo.test",
   fullName: "Admin Centro Demo",
   role: "admin",
@@ -11,6 +13,8 @@ export const superAdminUserFixture = {
   ...authUserFixture,
   id: "4c5b84e6-d88e-4f8a-93de-af2916d62f40",
   tenantId: null,
+  tenantMunicipality: null,
+  tenantDepartment: null,
   email: "superadmin@cuidarte.test",
   fullName: "Super Admin CuidarTe",
   role: "super_admin",

@@ -1,7 +1,6 @@
 import {
   type ActividadGrupalActaCorrectionPreviewResponse,
   type ActividadGrupalOrganizer,
-  actividadGrupalOrganizerValues,
   type AuthUser,
 } from "@cuidarte/contracts";
 import { ChevronLeft, LoaderCircle, RefreshCw, ShieldAlert } from "lucide-react";
@@ -23,17 +22,24 @@ import {
 
 type Props = { navigate: Navigate; user: AuthUser };
 
+const ACTA_SERIES_OPTIONS: readonly { value: ActividadGrupalOrganizer; label: string }[] = [
+  { value: "director", label: "DIREC — Director" },
+  { value: "medico", label: "SALUD — Médico y Enfermería" },
+  { value: "psicologa", label: "PSICO — Psicología y Trabajo Social" },
+  { value: "nutricionista", label: "NUTRI — Nutrición" },
+  { value: "fisioterapeuta", label: "FISIO — Fisioterapia" },
+  { value: "recreacionista", label: "RECRE — Recreación" },
+];
+
 export function ActividadesGrupalesCorrectionsPage({ navigate, user }: Props) {
   const [tenantId, setTenantId] = useState("");
-  const [organizer, setOrganizer] = useState<ActividadGrupalOrganizer | null>(null);
-  const [reason, setReason] = useState("Normalizacion inicial de consecutivos por organizador");
+  const [seriesOrganizer, setSeriesOrganizer] = useState<ActividadGrupalOrganizer | null>(null);
+  const [reason, setReason] = useState("Normalizacion inicial de consecutivos por serie");
   const [preview, setPreview] = useState<ActividadGrupalActaCorrectionPreviewResponse | null>(null);
   const tenantOptionsQuery = useActividadGrupalTenantOptionsQuery(user.role === "super_admin");
   const previewMutation = usePreviewActividadGrupalActaCorrectionMutation();
   const applyMutation = useApplyActividadGrupalActaCorrectionMutation();
-  const canApply =
-    preview !== null &&
-    reason.trim().length > 0;
+  const canApply = preview !== null && reason.trim().length > 0;
 
   function loadPreview() {
     if (tenantId === "") {
@@ -41,13 +47,16 @@ export function ActividadesGrupalesCorrectionsPage({ navigate, user }: Props) {
       return;
     }
 
-    previewMutation.mutate({ tenantId, organizer }, {
-      onSuccess: setPreview,
-      onError: (error) =>
-        toast.error(
-          resolveActividadesGrupalesApiError(error) ?? "No fue posible generar la vista previa.",
-        ),
-    });
+    previewMutation.mutate(
+      { tenantId, organizer: seriesOrganizer },
+      {
+        onSuccess: setPreview,
+        onError: (error) =>
+          toast.error(
+            resolveActividadesGrupalesApiError(error) ?? "No fue posible generar la vista previa.",
+          ),
+      },
+    );
   }
 
   function applyCorrection() {
@@ -104,22 +113,22 @@ export function ActividadesGrupalesCorrectionsPage({ navigate, user }: Props) {
           </select>
         </label>
         <label className="actividades-corrections__tenant-field">
-          <span>Organizador</span>
+          <span>Serie de consecutivos</span>
           <select
-            value={organizer ?? ""}
+            value={seriesOrganizer ?? ""}
             onChange={(event) => {
               const value = event.target.value;
-              setOrganizer(value === "" ? null : (value as ActividadGrupalOrganizer));
+              setSeriesOrganizer(value === "" ? null : (value as ActividadGrupalOrganizer));
               setPreview(null);
             }}
             disabled={
               tenantOptionsQuery.isLoading || previewMutation.isPending || applyMutation.isPending
             }
           >
-            <option value="">Todos los organizadores</option>
-            {actividadGrupalOrganizerValues.map((value) => (
-              <option key={value} value={value}>
-                {formatActividadGrupalOrganizer(value)}
+            <option value="">Todas las series</option>
+            {ACTA_SERIES_OPTIONS.map((series) => (
+              <option key={series.value} value={series.value}>
+                {series.label}
               </option>
             ))}
           </select>

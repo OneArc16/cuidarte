@@ -49,6 +49,7 @@ describe("App smoke routing", () => {
 
     expect(loggedUser).toHaveTextContent(authUserFixture.fullName);
     expect(loggedUser).toHaveTextContent("Admin");
+    expect(loggedUser).toHaveTextContent("Sede · Bogota, Cundinamarca");
     expect(screen.getAllByText("CuidarTe")).not.toHaveLength(0);
 
     const navigation = screen.getByRole("navigation", { name: "Modulos principales" });

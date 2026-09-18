@@ -9,10 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-import {
-  formatActividadGrupalOrganizer,
-  getActividadGrupalOrganizerOptions,
-} from "../lib/actividades-grupales-formatters";
+import { getActividadGrupalOrganizerFilterOptions } from "../lib/actividades-grupales-formatters";
 
 type ActividadesGrupalesToolbarProps = {
   selectedActivityTypeId: string;
@@ -226,17 +223,17 @@ export function ActividadesGrupalesToolbar({
       </label>
 
       <label className="actividades-filter">
-        <span>Organizador</span>
+        <span>Organizador / equipo</span>
         <select
           value={selectedOrganizer}
           onChange={(event) =>
             onOrganizerChange(event.target.value as ActividadGrupalOrganizer | "")
           }
         >
-          <option value="">Todos los organizadores</option>
-          {getActividadGrupalOrganizerOptions().map((organizer) => (
-            <option key={organizer} value={organizer}>
-              {formatActividadGrupalOrganizer(organizer)}
+          <option value="">Todos los organizadores y equipos</option>
+          {getActividadGrupalOrganizerFilterOptions().map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
             </option>
           ))}
         </select>

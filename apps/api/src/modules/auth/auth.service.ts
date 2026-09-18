@@ -21,6 +21,7 @@ type AuthenticatedSession = {
 };
 
 type UserRow = typeof users.$inferSelect;
+type TenantRow = typeof tenants.$inferSelect;
 
 const GENERIC_LOGIN_ERROR = "Correo o contrasena incorrectos.";
 const MAX_FAILED_LOGIN_ATTEMPTS = 5;
@@ -37,7 +38,7 @@ export class AuthService {
       throw new UnauthorizedException(GENERIC_LOGIN_ERROR);
     }
 
-    await this.ensureTenantCanLogin(user);
+    const tenant = await this.ensureTenantCanLogin(user);
 
     const passwordMatches = await verify(user.passwordHash, command.password);
 
@@ -73,7 +74,7 @@ export class AuthService {
     return {
       token,
       expiresAt,
-      user: this.toAuthUser(user),
+      user: this.toAuthUser(user, tenant),
     };
   }
 
@@ -107,14 +108,14 @@ export class AuthService {
       return null;
     }
 
-    await this.ensureTenantCanLogin(user);
+    const tenant = await this.ensureTenantCanLogin(user);
 
     await this.database.db
       .update(userSessions)
       .set({ lastUsedAt: now })
       .where(eq(userSessions.id, session.id));
 
-    return this.toAuthUser(user);
+    return this.toAuthUser(user, tenant);
   }
 
   async logout(token: string | undefined): Promise<void> {
@@ -144,9 +145,9 @@ export class AuthService {
     return user ?? null;
   }
 
-  private async ensureTenantCanLogin(user: UserRow): Promise<void> {
+  private async ensureTenantCanLogin(user: UserRow): Promise<TenantRow | null> {
     if (user.tenantId === null) {
-      return;
+      return null;
     }
 
     const [tenant] = await this.database.db
@@ -158,6 +159,8 @@ export class AuthService {
     if (tenant === undefined || !tenant.isActive) {
       throw new UnauthorizedException(GENERIC_LOGIN_ERROR);
     }
+
+    return tenant;
   }
 
   private isLocked(user: UserRow): boolean {
@@ -192,10 +195,12 @@ export class AuthService {
     return createHash("sha256").update(token).digest("hex");
   }
 
-  private toAuthUser(user: UserRow): AuthUser {
+  private toAuthUser(user: UserRow, tenant: TenantRow | null): AuthUser {
     return authUserSchema.parse({
       id: user.id,
       tenantId: user.tenantId,
+      tenantMunicipality: tenant?.city ?? null,
+      tenantDepartment: tenant?.department ?? null,
       email: user.email,
       fullName: user.fullName,
       role: user.role,

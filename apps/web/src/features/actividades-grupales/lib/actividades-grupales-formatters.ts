@@ -32,6 +32,18 @@ const ORGANIZER_LABELS = {
   recreacionista: "Recreacionista",
 } satisfies Record<ActividadGrupalOrganizer, string>;
 
+const ORGANIZER_FILTER_OPTIONS: readonly {
+  value: ActividadGrupalOrganizer;
+  label: string;
+}[] = [
+  { value: "director", label: "Director" },
+  { value: "medico", label: "SALUD — Médico y Enfermería" },
+  { value: "psicologa", label: "PSICO — Psicología y Trabajo Social" },
+  { value: "nutricionista", label: "Nutricionista" },
+  { value: "fisioterapeuta", label: "Fisioterapeuta" },
+  { value: "recreacionista", label: "Recreacionista" },
+];
+
 const RESPONSIBLE_DEPARTMENT_LABELS = {
   direccion: "Direccion",
   medicina: "Medicina",
@@ -49,6 +61,13 @@ export function getActividadGrupalTypeOptions(): readonly ActividadGrupalType[] 
 
 export function getActividadGrupalOrganizerOptions(): readonly ActividadGrupalOrganizer[] {
   return actividadGrupalOrganizerValues;
+}
+
+export function getActividadGrupalOrganizerFilterOptions(): readonly {
+  value: ActividadGrupalOrganizer;
+  label: string;
+}[] {
+  return ORGANIZER_FILTER_OPTIONS;
 }
 
 export function getActividadGrupalResponsibleDepartmentOptions(): readonly ActividadGrupalResponsibleDepartment[] {

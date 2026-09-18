@@ -5,6 +5,7 @@ import type { ActaCorrectionPreviewRow } from "../domain/actividad-grupal.types"
 import { ActaCorrectionConflictError } from "../domain/actividad-grupal.types";
 import {
   assertCorrectionFinalStateIsUnique,
+  buildCorrectionPreviewRows,
   buildTemporaryCorrectionRows,
   DrizzleActividadesGrupalesRepository,
   hashCorrectionSnapshot,
@@ -18,6 +19,34 @@ type ActiveRow = {
 };
 
 describe("DrizzleActividadesGrupalesRepository correction planning", () => {
+  it("normalizes health and psychosocial teams in their shared series", () => {
+    const rows = [
+      {
+        ...correctionSource("health-001", "ENFER-010", 10, "2026-09-17"),
+        organizer: "enfermeria" as const,
+        actaOrganizer: "medico" as const,
+      },
+      {
+        ...correctionSource("health-002", "MED-004", 4, "2026-09-18"),
+        organizer: "medico" as const,
+        actaOrganizer: "medico" as const,
+      },
+      {
+        ...correctionSource("psico-001", "TSOC-008", 8, "2026-09-17"),
+        organizer: "trabajadora_social" as const,
+        actaOrganizer: "psicologa" as const,
+      },
+      correctionSource("psico-002", "PSICO-002", 2, "2026-09-18"),
+    ];
+
+    const preview = buildCorrectionPreviewRows(rows);
+
+    assert.deepEqual(
+      preview.map((row) => row.proposedActaNumber),
+      ["SALUD-001", "SALUD-002", "PSICO-001", "PSICO-002"],
+    );
+  });
+
   it("assigns positive temporary sequences above the real maximum for the PSICO-024 chain", () => {
     const activeRows = [
       active("024", "PSICO-024", 24),
@@ -109,8 +138,14 @@ describe("DrizzleActividadesGrupalesRepository correction planning", () => {
       changedRows: targets,
     });
 
-    assert.deepEqual(temporaryRows.map((row) => row.id), ["psico-003"]);
-    assert.deepEqual(temporaryRows.map((row) => row.temporaryActaSequence), [4]);
+    assert.deepEqual(
+      temporaryRows.map((row) => row.id),
+      ["psico-003"],
+    );
+    assert.deepEqual(
+      temporaryRows.map((row) => row.temporaryActaSequence),
+      [4],
+    );
   });
 
   it("rejects a final acta-number collision with an active acta outside the organizer filter", () => {
@@ -167,7 +202,9 @@ describe("DrizzleActividadesGrupalesRepository correction planning", () => {
     assert.equal(finalUpdates.length, 2);
     assert.ok(finalUpdates.every((update) => update.previousActaNumber !== undefined));
     assert.ok(finalUpdates.every((update) => update.actaNumberCorrectedAt instanceof Date));
-    assert.ok(finalUpdates.every((update) => update.actaNumberCorrectedByUserId === state.actorUserId));
+    assert.ok(
+      finalUpdates.every((update) => update.actaNumberCorrectedByUserId === state.actorUserId),
+    );
   });
 
   it("rolls back phase one completely when a phase-two update fails", async () => {
@@ -199,7 +236,11 @@ function active(
   return { id, actaNumber, actaOrganizer, actaSequence };
 }
 
-function target(id: string, proposedActaNumber: string, sequence: number): ActaCorrectionPreviewRow {
+function target(
+  id: string,
+  proposedActaNumber: string,
+  sequence: number,
+): ActaCorrectionPreviewRow {
   return {
     activityId: id,
     activityDate: "2026-09-17",
@@ -262,7 +303,12 @@ function createApplyRepository({ failOnFinalUpdate }: { failOnFinalUpdate?: numb
   };
 }
 
-function correctionSource(id: string, actaNumber: string, actaSequence: number, activityDate: string) {
+function correctionSource(
+  id: string,
+  actaNumber: string,
+  actaSequence: number,
+  activityDate: string,
+) {
   return {
     id,
     activityDate,
@@ -288,7 +334,15 @@ function createTransaction({
     activityUpdates: Array<Record<string, unknown>>;
   };
   activities: Array<ReturnType<typeof correctionSource>>;
-  operation: ReturnType<typeof structuredClone<typeof state.operation>>;
+  operation: {
+    id: string;
+    tenantId: string;
+    requestedByUserId: string;
+    organizer: "psicologa";
+    snapshotHash: string;
+    expiresAt: Date;
+    usedAt: Date | null;
+  };
   failOnFinalUpdate: number | undefined;
 }) {
   const selectResults: unknown[][] = [[operation], [operation], activities, activities];
