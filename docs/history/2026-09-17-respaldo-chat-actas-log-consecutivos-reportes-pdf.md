@@ -106,6 +106,32 @@ Resultado esperado:
 - La aplicación renumera únicamente actas activas.
 - Las actas del log conservan su número original y no se modifican.
 
+### Filtro por organizador
+
+Se agregó un filtro opcional para normalizar solo un organizador específico, por ejemplo Enfermería o Medicina.
+
+El filtro está disponible en la pantalla de corrección administrativa y se aplica en ambos pasos:
+
+- Vista previa.
+- Aplicación de la corrección.
+
+La selección queda almacenada en la operación de corrección para que la confirmación siempre use el mismo organizador que fue previsualizado. La opción `Todos los organizadores` conserva el comportamiento anterior.
+
+Archivos principales:
+
+- `packages/contracts/src/actividades-grupales.ts`
+- `apps/api/src/database/schema.ts`
+- `apps/api/src/modules/actividades-grupales/application/actividades-grupales.service.ts`
+- `apps/api/src/modules/actividades-grupales/infrastructure/drizzle-actividades-grupales.repository.ts`
+- `apps/web/src/features/actividades-grupales/pages/actividades-grupales-corrections-page.tsx`
+- `apps/web/src/features/actividades-grupales/actividades-grupales.css`
+
+Se agregó y aplicó la migración:
+
+- `apps/api/drizzle/0045_actividades_grupales_correction_organizer.sql`
+
+La interfaz muestra los controles en una fila de escritorio: `Centro | Organizador | botón`. En pantallas pequeñas se adapta a dos filas.
+
 ## PDF de reportes
 
 Solicitud adicional: el PDF de Reportes estaba mostrando un cuadro por días, pero debía incluir las gráficas visibles en la pantalla de Reportes.
@@ -127,6 +153,14 @@ Se conservaron los indicadores superiores y se eliminó la sección “Metodolog
 Pruebas enfocadas del módulo de actividades:
 
 - 33 pruebas pasaron correctamente después del ajuste de normalización.
+- 31 pruebas pasaron después de agregar el filtro por organizador.
+
+Verificaciones adicionales:
+
+- El build de `@cuidarte/contracts` pasó.
+- La migración `0045` se aplicó correctamente.
+- El TypeScript del frontend no reportó errores en las áreas de actividades grupales.
+- `git diff --check` pasó.
 
 Pruebas del módulo de reportes:
 
@@ -138,10 +172,16 @@ El chequeo global de TypeScript del API sigue mostrando errores preexistentes en
 
 ## Commit y push
 
-Commit creado:
+Primer commit de esta sesión:
 
 ```text
 d607e2f feat: actualiza log de actas y reportes graficos
+```
+
+Último commit publicado:
+
+```text
+a1cf016 feat: filtra normalizacion de actas por organizador
 ```
 
 Push confirmado por el usuario y realizado correctamente:
@@ -160,4 +200,4 @@ Leer primero este archivo y revisar:
 - `apps/api/src/modules/reports/application/reports-dashboard-pdf.service.ts`
 - `apps/api/drizzle/0044_actividades_grupales_active_acta_unique.sql`
 
-La rama esperada es `feat/actas-alimentacion-home-incremental` y el último commit publicado es `d607e2f`.
+La rama esperada es `feat/actas-alimentacion-home-incremental` y el último commit publicado es `a1cf016`.

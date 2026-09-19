@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { and, asc, eq, gte, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
 import { type AnyPgColumn } from "drizzle-orm/pg-core";
 
 import { DatabaseService } from "../../../database/database.service";
@@ -41,6 +41,8 @@ export class DrizzleReportsDashboardRepository implements ReportsDashboardReposi
 
     return {
       tenantName: tenantRow?.name ?? null,
+      municipality: tenantRow?.city ?? null,
+      department: tenantRow?.department ?? null,
       dailySeries,
       activitiesByType: activityTypeRows,
       snackOneDelivered: foodRows.reduce((total, row) => total + row.snackOneDelivered, 0),
@@ -145,20 +147,29 @@ export class DrizzleReportsDashboardRepository implements ReportsDashboardReposi
       .select({
         activityTypeId: actividadGrupalTipos.id,
         activityTypeName: actividadGrupalTipos.name,
-        count: sql<number>`count(*)::int`,
+        count: sql<number>`count(${actividadesGrupales.id})::int`,
       })
-      .from(actividadesGrupales)
-      .innerJoin(
-        actividadGrupalTipos,
-        eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
-      )
-      .where(
+      .from(actividadGrupalTipos)
+      .leftJoin(
+        actividadesGrupales,
         and(
+          eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
           ...tenantCondition(actividadesGrupales.tenantId, query.scope),
           isNull(actividadesGrupales.deletedAt),
           gte(actividadesGrupales.activityDate, query.from),
           lte(actividadesGrupales.activityDate, query.to),
         ),
+      )
+      .where(
+        query.scope.tenantId === null
+          ? or(eq(actividadGrupalTipos.isActive, true), sql`${actividadesGrupales.id} is not null`)
+          : and(
+              eq(actividadGrupalTipos.tenantId, query.scope.tenantId),
+              or(
+                eq(actividadGrupalTipos.isActive, true),
+                sql`${actividadesGrupales.id} is not null`,
+              ),
+            ),
       )
       .groupBy(actividadGrupalTipos.id, actividadGrupalTipos.name)
       .orderBy(asc(actividadGrupalTipos.name));
@@ -170,7 +181,7 @@ export class DrizzleReportsDashboardRepository implements ReportsDashboardReposi
     }
 
     const [row] = await this.database.db
-      .select({ name: tenants.name })
+      .select({ name: tenants.name, city: tenants.city, department: tenants.department })
       .from(tenants)
       .where(and(eq(tenants.id, scope.tenantId), eq(tenants.isActive, true)))
       .limit(1);

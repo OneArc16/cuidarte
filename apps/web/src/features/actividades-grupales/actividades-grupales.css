@@ -326,6 +326,46 @@
   width: 9.5%;
 }
 
+.actividades-table--with-created-at {
+  min-width: 1200px;
+}
+
+.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-acta {
+  width: 7%;
+}
+
+.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-actividad {
+  width: 21%;
+}
+
+.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-tipo {
+  width: 11.5%;
+}
+
+.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-fecha {
+  width: 8%;
+}
+
+.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-horario {
+  width: 8%;
+}
+
+.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-organizador {
+  width: 10.5%;
+}
+
+.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-centro {
+  width: 12.5%;
+}
+
+.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-creada-el {
+  width: 13%;
+}
+
+.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-acciones {
+  width: 8.5%;
+}
+
 .actividades-trash-table {
   min-width: 1180px;
 }
@@ -421,6 +461,12 @@
   color: var(--color-ink);
   text-align: left;
   vertical-align: middle;
+}
+
+.actividades-cell-created-at {
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .actividades-table th {
@@ -1847,12 +1893,81 @@
   box-shadow: 0 10px 20px rgb(8 80 65 / 15%);
 }
 
+.actividad-diligenciamiento-upload-button--loading {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .actividad-diligenciamiento-upload-button:not(:disabled):hover,
 .actividad-diligenciamiento-upload-button:focus-within {
   border-color: transparent;
   background: linear-gradient(135deg, rgb(6 70 58), rgb(24 139 105));
   color: white;
   box-shadow: 0 13px 24px rgb(8 80 65 / 20%);
+}
+
+.actividad-diligenciamiento-pdf-progress {
+  display: grid;
+  gap: 9px;
+  padding: 13px 14px;
+  border: 1px solid rgb(8 137 105 / 18%);
+  border-radius: 10px;
+  background: linear-gradient(110deg, rgb(239 249 245), rgb(247 252 250));
+}
+
+.actividad-diligenciamiento-pdf-progress__copy {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.actividad-diligenciamiento-pdf-progress__copy strong {
+  color: var(--color-ink);
+  font-size: 0.82rem;
+}
+
+.actividad-diligenciamiento-pdf-progress__copy small {
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actividad-diligenciamiento-pdf-progress__track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(8 137 105 / 14%);
+}
+
+.actividad-diligenciamiento-pdf-progress__bar {
+  display: block;
+  width: 42%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--color-care), #42b78d, var(--color-care));
+  animation: actividad-diligenciamiento-pdf-loading 1.15s ease-in-out infinite;
+}
+
+@keyframes actividad-diligenciamiento-pdf-loading {
+  from {
+    transform: translateX(-120%);
+  }
+
+  to {
+    transform: translateX(240%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actividad-diligenciamiento-pdf-progress__bar {
+    animation: none;
+    transform: translateX(70%);
+  }
 }
 
 .actividad-diligenciamiento-file-card {
@@ -2090,6 +2205,10 @@
   .actividades-table {
     min-width: 820px;
     font-size: 0.79rem;
+  }
+
+  .actividades-table--with-created-at {
+    min-width: 1180px;
   }
 
   .actividades-table th,

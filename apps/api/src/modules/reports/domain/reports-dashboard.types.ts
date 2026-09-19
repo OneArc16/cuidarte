@@ -25,6 +25,8 @@ export type ReportsDashboardActivityTypeAggregate = {
 
 export type ReportsDashboardAggregate = {
   tenantName: string | null;
+  municipality?: string | null;
+  department?: string | null;
   dailySeries: ReportsDashboardDailyAggregate[];
   activitiesByType: ReportsDashboardActivityTypeAggregate[];
   snackOneDelivered: number;

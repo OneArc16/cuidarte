@@ -145,6 +145,8 @@ export const reportsDashboardResponseSchema = z.object({
     tenantId: z.uuid().nullable(),
     tenantName: z.string().min(1).nullable(),
     isConsolidated: z.boolean(),
+    municipality: z.string().min(1).nullable().optional(),
+    department: z.string().min(1).nullable().optional(),
   }),
   summary: reportsDashboardSummarySchema,
   dailySeries: z.array(reportsDashboardDailyPointSchema),
@@ -184,8 +186,12 @@ export const reportsDashboardExportSchema = z.object({
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
-export const reportsDashboardExportResponseSchema = z.object({ export: reportsDashboardExportSchema });
-export const reportsDashboardExportListResponseSchema = z.object({ exports: z.array(reportsDashboardExportSchema) });
+export const reportsDashboardExportResponseSchema = z.object({
+  export: reportsDashboardExportSchema,
+});
+export const reportsDashboardExportListResponseSchema = z.object({
+  exports: z.array(reportsDashboardExportSchema),
+});
 
 export const cancelReportResponseSchema = z.object({
   report: reportJobSchema,
@@ -210,7 +216,9 @@ export type ReportsDashboardActivityType = z.infer<typeof reportsDashboardActivi
 export type ReportsDashboardResponse = z.infer<typeof reportsDashboardResponseSchema>;
 export type ReportAnalyticsExportFormat = z.infer<typeof reportAnalyticsExportFormatSchema>;
 export type ReportAnalyticsExportStatus = z.infer<typeof reportAnalyticsExportStatusSchema>;
-export type CreateReportsDashboardExportRequest = z.infer<typeof createReportsDashboardExportRequestSchema>;
+export type CreateReportsDashboardExportRequest = z.infer<
+  typeof createReportsDashboardExportRequestSchema
+>;
 export type ReportsDashboardExport = z.infer<typeof reportsDashboardExportSchema>;
 
 function differenceInCalendarDays(from: string, to: string): number {

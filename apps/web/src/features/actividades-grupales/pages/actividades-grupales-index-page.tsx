@@ -141,8 +141,17 @@ export function ActividadesGrupalesIndexPage({
         activityMonth={activityMonth}
         exportButton={
           <div className="module-report-actions">
-            <ReportExportButton className="actividades-zip-action" period={reportPeriod} tenantId={reportTenantId} type="ACTAS_SESIONES_GRUPALES" />
-            <ReportHistoryButton period={reportPeriod} tenantId={reportTenantId} type="ACTAS_SESIONES_GRUPALES" />
+            <ReportExportButton
+              className="actividades-zip-action"
+              period={reportPeriod}
+              tenantId={reportTenantId}
+              type="ACTAS_SESIONES_GRUPALES"
+            />
+            <ReportHistoryButton
+              period={reportPeriod}
+              tenantId={reportTenantId}
+              type="ACTAS_SESIONES_GRUPALES"
+            />
           </div>
         }
         search={search}
@@ -179,6 +188,7 @@ export function ActividadesGrupalesIndexPage({
         }
         onOpenActaPdf={(actividad) => openActividadGrupalActaPdf(actividad.id)}
         showTenantColumn={showTenantFilter}
+        showCreationTimestampColumn={user.role === "super_admin"}
       />
 
       {activityPendingDelete !== null ? (

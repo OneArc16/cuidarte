@@ -1,11 +1,15 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
 import {
   type AuthUser,
   type ReportsDashboardQuery,
   type ReportsDashboardResponse,
 } from "@cuidarte/contracts";
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import PptxGenJS from "pptxgenjs";
 
+import { TenantBrandingService } from "../../tenant-branding/application/tenant-branding.service";
 import { ReportsDashboardService } from "./reports-dashboard.service";
 
 export type ReportsDashboardPptxFile = {
@@ -14,15 +18,26 @@ export type ReportsDashboardPptxFile = {
   filename: string;
 };
 
+type PptxBrandingAssets = {
+  organizationLogoData: string | null;
+  governmentLogoData: string | null;
+};
+
+const INSTITUTIONAL_LOGO_RELATIVE_PATH = path.join("public", "logos", "gobernacion-magdalena.png");
+
 @Injectable()
 export class ReportsDashboardPptxService {
-  constructor(private readonly dashboardService: ReportsDashboardService) {}
+  constructor(
+    private readonly dashboardService: ReportsDashboardService,
+    @Optional() private readonly tenantBrandingService?: TenantBrandingService,
+  ) {}
 
   async exportPptx(
     query: ReportsDashboardQuery,
     actor: AuthUser,
   ): Promise<ReportsDashboardPptxFile> {
     const dashboard = await this.dashboardService.getDashboard(query, actor);
+    const branding = await resolvePptxBranding(dashboard, this.tenantBrandingService);
     const presentation = new PptxGenJS();
     presentation.layout = "LAYOUT_WIDE";
     presentation.author = "CuidarTe";
@@ -30,12 +45,12 @@ export class ReportsDashboardPptxService {
     presentation.title = "Reporte ejecutivo de estadísticas";
     presentation.company = "CuidarTe";
 
-    addCoverSlide(presentation, dashboard);
+    const monthlySeries = buildMonthlySeries(dashboard.dailySeries);
+    addCoverSlide(presentation, dashboard, branding);
     addSummarySlide(presentation, dashboard);
-    addDailySlide(presentation, dashboard);
+    addMonthlyAttendanceSlide(presentation, monthlySeries);
     addActivitiesSlide(presentation, dashboard);
-    addDeliverySlide(presentation, dashboard);
-    addMethodologySlide(presentation, dashboard);
+    addDeliverySlide(presentation, monthlySeries);
 
     const output = await presentation.write({ outputType: "nodebuffer" });
     return {
@@ -46,31 +61,114 @@ export class ReportsDashboardPptxService {
   }
 }
 
-function addCoverSlide(presentation: PptxGenJS, dashboard: ReportsDashboardResponse): void {
+function addCoverSlide(
+  presentation: PptxGenJS,
+  dashboard: ReportsDashboardResponse,
+  branding: PptxBrandingAssets,
+): void {
   const slide = presentation.addSlide();
   slide.background = { color: "F3F8F5" };
-  slide.addText("CuidarTe", {
-    x: 0.8,
-    y: 0.8,
-    w: 3,
-    h: 0.4,
-    fontSize: 18,
-    bold: true,
-    color: "168362",
+  addLogoCard(
+    presentation,
+    slide,
+    branding.organizationLogoData,
+    "Logo de la organización",
+    "CuidarTe",
+    { x: 0.65, y: 0.35, w: 2.75, h: 1.1 },
+  );
+  addLogoCard(
+    presentation,
+    slide,
+    branding.governmentLogoData,
+    "Logo de la Gobernación del Magdalena",
+    "Gobernación del Magdalena",
+    { x: 9.93, y: 0.35, w: 2.75, h: 1.1 },
+  );
+  slide.addShape(presentation.ShapeType.line, {
+    x: 0.65,
+    y: 1.7,
+    w: 12.03,
+    h: 0,
+    line: { color: "DCE9E2", pt: 1.2 },
   });
   slide.addText("Reporte ejecutivo de estadísticas", {
-    x: 0.8,
-    y: 2,
-    w: 11,
+    x: 1.05,
+    y: 2.15,
+    w: 11.23,
     h: 0.7,
     fontSize: 30,
     bold: true,
     color: "123B31",
+    align: "center",
   });
   slide.addText(
-    `${dashboard.range.from} a ${dashboard.range.to}\n${dashboard.scope.isConsolidated ? "Todos los centros activos" : (dashboard.scope.tenantName ?? "Centro")}`,
-    { x: 0.8, y: 2.9, w: 8, h: 0.8, fontSize: 17, color: "657A72" },
+    [
+      {
+        text: `Periodo: ${dashboard.range.from} a ${dashboard.range.to}\n`,
+        options: { bold: true },
+      },
+      {
+        text: `${dashboard.scope.isConsolidated ? "Todos los centros activos" : (dashboard.scope.tenantName ?? "Centro")}\n`,
+      },
+      {
+        text: `Sede: ${dashboard.scope.municipality ?? "Municipio no registrado"}, ${dashboard.scope.department ?? "Departamento no registrado"}`,
+      },
+    ],
+    {
+      x: 1.5,
+      y: 3.15,
+      w: 10.33,
+      h: 1.2,
+      fontSize: 17,
+      color: "657A72",
+      align: "center",
+      breakLine: false,
+      valign: "middle",
+    },
   );
+}
+
+function addLogoCard(
+  presentation: PptxGenJS,
+  slide: PptxGenJS.Slide,
+  data: string | null,
+  altText: string,
+  fallbackLabel: string,
+  position: { x: number; y: number; w: number; h: number },
+): void {
+  slide.addShape(presentation.ShapeType.roundRect, {
+    ...position,
+    rectRadius: 0.08,
+    fill: { color: "FFFFFF" },
+    line: { color: "DCE9E2", pt: 1 },
+  });
+  if (data !== null) {
+    const imageWidth = position.w - 0.36;
+    const imageHeight = position.h - 0.24;
+    slide.addImage({
+      data,
+      altText,
+      x: position.x + 0.18,
+      y: position.y + 0.12,
+      w: imageWidth,
+      h: imageHeight,
+      sizing: { type: "contain", w: imageWidth, h: imageHeight },
+    });
+    return;
+  }
+
+  slide.addText(fallbackLabel, {
+    x: position.x + 0.18,
+    y: position.y + 0.27,
+    w: position.w - 0.36,
+    h: position.h - 0.54,
+    fontSize: 13,
+    bold: true,
+    color: "168362",
+    align: "center",
+    valign: "middle",
+    fit: "shrink",
+  });
 }
 
 function addSummarySlide(presentation: PptxGenJS, dashboard: ReportsDashboardResponse): void {
@@ -85,9 +183,9 @@ function addSummarySlide(presentation: PptxGenJS, dashboard: ReportsDashboardRes
     ["Almuerzos", dashboard.summary.lunchesDelivered],
   ].map((row) => row.map((cell) => ({ text: String(cell) })));
   slide.addTable(rows, {
-    x: 1,
+    x: 2.15,
     y: 1.35,
-    w: 7.4,
+    w: 9.03,
     h: 4.6,
     border: { type: "solid", color: "DCE9E2", pt: 1 },
     fill: { color: "F7FBF9" },
@@ -99,21 +197,24 @@ function addSummarySlide(presentation: PptxGenJS, dashboard: ReportsDashboardRes
   });
 }
 
-function addDailySlide(presentation: PptxGenJS, dashboard: ReportsDashboardResponse): void {
-  const slide = baseSlide(presentation, "Atenciones por día");
-  const labels = dashboard.dailySeries.map((point) => point.date);
+function addMonthlyAttendanceSlide(
+  presentation: PptxGenJS,
+  monthlySeries: MonthlyChartPoint[],
+): void {
+  const slide = baseSlide(presentation, "Atenciones por mes");
+  const labels = monthlySeries.map((point) => formatChartMonth(point.month));
   slide.addChart(
     presentation.ChartType.line,
     [
       {
         name: "Enfermería",
         labels,
-        values: dashboard.dailySeries.map((point) => point.nursingAttendances),
+        values: monthlySeries.map((point) => point.nursingAttendances),
       },
       {
         name: "Medicina",
         labels,
-        values: dashboard.dailySeries.map((point) => point.medicalAttendances),
+        values: monthlySeries.map((point) => point.medicalAttendances),
       },
     ],
     chartOptions(),
@@ -122,8 +223,14 @@ function addDailySlide(presentation: PptxGenJS, dashboard: ReportsDashboardRespo
 
 function addActivitiesSlide(presentation: PptxGenJS, dashboard: ReportsDashboardResponse): void {
   const slide = baseSlide(presentation, "Actividades por tipo");
-  const labels = dashboard.activitiesByType.map((activity) => activity.activityTypeName);
-  const values = dashboard.activitiesByType.map((activity) => activity.count);
+  const labels =
+    dashboard.activitiesByType.length > 0
+      ? dashboard.activitiesByType.map((activity) => activity.activityTypeName)
+      : ["Sin actividades"];
+  const values =
+    dashboard.activitiesByType.length > 0
+      ? dashboard.activitiesByType.map((activity) => activity.count)
+      : [0];
   slide.addChart(presentation.ChartType.bar, [{ name: "Actividades", labels, values }], {
     ...chartOptions(),
     catAxisLabelRotate: 0,
@@ -131,55 +238,29 @@ function addActivitiesSlide(presentation: PptxGenJS, dashboard: ReportsDashboard
   });
 }
 
-function addDeliverySlide(presentation: PptxGenJS, dashboard: ReportsDashboardResponse): void {
+function addDeliverySlide(presentation: PptxGenJS, monthlySeries: MonthlyChartPoint[]): void {
   const slide = baseSlide(presentation, "Alimentación y transporte");
-  const labels = dashboard.dailySeries.map((point) => point.date);
+  const labels = monthlySeries.map((point) => formatChartMonth(point.month));
   slide.addChart(
     presentation.ChartType.bar,
     [
       {
         name: "Transporte",
         labels,
-        values: dashboard.dailySeries.map((point) => point.transportAllowancesDelivered),
+        values: monthlySeries.map((point) => point.transportAllowancesDelivered),
       },
       {
         name: "Refrigerios",
         labels,
-        values: dashboard.dailySeries.map((point) => point.snacksDelivered),
+        values: monthlySeries.map((point) => point.snacksDelivered),
       },
       {
         name: "Almuerzos",
         labels,
-        values: dashboard.dailySeries.map((point) => point.lunchesDelivered),
+        values: monthlySeries.map((point) => point.lunchesDelivered),
       },
     ],
-    { ...chartOptions(), catAxisLabelRotate: 45 },
-  );
-}
-
-function addMethodologySlide(presentation: PptxGenJS, dashboard: ReportsDashboardResponse): void {
-  const slide = baseSlide(presentation, "Metodología");
-  slide.addText(
-    [
-      { text: "Rango inclusivo: ", options: { bold: true } },
-      { text: `${dashboard.range.from} a ${dashboard.range.to}\n` },
-      { text: "Atenciones médicas: ", options: { bold: true } },
-      { text: "creadas por usuarios con rol médico.\n" },
-      { text: "Actividades: ", options: { bold: true } },
-      { text: "se excluyen registros eliminados.\n" },
-      { text: "Alimentación: ", options: { bold: true } },
-      { text: "se usa delivery_date y estado entregado." },
-    ],
-    {
-      x: 1,
-      y: 1.5,
-      w: 10.5,
-      h: 2.4,
-      fontSize: 20,
-      color: "123B31",
-      breakLine: false,
-      valign: "middle",
-    },
+    { ...chartOptions(), catAxisLabelRotate: 0 },
   );
 }
 
@@ -187,23 +268,24 @@ function baseSlide(presentation: PptxGenJS, title: string): PptxGenJS.Slide {
   const slide = presentation.addSlide();
   slide.background = { color: "FFFFFF" };
   slide.addText(title, {
-    x: 0.65,
+    x: 0.8,
     y: 0.45,
-    w: 11.5,
+    w: 11.73,
     h: 0.4,
     fontSize: 24,
     bold: true,
     color: "123B31",
+    align: "center",
   });
   return slide;
 }
 
 function chartOptions(): PptxGenJS.IChartOpts {
   return {
-    x: 0.75,
-    y: 1.1,
-    w: 11.5,
-    h: 5.65,
+    x: 1,
+    y: 1.25,
+    w: 11.33,
+    h: 5.45,
     showLegend: true,
     showTitle: false,
     showValue: false,
@@ -215,4 +297,104 @@ function chartOptions(): PptxGenJS.IChartOpts {
     valAxisMinVal: 0,
     chartColors: ["168362", "2B6B99", "A24B48"],
   };
+}
+
+type MonthlyChartPoint = {
+  month: string;
+  nursingAttendances: number;
+  medicalAttendances: number;
+  transportAllowancesDelivered: number;
+  snacksDelivered: number;
+  lunchesDelivered: number;
+};
+
+export function buildMonthlySeries(
+  dailySeries: ReportsDashboardResponse["dailySeries"],
+): MonthlyChartPoint[] {
+  const pointsByMonth = new Map<string, MonthlyChartPoint>();
+
+  for (const point of dailySeries) {
+    const month = point.date.slice(0, 7);
+    const existing = pointsByMonth.get(month);
+    if (existing !== undefined) {
+      existing.nursingAttendances += point.nursingAttendances;
+      existing.medicalAttendances += point.medicalAttendances;
+      existing.transportAllowancesDelivered += point.transportAllowancesDelivered;
+      existing.snacksDelivered += point.snacksDelivered;
+      existing.lunchesDelivered += point.lunchesDelivered;
+      continue;
+    }
+
+    pointsByMonth.set(month, {
+      month,
+      nursingAttendances: point.nursingAttendances,
+      medicalAttendances: point.medicalAttendances,
+      transportAllowancesDelivered: point.transportAllowancesDelivered,
+      snacksDelivered: point.snacksDelivered,
+      lunchesDelivered: point.lunchesDelivered,
+    });
+  }
+
+  return [...pointsByMonth.values()];
+}
+
+function formatChartMonth(value: string): string {
+  return new Intl.DateTimeFormat("es-CO", {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${value}-01T00:00:00Z`));
+}
+
+async function resolvePptxBranding(
+  dashboard: ReportsDashboardResponse,
+  tenantBrandingService?: TenantBrandingService,
+): Promise<PptxBrandingAssets> {
+  const [governmentLogoBuffer, organizationLogoBuffer] = await Promise.all([
+    readInstitutionalLogo(),
+    readOrganizationLogo(dashboard.scope.tenantId, tenantBrandingService),
+  ]);
+
+  return {
+    governmentLogoData: toPptxImageData(governmentLogoBuffer),
+    organizationLogoData: toPptxImageData(organizationLogoBuffer),
+  };
+}
+
+async function readOrganizationLogo(
+  tenantId: string | null,
+  tenantBrandingService?: TenantBrandingService,
+): Promise<Buffer | null> {
+  if (tenantId === null || tenantBrandingService === undefined) {
+    return null;
+  }
+
+  try {
+    const version = await tenantBrandingService.resolveActiveLogo(tenantId);
+    const file = await tenantBrandingService.readLogoVersionFile(version);
+    return file.buffer;
+  } catch {
+    return null;
+  }
+}
+
+async function readInstitutionalLogo(): Promise<Buffer | null> {
+  const candidatePaths = [
+    path.resolve(process.cwd(), "apps", "web", INSTITUTIONAL_LOGO_RELATIVE_PATH),
+    path.resolve(process.cwd(), "..", "web", INSTITUTIONAL_LOGO_RELATIVE_PATH),
+  ];
+
+  for (const candidatePath of candidatePaths) {
+    try {
+      return await readFile(candidatePath);
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
+function toPptxImageData(buffer: Buffer | null): string | null {
+  return buffer === null ? null : `image/png;base64,${buffer.toString("base64")}`;
 }

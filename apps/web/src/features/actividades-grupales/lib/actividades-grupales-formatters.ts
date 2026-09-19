@@ -102,11 +102,15 @@ export function formatActivitySchedule(startTime: string, endTime: string): stri
   return `${startTime} - ${endTime}`;
 }
 
-export function formatActividadGrupalTrashTimestamp(value: string): string {
+export function formatActividadGrupalTimestamp(value: string): string {
   return new Intl.DateTimeFormat("es-CO", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+export function formatActividadGrupalTrashTimestamp(value: string): string {
+  return formatActividadGrupalTimestamp(value);
 }
 
 export function formatActividadGrupalFileSize(sizeBytes: number): string {

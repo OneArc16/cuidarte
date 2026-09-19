@@ -124,7 +124,15 @@ describe("App routing guards", () => {
     renderAppAtPath("/adultos-mayores/importar");
 
     expect(await screen.findByRole("button", { name: "Descargar plantilla" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Importar adultos mayores" })).toBeInTheDocument();
+    const navigation = screen.getByRole("navigation", { name: "Modulos principales" });
+
+    expect(
+      within(navigation).queryByRole("button", { name: "Importar adultos mayores" }),
+    ).not.toBeInTheDocument();
+    expect(within(navigation).getByRole("button", { name: "Adultos mayores" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     expect(window.location.pathname).toBe("/adultos-mayores/importar");
   });
 

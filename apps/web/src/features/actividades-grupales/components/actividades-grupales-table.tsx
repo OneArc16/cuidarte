@@ -3,6 +3,7 @@ import { ClipboardPenLine, Eye, FileText, PencilLine, Trash2 } from "lucide-reac
 
 import {
   formatActividadGrupalOrganizer,
+  formatActividadGrupalTimestamp,
   formatActivitySchedule,
   formatActaNumber,
 } from "../lib/actividades-grupales-formatters";
@@ -15,6 +16,7 @@ type ActividadesGrupalesTableProps = {
   onOpenDiligenciamiento: (actividad: ActividadGrupalListItem) => void;
   onOpenActaPdf: (actividad: ActividadGrupalListItem) => void;
   showTenantColumn: boolean;
+  showCreationTimestampColumn: boolean;
 };
 
 export function ActividadesGrupalesTable({
@@ -25,6 +27,7 @@ export function ActividadesGrupalesTable({
   onOpenDiligenciamiento,
   onOpenActaPdf,
   showTenantColumn,
+  showCreationTimestampColumn,
 }: ActividadesGrupalesTableProps) {
   if (isLoading) {
     return (
@@ -43,7 +46,7 @@ export function ActividadesGrupalesTable({
   return (
     <div className="actividades-table-wrap">
       <table
-        className={`actividades-table ${showTenantColumn ? "actividades-table--with-tenant" : "actividades-table--without-tenant"}`}
+        className={`actividades-table ${showTenantColumn ? "actividades-table--with-tenant" : "actividades-table--without-tenant"} ${showCreationTimestampColumn ? "actividades-table--with-created-at" : ""}`}
       >
         <colgroup>
           <col className="actividades-col-acta" />
@@ -53,6 +56,7 @@ export function ActividadesGrupalesTable({
           <col className="actividades-col-horario" />
           <col className="actividades-col-organizador" />
           {showTenantColumn ? <col className="actividades-col-centro" /> : null}
+          {showCreationTimestampColumn ? <col className="actividades-col-creada-el" /> : null}
           <col className="actividades-col-acciones" />
         </colgroup>
         <thead>
@@ -64,13 +68,16 @@ export function ActividadesGrupalesTable({
             <th scope="col">Horario</th>
             <th scope="col">Organizador</th>
             {showTenantColumn ? <th scope="col">Centro</th> : null}
+            {showCreationTimestampColumn ? <th scope="col">Creada el</th> : null}
             <th scope="col">Acciones</th>
           </tr>
         </thead>
         <tbody>
           {actividadesGrupales.length === 0 ? (
             <tr>
-              <td colSpan={showTenantColumn ? 8 : 7}>No hay actividades registradas.</td>
+              <td colSpan={7 + Number(showTenantColumn) + Number(showCreationTimestampColumn)}>
+                No hay actividades registradas.
+              </td>
             </tr>
           ) : (
             actividadesGrupales.map((actividad) => (
@@ -99,6 +106,13 @@ export function ActividadesGrupalesTable({
                 </td>
                 {showTenantColumn ? (
                   <td className="actividades-cell-centro">{actividad.tenantName}</td>
+                ) : null}
+                {showCreationTimestampColumn ? (
+                  <td className="actividades-cell-created-at">
+                    <time dateTime={actividad.createdAt}>
+                      {formatActividadGrupalTimestamp(actividad.createdAt)}
+                    </time>
+                  </td>
                 ) : null}
                 <td>
                   <div className="actividades-row-actions">

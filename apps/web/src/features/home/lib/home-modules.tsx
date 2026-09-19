@@ -42,6 +42,7 @@ export type HomeModule = {
   icon: LucideIcon;
   path: string;
   roles?: readonly AuthUser["role"][];
+  showInNavigation?: boolean;
   summaryLabel?: string;
   directAccessDescription?: string;
 };
@@ -73,6 +74,7 @@ export const HOME_MODULES = [
     icon: Upload,
     path: ADULTOS_MAYORES_IMPORT_PATH,
     roles: ["super_admin", "admin", "director"],
+    showInNavigation: false,
     summaryLabel: "Importaciones completadas",
     directAccessDescription: "Carga masiva",
   },
@@ -142,6 +144,10 @@ const MOBILE_PRIMARY_MODULE_IDS = ["inicio", "adultos-mayores", "sesiones-grupal
 
 export function canViewModule(module: HomeModule, role: AuthUser["role"]): boolean {
   return module.roles === undefined || module.roles.includes(role);
+}
+
+export function isNavigationModule(module: HomeModule): boolean {
+  return module.showInNavigation !== false;
 }
 
 export function isMobilePrimaryModule(module: HomeModule): boolean {

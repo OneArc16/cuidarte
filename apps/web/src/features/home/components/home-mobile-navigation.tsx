@@ -7,7 +7,12 @@ import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { HomeModuleButton } from "./home-module-button";
 import { HomeUserSummary } from "./home-user-summary";
 import { SessionLogoutButton } from "./session-logout-button";
-import { canViewModule, HOME_MODULES, isMobilePrimaryModule } from "../lib/home-modules";
+import {
+  canViewModule,
+  HOME_MODULES,
+  isMobilePrimaryModule,
+  isNavigationModule,
+} from "../lib/home-modules";
 
 type HomeMobileNavigationProps = {
   activeModuleId: string;
@@ -23,7 +28,9 @@ export function HomeMobileNavigation({
   onLogoutSuccess,
 }: HomeMobileNavigationProps) {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
-  const visibleModules = HOME_MODULES.filter((module) => canViewModule(module, user.role));
+  const visibleModules = HOME_MODULES.filter(
+    (module) => isNavigationModule(module) && canViewModule(module, user.role),
+  );
   const primaryModules = visibleModules.filter((module) => isMobilePrimaryModule(module));
   const secondaryModules = visibleModules.filter((module) => !isMobilePrimaryModule(module));
 

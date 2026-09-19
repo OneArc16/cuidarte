@@ -101,6 +101,8 @@ export function ActividadGrupalDiligenciamientoForm({
   const [selectedIntegrantes, setSelectedIntegrantes] = useState(detail.integrantes);
   const [newPhotoFiles, setNewPhotoFiles] = useState<File[]>([]);
   const [newPdfFile, setNewPdfFile] = useState<File | null>(null);
+  const [isPreparingPdf, setIsPreparingPdf] = useState(false);
+  const [pendingPdfFileName, setPendingPdfFileName] = useState<string | null>(null);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
   const [photoUploadError, setPhotoUploadError] = useState<string | null>(null);
   const [pdfUploadError, setPdfUploadError] = useState<string | null>(null);
@@ -120,6 +122,8 @@ export function ActividadGrupalDiligenciamientoForm({
     setIntegranteSearch("");
     setNewPhotoFiles([]);
     setNewPdfFile(null);
+    setIsPreparingPdf(false);
+    setPendingPdfFileName(null);
     setActivePhotoIndex(0);
     setPhotoUploadError(null);
     setPdfUploadError(null);
@@ -182,6 +186,8 @@ export function ActividadGrupalDiligenciamientoForm({
     (integrante) => !selectedIntegrantes.some((selected) => selected.id === integrante.id),
   );
   const visiblePdfFile = newPdfFile !== null ? null : removePdfFile ? null : detail.pdfFile;
+  const isPdfUploading = isPending && newPdfFile !== null;
+  const isPdfBusy = isPreparingPdf || isPdfUploading;
 
   useEffect(() => {
     setActivePhotoIndex((current) => {
@@ -263,7 +269,7 @@ export function ActividadGrupalDiligenciamientoForm({
     setNewPhotoFiles((current) => [...current, ...nextValidFiles.slice(0, allowedSlots)]);
   }
 
-  function handlePdf(fileList: FileList | null) {
+  async function handlePdf(fileList: FileList | null) {
     if (fileList === null || fileList.length === 0) {
       return;
     }
@@ -285,12 +291,23 @@ export function ActividadGrupalDiligenciamientoForm({
       return;
     }
 
-    setNewPdfFile(file);
-    form.setValue("removePdfFile", false, {
-      shouldDirty: true,
-      shouldTouch: true,
-      shouldValidate: true,
-    });
+    setIsPreparingPdf(true);
+    setPendingPdfFileName(file.name);
+
+    try {
+      await file.arrayBuffer();
+      setNewPdfFile(file);
+      form.setValue("removePdfFile", false, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      });
+    } catch {
+      setPdfUploadError("No fue posible preparar el PDF. Intenta adjuntarlo nuevamente.");
+    } finally {
+      setIsPreparingPdf(false);
+      setPendingPdfFileName(null);
+    }
   }
 
   return (
@@ -298,7 +315,7 @@ export function ActividadGrupalDiligenciamientoForm({
       className="actividad-form actividad-diligenciamiento-form"
       noValidate
       onSubmit={(event) => {
-        if (isReadOnly) {
+        if (isReadOnly || isPreparingPdf) {
           event.preventDefault();
           return;
         }
@@ -579,7 +596,7 @@ export function ActividadGrupalDiligenciamientoForm({
             />
           </div>
 
-          <div className="actividad-diligenciamiento-upload-card">
+          <div className="actividad-diligenciamiento-upload-card" aria-busy={isPdfBusy}>
             <div className="actividad-diligenciamiento-upload-card__header">
               <FileText aria-hidden="true" />
               <div>
@@ -589,16 +606,28 @@ export function ActividadGrupalDiligenciamientoForm({
             </div>
 
             {isReadOnly ? null : (
-              <label className="outline-action actividad-diligenciamiento-upload-button">
+              <label
+                className={`outline-action actividad-diligenciamiento-upload-button${isPdfBusy ? " actividad-diligenciamiento-upload-button--loading" : ""}`}
+                aria-disabled={isPdfBusy}
+              >
                 <Upload aria-hidden="true" />
-                <span>{newPdfFile === null ? "Adjuntar PDF" : "Reemplazar PDF"}</span>
+                <span>
+                  {isPdfBusy
+                    ? isPreparingPdf
+                      ? "Preparando PDF..."
+                      : "Subiendo PDF..."
+                    : newPdfFile === null
+                      ? "Adjuntar PDF"
+                      : "Reemplazar PDF"}
+                </span>
                 <input
                   className="visually-hidden"
                   type="file"
                   aria-label="Adjuntar documento PDF"
                   accept="application/pdf"
+                  disabled={isPdfBusy}
                   onChange={(event) => {
-                    handlePdf(event.target.files);
+                    void handlePdf(event.target.files);
                     event.target.value = "";
                   }}
                 />
@@ -611,37 +640,49 @@ export function ActividadGrupalDiligenciamientoForm({
               </p>
             ) : null}
 
-            {visiblePdfFile === null && newPdfFile === null ? <EmptySupportSlot /> : null}
-
-            {visiblePdfFile !== null ? (
-              <FileCard
-                actionLabel="Retirar PDF actual"
-                actionIcon={<Trash2 aria-hidden="true" />}
-                description={formatActividadGrupalFileSize(visiblePdfFile.sizeBytes)}
-                href={buildActividadGrupalDiligenciamientoFileUrl(activityId, visiblePdfFile.id)}
-                title={visiblePdfFile.originalName}
-                {...(isReadOnly
-                  ? {}
-                  : {
-                      onAction: () =>
-                        form.setValue("removePdfFile", true, {
-                          shouldDirty: true,
-                          shouldTouch: true,
-                          shouldValidate: true,
-                        }),
-                    })}
+            {isPdfBusy ? (
+              <PdfLoadingIndicator
+                fileName={newPdfFile?.name ?? pendingPdfFileName ?? "Documento PDF"}
+                phase={isPreparingPdf ? "Preparando PDF" : "Subiendo PDF"}
               />
-            ) : null}
+            ) : (
+              <>
+                {visiblePdfFile === null && newPdfFile === null ? <EmptySupportSlot /> : null}
 
-            {newPdfFile !== null ? (
-              <FileCard
-                actionLabel="Quitar PDF nuevo"
-                actionIcon={<X aria-hidden="true" />}
-                description={formatActividadGrupalFileSize(newPdfFile.size)}
-                title={newPdfFile.name}
-                {...(isReadOnly ? {} : { onAction: () => setNewPdfFile(null) })}
-              />
-            ) : null}
+                {visiblePdfFile !== null ? (
+                  <FileCard
+                    actionLabel="Retirar PDF actual"
+                    actionIcon={<Trash2 aria-hidden="true" />}
+                    description={formatActividadGrupalFileSize(visiblePdfFile.sizeBytes)}
+                    href={buildActividadGrupalDiligenciamientoFileUrl(
+                      activityId,
+                      visiblePdfFile.id,
+                    )}
+                    title={visiblePdfFile.originalName}
+                    {...(isReadOnly
+                      ? {}
+                      : {
+                          onAction: () =>
+                            form.setValue("removePdfFile", true, {
+                              shouldDirty: true,
+                              shouldTouch: true,
+                              shouldValidate: true,
+                            }),
+                        })}
+                  />
+                ) : null}
+
+                {newPdfFile !== null ? (
+                  <FileCard
+                    actionLabel="Quitar PDF nuevo"
+                    actionIcon={<X aria-hidden="true" />}
+                    description={formatActividadGrupalFileSize(newPdfFile.size)}
+                    title={newPdfFile.name}
+                    {...(isReadOnly ? {} : { onAction: () => setNewPdfFile(null) })}
+                  />
+                ) : null}
+              </>
+            )}
           </div>
         </div>
       </section>
@@ -657,8 +698,8 @@ export function ActividadGrupalDiligenciamientoForm({
           Cancelar
         </button>
         {isReadOnly ? null : (
-          <button className="primary-action" type="submit" disabled={isPending}>
-            {isPending ? "Guardando..." : "Guardar"}
+          <button className="primary-action" type="submit" disabled={isPending || isPreparingPdf}>
+            {isPending ? "Guardando..." : isPreparingPdf ? "Preparando PDF..." : "Guardar"}
           </button>
         )}
       </div>
@@ -735,6 +776,25 @@ function FileCard({
         ) : null}
       </div>
     </article>
+  );
+}
+
+function PdfLoadingIndicator({ fileName, phase }: { fileName: string; phase: string }) {
+  return (
+    <div className="actividad-diligenciamiento-pdf-progress" role="status" aria-live="polite">
+      <div className="actividad-diligenciamiento-pdf-progress__copy">
+        <strong>{phase}</strong>
+        <small>{fileName}</small>
+      </div>
+      <div
+        className="actividad-diligenciamiento-pdf-progress__track"
+        role="progressbar"
+        aria-label={phase}
+        aria-valuetext={`${phase}: ${fileName}`}
+      >
+        <span className="actividad-diligenciamiento-pdf-progress__bar" />
+      </div>
+    </div>
   );
 }
 

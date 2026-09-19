@@ -7,7 +7,7 @@ import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { HomeModuleButton } from "./home-module-button";
 import { HomeUserSummary } from "./home-user-summary";
 import { SessionLogoutButton } from "./session-logout-button";
-import { canViewModule, HOME_MODULES } from "../lib/home-modules";
+import { canViewModule, HOME_MODULES, isNavigationModule } from "../lib/home-modules";
 
 type HomeDesktopSidebarProps = {
   activeModuleId: string;
@@ -23,7 +23,9 @@ export function HomeDesktopSidebar({
   onLogoutSuccess,
 }: HomeDesktopSidebarProps) {
   const [shouldCollapseAfterAction, setShouldCollapseAfterAction] = useState(false);
-  const visibleModules = HOME_MODULES.filter((module) => canViewModule(module, user.role));
+  const visibleModules = HOME_MODULES.filter(
+    (module) => isNavigationModule(module) && canViewModule(module, user.role),
+  );
 
   return (
     <aside

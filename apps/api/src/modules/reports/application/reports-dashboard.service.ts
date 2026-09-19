@@ -11,7 +11,10 @@ import {
   REPORTS_DASHBOARD_REPOSITORY,
   type ReportsDashboardRepository,
 } from "../domain/reports-dashboard.repository";
-import { type ReportsDashboardAggregate } from "../domain/reports-dashboard.types";
+import {
+  type ReportsDashboardActivityTypeAggregate,
+  type ReportsDashboardAggregate,
+} from "../domain/reports-dashboard.types";
 
 @Injectable()
 export class ReportsDashboardService {
@@ -32,7 +35,11 @@ export class ReportsDashboardService {
       scope: { tenantId },
     });
     const dailySeries = completeDailySeries(query, aggregate);
-    const activities = aggregate.activitiesByType.reduce((total, item) => total + item.count, 0);
+    const activitiesByType =
+      tenantId === null
+        ? consolidateActivitiesByType(aggregate.activitiesByType)
+        : aggregate.activitiesByType;
+    const activities = activitiesByType.reduce((total, item) => total + item.count, 0);
 
     return {
       range: query,
@@ -40,6 +47,8 @@ export class ReportsDashboardService {
         tenantId,
         tenantName: aggregate.tenantName,
         isConsolidated: tenantId === null,
+        municipality: aggregate.municipality ?? null,
+        department: aggregate.department ?? null,
       },
       summary: {
         nursingAttendances: dailySeries.reduce(
@@ -61,9 +70,35 @@ export class ReportsDashboardService {
         lunchesDelivered: dailySeries.reduce((total, point) => total + point.lunchesDelivered, 0),
       },
       dailySeries,
-      activitiesByType: aggregate.activitiesByType,
+      activitiesByType,
     };
   }
+}
+
+function consolidateActivitiesByType(
+  activitiesByType: readonly ReportsDashboardActivityTypeAggregate[],
+): ReportsDashboardActivityTypeAggregate[] {
+  const activitiesByNormalizedName = new Map<string, ReportsDashboardActivityTypeAggregate>();
+
+  for (const activity of activitiesByType) {
+    const activityTypeName = activity.activityTypeName.trim();
+    const normalizedName = activityTypeName.normalize("NFC").toLocaleLowerCase("es-CO");
+    const existingActivity = activitiesByNormalizedName.get(normalizedName);
+
+    if (existingActivity === undefined) {
+      activitiesByNormalizedName.set(normalizedName, {
+        ...activity,
+        activityTypeName,
+      });
+      continue;
+    }
+
+    existingActivity.count += activity.count;
+  }
+
+  return [...activitiesByNormalizedName.values()].sort((left, right) =>
+    left.activityTypeName.localeCompare(right.activityTypeName, "es-CO"),
+  );
 }
 
 function completeDailySeries(

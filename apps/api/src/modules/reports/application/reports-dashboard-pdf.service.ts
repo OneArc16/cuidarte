@@ -90,9 +90,9 @@ function buildPdfHtml(dashboard: ReportsDashboardResponse): string {
     <section class="charts">
       <article class="chart-panel"><h3>Atenciones por mes</h3><p>Comparación mensual de enfermería y medicina.</p>${buildAttendanceChart(monthlySeries)}</article>
       <article class="chart-panel"><h3>Actividades por tipo</h3><p>Sesiones grupales registradas en el periodo.</p>${buildActivityChart(dashboard)}</article>
-      <article class="chart-panel chart-panel--wide"><h3>Entregas por mes</h3><p>Transporte, refrigerios y almuerzos entregados.</p>${buildDeliveryChart(monthlySeries)}</article>
+      <article class="chart-panel chart-panel--wide"><h3>Entregas mensuales por tipo de apoyo</h3>${buildDeliveryChart(monthlySeries)}</article>
     </section>
-    <div class="footer">Generado por CuidarTe · Refrigerios totales = refrigerio 1 + refrigerio 2</div>
+    <div class="footer">Generado por CuidarTe</div>
   </body></html>`;
 }
 
@@ -256,7 +256,7 @@ function buildDeliveryChart(points: MonthlyChartPoint[]): string {
     })
     .join("");
 
-  return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Entregas por mes"><g>${grid}</g>${bars}<g><circle cx="${left}" cy="${height - 2}" r="4" fill="#a24b48"/><text x="${left + 9}" y="${height + 1}" fill="#123b31" font-size="10">Transporte</text><circle cx="${left + 105}" cy="${height - 2}" r="4" fill="#70549a"/><text x="${left + 114}" y="${height + 1}" fill="#123b31" font-size="10">Refrigerios</text><circle cx="${left + 210}" cy="${height - 2}" r="4" fill="#4d7b38"/><text x="${left + 219}" y="${height + 1}" fill="#123b31" font-size="10">Almuerzos</text></g></svg>`;
+  return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Entregas mensuales por tipo de apoyo: transporte, refrigerios y almuerzos"><g>${grid}</g>${bars}<g><circle cx="${left}" cy="${height - 2}" r="4" fill="#a24b48"/><text x="${left + 9}" y="${height + 1}" fill="#123b31" font-size="10">Transporte</text><circle cx="${left + 105}" cy="${height - 2}" r="4" fill="#70549a"/><text x="${left + 114}" y="${height + 1}" fill="#123b31" font-size="10">Refrigerios</text><circle cx="${left + 210}" cy="${height - 2}" r="4" fill="#4d7b38"/><text x="${left + 219}" y="${height + 1}" fill="#123b31" font-size="10">Almuerzos</text></g></svg>`;
 }
 
 function formatChartMonth(value: string): string {
