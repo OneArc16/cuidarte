@@ -857,8 +857,7 @@ function PhotoCarousel({
 
       <div className="actividad-diligenciamiento-photo-carousel__meta">
         <div className="actividad-diligenciamiento-photo-carousel__copy">
-          <strong>{activeSlide.title}</strong>
-          <small>{activeSlide.sizeLabel}</small>
+          <strong>{activeSlide.sizeLabel}</strong>
         </div>
 
         <div className="actividad-diligenciamiento-photo-carousel__actions">

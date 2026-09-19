@@ -13,6 +13,33 @@ describe("ActividadGrupalDiligenciamientoForm", () => {
     vi.restoreAllMocks();
   });
 
+  it("shows only the support photo size in the carousel metadata", () => {
+    const detail: ActividadGrupalDiligenciamientoDetail = {
+      ...actividadGrupalDiligenciamientoFixture,
+      actaOrganizer: "fisioterapeuta",
+      actaSequence: 4,
+      previousActaNumber: null,
+      assignedProfessionals: [...actividadGrupalDiligenciamientoFixture.assignedProfessionals],
+      integrantes: [...actividadGrupalDiligenciamientoFixture.integrantes],
+      photoFiles: [...actividadGrupalDiligenciamientoFixture.photoFiles],
+    };
+
+    renderWithProviders(
+      <ActividadGrupalDiligenciamientoForm
+        activityId={detail.id}
+        detail={detail}
+        error={null}
+        isPending={false}
+        mode="view"
+        onCancel={vi.fn()}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("240 KB")).toBeInTheDocument();
+    expect(screen.queryByText("foto-soporte.webp")).not.toBeInTheDocument();
+  });
+
   it("shows a progress bar while preparing an attached PDF", async () => {
     let finishReadingPdf: ((value: ArrayBuffer) => void) | undefined;
     vi.spyOn(File.prototype, "arrayBuffer").mockImplementation(
