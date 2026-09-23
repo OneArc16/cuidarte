@@ -10,6 +10,8 @@ import {
   type ActividadGrupalTenantOptionsResponse,
   type ActividadGrupalActaCorrectionPreviewResponse,
   type ApplyActividadGrupalActaCorrectionRequest,
+  type ActividadGrupalActaPrefixCorrectionPreviewRequest,
+  type ApplyActividadGrupalActaPrefixCorrectionRequest,
   type ApplyActividadGrupalActaCorrectionResponse,
   type CorrectActividadGrupalActaNumberRequest,
   type ActividadGrupalType,
@@ -25,6 +27,8 @@ import {
   actividadGrupalTrashListResponseSchema,
   actividadGrupalTenantOptionsResponseSchema,
   actividadGrupalActaCorrectionPreviewResponseSchema,
+  actividadGrupalActaPrefixCorrectionPreviewRequestSchema,
+  applyActividadGrupalActaPrefixCorrectionRequestSchema,
   applyActividadGrupalActaCorrectionResponseSchema,
   deleteActividadGrupalResponseSchema,
 } from "@cuidarte/contracts";
@@ -115,6 +119,32 @@ export function correctActividadGrupalActaNumber(
     `${getApiBaseUrl()}/actividades-grupales/${activityId}/correct-acta-number`,
     actividadGrupalListItemSchema,
     { method: "POST", body: request },
+  );
+}
+
+export function previewActividadGrupalActaPrefixCorrection(
+  request: ActividadGrupalActaPrefixCorrectionPreviewRequest,
+): Promise<ActividadGrupalActaCorrectionPreviewResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/actividades-grupales/acta-prefix-corrections/preview`,
+    actividadGrupalActaCorrectionPreviewResponseSchema,
+    {
+      method: "POST",
+      body: actividadGrupalActaPrefixCorrectionPreviewRequestSchema.parse(request),
+    },
+  );
+}
+
+export function applyActividadGrupalActaPrefixCorrection(
+  request: ApplyActividadGrupalActaPrefixCorrectionRequest,
+): Promise<ApplyActividadGrupalActaCorrectionResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/actividades-grupales/acta-prefix-corrections/apply`,
+    applyActividadGrupalActaCorrectionResponseSchema,
+    {
+      method: "POST",
+      body: applyActividadGrupalActaPrefixCorrectionRequestSchema.parse(request),
+    },
   );
 }
 

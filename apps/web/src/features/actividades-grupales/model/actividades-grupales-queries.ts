@@ -6,6 +6,8 @@ import {
   type CreateActividadGrupalRequest,
   type SaveActividadGrupalDiligenciamiento,
   type ApplyActividadGrupalActaCorrectionRequest,
+  type ActividadGrupalActaPrefixCorrectionPreviewRequest,
+  type ApplyActividadGrupalActaPrefixCorrectionRequest,
   type CorrectActividadGrupalActaNumberRequest,
 } from "@cuidarte/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -263,6 +265,29 @@ export function useSaveActividadGrupalDiligenciamientoMutation() {
     onSuccess: async (detail, request) => {
       queryClient.setQueryData(actividadesGrupalesQueryKeys.detail(request.activityId), detail);
       await queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] });
+    },
+  });
+}
+
+export function usePreviewActividadGrupalActaPrefixCorrectionMutation() {
+  return useMutation({
+    mutationFn: (request: ActividadGrupalActaPrefixCorrectionPreviewRequest) =>
+      actividadesGrupalesApi.previewActividadGrupalActaPrefixCorrection(request),
+  });
+}
+
+export function useApplyActividadGrupalActaPrefixCorrectionMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: ApplyActividadGrupalActaPrefixCorrectionRequest) =>
+      actividadesGrupalesApi.applyActividadGrupalActaPrefixCorrection(request),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] }),
+        queryClient.invalidateQueries({ queryKey: ["actividad-grupal-tipos"] }),
+        queryClient.invalidateQueries({ queryKey: ["home"] }),
+      ]);
     },
   });
 }

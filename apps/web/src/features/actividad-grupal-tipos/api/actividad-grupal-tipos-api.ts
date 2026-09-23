@@ -3,6 +3,7 @@ import {
   type CreateActividadGrupalTipoRequest,
   type UpdateActividadGrupalTipoRequest,
   type UpdateActividadGrupalTipoStatusRequest,
+  type UpdateActividadGrupalTipoConsecutiveConfigRequest,
   actividadGrupalTipoSchema,
   actividadGrupalTiposListResponseSchema,
 } from "@cuidarte/contracts";
@@ -49,6 +50,18 @@ export function updateActividadGrupalTipo(id: string, request: UpdateActividadGr
     body: request,
   });
 }
+
+export function updateActividadGrupalTipoConsecutiveConfig(
+  id: string,
+  request: UpdateActividadGrupalTipoConsecutiveConfigRequest,
+) {
+  return fetchJson(
+    `${getApiBaseUrl()}/actividad-grupal-tipos/${id}/consecutive-config`,
+    actividadGrupalTipoSchema,
+    { method: "PATCH", body: request },
+  );
+}
+
 
 export function updateActividadGrupalTipoStatus(
   id: string,

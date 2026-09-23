@@ -81,6 +81,7 @@ export type CreateActividadGrupalRecordCommand = {
   endTime: string;
   organizer: ActividadGrupalOrganizer;
   employeeIds: string[];
+  customConsecutive: { prefix: string; nextValue: number } | null;
 };
 
 export type UpdateActividadGrupalRecordCommand = {
@@ -131,6 +132,19 @@ export type ActaCorrectionPreview = {
   unchangedCount: number;
   warningCount: number;
   rows: ActaCorrectionPreviewRow[];
+};
+
+export type PreviewActaPrefixCorrectionCommand = {
+  tenantId: string;
+  actorUserId: string;
+  activityTypeId: string;
+  prefix: string;
+};
+
+export type ApplyActaPrefixCorrectionCommand = {
+  operationToken: string;
+  actorUserId: string;
+  reason: string;
 };
 
 export type ApplyActaCorrectionCommand = {

@@ -91,11 +91,11 @@
 }
 
 .adultos-export-action--import {
-  --adultos-action-color: #087c6d;
-  --adultos-action-border: rgb(8 124 109 / 24%);
-  --adultos-action-border-hover: rgb(8 124 109 / 42%);
-  --adultos-action-background: rgb(8 124 109 / 7%);
-  --adultos-action-background-hover: rgb(8 124 109 / 14%);
+  --adultos-action-color: #714f9c;
+  --adultos-action-border: rgb(113 79 156 / 26%);
+  --adultos-action-border-hover: rgb(113 79 156 / 46%);
+  --adultos-action-background: rgb(113 79 156 / 8%);
+  --adultos-action-background-hover: rgb(113 79 156 / 16%);
 }
 
 .adultos-export-action--excel {
@@ -1291,7 +1291,15 @@
 }
 
 .adultos-row-action--trash {
+  border-color: rgb(159 45 35 / 30%);
   color: #9f2d23;
+}
+
+.adultos-row-action--trash:not(:disabled):hover,
+.adultos-row-action--trash:not(:disabled):focus-visible {
+  border-color: rgb(159 45 35 / 50%);
+  background: #fff0ed;
+  color: #7e2019;
 }
 
 .adultos-trash-search {

@@ -25,7 +25,7 @@ export const actividadGrupalFormSchema = z
       .string()
       .regex(/^([01]\d|2[0-3]):[0-5]\d$/, { message: "Ingresa una hora final válida." }),
     organizer: actividadGrupalOrganizerSchema,
-    employeeIds: z.array(z.string().uuid()).min(1),
+    employeeIds: z.array(z.string().uuid()).min(1, "Selecciona al menos un empleado."),
   })
   .superRefine((value, context) => {
     if (value.endTime <= value.startTime) {

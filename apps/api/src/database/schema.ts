@@ -705,6 +705,10 @@ export const actividadGrupalActaCorrectionOperations = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
     organizer: actividadGrupalOrganizer("organizer"),
+    activityTypeId: uuid("activity_type_id").references(() => actividadGrupalTipos.id, {
+      onDelete: "restrict",
+    }),
+    targetPrefix: varchar("target_prefix", { length: 24 }),
     snapshotHash: varchar("snapshot_hash", { length: 64 }).notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     usedAt: timestamp("used_at", { withTimezone: true }),
@@ -725,6 +729,12 @@ export const actividadGrupalTipos = pgTable(
       .references(() => tenants.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 120 }).notNull(),
     normalizedName: varchar("normalized_name", { length: 120 }).notNull(),
+    consecutivePrefix: varchar("consecutive_prefix", { length: 24 }),
+    consecutiveNextValue: integer("consecutive_next_value"),
+    consecutiveCreatorRoles: jsonb("consecutive_creator_roles")
+      .$type<(typeof userRole.enumValues)[number][]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     isActive: boolean("is_active").notNull().default(true),
     createdByUserId: uuid("created_by_user_id").references(() => users.id, {
       onDelete: "restrict",
@@ -741,7 +751,14 @@ export const actividadGrupalTipos = pgTable(
       table.tenantId,
       table.normalizedName,
     ),
+    uniqueIndex("actividad_grupal_tipos_tenant_consecutive_prefix_unique")
+      .on(table.tenantId, table.consecutivePrefix)
+      .where(sql`${table.consecutivePrefix} is not null`),
     index("actividad_grupal_tipos_tenant_active_idx").on(table.tenantId, table.isActive),
+    check(
+      "actividad_grupal_tipos_consecutive_config_complete",
+      sql`(${table.consecutivePrefix} is null and ${table.consecutiveNextValue} is null) or (${table.consecutivePrefix} is not null and ${table.consecutiveNextValue} > 0)`,
+    ),
   ],
 );
 
@@ -753,6 +770,7 @@ export const actividadesGrupales = pgTable(
       .notNull()
       .references(() => tenants.id, { onDelete: "restrict" }),
     actaNumber: varchar("acta_number", { length: 40 }).notNull(),
+    actaSeriesKey: varchar("acta_series_key", { length: 160 }).notNull(),
     actaOrganizer: actividadGrupalOrganizer("acta_organizer").notNull(),
     actaSequence: integer("acta_sequence").notNull(),
     previousActaNumber: varchar("previous_acta_number", { length: 40 }),

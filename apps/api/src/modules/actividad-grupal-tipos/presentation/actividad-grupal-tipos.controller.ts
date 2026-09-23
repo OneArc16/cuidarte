@@ -7,6 +7,7 @@ import {
   createActividadGrupalTipoRequestSchema,
   updateActividadGrupalTipoRequestSchema,
   updateActividadGrupalTipoStatusRequestSchema,
+  updateActividadGrupalTipoConsecutiveConfigRequestSchema,
 } from "@cuidarte/contracts";
 import { z } from "zod";
 
@@ -63,6 +64,25 @@ export class ActividadGrupalTiposController {
     const activityTypeId = parseZodSchema(idParamSchema, id);
     const command = parseZodSchema(updateActividadGrupalTipoRequestSchema, body);
     const activityType = await this.actividadGrupalTiposService.update(
+      activityTypeId,
+      command,
+      request.currentUser,
+    );
+
+    return actividadGrupalTipoSchema.parse(activityType);
+  }
+
+  @Patch(":id/consecutive-config")
+  @ApiOkResponse({ description: "Consecutivo especial configurado." })
+  @ApiForbiddenResponse({ description: "El usuario no tiene permisos." })
+  async updateConsecutiveConfig(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const activityTypeId = parseZodSchema(idParamSchema, id);
+    const command = parseZodSchema(updateActividadGrupalTipoConsecutiveConfigRequestSchema, body);
+    const activityType = await this.actividadGrupalTiposService.updateConsecutiveConfig(
       activityTypeId,
       command,
       request.currentUser,

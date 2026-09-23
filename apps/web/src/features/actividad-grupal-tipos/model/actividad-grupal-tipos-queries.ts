@@ -2,6 +2,7 @@ import {
   type CreateActividadGrupalTipoRequest,
   type UpdateActividadGrupalTipoRequest,
   type UpdateActividadGrupalTipoStatusRequest,
+  type UpdateActividadGrupalTipoConsecutiveConfigRequest,
 } from "@cuidarte/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -51,6 +52,21 @@ export function useUpdateActividadGrupalTipoMutation() {
         queryClient.invalidateQueries({ queryKey: ["actividad-grupal-tipos"] }),
         queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] }),
         queryClient.invalidateQueries({ queryKey: ["home"] }),
+      ]);
+    },
+  });
+}
+
+export function useUpdateActividadGrupalTipoConsecutiveConfigMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: { id: string; payload: UpdateActividadGrupalTipoConsecutiveConfigRequest }) =>
+      actividadGrupalTiposApi.updateActividadGrupalTipoConsecutiveConfig(request.id, request.payload),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["actividad-grupal-tipos"] }),
+        queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] }),
       ]);
     },
   });

@@ -5,6 +5,7 @@ import {
   type CreateActividadGrupalTipoRequest,
   type UpdateActividadGrupalTipoRequest,
   type UpdateActividadGrupalTipoStatusRequest,
+  type UpdateActividadGrupalTipoConsecutiveConfigRequest,
   actividadGrupalTipoSchema,
 } from "@cuidarte/contracts";
 import {
@@ -124,6 +125,29 @@ export class ActividadGrupalTiposService {
     return this.toResponse(record);
   }
 
+  async updateConsecutiveConfig(
+    id: string,
+    command: UpdateActividadGrupalTipoConsecutiveConfigRequest,
+    actor: AuthUser,
+  ): Promise<ActividadGrupalTipo> {
+    const current = await this.findAccessibleOrThrow(id, actor);
+    const prefix = command.prefix.trim().toUpperCase();
+
+    if (!/^[A-Z0-9]{2,24}$/.test(prefix)) {
+      throw new BadRequestException("El prefijo solo puede incluir letras y números.");
+    }
+
+    const record = await this.actividadGrupalTiposRepository.updateConsecutiveConfig({
+      id: current.id,
+      actorUserId: actor.id,
+      prefix,
+      nextValue: command.nextValue,
+      creatorRoles: command.creatorRoles,
+    });
+
+    return this.toResponse(record);
+  }
+
   async listForSessionForm(tenantId: string): Promise<ActividadGrupalTipo[]> {
     const records = await this.actividadGrupalTiposRepository.findMany({
       tenantId,
@@ -225,6 +249,14 @@ export class ActividadGrupalTiposService {
   private toResponse(record: ActividadGrupalTipoRecord): ActividadGrupalTipo {
     return actividadGrupalTipoSchema.parse({
       ...record,
+      consecutiveConfig:
+        record.consecutivePrefix === null || record.consecutiveNextValue === null
+          ? null
+          : {
+              prefix: record.consecutivePrefix,
+              nextValue: record.consecutiveNextValue,
+              creatorRoles: record.consecutiveCreatorRoles,
+            },
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
       deactivatedAt: record.deactivatedAt?.toISOString() ?? null,

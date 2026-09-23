@@ -210,6 +210,13 @@ export const actividadGrupalTipoSchema = z.object({
   tenantId: z.uuid(),
   name: z.string().min(1).max(120),
   normalizedName: z.string().min(1).max(120),
+  consecutiveConfig: z
+    .object({
+      prefix: z.string().min(2).max(24),
+      nextValue: z.number().int().positive(),
+      creatorRoles: z.array(userRoleSchema).min(1),
+    })
+    .nullable(),
   isActive: z.boolean(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
@@ -249,6 +256,12 @@ export const updateActividadGrupalTipoRequestSchema = z.object({
 
 export const updateActividadGrupalTipoStatusRequestSchema = z.object({
   isActive: z.boolean(),
+});
+
+export const updateActividadGrupalTipoConsecutiveConfigRequestSchema = z.object({
+  prefix: z.string().trim().toUpperCase().min(2).max(24),
+  nextValue: z.number().int().min(1).max(2_147_483_647),
+  creatorRoles: z.array(userRoleSchema).min(1, "Selecciona al menos un rol."),
 });
 
 export const actividadGrupalTiposListResponseSchema = z.object({
@@ -401,6 +414,17 @@ export const actividadGrupalActaCorrectionPreviewRequestSchema = z.object({
   organizer: actividadGrupalOrganizerSchema.nullable().default(null),
 });
 
+export const actividadGrupalActaPrefixCorrectionPreviewRequestSchema = z.object({
+  tenantId: z.uuid(),
+  activityTypeId: z.uuid(),
+  prefix: z.string().trim().toUpperCase().min(2).max(24),
+});
+
+export const applyActividadGrupalActaPrefixCorrectionRequestSchema = z.object({
+  operationToken: z.uuid(),
+  reason: z.string().trim().min(1, "Indica el motivo de la corrección.").max(500),
+});
+
 export const applyActividadGrupalActaCorrectionRequestSchema = z.object({
   operationToken: z.uuid(),
   reason: z.string().trim().min(1, "Indica el motivo de la correccion.").max(500),
@@ -448,6 +472,9 @@ export type UpdateActividadGrupalTipoRequest = z.infer<
 export type UpdateActividadGrupalTipoStatusRequest = z.infer<
   typeof updateActividadGrupalTipoStatusRequestSchema
 >;
+export type UpdateActividadGrupalTipoConsecutiveConfigRequest = z.infer<
+  typeof updateActividadGrupalTipoConsecutiveConfigRequestSchema
+>;
 export type ActividadGrupalTiposListResponse = z.infer<
   typeof actividadGrupalTiposListResponseSchema
 >;
@@ -480,6 +507,12 @@ export type ActividadGrupalActaCorrectionPreviewResponse = z.infer<
 >;
 export type ActividadGrupalActaCorrectionPreviewRequest = z.infer<
   typeof actividadGrupalActaCorrectionPreviewRequestSchema
+>;
+export type ActividadGrupalActaPrefixCorrectionPreviewRequest = z.infer<
+  typeof actividadGrupalActaPrefixCorrectionPreviewRequestSchema
+>;
+export type ApplyActividadGrupalActaPrefixCorrectionRequest = z.infer<
+  typeof applyActividadGrupalActaPrefixCorrectionRequestSchema
 >;
 export type ApplyActividadGrupalActaCorrectionRequest = z.infer<
   typeof applyActividadGrupalActaCorrectionRequestSchema

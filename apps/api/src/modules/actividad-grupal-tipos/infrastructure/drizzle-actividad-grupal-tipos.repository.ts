@@ -9,6 +9,7 @@ import {
   type FindActividadGrupalTiposQuery,
   type UpdateActividadGrupalTipoCommand,
   type UpdateActividadGrupalTipoStatusCommand,
+  type UpdateActividadGrupalTipoConsecutiveConfigCommand,
 } from "../domain/actividad-grupal-tipo.types";
 import { type ActividadGrupalTiposRepository } from "../domain/actividad-grupal-tipos.repository";
 
@@ -166,12 +167,50 @@ export class DrizzleActividadGrupalTiposRepository implements ActividadGrupalTip
     });
   }
 
+  async updateConsecutiveConfig(command: UpdateActividadGrupalTipoConsecutiveConfigCommand): Promise<ActividadGrupalTipoRecord> {
+    return await this.database.db.transaction(async (tx) => {
+      const now = new Date();
+      const [updated] = await tx
+        .update(actividadGrupalTipos)
+        .set({
+          consecutivePrefix: command.prefix,
+          consecutiveNextValue: command.nextValue,
+          consecutiveCreatorRoles: command.creatorRoles as (typeof actividadGrupalTipos.$inferInsert)["consecutiveCreatorRoles"],
+          updatedAt: now,
+        })
+        .where(eq(actividadGrupalTipos.id, command.id))
+        .returning(this.getSelection());
+
+      if (updated === undefined) {
+        throw new Error("No fue posible actualizar el consecutivo de la actividad grupal.");
+      }
+
+      await tx.insert(auditLogs).values({
+        actorUserId: command.actorUserId,
+        action: "actividades-grupales.tipo.consecutive-configured",
+        targetTenantId: updated.tenantId,
+        summary: "Consecutivo configurado para actividad grupal",
+        metadata: {
+          activityTypeId: updated.id,
+          prefix: command.prefix,
+          nextValue: command.nextValue,
+          creatorRoles: command.creatorRoles,
+        },
+      });
+
+      return updated;
+    });
+  }
+
   private getSelection() {
     return {
       id: actividadGrupalTipos.id,
       tenantId: actividadGrupalTipos.tenantId,
       name: actividadGrupalTipos.name,
       normalizedName: actividadGrupalTipos.normalizedName,
+      consecutivePrefix: actividadGrupalTipos.consecutivePrefix,
+      consecutiveNextValue: actividadGrupalTipos.consecutiveNextValue,
+      consecutiveCreatorRoles: actividadGrupalTipos.consecutiveCreatorRoles,
       isActive: actividadGrupalTipos.isActive,
       createdAt: actividadGrupalTipos.createdAt,
       updatedAt: actividadGrupalTipos.updatedAt,

@@ -1,5 +1,10 @@
-import { type ActividadGrupalTipo, type AuthUser } from "@cuidarte/contracts";
-import { AlertTriangle, Pencil, Plus, Power, PowerOff, Save, X } from "lucide-react";
+import {
+  type ActividadGrupalTipo,
+  type AuthUser,
+  type UserRole,
+  userRoleValues,
+} from "@cuidarte/contracts";
+import { AlertTriangle, Hash, Info, Pencil, Plus, Power, PowerOff, Save, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -9,6 +14,7 @@ import {
   useActividadGrupalTiposQuery,
   useCreateActividadGrupalTipoMutation,
   useUpdateActividadGrupalTipoMutation,
+  useUpdateActividadGrupalTipoConsecutiveConfigMutation,
   useUpdateActividadGrupalTipoStatusMutation,
 } from "@/features/actividad-grupal-tipos/model/actividad-grupal-tipos-queries";
 
@@ -36,6 +42,8 @@ export function AjustesPage({ user }: AjustesPageProps) {
   const [editingName, setEditingName] = useState("");
   const [activityPendingDeactivation, setActivityPendingDeactivation] =
     useState<ActivityCatalogRow | null>(null);
+  const [activityTypePendingConsecutiveConfig, setActivityTypePendingConsecutiveConfig] =
+    useState<ActividadGrupalTipo | null>(null);
   const isAllTenantsSelected = shouldSelectTenant && selectedTenantId === ALL_TENANTS_VALUE;
   const effectiveTenantId = shouldSelectTenant
     ? selectedTenantId && !isAllTenantsSelected
@@ -50,6 +58,7 @@ export function AjustesPage({ user }: AjustesPageProps) {
   const createMutation = useCreateActividadGrupalTipoMutation();
   const updateMutation = useUpdateActividadGrupalTipoMutation();
   const statusMutation = useUpdateActividadGrupalTipoStatusMutation();
+  const consecutiveConfigMutation = useUpdateActividadGrupalTipoConsecutiveConfigMutation();
   const activityTypes = activityTypesQuery.data?.activityTypes ?? [];
   const activityRows = useMemo(
     () => buildActivityCatalogRows(activityTypes, isAllTenantsSelected),
@@ -276,6 +285,7 @@ export function AjustesPage({ user }: AjustesPageProps) {
           <thead>
             <tr>
               <th scope="col">Actividad</th>
+              <th scope="col">Consecutivo</th>
               <th scope="col">Estado</th>
               <th scope="col">Actualizada</th>
               <th scope="col">Acciones</th>
@@ -284,15 +294,15 @@ export function AjustesPage({ user }: AjustesPageProps) {
           <tbody>
             {!isAllTenantsSelected && effectiveTenantId === null ? (
               <tr>
-                <td colSpan={4}>Selecciona un centro para cargar el catálogo.</td>
+                <td colSpan={5}>Selecciona un centro para cargar el catálogo.</td>
               </tr>
             ) : activityTypesQuery.isLoading ? (
               <tr>
-                <td colSpan={4}>Cargando actividades...</td>
+                <td colSpan={5}>Cargando actividades...</td>
               </tr>
             ) : activityRows.length === 0 ? (
               <tr>
-                <td colSpan={4}>No hay actividades configuradas.</td>
+                <td colSpan={5}>No hay actividades configuradas.</td>
               </tr>
             ) : (
               activityRows.map((activityRow) => {
@@ -319,6 +329,7 @@ export function AjustesPage({ user }: AjustesPageProps) {
                         </div>
                       )}
                     </td>
+                    <td>{formatActivityConsecutive(activityRow)}</td>
                     <td>{formatActivityRowStatus(activityRow)}</td>
                     <td>{formatTimestamp(activityRow.updatedAt)}</td>
                     <td>
@@ -347,6 +358,17 @@ export function AjustesPage({ user }: AjustesPageProps) {
                             <Pencil aria-hidden="true" />
                           </button>
                         )}
+                        {!activityRow.isUnified ? (
+                          <button
+                            className="actividades-row-action actividades-row-action--acta"
+                            type="button"
+                            data-tooltip={`Configurar consecutivo: ${activityRow.name}`}
+                            aria-label={`Configurar consecutivo de ${activityRow.name}`}
+                            onClick={() => setActivityTypePendingConsecutiveConfig(activityRow.activityTypes[0] ?? null)}
+                          >
+                            <Hash aria-hidden="true" />
+                          </button>
+                        ) : null}
                         <button
                           className={`actividades-row-action ${
                             isActive
@@ -456,6 +478,27 @@ export function AjustesPage({ user }: AjustesPageProps) {
           </section>
         </div>
       ) : null}
+
+      {activityTypePendingConsecutiveConfig !== null ? (
+        <ActivityConsecutiveConfigDialog
+          key={activityTypePendingConsecutiveConfig.id}
+          activityType={activityTypePendingConsecutiveConfig}
+          pending={consecutiveConfigMutation.isPending}
+          onClose={() => setActivityTypePendingConsecutiveConfig(null)}
+          onSave={(payload) => {
+            consecutiveConfigMutation.mutate(
+              { id: activityTypePendingConsecutiveConfig.id, payload },
+              {
+                onSuccess: () => {
+                  toast.success("Configuración del consecutivo guardada.");
+                  setActivityTypePendingConsecutiveConfig(null);
+                },
+              },
+            );
+          }}
+        />
+      ) : null}
+
     </section>
   );
 }
@@ -523,4 +566,144 @@ function formatTimestamp(value: string): string {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+function ActivityConsecutiveConfigDialog({
+  activityType,
+  pending,
+  onClose,
+  onSave,
+}: {
+  activityType: ActividadGrupalTipo;
+  pending: boolean;
+  onClose: () => void;
+  onSave: (payload: { prefix: string; nextValue: number; creatorRoles: UserRole[] }) => void;
+}) {
+  const [prefix, setPrefix] = useState(activityType.consecutiveConfig?.prefix ?? "");
+  const nextValue = activityType.consecutiveConfig?.nextValue ?? 1;
+  const [creatorRoles, setCreatorRoles] = useState<UserRole[]>(
+    activityType.consecutiveConfig?.creatorRoles ?? [],
+  );
+  const allRolesSelected = creatorRoles.length === userRoleValues.length;
+
+  function toggleRole(role: UserRole) {
+    setCreatorRoles((current) =>
+      current.includes(role) ? current.filter((item) => item !== role) : [...current, role],
+    );
+  }
+
+  return (
+    <div
+      className="actividad-delete-dialog-backdrop ajustes-consecutive-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.currentTarget === event.target) onClose();
+      }}
+    >
+      <section
+        className="ajustes-consecutive-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="actividad-consecutive-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header className="ajustes-consecutive-dialog__header">
+          <div>
+            <span className="ajustes-consecutive-dialog__badge">Serie especial</span>
+            <h2 id="actividad-consecutive-title">{activityType.name}</h2>
+          </div>
+          <button
+            className="ajustes-consecutive-dialog__close"
+            type="button"
+            aria-label="Cerrar"
+            disabled={pending}
+            onClick={onClose}
+          >
+            <X aria-hidden="true" />
+          </button>
+        </header>
+
+        <div className="ajustes-consecutive-dialog__notice">
+          <Info aria-hidden="true" />
+          <span>Las actas existentes no se modifican. El nuevo consecutivo se aplicará a partir de la próxima sesión creada.</span>
+        </div>
+
+        <div className="ajustes-consecutive-dialog__fields">
+          <label>
+            <span>Prefijo</span>
+            <input
+              value={prefix}
+              maxLength={24}
+              placeholder="BELLEZA"
+              onChange={(event) => setPrefix(event.target.value.toUpperCase())}
+            />
+          </label>
+          <div className="ajustes-consecutive-dialog__readonly-field">
+            <span>Próximo consecutivo</span>
+            <strong>{String(nextValue).padStart(3, "0")}</strong>
+          </div>
+        </div>
+        <p className="ajustes-consecutive-dialog__preview">
+          Próxima acta: <code>{prefix.trim() === "" ? "PREFIJO" : prefix.trim()}-{String(nextValue).padStart(3, "0")}</code>
+        </p>
+
+        <div className="ajustes-consecutive-dialog__divider" />
+
+        <div className="ajustes-consecutive-dialog__roles-header">
+          <div>
+            <h3>Roles con permiso</h3>
+            <p>Quiénes pueden crear esta actividad · {creatorRoles.length} seleccionados</p>
+          </div>
+          <button type="button" onClick={() => setCreatorRoles(allRolesSelected ? [] : [...userRoleValues])}>
+            {allRolesSelected ? "Quitar todos" : "Seleccionar todos"}
+          </button>
+        </div>
+        <div className="ajustes-consecutive-dialog__role-chips">
+          {userRoleValues.map((role) => {
+            const selected = creatorRoles.includes(role);
+
+            return (
+              <button
+                key={role}
+                type="button"
+                className={selected ? "is-selected" : ""}
+                aria-pressed={selected}
+                onClick={() => toggleRole(role)}
+              >
+                {selected ? <span aria-hidden="true">✓</span> : null}
+                {formatUserRole(role)}
+              </button>
+            );
+          })}
+        </div>
+
+        <footer className="ajustes-consecutive-dialog__actions">
+          <button className="ajustes-consecutive-dialog__cancel" type="button" disabled={pending} onClick={onClose}>
+            Cancelar
+          </button>
+          <button
+            className="ajustes-consecutive-dialog__save"
+            type="button"
+            disabled={pending || !/^[A-Z0-9]{2,24}$/.test(prefix) || creatorRoles.length === 0}
+            onClick={() => onSave({ prefix, nextValue, creatorRoles })}
+          >
+            {pending ? "Guardando…" : "Guardar consecutivo"}
+          </button>
+        </footer>
+      </section>
+    </div>
+  );
+}
+
+function formatActivityConsecutive(row: ActivityCatalogRow): string {
+  if (row.isUnified) return "Por centro";
+
+  const config = row.activityTypes[0]?.consecutiveConfig;
+  return config === null || config === undefined
+    ? "Serie general"
+    : `${config.prefix}-${String(config.nextValue).padStart(3, "0")}`;
+}
+
+function formatUserRole(role: UserRole): string {
+  return role.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Save, Search, Sparkles, X } from "lucide-react";
 import { type FieldErrors, type Resolver, useForm } from "react-hook-form";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { formatEmpleadoRole } from "@/features/empleados/lib/empleados-formatters";
 
@@ -38,6 +39,8 @@ type ActividadGrupalFormProps = {
   onTenantChange: (tenantId: string) => void;
 };
 
+const EXCLUDED_SESSION_EMPLOYEE_ROLES: ReadonlySet<string> = new Set(["admin", "auditor"]);
+
 export function ActividadGrupalForm({
   mode,
   error,
@@ -64,7 +67,10 @@ export function ActividadGrupalForm({
   const employeeIds = watch("employeeIds");
   const organizerValue = watch("organizer");
   const isTenantSelected = !shouldSelectTenant || selectedTenantId.trim() !== "";
-  const availableEmployees = formOptions?.empleados ?? [];
+  const availableEmployees = useMemo(
+    () => (formOptions?.empleados ?? []).filter((employee) => !EXCLUDED_SESSION_EMPLOYEE_ROLES.has(employee.role)),
+    [formOptions?.empleados],
+  );
   const activityTypeOptions = useMemo(() => {
     const options = [...(formOptions?.activityTypes ?? [])];
 
@@ -76,6 +82,7 @@ export function ActividadGrupalForm({
         ...currentActivityType,
         tenantId: selectedTenantId,
         normalizedName: currentActivityType.name.toLowerCase(),
+        consecutiveConfig: null,
         createdAt: "",
         updatedAt: "",
         deactivatedAt: null,
@@ -163,8 +170,22 @@ export function ActividadGrupalForm({
     });
   }
 
-  function handleInvalidSubmit(_errors: FieldErrors<ActividadGrupalFormValues>) {
-    return;
+  function selectAllEmployees() {
+    setValue(
+      "employeeIds",
+      availableEmployees.map((employee) => employee.id),
+      {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      },
+    );
+  }
+
+  function handleInvalidSubmit(errors: FieldErrors<ActividadGrupalFormValues>) {
+    if (errors.employeeIds !== undefined) {
+      toast.error("Selecciona al menos un empleado.", { id: "actividad-empleados-required" });
+    }
   }
 
   return (
@@ -333,7 +354,17 @@ export function ActividadGrupalForm({
             <p className="eyebrow">Equipo involucrado</p>
             <h2>Selecciona los empleados</h2>
           </div>
-          <span>{employeeIds.length} seleccionados</span>
+          <div className="actividad-empleados-header-actions">
+            <button
+              className="outline-action actividad-empleados-select-all"
+              type="button"
+              disabled={!isTenantSelected || isFormOptionsLoading || availableEmployees.length === 0 || availableEmployees.every((employee) => employeeIds.includes(employee.id))}
+              onClick={selectAllEmployees}
+            >
+              Agregar todos
+            </button>
+            <span>{employeeIds.length} seleccionados</span>
+          </div>
         </div>
 
         <label className="actividad-empleados-search">
@@ -387,11 +418,6 @@ export function ActividadGrupalForm({
           </div>
         )}
 
-        {getError("employeeIds") !== undefined ? (
-          <p className="form-error" role="alert">
-            {getError("employeeIds")}
-          </p>
-        ) : null}
       </section>
 
       {error !== null ? (

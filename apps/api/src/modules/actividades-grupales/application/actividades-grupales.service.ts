@@ -13,6 +13,8 @@ import {
   type ActividadGrupalFormOptionsResponse,
   type ActividadGrupalActaCorrectionPreviewResponse,
   type ApplyActividadGrupalActaCorrectionRequest,
+  type ActividadGrupalActaPrefixCorrectionPreviewRequest,
+  type ApplyActividadGrupalActaPrefixCorrectionRequest,
   type ApplyActividadGrupalActaCorrectionResponse,
   type CorrectActividadGrupalActaNumberRequest,
   type UpdateActividadGrupalRequest,
@@ -114,6 +116,7 @@ export class ActividadesGrupalesService {
           tenantId,
           name: "Actividad",
           normalizedName: "actividad",
+          consecutiveConfig: null,
           isActive: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -126,6 +129,7 @@ export class ActividadesGrupalesService {
           tenantId,
           name: "Actividad",
           normalizedName: "actividad",
+          consecutiveConfig: null,
           isActive: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -195,10 +199,17 @@ export class ActividadesGrupalesService {
     this.resolveScopeOrThrow(actor);
 
     const tenantId = this.resolveTenantIdForCreate(actor, command.tenantId);
-    await this.actividadGrupalTiposService.resolveForSessionCreate(
+    const activityType = await this.actividadGrupalTiposService.resolveForSessionCreate(
       command.activityTypeId,
       tenantId,
     );
+
+    if (
+      activityType.consecutiveConfig !== null &&
+      !activityType.consecutiveConfig.creatorRoles.includes(actor.role)
+    ) {
+      throw new ForbiddenException("No tienes permiso para crear esta actividad con su consecutivo especial.");
+    }
     const activeEmpleados =
       await this.actividadesGrupalesRepository.findActiveEmpleadoOptions(tenantId);
     const activeEmpleadoIds = new Set(activeEmpleados.map((empleado) => empleado.id));
@@ -223,6 +234,7 @@ export class ActividadesGrupalesService {
       endTime: command.endTime,
       organizer: command.organizer,
       employeeIds: command.employeeIds,
+      customConsecutive: activityType.consecutiveConfig,
     });
 
     return this.toListItem(record, actor);
@@ -332,6 +344,68 @@ export class ActividadesGrupalesService {
       warningCount: preview.warningCount,
       rows: preview.rows,
     });
+  }
+
+  async previewActividadGrupalActaPrefixCorrection(
+    command: ActividadGrupalActaPrefixCorrectionPreviewRequest,
+    actor: AuthUser,
+  ): Promise<ActividadGrupalActaCorrectionPreviewResponse> {
+    this.ensureCanCorrectActa(actor, true);
+    const prefix = command.prefix.trim().toUpperCase();
+
+    if (!/^[A-Z0-9]{2,24}$/.test(prefix)) {
+      throw new BadRequestException("El prefijo solo puede incluir letras y números.");
+    }
+
+    const previewPrefixCorrection = this.actividadesGrupalesRepository.previewActaPrefixCorrection;
+    if (previewPrefixCorrection === undefined) {
+      throw new BadRequestException("La migración de prefijos no está disponible.");
+    }
+
+    const preview = await previewPrefixCorrection.call(this.actividadesGrupalesRepository, {
+      tenantId: command.tenantId,
+      actorUserId: actor.id,
+      activityTypeId: command.activityTypeId,
+      prefix,
+    });
+
+    return actividadGrupalActaCorrectionPreviewResponseSchema.parse({
+      operationToken: preview.operationToken,
+      tenantId: preview.tenantId,
+      previewExpiresAt: preview.previewExpiresAt.toISOString(),
+      totalCount: preview.totalCount,
+      changedCount: preview.changedCount,
+      unchangedCount: preview.unchangedCount,
+      warningCount: preview.warningCount,
+      rows: preview.rows,
+    });
+  }
+
+  async applyActividadGrupalActaPrefixCorrection(
+    command: ApplyActividadGrupalActaPrefixCorrectionRequest,
+    actor: AuthUser,
+  ): Promise<ApplyActividadGrupalActaCorrectionResponse> {
+    this.ensureCanCorrectActa(actor, true);
+    const applyPrefixCorrection = this.actividadesGrupalesRepository.applyActaPrefixCorrection;
+    if (applyPrefixCorrection === undefined) {
+      throw new BadRequestException("La migración de prefijos no está disponible.");
+    }
+
+    try {
+      const result = await applyPrefixCorrection.call(this.actividadesGrupalesRepository, {
+        operationToken: command.operationToken,
+        actorUserId: actor.id,
+        reason: command.reason,
+      });
+
+      return applyActividadGrupalActaCorrectionResponseSchema.parse(result);
+    } catch (error) {
+      if (error instanceof ActaCorrectionConflictError) {
+        throw new ConflictException(error.message);
+      }
+
+      throw error;
+    }
   }
 
   async applyActividadGrupalActaCorrection(

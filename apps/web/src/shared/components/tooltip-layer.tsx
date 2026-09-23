@@ -50,16 +50,30 @@ export function TooltipLayer() {
       }
     }
 
+    function hideOnActivation() {
+      setTooltip(null);
+    }
+
+    function hideOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setTooltip(null);
+      }
+    }
+
     document.addEventListener("pointerover", show);
     document.addEventListener("pointerout", hide);
     document.addEventListener("focusin", show);
     document.addEventListener("focusout", hide);
+    document.addEventListener("click", hideOnActivation, true);
+    document.addEventListener("keydown", hideOnEscape);
 
     return () => {
       document.removeEventListener("pointerover", show);
       document.removeEventListener("pointerout", hide);
       document.removeEventListener("focusin", show);
       document.removeEventListener("focusout", hide);
+      document.removeEventListener("click", hideOnActivation, true);
+      document.removeEventListener("keydown", hideOnEscape);
     };
   }, []);
 

@@ -35,6 +35,8 @@ import {
   actividadGrupalActaCorrectionPreviewRequestSchema,
   actividadGrupalActaCorrectionPreviewResponseSchema,
   applyActividadGrupalActaCorrectionRequestSchema,
+  actividadGrupalActaPrefixCorrectionPreviewRequestSchema,
+  applyActividadGrupalActaPrefixCorrectionRequestSchema,
   applyActividadGrupalActaCorrectionResponseSchema,
   correctActividadGrupalActaNumberRequestSchema,
   createActividadGrupalRequestSchema,
@@ -146,6 +148,32 @@ export class ActividadesGrupalesController {
     );
 
     return actividadGrupalListItemSchema.parse(detail);
+  }
+
+  @Post("acta-prefix-corrections/preview")
+  @ApiOkResponse({ description: "Vista previa de migración de prefijo." })
+  @ApiForbiddenResponse({ description: "Solo super administradores pueden migrar prefijos." })
+  async previewActaPrefixCorrection(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    const command = parseZodSchema(actividadGrupalActaPrefixCorrectionPreviewRequestSchema, body);
+    const preview = await this.actividadesGrupalesService.previewActividadGrupalActaPrefixCorrection(
+      command,
+      request.currentUser,
+    );
+
+    return actividadGrupalActaCorrectionPreviewResponseSchema.parse(preview);
+  }
+
+  @Post("acta-prefix-corrections/apply")
+  @ApiOkResponse({ description: "Migración de prefijo aplicada." })
+  @ApiForbiddenResponse({ description: "Solo super administradores pueden migrar prefijos." })
+  async applyActaPrefixCorrection(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    const command = parseZodSchema(applyActividadGrupalActaPrefixCorrectionRequestSchema, body);
+    const result = await this.actividadesGrupalesService.applyActividadGrupalActaPrefixCorrection(
+      command,
+      request.currentUser,
+    );
+
+    return applyActividadGrupalActaCorrectionResponseSchema.parse(result);
   }
 
   @Post("acta-number-corrections/preview")

@@ -9,6 +9,7 @@ import {
   actividadGrupalFormOptionsFixture,
   actividadGrupalIntegranteFixture,
   authUserFixture,
+  auditorUserFixture,
   empleadoFixture,
   superAdminUserFixture,
 } from "../../test/fixtures";
@@ -348,6 +349,11 @@ describe("App actividades flow", () => {
       http.get("http://localhost:3001/api/actividades-grupales/form-options", () =>
         HttpResponse.json({
           ...actividadGrupalFormOptionsFixture,
+          empleados: [
+            empleadoFixture,
+            { id: authUserFixture.id, fullName: authUserFixture.fullName, role: authUserFixture.role },
+            { id: auditorUserFixture.id, fullName: auditorUserFixture.fullName, role: auditorUserFixture.role },
+          ],
           nextActaNumber: 5,
         }),
       ),
@@ -376,6 +382,9 @@ describe("App actividades flow", () => {
     await waitFor(() => {
       expect(screen.getByLabelText(/Numero de acta/i)).toHaveValue("0005");
     });
+    expect(screen.queryByRole("checkbox", { name: /Admin Centro Demo/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /Auditor Centro Demo/i })).not.toBeInTheDocument();
+
     await user.type(screen.getByLabelText("Nombre de la actividad"), "Actividad creada desde test");
     await user.selectOptions(screen.getByLabelText("Tipo de actividad"), "salud_preventiva");
     await user.type(screen.getByLabelText("Fecha de la actividad"), "2026-04-24");

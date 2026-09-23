@@ -9,6 +9,8 @@ import {
   type ActaCorrectionPreview,
   type AppliedActaCorrection,
   type ApplyActaCorrectionCommand,
+  type PreviewActaPrefixCorrectionCommand,
+  type ApplyActaPrefixCorrectionCommand,
   type CorrectActividadGrupalActaNumberCommand,
   type ActividadGrupalTenantOptionRecord,
   type CreateActividadGrupalRecordCommand,
@@ -55,6 +57,8 @@ export type ActividadesGrupalesRepository = {
     organizer: import("@cuidarte/contracts").ActividadGrupalOrganizer | null,
   ): Promise<ActaCorrectionPreview>;
   applyActaNumberCorrection(command: ApplyActaCorrectionCommand): Promise<AppliedActaCorrection>;
+  previewActaPrefixCorrection?(command: PreviewActaPrefixCorrectionCommand): Promise<ActaCorrectionPreview>;
+  applyActaPrefixCorrection?(command: ApplyActaPrefixCorrectionCommand): Promise<AppliedActaCorrection>;
   delete(command: DeleteActividadGrupalRecordCommand): Promise<void>;
   saveDiligenciamiento(
     command: SaveActividadGrupalDiligenciamientoRecordCommand,

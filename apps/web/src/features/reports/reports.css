@@ -108,16 +108,16 @@
   width: 40px;
   min-height: 40px;
   padding: 0;
-  border: 1px solid rgb(8 80 65 / 14%);
+  border: 1px solid rgb(113 79 156 / 28%);
   border-radius: 10px;
-  background: #fff;
-  color: var(--color-deep);
+  background: rgb(113 79 156 / 8%);
+  color: #714f9c;
 }
 
 .report-history-button:hover,
 .report-history-button:focus-visible {
-  border-color: rgb(32 156 113 / 38%);
-  background: rgb(32 156 113 / 8%);
+  border-color: rgb(113 79 156 / 48%);
+  background: #f3effa;
 }
 
 .report-history-button svg { width: 17px; }

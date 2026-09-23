@@ -44,6 +44,8 @@ import {
   type ActaCorrectionPreviewRow,
   type AppliedActaCorrection,
   type ApplyActaCorrectionCommand,
+  type PreviewActaPrefixCorrectionCommand,
+  type ApplyActaPrefixCorrectionCommand,
   type CorrectActividadGrupalActaNumberCommand,
   type CreateActividadGrupalRecordCommand,
   type DeleteActividadGrupalRecordCommand,
@@ -380,6 +382,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     return await this.database.db.transaction(async (tx) => {
       const now = new Date();
       const actaOrganizer = resolveActividadGrupalActaOrganizer(command.organizer);
+      const actaSeriesKey =
+        command.customConsecutive === null
+          ? `legacy:${actaOrganizer}`
+          : `activity-type:${command.activityTypeId}`;
       await tx.execute(
         sql`select pg_advisory_xact_lock(hashtext(${`actividades-grupales-acta:${command.tenantId}`}))`,
       );
@@ -389,13 +395,15 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .where(
           and(
             eq(actividadesGrupales.tenantId, command.tenantId),
-            eq(actividadesGrupales.actaOrganizer, actaOrganizer),
+            eq(actividadesGrupales.actaSeriesKey, actaSeriesKey),
             isNull(actividadesGrupales.deletedAt),
           ),
         );
-      const nextSequence = findNextAvailableActividadGrupalActaSequence(
-        activeActaSequences.map((row) => row.actaSequence),
-      );
+      const nextSequence =
+        command.customConsecutive?.nextValue ??
+        findNextAvailableActividadGrupalActaSequence(
+          activeActaSequences.map((row) => row.actaSequence),
+        );
       const highestActiveSequence = activeActaSequences.reduce(
         (highest, row) => Math.max(highest, row.actaSequence),
         0,
@@ -420,7 +428,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           },
         });
 
-      const actaNumber = formatActividadGrupalActaNumber(actaOrganizer, nextSequence);
+      const actaNumber =
+        command.customConsecutive === null
+          ? formatActividadGrupalActaNumber(actaOrganizer, nextSequence)
+          : command.customConsecutive.prefix + "-" + String(nextSequence).padStart(3, "0");
 
       const [created] = await tx
         .insert(actividadesGrupales)
@@ -428,6 +439,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           tenantId: command.tenantId,
           actaNumber,
           actaOrganizer,
+          actaSeriesKey,
           actaSequence: nextSequence,
           activityName: command.activityName,
           activityType: command.activityType,
@@ -444,6 +456,13 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
 
       if (created === undefined) {
         throw new Error("No fue posible crear la actividad grupal.");
+      }
+
+      if (command.customConsecutive !== null) {
+        await tx
+          .update(actividadGrupalTipos)
+          .set({ consecutiveNextValue: nextSequence + 1, updatedAt: now })
+          .where(eq(actividadGrupalTipos.id, command.activityTypeId));
       }
 
       await tx.insert(actividadGrupalEmpleados).values(
@@ -690,6 +709,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         and(
           eq(actividadesGrupales.tenantId, tenantId),
           isNull(actividadesGrupales.deletedAt),
+          sql`${actividadesGrupales.actaSeriesKey} like 'legacy:%'`,
           actaOrganizer === null ? undefined : eq(actividadesGrupales.actaOrganizer, actaOrganizer),
         ),
       )
@@ -735,6 +755,257 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .length,
       rows: previewRows,
     };
+  }
+
+  async previewActaPrefixCorrection(
+    command: PreviewActaPrefixCorrectionCommand,
+  ): Promise<ActaCorrectionPreview> {
+    const prefix = command.prefix.trim().toUpperCase();
+
+    if (!/^[A-Z0-9]{2,24}$/.test(prefix)) {
+      throw new ActaCorrectionConflictError("El prefijo solo puede incluir letras y números.");
+    }
+
+    const [activityType] = await this.database.db
+      .select({ id: actividadGrupalTipos.id })
+      .from(actividadGrupalTipos)
+      .where(
+        and(
+          eq(actividadGrupalTipos.id, command.activityTypeId),
+          eq(actividadGrupalTipos.tenantId, command.tenantId),
+          isNotNull(actividadGrupalTipos.consecutivePrefix),
+        ),
+      )
+      .limit(1);
+
+    if (activityType === undefined) {
+      throw new ActaCorrectionConflictError(
+        "La actividad no tiene una serie especial configurada para este centro.",
+      );
+    }
+
+    const rows = await this.database.db
+      .select({
+        id: actividadesGrupales.id,
+        activityDate: actividadesGrupales.activityDate,
+        startTime: actividadesGrupales.startTime,
+        endTime: actividadesGrupales.endTime,
+        organizer: actividadesGrupales.organizer,
+        actaNumber: actividadesGrupales.actaNumber,
+        actaOrganizer: actividadesGrupales.actaOrganizer,
+        actaSequence: actividadesGrupales.actaSequence,
+        createdAt: actividadesGrupales.createdAt,
+        updatedAt: actividadesGrupales.updatedAt,
+        deletedAt: actividadesGrupales.deletedAt,
+      })
+      .from(actividadesGrupales)
+      .where(
+        and(
+          eq(actividadesGrupales.tenantId, command.tenantId),
+          eq(actividadesGrupales.activityTypeId, command.activityTypeId),
+          eq(actividadesGrupales.actaSeriesKey, `activity-type:${command.activityTypeId}`),
+          isNull(actividadesGrupales.deletedAt),
+        ),
+      )
+      .orderBy(asc(actividadesGrupales.actaSequence));
+
+    const previewRows = buildPrefixCorrectionPreviewRows(rows, prefix);
+    const snapshotHash = hashCorrectionSnapshot(rows);
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const [operation] = await this.database.db
+      .insert(actividadGrupalActaCorrectionOperations)
+      .values({
+        tenantId: command.tenantId,
+        requestedByUserId: command.actorUserId,
+        activityTypeId: command.activityTypeId,
+        targetPrefix: prefix,
+        snapshotHash,
+        expiresAt,
+      })
+      .returning({ id: actividadGrupalActaCorrectionOperations.id });
+
+    if (operation === undefined) {
+      throw new Error("No fue posible preparar la migración de prefijo.");
+    }
+
+    const changedCount = previewRows.filter(
+      (row) => row.currentActaNumber !== row.proposedActaNumber,
+    ).length;
+
+    return {
+      operationToken: operation.id,
+      operationId: operation.id,
+      tenantId: command.tenantId,
+      previewExpiresAt: expiresAt,
+      totalCount: previewRows.length,
+      changedCount,
+      unchangedCount: previewRows.length - changedCount,
+      warningCount: 0,
+      rows: previewRows,
+    };
+  }
+
+  async applyActaPrefixCorrection(
+    command: ApplyActaPrefixCorrectionCommand,
+  ): Promise<AppliedActaCorrection> {
+    return await this.database.db.transaction(async (tx) => {
+      const [operation] = await tx
+        .select()
+        .from(actividadGrupalActaCorrectionOperations)
+        .where(
+          and(
+            eq(actividadGrupalActaCorrectionOperations.id, command.operationToken),
+            eq(actividadGrupalActaCorrectionOperations.requestedByUserId, command.actorUserId),
+            isNull(actividadGrupalActaCorrectionOperations.usedAt),
+          ),
+        )
+        .limit(1);
+
+      if (
+        operation === undefined ||
+        operation.expiresAt <= new Date() ||
+        operation.activityTypeId === null ||
+        operation.targetPrefix === null
+      ) {
+        throw new ActaCorrectionConflictError("La vista previa de migración de prefijo ya no está vigente.");
+      }
+
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`actividades-grupales-acta:${operation.tenantId}`}))`,
+      );
+
+      const [lockedOperation] = await tx
+        .select()
+        .from(actividadGrupalActaCorrectionOperations)
+        .where(
+          and(
+            eq(actividadGrupalActaCorrectionOperations.id, operation.id),
+            eq(actividadGrupalActaCorrectionOperations.requestedByUserId, command.actorUserId),
+            isNull(actividadGrupalActaCorrectionOperations.usedAt),
+          ),
+        )
+        .limit(1);
+
+      if (lockedOperation === undefined || lockedOperation.expiresAt <= new Date()) {
+        throw new ActaCorrectionConflictError("La vista previa de migración de prefijo ya no está vigente.");
+      }
+
+      const rows = await tx
+        .select({
+          id: actividadesGrupales.id,
+          activityDate: actividadesGrupales.activityDate,
+          startTime: actividadesGrupales.startTime,
+          endTime: actividadesGrupales.endTime,
+          organizer: actividadesGrupales.organizer,
+          actaNumber: actividadesGrupales.actaNumber,
+          actaOrganizer: actividadesGrupales.actaOrganizer,
+          actaSequence: actividadesGrupales.actaSequence,
+          createdAt: actividadesGrupales.createdAt,
+          updatedAt: actividadesGrupales.updatedAt,
+          deletedAt: actividadesGrupales.deletedAt,
+        })
+        .from(actividadesGrupales)
+        .where(
+          and(
+            eq(actividadesGrupales.tenantId, operation.tenantId),
+            eq(actividadesGrupales.activityTypeId, operation.activityTypeId),
+            eq(actividadesGrupales.actaSeriesKey, `activity-type:${operation.activityTypeId}`),
+            isNull(actividadesGrupales.deletedAt),
+          ),
+        )
+        .orderBy(asc(actividadesGrupales.actaSequence));
+
+      if (hashCorrectionSnapshot(rows) !== operation.snapshotHash) {
+        throw new ActaCorrectionConflictError();
+      }
+
+      const previewRows = buildPrefixCorrectionPreviewRows(rows, operation.targetPrefix);
+      const sourceIds = new Set(rows.map((row) => row.id));
+      const activeActaNumbers = await tx
+        .select({ id: actividadesGrupales.id, actaNumber: actividadesGrupales.actaNumber })
+        .from(actividadesGrupales)
+        .where(
+          and(
+            eq(actividadesGrupales.tenantId, operation.tenantId),
+            isNull(actividadesGrupales.deletedAt),
+          ),
+        );
+      const usedNumbers = new Set(
+        activeActaNumbers.filter((row) => !sourceIds.has(row.id)).map((row) => row.actaNumber),
+      );
+
+      for (const row of previewRows) {
+        if (usedNumbers.has(row.proposedActaNumber)) {
+          throw new ActaCorrectionConflictError(
+            `El prefijo produciría un acta duplicada: ${row.proposedActaNumber}.`,
+          );
+        }
+        usedNumbers.add(row.proposedActaNumber);
+      }
+
+      const changedRows = previewRows.filter(
+        (row) => row.currentActaNumber !== row.proposedActaNumber,
+      );
+
+      for (const row of changedRows) {
+        await tx
+          .update(actividadesGrupales)
+          .set({
+            actaNumber: row.proposedActaNumber,
+            previousActaNumber: row.currentActaNumber,
+            actaNumberCorrectedAt: new Date(),
+            actaNumberCorrectedByUserId: command.actorUserId,
+            updatedAt: new Date(),
+          })
+          .where(eq(actividadesGrupales.id, row.activityId));
+
+        await tx.insert(auditLogs).values({
+          actorUserId: command.actorUserId,
+          action: "actividades-grupales.acta-prefix-migrated",
+          targetTenantId: operation.tenantId,
+          summary: `Prefijo de acta migrado de ${row.currentActaNumber} a ${row.proposedActaNumber}.`,
+          metadata: {
+            operationId: operation.id,
+            activityId: row.activityId,
+            activityTypeId: operation.activityTypeId,
+            previousActaNumber: row.currentActaNumber,
+            newActaNumber: row.proposedActaNumber,
+            reason: command.reason,
+          },
+        });
+      }
+
+      await tx
+        .update(actividadGrupalTipos)
+        .set({ consecutivePrefix: operation.targetPrefix, updatedAt: new Date() })
+        .where(eq(actividadGrupalTipos.id, operation.activityTypeId));
+      await tx.insert(auditLogs).values({
+        actorUserId: command.actorUserId,
+        action: "actividades-grupales.acta-prefix-migration-applied",
+        targetTenantId: operation.tenantId,
+        summary: `Migración histórica de prefijo aplicada a  actas.`,
+        metadata: {
+          operationId: operation.id,
+          activityTypeId: operation.activityTypeId,
+          targetPrefix: operation.targetPrefix,
+          totalCount: previewRows.length,
+          changedCount: changedRows.length,
+          reason: command.reason,
+        },
+      });
+
+      await tx
+        .update(actividadGrupalActaCorrectionOperations)
+        .set({ usedAt: new Date() })
+        .where(eq(actividadGrupalActaCorrectionOperations.id, operation.id));
+
+      return {
+        operationId: operation.id,
+        totalCount: previewRows.length,
+        changedCount: changedRows.length,
+        unchangedCount: previewRows.length - changedRows.length,
+      };
+    });
   }
 
   async applyActaNumberCorrection(
@@ -796,6 +1067,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           and(
             eq(actividadesGrupales.tenantId, lockedOperation.tenantId),
             isNull(actividadesGrupales.deletedAt),
+            sql`${actividadesGrupales.actaSeriesKey} like 'legacy:%'`,
             lockedOperation.organizer === null
               ? undefined
               : eq(actividadesGrupales.actaOrganizer, lockedOperation.organizer),
@@ -1454,6 +1726,23 @@ export function buildCorrectionPreviewRows(
       isDeleted: row.deletedAt !== null,
     };
   });
+}
+
+export function buildPrefixCorrectionPreviewRows(
+  rows: ActaCorrectionSourceRow[],
+  prefix: string,
+): ActaCorrectionPreviewRow[] {
+  return rows.map((row) => ({
+    activityId: row.id,
+    activityDate: row.activityDate,
+    startTime: row.startTime,
+    endTime: row.endTime,
+    organizer: row.organizer,
+    currentActaNumber: row.actaNumber,
+    proposedActaNumber: `${prefix}-${String(row.actaSequence).padStart(3, "0")}`,
+    sequence: row.actaSequence,
+    isDeleted: row.deletedAt !== null,
+  }));
 }
 
 export function hashCorrectionSnapshot(rows: ActaCorrectionSourceRow[]): string {

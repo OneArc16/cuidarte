@@ -69,7 +69,7 @@ const FORM_SECTIONS = [
   {
     id: "enfermedad",
     label: "Enfermedad actual",
-    fields: ["motivoConsulta", "enfermedadActual", "analisis"],
+    fields: ["motivoConsulta", "enfermedadActual"],
   },
   {
     id: "antecedentes",
@@ -100,6 +100,7 @@ const FORM_SECTIONS = [
   },
   { id: "ordenes", label: "Ordenes medicas", fields: ["ordenesMedicas"] },
   { id: "diagnosticos", label: "Diagnosticos", fields: ["diagnosticos"] },
+  { id: "analisis", label: "Analisis", fields: ["analisis"] },
   { id: "soportes", label: "Soportes", fields: [] },
   { id: "enfermeria", label: "Atenciones de enfermería", fields: [] },
 ] as const;
@@ -493,12 +494,6 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
           readOnly={isReadOnly}
           registration={form.register("enfermedadActual")}
         />
-        <TextAreaField
-          label="Análisis"
-          error={getError("analisis")}
-          readOnly={isReadOnly}
-          registration={form.register("analisis")}
-        />
       </section>
 
       <section
@@ -715,6 +710,21 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
             </article>
           ))}
         </div>
+      </section>
+
+      <section
+        className="adulto-form-panel"
+        id={`${tabPanelIdPrefix}-analisis-panel`}
+        role="tabpanel"
+        aria-label="Contenido de analisis"
+        hidden={activeSection !== "analisis"}
+      >
+        <TextAreaField
+          label="Análisis"
+          error={getError("analisis")}
+          readOnly={isReadOnly}
+          registration={form.register("analisis")}
+        />
       </section>
 
       <section

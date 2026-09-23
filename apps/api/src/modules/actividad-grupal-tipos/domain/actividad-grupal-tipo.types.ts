@@ -3,6 +3,9 @@ export type ActividadGrupalTipoRecord = {
   tenantId: string;
   name: string;
   normalizedName: string;
+  consecutivePrefix: string | null;
+  consecutiveNextValue: number | null;
+  consecutiveCreatorRoles: string[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -32,4 +35,12 @@ export type UpdateActividadGrupalTipoStatusCommand = {
   id: string;
   actorUserId: string;
   isActive: boolean;
+};
+
+export type UpdateActividadGrupalTipoConsecutiveConfigCommand = {
+  id: string;
+  actorUserId: string;
+  prefix: string;
+  nextValue: number;
+  creatorRoles: string[];
 };

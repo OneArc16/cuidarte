@@ -630,6 +630,20 @@ export function AlimentacionBatchForm({
           {isPending ? "Guardando..." : "Guardar"}
         </button>
       </div>
+
+      {selectedRows.length >= 4 ? (
+        <div className="alimentacion-floating-actions" role="region" aria-label="Acciones del lote">
+          <span>{selectedRows.length} adultos seleccionados</span>
+          <div>
+            <button className="alimentacion-floating-actions__cancel" type="button" onClick={onCancel}>
+              Cancelar
+            </button>
+            <button className="alimentacion-floating-actions__save" type="submit" disabled={isPending}>
+              {isPending ? "Guardando..." : "Guardar"}
+            </button>
+          </div>
+        </div>
+      ) : null}
     </form>
   );
 }
