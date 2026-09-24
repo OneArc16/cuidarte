@@ -775,86 +775,90 @@ function ActivityConsecutiveConfigDialog({
           {!isPeopleMode ? (
             <label className="ajustes-consecutive-dialog__name-field">
               <span>Nombre de la actividad</span>
-              <input value={name} maxLength={120} onChange={(event) => setName(event.target.value)} />
+              <input
+                value={name}
+                maxLength={120}
+                onChange={(event) => setName(event.target.value)}
+              />
             </label>
           ) : null}
 
           {!isPeopleMode ? (
             <section
               className={
-              specialSeriesEnabled
-                ? "ajustes-consecutive-dialog__series-card"
-                : "ajustes-consecutive-dialog__series-card is-collapsed"
-            }
-            aria-labelledby="actividad-series-title"
-          >
-            <div className="ajustes-consecutive-dialog__series-header">
-              <div>
-                <h3 id="actividad-series-title">Serie especial</h3>
-                <p>
-                  {specialSeriesEnabled
-                    ? "Las actas de esta actividad usan su propio prefijo."
-                    : "Las actas usan la serie general."}
-                </p>
+                specialSeriesEnabled
+                  ? "ajustes-consecutive-dialog__series-card"
+                  : "ajustes-consecutive-dialog__series-card is-collapsed"
+              }
+              aria-labelledby="actividad-series-title"
+            >
+              <div className="ajustes-consecutive-dialog__series-header">
+                <div>
+                  <h3 id="actividad-series-title">Serie especial</h3>
+                  <p>
+                    {specialSeriesEnabled
+                      ? "Las actas de esta actividad usan su propio prefijo."
+                      : "Las actas usan la serie general."}
+                  </p>
+                </div>
+                <button
+                  className="ajustes-consecutive-dialog__switch"
+                  type="button"
+                  role="switch"
+                  aria-checked={specialSeriesEnabled}
+                  aria-label="Usar serie especial"
+                  onClick={() => setSpecialSeriesEnabled((current) => !current)}
+                >
+                  <span aria-hidden="true" />
+                </button>
               </div>
-              <button
-                className="ajustes-consecutive-dialog__switch"
-                type="button"
-                role="switch"
-                aria-checked={specialSeriesEnabled}
-                aria-label="Usar serie especial"
-                onClick={() => setSpecialSeriesEnabled((current) => !current)}
-              >
-                <span aria-hidden="true" />
-              </button>
-            </div>
 
-            {specialSeriesEnabled ? (
-              <>
-                <div className="ajustes-consecutive-dialog__series-divider" />
+              {specialSeriesEnabled ? (
+                <>
+                  <div className="ajustes-consecutive-dialog__series-divider" />
 
-                <div className="ajustes-consecutive-dialog__fields">
-                  <label>
-                    <span>Prefijo</span>
-                    <input
-                      value={prefix}
-                      disabled={!specialSeriesEnabled}
-                      maxLength={24}
-                      placeholder="Ej. CAMPO"
-                      onChange={(event) => setPrefix(event.target.value.toUpperCase())}
-                    />
-                  </label>
-                  <div className="ajustes-consecutive-dialog__readonly-field">
-                    <span>Próximo consecutivo</span>
-                    <div className="ajustes-consecutive-dialog__stepper">
-                      <button type="button" disabled aria-label="Disminuir consecutivo">
-                        −
-                      </button>
-                      <strong>{specialSeriesEnabled ? nextValue : "—"}</strong>
-                      <button type="button" disabled aria-label="Aumentar consecutivo">
-                        +
-                      </button>
+                  <div className="ajustes-consecutive-dialog__fields">
+                    <label>
+                      <span>Prefijo</span>
+                      <input
+                        value={prefix}
+                        disabled={!specialSeriesEnabled}
+                        maxLength={24}
+                        placeholder="Ej. CAMPO"
+                        onChange={(event) => setPrefix(event.target.value.toUpperCase())}
+                      />
+                    </label>
+                    <div className="ajustes-consecutive-dialog__readonly-field">
+                      <span>Próximo consecutivo</span>
+                      <div className="ajustes-consecutive-dialog__stepper">
+                        <button type="button" disabled aria-label="Disminuir consecutivo">
+                          −
+                        </button>
+                        <strong>{specialSeriesEnabled ? nextValue : "—"}</strong>
+                        <button type="button" disabled aria-label="Aumentar consecutivo">
+                          +
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="ajustes-consecutive-dialog__series-footer">
-                  <p>
-                    Próxima acta:{" "}
-                    <code>
-                      {specialSeriesEnabled
-                        ? (prefix.trim() === "" ? "PREFIJO" : prefix.trim()) +
-                          "-" +
-                          String(nextValue).padStart(3, "0")
-                        : "Serie general"}
-                    </code>
-                  </p>
-                  <span>
-                    <Info aria-hidden="true" /> No modifica actas existentes
-                  </span>
-                </div>
-              </>
-            ) : null}
+                  <div className="ajustes-consecutive-dialog__series-footer">
+                    <p>
+                      Próxima acta:{" "}
+                      <code>
+                        {specialSeriesEnabled
+                          ? (prefix.trim() === "" ? "PREFIJO" : prefix.trim()) +
+                            "-" +
+                            String(nextValue).padStart(3, "0")
+                          : "Serie general"}
+                      </code>
+                    </p>
+                    <span>
+                      <Info aria-hidden="true" /> No modifica actas existentes
+                    </span>
+                  </div>
+                </>
+              ) : null}
             </section>
           ) : null}
 
@@ -960,7 +964,6 @@ function ActivityConsecutiveConfigDialog({
               })}
             </div>
           </section>
-
         </div>
 
         <footer className="ajustes-consecutive-dialog__actions">
@@ -1031,9 +1034,7 @@ function ActivityGlobalConsecutiveConfigDialog({
   const [step, setStep] = useState<"series" | "people">("series");
   const [enabled, setEnabled] = useState(initialConfig !== null);
   const [prefix, setPrefix] = useState(initialConfig?.prefix ?? "");
-  const [selectedActivityTypeId, setSelectedActivityTypeId] = useState(
-    activityTypes[0]?.id ?? "",
-  );
+  const [selectedActivityTypeId, setSelectedActivityTypeId] = useState(activityTypes[0]?.id ?? "");
   const [personSearch, setPersonSearch] = useState("");
   const [creatorUserIds, setCreatorUserIds] = useState<string[]>([]);
   const tenantNameById = useMemo(
@@ -1114,6 +1115,7 @@ function ActivityGlobalConsecutiveConfigDialog({
       activityTypeId: selectedActivityType.id,
       creatorUserIds,
     });
+    setStep("people");
   }
 
   return (
@@ -1222,7 +1224,10 @@ function ActivityGlobalConsecutiveConfigDialog({
                 ) : null}
               </section>
 
-              <section className="ajustes-global-series-dialog__preview" aria-label="Próximas actas">
+              <section
+                className="ajustes-global-series-dialog__preview"
+                aria-label="Próximas actas"
+              >
                 <header>
                   <strong>Próxima acta por centro</strong>
                   <span>Consecutivo independiente</span>
@@ -1315,14 +1320,20 @@ function ActivityGlobalConsecutiveConfigDialog({
                       disabled={peoplePending}
                       onClick={() => toggleCreator(creator.id)}
                     >
-                      <span className="ajustes-global-series-dialog__person-avatar" aria-hidden="true">
+                      <span
+                        className="ajustes-global-series-dialog__person-avatar"
+                        aria-hidden="true"
+                      >
                         {getPersonInitials(creator.fullName)}
                       </span>
                       <span className="ajustes-global-series-dialog__person-copy">
                         <strong>{creator.fullName}</strong>
                         <small>{formatUserRole(creator.role)}</small>
                       </span>
-                      <span className="ajustes-global-series-dialog__person-check" aria-hidden="true">
+                      <span
+                        className="ajustes-global-series-dialog__person-check"
+                        aria-hidden="true"
+                      >
                         {selected ? <Check /> : null}
                       </span>
                     </button>
@@ -1333,7 +1344,11 @@ function ActivityGlobalConsecutiveConfigDialog({
           )}
         </div>
 
-        <footer className="ajustes-consecutive-dialog__actions ajustes-global-series-dialog__footer">
+        <footer
+          className="ajustes-consecutive-dialog__actions ajustes-global-series-dialog__footer"
+          onMouseDown={(event) => event.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
+        >
           <button
             className="ajustes-consecutive-dialog__cancel"
             type="button"
