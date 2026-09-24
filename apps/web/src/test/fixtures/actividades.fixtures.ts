@@ -37,8 +37,20 @@ export const actividadGrupalTrashFixture = {
 } as const;
 
 export const actividadGrupalFormOptionsFixture = {
-  nextActaNumber: 4,
   empleados: [empleadoFixture],
+  activityTypes: [
+    {
+      id: actividadGrupalFixture.activityTypeId,
+      tenantId: actividadGrupalFixture.tenantId,
+      name: actividadGrupalFixture.activityTypeCatalog.name,
+      normalizedName: "fisioterapia",
+      consecutiveConfig: null,
+      isActive: true,
+      createdAt: "2026-04-23T12:00:00.000Z",
+      updatedAt: "2026-04-23T12:00:00.000Z",
+      deactivatedAt: null,
+    },
+  ],
 } as const;
 
 export const actividadGrupalIntegranteFixture = {

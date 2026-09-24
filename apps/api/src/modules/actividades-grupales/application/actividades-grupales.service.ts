@@ -156,6 +156,7 @@ export class ActividadesGrupalesService {
       tenantId: effectiveTenantId,
       scope,
       permittedOrganizers,
+      ...(permittedOrganizers === null ? {} : { permittedCreatorUserId: actor.id }),
     });
 
     return records
@@ -569,6 +570,9 @@ export class ActividadesGrupalesService {
       activityId,
       scope,
       permittedOrganizers: resolvePermittedActividadGrupalOrganizers(actor),
+      ...(resolvePermittedActividadGrupalOrganizers(actor) === null
+        ? {}
+        : { permittedCreatorUserId: actor.id }),
     });
 
     if (detail === null) {
@@ -589,6 +593,9 @@ export class ActividadesGrupalesService {
       activityId,
       scope,
       permittedOrganizers: resolvePermittedActividadGrupalOrganizers(actor),
+      ...(resolvePermittedActividadGrupalOrganizers(actor) === null
+        ? {}
+        : { permittedCreatorUserId: actor.id }),
     });
 
     if (detail === null) {

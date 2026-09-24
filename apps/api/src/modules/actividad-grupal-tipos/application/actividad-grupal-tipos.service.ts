@@ -23,6 +23,7 @@ import {
 import { normalizeActividadGrupalTipoName } from "../domain/actividad-grupal-tipo-normalization";
 import {
   canManageActividadGrupalTipos,
+  canViewActividadGrupalTipos,
   resolveActividadGrupalTipoTenantId,
 } from "../domain/actividad-grupal-tipo.policy";
 import {
@@ -42,10 +43,14 @@ export class ActividadGrupalTiposService {
     query: ActividadGrupalTiposListQuery,
     actor: AuthUser,
   ): Promise<ActividadGrupalTipo[]> {
+    if (!canViewActividadGrupalTipos(actor)) {
+      throw new ForbiddenException("No tienes permisos para consultar actividades grupales.");
+    }
+
     const tenantId =
       actor.role === "super_admin" && query.tenantId === null
         ? null
-        : this.resolveTenantIdOrThrow(actor, query.tenantId);
+        : this.resolveTenantIdForList(actor, query.tenantId);
     const records = await this.actividadGrupalTiposRepository.findMany({
       tenantId: actor.role === "super_admin" && query.tenantId === null ? null : tenantId,
       includeInactive: query.includeInactive,
@@ -317,6 +322,24 @@ export class ActividadGrupalTiposService {
       requestedTenantId !== tenantId
     ) {
       throw new ForbiddenException("No puedes administrar actividades de otro centro.");
+    }
+
+    return tenantId;
+  }
+
+  private resolveTenantIdForList(actor: AuthUser, requestedTenantId: string | null): string {
+    const tenantId = resolveActividadGrupalTipoTenantId(actor, requestedTenantId);
+
+    if (tenantId === null) {
+      throw new BadRequestException("El usuario no tiene un centro asociado.");
+    }
+
+    if (
+      actor.role !== "super_admin" &&
+      requestedTenantId !== null &&
+      requestedTenantId !== tenantId
+    ) {
+      throw new ForbiddenException("No puedes consultar actividades de otro centro.");
     }
 
     return tenantId;

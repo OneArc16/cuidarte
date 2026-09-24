@@ -34,16 +34,22 @@ export function resolvePermittedActividadGrupalOrganizers(
 }
 
 export function canViewActividadGrupal(
-  activity: Pick<ActividadGrupalRecord, "organizer">,
-  user: Pick<AuthUser, "role" | "permissions">,
+  activity: Pick<ActividadGrupalRecord, "organizer" | "activityTypeCreatorUserIds">,
+  user: Pick<AuthUser, "role" | "permissions"> & { id?: string },
 ): boolean {
   if (user.permissions !== undefined && !hasUserPermission(user, "actividades_grupales.view")) {
     return false;
   }
 
   const permittedOrganizers = resolvePermittedActividadGrupalOrganizers(user);
+  const isConfiguredCreator =
+    user.id !== undefined && (activity.activityTypeCreatorUserIds?.includes(user.id) ?? false);
 
-  return permittedOrganizers === null || permittedOrganizers.includes(activity.organizer);
+  return (
+    isConfiguredCreator ||
+    permittedOrganizers === null ||
+    permittedOrganizers.includes(activity.organizer)
+  );
 }
 
 export function resolveActividadesGrupalesScope(user: AuthUser): ActividadesGrupalesScope | null {

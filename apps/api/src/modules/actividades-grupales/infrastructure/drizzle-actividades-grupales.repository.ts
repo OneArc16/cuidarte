@@ -81,6 +81,7 @@ type ActividadGrupalSelectionRow = {
   activityTypeId: string;
   activityTypeName: string;
   activityTypeIsActive: boolean;
+  activityTypeCreatorUserIds: string[];
   activityDate: string;
   startTime: string;
   endTime: string;
@@ -1588,6 +1589,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       activityTypeId: actividadesGrupales.activityTypeId,
       activityTypeName: actividadGrupalTipos.name,
       activityTypeIsActive: actividadGrupalTipos.isActive,
+      activityTypeCreatorUserIds: actividadGrupalTipos.consecutiveCreatorUserIds,
       activityDate: actividadesGrupales.activityDate,
       startTime: actividadesGrupales.startTime,
       endTime: actividadesGrupales.endTime,
@@ -1674,7 +1676,20 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     }
 
     if (query.permittedOrganizers !== null) {
-      conditions.push(inArray(actividadesGrupales.organizer, [...query.permittedOrganizers]));
+      const organizerCondition = inArray(actividadesGrupales.organizer, [
+        ...query.permittedOrganizers,
+      ]);
+
+      if (query.permittedCreatorUserId === undefined || query.permittedCreatorUserId === null) {
+        conditions.push(organizerCondition);
+      } else {
+        conditions.push(
+          or(
+            organizerCondition,
+            sql`${actividadGrupalTipos.consecutiveCreatorUserIds} @> ${JSON.stringify([query.permittedCreatorUserId])}::jsonb`,
+          )!,
+        );
+      }
     }
 
     if (query.activityMonth !== null) {
@@ -1727,7 +1742,20 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     }
 
     if (query.permittedOrganizers !== null) {
-      conditions.push(inArray(actividadesGrupales.organizer, [...query.permittedOrganizers]));
+      const organizerCondition = inArray(actividadesGrupales.organizer, [
+        ...query.permittedOrganizers,
+      ]);
+
+      if (query.permittedCreatorUserId === undefined || query.permittedCreatorUserId === null) {
+        conditions.push(organizerCondition);
+      } else {
+        conditions.push(
+          or(
+            organizerCondition,
+            sql`${actividadGrupalTipos.consecutiveCreatorUserIds} @> ${JSON.stringify([query.permittedCreatorUserId])}::jsonb`,
+          )!,
+        );
+      }
     }
 
     if (query.activityMonth !== null) {
@@ -1775,7 +1803,20 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     }
 
     if (query.permittedOrganizers !== null) {
-      conditions.push(inArray(actividadesGrupales.organizer, [...query.permittedOrganizers]));
+      const organizerCondition = inArray(actividadesGrupales.organizer, [
+        ...query.permittedOrganizers,
+      ]);
+
+      if (query.permittedCreatorUserId === undefined || query.permittedCreatorUserId === null) {
+        conditions.push(organizerCondition);
+      } else {
+        conditions.push(
+          or(
+            organizerCondition,
+            sql`${actividadGrupalTipos.consecutiveCreatorUserIds} @> ${JSON.stringify([query.permittedCreatorUserId])}::jsonb`,
+          )!,
+        );
+      }
     }
 
     return and(...conditions);

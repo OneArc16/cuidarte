@@ -144,6 +144,7 @@ describe("ActividadesGrupalesService", () => {
       tenantId,
       scope: { type: "tenant", tenantId },
       permittedOrganizers: ["medico", "enfermeria"],
+      permittedCreatorUserId: medicoUserId,
     });
   });
 

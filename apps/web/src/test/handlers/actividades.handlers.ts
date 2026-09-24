@@ -72,6 +72,7 @@ export const actividadesHandlers = [
           ...actividadGrupalFixture.activityTypeCatalog,
           tenantId: actividadGrupalFixture.tenantId,
           normalizedName: "fisioterapia",
+          consecutiveConfig: null,
           createdAt: "2026-04-23T12:00:00.000Z",
           updatedAt: "2026-04-23T12:00:00.000Z",
           deactivatedAt: null,

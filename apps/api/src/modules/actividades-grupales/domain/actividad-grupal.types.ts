@@ -25,12 +25,14 @@ export type FindActividadesGrupalesQuery = {
   tenantId: string | null;
   scope: ActividadesGrupalesScope;
   permittedOrganizers: readonly ActividadGrupalOrganizer[] | null;
+  permittedCreatorUserId?: string | null;
 };
 
 export type FindActividadGrupalByIdQuery = {
   activityId: string;
   scope: ActividadesGrupalesScope;
   permittedOrganizers: readonly ActividadGrupalOrganizer[] | null;
+  permittedCreatorUserId?: string | null;
 };
 
 export type FindActividadesGrupalesTrashQuery = FindActividadesGrupalesQuery;
@@ -207,6 +209,7 @@ export type ActividadGrupalRecord = {
   activityTypeId: string;
   activityTypeName: string;
   activityTypeIsActive: boolean;
+  activityTypeCreatorUserIds?: string[];
   activityDate: string;
   startTime: string;
   endTime: string;

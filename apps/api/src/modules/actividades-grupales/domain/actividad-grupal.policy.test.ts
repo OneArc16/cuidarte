@@ -13,6 +13,7 @@ import {
 } from "./actividad-grupal.policy";
 
 const tenantId = "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054";
+const medicoUserId = "11111111-1111-4111-8111-111111111111";
 
 const adminUser: AuthUser = {
   id: "9f75c51f-74ab-40b7-84ef-9e4a93d14af1",
@@ -59,6 +60,16 @@ describe("actividad-grupal.policy", () => {
     assert.equal(canViewActividadGrupal({ organizer: "enfermeria" }, { role: "medico" }), true);
     assert.equal(canViewActividadGrupal({ organizer: "nutricionista" }, { role: "medico" }), false);
     assert.equal(canViewActividadGrupal({ organizer: "nutricionista" }, adminUser), true);
+    assert.equal(
+      canViewActividadGrupal(
+        {
+          organizer: "nutricionista",
+          activityTypeCreatorUserIds: [medicoUserId],
+        },
+        { ...adminUser, id: medicoUserId, role: "medico" },
+      ),
+      true,
+    );
   });
 
   it("allows only admins and super admins to delete an acta", () => {
