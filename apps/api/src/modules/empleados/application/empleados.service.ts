@@ -136,6 +136,61 @@ export class EmpleadosService {
     };
   }
 
+  async getEmpleadoActividadGrupalOrganizerPermission(
+    empleadoId: string,
+    actor: AuthUser,
+  ): Promise<import("@cuidarte/contracts").EmpleadoActividadGrupalOrganizerPermissionResponse> {
+    this.ensureCanManagePermissions(actor);
+    const scope = this.resolveScopeOrThrow(actor);
+    const record = await this.empleadosRepository.findById({ id: empleadoId, scope });
+
+    if (record === null) {
+      throw new NotFoundException("Usuario no encontrado.");
+    }
+
+    return {
+      employeeId: empleadoId,
+      allowedOrganizers: record.actividadGrupalAllowedOrganizers,
+    };
+  }
+
+  async updateEmpleadoActividadGrupalOrganizerPermission(
+    empleadoId: string,
+    command: import("@cuidarte/contracts").UpdateEmpleadoActividadGrupalOrganizerPermissionRequest,
+    actor: AuthUser,
+  ): Promise<import("@cuidarte/contracts").EmpleadoActividadGrupalOrganizerPermissionResponse> {
+    this.ensureCanManagePermissions(actor);
+    const scope = this.resolveScopeOrThrow(actor);
+    const record = await this.empleadosRepository.findById({ id: empleadoId, scope });
+
+    if (record === null) {
+      throw new NotFoundException("Usuario no encontrado.");
+    }
+
+    const allowedOrganizers = [...new Set(command.allowedOrganizers)];
+
+    await this.empleadosRepository.updateActividadGrupalOrganizerPermission(
+      {
+        employeeId: empleadoId,
+        allowedOrganizers,
+      },
+      {
+        actorUserId: actor.id,
+        action: "empleados.activity_organizer_permission_updated",
+        targetTenantId: record.tenantId,
+        summary: `Alcance de organizadores actualizado: ${record.fullName}`,
+        metadata: {
+          allowedOrganizers,
+        },
+      },
+    );
+
+    return {
+      employeeId: empleadoId,
+      allowedOrganizers,
+    };
+  }
+
   async createEmpleado(command: CreateEmpleadoRequest, actor: AuthUser): Promise<EmpleadoDetail> {
     this.ensureCanCreate(actor);
     this.ensureCanAssignRole(actor, command.role);

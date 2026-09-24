@@ -7,7 +7,9 @@ import {
   canEditActividadGrupal,
   canListTrashActividadesGrupales,
   canManageActividadesGrupales,
+  canCreateActividadGrupalWithOrganizer,
   canTrashActividadGrupal,
+  resolveCreatableActividadGrupalOrganizers,
   canViewActividadGrupal,
   resolvePermittedActividadGrupalOrganizers,
 } from "./actividad-grupal.policy";
@@ -67,6 +69,21 @@ describe("actividad-grupal.policy", () => {
           activityTypeCreatorUserIds: [medicoUserId],
         },
         { ...adminUser, id: medicoUserId, role: "medico" },
+      ),
+      true,
+    );
+  });
+
+  it("limits activity creation to a person's own organizer unless explicitly enabled", () => {
+    const medico = { role: "medico" as const };
+
+    assert.deepEqual(resolveCreatableActividadGrupalOrganizers(medico), ["medico"]);
+    assert.equal(canCreateActividadGrupalWithOrganizer(medico, "medico"), true);
+    assert.equal(canCreateActividadGrupalWithOrganizer(medico, "enfermeria"), false);
+    assert.equal(
+      canCreateActividadGrupalWithOrganizer(
+        { ...medico, allowedActividadGrupalOrganizers: ["enfermeria"] },
+        "enfermeria",
       ),
       true,
     );

@@ -32,6 +32,8 @@ import {
   updateEmpleadoRequestSchema,
   empleadoPermissionsResponseSchema,
   updateEmpleadoPermissionsRequestSchema,
+  empleadoActividadGrupalOrganizerPermissionResponseSchema,
+  updateEmpleadoActividadGrupalOrganizerPermissionRequestSchema,
 } from "@cuidarte/contracts";
 import { type FastifyReply } from "fastify";
 import { type Multipart, type MultipartFile } from "@fastify/multipart";
@@ -151,6 +153,49 @@ export class EmpleadosController {
     );
 
     return empleadoPermissionsResponseSchema.parse(permissions);
+  }
+
+  @Get(":id/activity-organizer-permission")
+  @ApiOkResponse({ description: "Alcance de organizadores para actividades grupales." })
+  @ApiNotFoundResponse({ description: "Usuario no encontrado." })
+  @ApiForbiddenResponse({ description: "Solo Admin y Superadmin pueden administrar permisos." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async getEmpleadoActividadGrupalOrganizerPermission(
+    @Param("id") id: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const empleadoId = parseZodSchema(empleadoIdParamSchema, id);
+    const permission = await this.empleadosService.getEmpleadoActividadGrupalOrganizerPermission(
+      empleadoId,
+      request.currentUser,
+    );
+
+    return empleadoActividadGrupalOrganizerPermissionResponseSchema.parse(permission);
+  }
+
+  @Put(":id/activity-organizer-permission")
+  @ApiOkResponse({ description: "Alcance de organizadores actualizado." })
+  @ApiBadRequestResponse({ description: "Solicitud invalida." })
+  @ApiNotFoundResponse({ description: "Usuario no encontrado." })
+  @ApiForbiddenResponse({ description: "Solo Admin y Superadmin pueden administrar permisos." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async updateEmpleadoActividadGrupalOrganizerPermission(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const empleadoId = parseZodSchema(empleadoIdParamSchema, id);
+    const command = parseZodSchema(
+      updateEmpleadoActividadGrupalOrganizerPermissionRequestSchema,
+      body,
+    );
+    const permission = await this.empleadosService.updateEmpleadoActividadGrupalOrganizerPermission(
+      empleadoId,
+      command,
+      request.currentUser,
+    );
+
+    return empleadoActividadGrupalOrganizerPermissionResponseSchema.parse(permission);
   }
 
   @Post(":id/signature")

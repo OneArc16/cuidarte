@@ -14,6 +14,7 @@ import {
   Save,
   Search,
   ShieldCheck,
+  Waypoints,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -23,6 +24,7 @@ import { useActividadGrupalTenantOptionsQuery } from "@/features/actividades-gru
 import { resolveActividadesGrupalesApiError } from "@/features/actividades-grupales/lib/actividades-grupales-formatters";
 import { canManageEmpleadoPermissions } from "@/features/empleados/lib/empleados-permissions";
 import { AjustesPermissionsDialog } from "../components/ajustes-permissions-dialog";
+import { AjustesActivityOrganizerPermissionsDialog } from "../components/ajustes-activity-organizer-permissions-dialog";
 import {
   useUpdateActividadGrupalTipoGlobalConsecutiveConfigMutation,
   useActividadGrupalTipoCreatorOptionsQuery,
@@ -61,6 +63,7 @@ export function AjustesPage({ user }: AjustesPageProps) {
     useState<ActividadGrupalTipo | null>(null);
   const [globalSeriesActivity, setGlobalSeriesActivity] = useState<ActivityCatalogRow | null>(null);
   const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
+  const [organizerPermissionsDialogOpen, setOrganizerPermissionsDialogOpen] = useState(false);
   const isAllTenantsSelected = shouldSelectTenant && selectedTenantId === ALL_TENANTS_VALUE;
   const effectiveTenantId = shouldSelectTenant
     ? selectedTenantId && !isAllTenantsSelected
@@ -188,15 +191,26 @@ export function AjustesPage({ user }: AjustesPageProps) {
       <div className="home-dashboard-section__header ajustes-page__header">
         <span className="eyebrow">Ajustes</span>
         {canManageEmpleadoPermissions(user) ? (
-          <button
-            className="ajustes-page__icon-button"
-            type="button"
-            aria-label="Administrar permisos por persona"
-            data-tooltip="Permisos por persona"
-            onClick={() => setPermissionsDialogOpen(true)}
-          >
-            <ShieldCheck aria-hidden="true" />
-          </button>
+          <div className="ajustes-page__header-actions">
+            <button
+              className="ajustes-page__icon-button ajustes-page__icon-button--permissions"
+              type="button"
+              aria-label="Administrar permisos por persona"
+              data-tooltip="Permisos por persona"
+              onClick={() => setPermissionsDialogOpen(true)}
+            >
+              <ShieldCheck aria-hidden="true" />
+            </button>
+            <button
+              className="ajustes-page__icon-button ajustes-page__icon-button--organizers"
+              type="button"
+              aria-label="Administrar alcance de organizadores"
+              data-tooltip="Crear para otros organizadores"
+              onClick={() => setOrganizerPermissionsDialogOpen(true)}
+            >
+              <Waypoints aria-hidden="true" />
+            </button>
+          </div>
         ) : null}
       </div>
 
@@ -607,6 +621,11 @@ export function AjustesPage({ user }: AjustesPageProps) {
       ) : null}
       {permissionsDialogOpen ? (
         <AjustesPermissionsDialog onClose={() => setPermissionsDialogOpen(false)} />
+      ) : null}
+      {organizerPermissionsDialogOpen ? (
+        <AjustesActivityOrganizerPermissionsDialog
+          onClose={() => setOrganizerPermissionsDialogOpen(false)}
+        />
       ) : null}
     </section>
   );

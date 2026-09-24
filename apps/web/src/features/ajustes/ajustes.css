@@ -17,6 +17,339 @@
     transform 160ms ease;
 }
 
+.ajustes-organizer-permissions-dialog {
+  width: min(780px, calc(100vw - 44px));
+  max-height: min(620px, calc(100dvh - 44px));
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: #fff;
+}
+
+.ajustes-organizer-permissions-dialog__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid #dfe8e4;
+}
+
+.ajustes-organizer-permissions-dialog__header h2 {
+  margin: 12px 0 3px;
+  color: #142c25;
+  font-size: clamp(1.35rem, 2.5vw, 1.65rem);
+  letter-spacing: -0.035em;
+}
+
+.ajustes-organizer-permissions-dialog__header p {
+  margin: 0;
+  color: #657770;
+  font-size: 0.88rem;
+}
+
+.ajustes-organizer-permissions-dialog__badge {
+  display: inline-flex;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #e7f3ee;
+  color: #075b45;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.ajustes-organizer-permissions-dialog__body {
+  grid-template-columns: 250px minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.ajustes-organizer-permissions-dialog__body .ajustes-permissions-dialog__people {
+  min-height: 0;
+  padding: 18px 14px;
+  background: #f5f9f7;
+}
+
+.ajustes-organizer-permissions-dialog__body .ajustes-permissions-dialog__people-list {
+  max-height: none;
+}
+
+.ajustes-organizer-permissions-dialog__editor {
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.ajustes-organizer-permissions-dialog__card {
+  display: grid;
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  gap: 0;
+  padding: 20px 18px 0;
+}
+
+.ajustes-organizer-permissions-dialog__employee-header {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 0 0 18px;
+}
+
+.ajustes-organizer-permissions-dialog__employee-avatar {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid #a9dbc7;
+  border-radius: 50%;
+  background: #e8f6ef;
+  color: #075e47;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.ajustes-organizer-permissions-dialog__employee-header strong,
+.ajustes-organizer-permissions-dialog__employee-header span {
+  display: block;
+}
+
+.ajustes-organizer-permissions-dialog__employee-header strong {
+  color: #1b3029;
+  font-size: 1rem;
+}
+
+.ajustes-organizer-permissions-dialog__employee-header div > span {
+  margin-top: 3px;
+  color: #71817b;
+  font-size: 0.8rem;
+}
+
+.ajustes-organizer-permissions-dialog__selection {
+  min-height: 0;
+  border-top: 1px solid #e0e9e5;
+}
+
+.ajustes-organizer-permissions-dialog__selection-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0 10px;
+}
+
+.ajustes-organizer-permissions-dialog__selection-header strong {
+  color: #183a2f;
+  font-size: 0.82rem;
+}
+
+.ajustes-organizer-permissions-dialog__selection-header strong span {
+  color: #71817b;
+  font-weight: 500;
+}
+
+.ajustes-organizer-permissions-dialog__selection-header button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #075d47;
+  font-size: 0.77rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ajustes-organizer-permissions-dialog__selection-header button:disabled {
+  cursor: default;
+  opacity: 0.52;
+}
+
+.ajustes-organizer-permissions-dialog__organizer-list {
+  display: grid;
+  gap: 7px;
+  max-height: 300px;
+  padding: 0 2px 16px 0;
+  overflow-y: auto;
+  scrollbar-color: #cad9d2 transparent;
+  scrollbar-width: thin;
+}
+
+.ajustes-organizer-permissions-dialog__organizer {
+  grid-template-columns: 22px minmax(0, 1fr);
+  min-height: 47px;
+  padding: 8px 10px;
+  border-color: transparent;
+  border-radius: 10px;
+  background: transparent;
+}
+
+.ajustes-organizer-permissions-dialog__organizer.is-selected {
+  border-color: transparent;
+  background: #e7f4ee;
+}
+
+.ajustes-organizer-permissions-dialog__organizer:hover:not(:disabled),
+.ajustes-organizer-permissions-dialog__organizer:focus-visible:not(:disabled) {
+  border-color: #cae5d9;
+  background: #f1f9f5;
+}
+
+.ajustes-organizer-permissions-dialog__organizer-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+}
+
+.ajustes-organizer-permissions-dialog__organizer.is-selected
+  .ajustes-organizer-permissions-dialog__organizer-check {
+  border-color: #0b5d48;
+  background: #0b5d48;
+}
+
+.ajustes-organizer-permissions-dialog__organizer-check svg {
+  width: 13px;
+  height: 13px;
+  animation: ajustes-organizer-check-pop 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ajustes-organizer-permissions-dialog__organizer-copy {
+  min-width: 0;
+}
+
+.ajustes-organizer-permissions-dialog__organizer strong {
+  font-size: 0.86rem;
+}
+
+.ajustes-organizer-permissions-dialog__organizer small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 0.68rem;
+}
+
+.ajustes-organizer-permissions-dialog__organizer small svg {
+  width: 11px;
+  height: 11px;
+}
+
+.ajustes-organizer-permissions-dialog__person-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 25px;
+  padding: 4px 6px;
+  border-radius: 999px;
+  background: #e3f2eb;
+  color: #12664e;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.ajustes-organizer-permissions-dialog__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 68px;
+  padding: 11px 18px;
+  border-top: 1px solid #dfe8e4;
+  background: #fff;
+}
+
+.ajustes-organizer-permissions-dialog__footer > span {
+  color: #71817b;
+  font-size: 0.78rem;
+}
+
+.ajustes-organizer-permissions-dialog__footer > span.is-dirty::first-letter {
+  color: #d3922e;
+}
+
+.ajustes-organizer-permissions-dialog__footer > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.ajustes-organizer-permissions-dialog__footer button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #657770;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ajustes-organizer-permissions-dialog__footer button:hover:not(:disabled),
+.ajustes-organizer-permissions-dialog__footer button:focus-visible:not(:disabled) {
+  background: #f1f6f3;
+  color: #183a2f;
+}
+
+.ajustes-organizer-permissions-dialog__footer button.is-primary {
+  background: #0b5d48;
+  color: #fff;
+}
+
+.ajustes-organizer-permissions-dialog__footer button.is-primary:hover:not(:disabled),
+.ajustes-organizer-permissions-dialog__footer button.is-primary:focus-visible:not(:disabled) {
+  background: #084936;
+}
+
+.ajustes-organizer-permissions-dialog__footer button:disabled {
+  cursor: default;
+  opacity: 0.46;
+}
+
+@keyframes ajustes-organizer-check-pop {
+  0% {
+    transform: scale(0.35) rotate(-12deg);
+    opacity: 0;
+  }
+
+  70% {
+    transform: scale(1.15) rotate(3deg);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
+@media (max-width: 700px) {
+  .ajustes-organizer-permissions-dialog {
+    width: min(100%, calc(100vw - 24px));
+    max-height: calc(100dvh - 24px);
+  }
+
+  .ajustes-organizer-permissions-dialog__body {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .ajustes-organizer-permissions-dialog__body .ajustes-permissions-dialog__people {
+    max-height: 220px;
+    border-right: 0;
+    border-bottom: 1px solid #dfe8e4;
+  }
+
+  .ajustes-organizer-permissions-dialog__editor {
+    overflow: visible;
+  }
+
+  .ajustes-organizer-permissions-dialog__footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ajustes-organizer-permissions-dialog__footer > div {
+    justify-content: flex-end;
+  }
+}
+
 .ajustes-page__icon-button:hover,
 .ajustes-page__icon-button:focus-visible {
   border-color: rgb(29 158 117 / 42%);
@@ -28,6 +361,170 @@
 .ajustes-page__icon-button svg {
   width: 19px;
   height: 19px;
+}
+
+.ajustes-page__icon-button--permissions {
+  border-color: #adc4e6;
+  background: #edf3fc;
+  color: #28578f;
+}
+
+.ajustes-page__icon-button--permissions:hover,
+.ajustes-page__icon-button--permissions:focus-visible {
+  border-color: #6e99cf;
+  background: #e0ebfa;
+  color: #1d467e;
+}
+
+.ajustes-page__icon-button--organizers {
+  border-color: #e6bd82;
+  background: #fff4e5;
+  color: #a55b12;
+}
+
+.ajustes-page__icon-button--organizers:hover,
+.ajustes-page__icon-button--organizers:focus-visible {
+  border-color: #d69849;
+  background: #ffead0;
+  color: #824508;
+}
+
+.ajustes-page__header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ajustes-organizer-permissions-dialog {
+  width: min(860px, calc(100vw - 48px));
+}
+
+.ajustes-organizer-permissions-dialog__editor {
+  display: grid;
+  align-content: center;
+}
+
+.ajustes-organizer-permissions-dialog__card {
+  display: grid;
+  gap: 26px;
+  max-width: 490px;
+  padding: 24px 0;
+}
+
+.ajustes-organizer-permissions-dialog__copy {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #dce9e3;
+  border-radius: 14px;
+  background: #f6fbf8;
+}
+
+.ajustes-organizer-permissions-dialog__icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 12px;
+  background: #dff3e9;
+  color: #0f7960;
+}
+
+.ajustes-organizer-permissions-dialog__icon svg {
+  width: 21px;
+  height: 21px;
+}
+
+.ajustes-organizer-permissions-dialog__copy strong {
+  color: #183b32;
+}
+
+.ajustes-organizer-permissions-dialog__copy p {
+  margin: 5px 0 0;
+  color: #647a72;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.ajustes-organizer-permissions-dialog__organizer-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.ajustes-organizer-permissions-dialog__organizer {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  min-height: 62px;
+  padding: 9px;
+  border: 1px solid #d9e6e0;
+  border-radius: 11px;
+  background: #fff;
+  color: #36534a;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.ajustes-organizer-permissions-dialog__organizer:hover:not(:disabled),
+.ajustes-organizer-permissions-dialog__organizer:focus-visible:not(:disabled) {
+  border-color: #62b997;
+  background: #f3fbf7;
+}
+
+.ajustes-organizer-permissions-dialog__organizer.is-selected {
+  border-color: #8ccdb3;
+  background: #eff9f4;
+}
+
+.ajustes-organizer-permissions-dialog__organizer-check {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid #cfddd7;
+  border-radius: 8px;
+  background: #fff;
+  color: #fff;
+}
+
+.ajustes-organizer-permissions-dialog__organizer.is-selected
+  .ajustes-organizer-permissions-dialog__organizer-check {
+  border-color: #15966f;
+  background: #15966f;
+}
+
+.ajustes-organizer-permissions-dialog__organizer-check svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ajustes-organizer-permissions-dialog__organizer strong,
+.ajustes-organizer-permissions-dialog__organizer small {
+  display: block;
+}
+
+.ajustes-organizer-permissions-dialog__organizer strong {
+  color: #183b32;
+  font-size: 0.81rem;
+}
+
+.ajustes-organizer-permissions-dialog__organizer small {
+  margin-top: 2px;
+  color: #71817c;
+  font-size: 0.7rem;
+}
+
+.ajustes-organizer-permissions-dialog__organizer:disabled {
+  cursor: default;
+  opacity: 0.82;
 }
 
 .ajustes-permissions-dialog-backdrop {
@@ -315,4 +812,954 @@
     overflow: visible;
     padding: 0 18px 18px;
   }
+
+  .ajustes-organizer-permissions-dialog__card {
+    max-width: none;
+  }
+
+  .ajustes-organizer-permissions-dialog__organizer-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Organizer permission modal overrides: keep this compact editor above the shared permissions modal. */
+.ajustes-organizer-permissions-dialog {
+  width: min(780px, calc(100vw - 44px));
+  max-height: min(620px, calc(100dvh - 44px));
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.ajustes-organizer-permissions-dialog__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 22px 24px 16px;
+  border-bottom: 1px solid #dfe8e4;
+}
+
+.ajustes-organizer-permissions-dialog__header h2 {
+  margin: 12px 0 3px;
+  color: #142c25;
+  font-size: clamp(1.35rem, 2.5vw, 1.65rem);
+  letter-spacing: -0.035em;
+}
+
+.ajustes-organizer-permissions-dialog__header p {
+  margin: 0;
+  color: #657770;
+  font-size: 0.88rem;
+}
+
+.ajustes-organizer-permissions-dialog__body {
+  grid-template-columns: 250px minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.ajustes-organizer-permissions-dialog__editor {
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.ajustes-organizer-permissions-dialog__card {
+  display: grid;
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  gap: 0;
+  padding: 20px 18px 0;
+}
+
+.ajustes-organizer-permissions-dialog__organizer-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 7px;
+  max-height: 300px;
+  padding: 0 2px 16px 0;
+  overflow-y: auto;
+}
+
+.ajustes-organizer-permissions-dialog__organizer {
+  grid-template-columns: 22px minmax(0, 1fr);
+  min-height: 47px;
+  padding: 8px 10px;
+  border-color: transparent;
+  border-radius: 10px;
+  background: transparent;
+}
+
+.ajustes-organizer-permissions-dialog__organizer.is-selected {
+  border-color: transparent;
+  background: #e7f4ee;
+}
+
+.ajustes-organizer-permissions-dialog__organizer-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+}
+
+.ajustes-organizer-permissions-dialog__organizer.is-selected
+  .ajustes-organizer-permissions-dialog__organizer-check {
+  border-color: #0b5d48;
+  background: #0b5d48;
+}
+
+.ajustes-organizer-permissions-dialog__organizer-check svg {
+  width: 13px;
+  height: 13px;
+  animation: ajustes-organizer-check-pop 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ajustes-organizer-permissions-dialog__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 68px;
+  padding: 11px 18px;
+  border-top: 1px solid #dfe8e4;
+  background: #fff;
+}
+
+@media (max-width: 700px) {
+  .ajustes-organizer-permissions-dialog {
+    width: min(100%, calc(100vw - 24px));
+    max-height: calc(100dvh - 24px);
+  }
+
+  .ajustes-organizer-permissions-dialog__body {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .ajustes-organizer-permissions-dialog__editor {
+    overflow: visible;
+  }
+
+  .ajustes-organizer-permissions-dialog__footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+/* Final organizer modal layout. This selector intentionally scopes the dialog to
+ * prevent legacy permission-dialog rules from changing the selected state. */
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog {
+  width: min(780px, calc(100vw - 44px));
+  max-height: min(620px, calc(100dvh - 44px));
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__body {
+  grid-template-columns: 250px minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__people {
+  min-height: 0;
+  padding: 18px 14px;
+  background: #f5f9f7;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__people-list {
+  max-height: none;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__editor {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__card {
+  display: block;
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  padding: 20px 18px 0;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer-list {
+  grid-template-columns: 1fr;
+  gap: 7px;
+  max-height: 300px;
+  padding: 0 2px 16px 0;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer {
+  grid-template-columns: 22px minmax(0, 1fr);
+  min-height: 47px;
+  padding: 8px 10px;
+  border-color: transparent;
+  border-radius: 10px;
+  background: transparent;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer.is-selected {
+  border-color: transparent;
+  background: #e7f4ee;
+  box-shadow: none;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer:hover:not(:disabled),
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer:focus-visible:not(:disabled) {
+  border-color: #cae5d9;
+  background: #f1f9f5;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer.is-selected:hover:not(:disabled),
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer.is-selected:focus-visible:not(:disabled) {
+  border-color: transparent;
+  background: #e7f4ee;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer.is-selected
+  .ajustes-organizer-permissions-dialog__organizer-check {
+  border-color: #0b5d48;
+  background: #0b5d48;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer.is-just-changed {
+  animation: ajustes-organizer-selection-pulse 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer.is-just-changed
+  .ajustes-organizer-permissions-dialog__organizer-check
+  svg {
+  animation: ajustes-organizer-check-pop 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes ajustes-organizer-selection-pulse {
+  0% {
+    transform: scale(0.975);
+  }
+
+  55% {
+    transform: scale(1.012);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__organizer {
+    transition: none;
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__organizer.is-just-changed,
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__organizer.is-just-changed
+    .ajustes-organizer-permissions-dialog__organizer-check
+    svg {
+    animation: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog {
+    width: min(100%, calc(100vw - 24px));
+    max-height: calc(100dvh - 24px);
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__body {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__editor {
+    overflow: visible;
+  }
+}
+
+/* Final sizing and alignment refinements. */
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog {
+  width: min(1040px, calc(100vw - 24px));
+  max-height: min(820px, calc(100dvh - 24px));
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__people {
+  padding: 22px 18px;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__person {
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  min-width: 0;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__avatar,
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__employee-avatar {
+  place-items: center;
+  line-height: 1;
+  text-align: center;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__person-count {
+  justify-self: end;
+  align-self: center;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__footer
+  > span.is-dirty {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__footer
+  > span.is-dirty::before {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: #d89a2b;
+  content: "";
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__footer
+  > span.is-dirty::first-letter {
+  color: inherit;
+}
+
+@media (max-width: 700px) {
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog {
+    width: min(100%, calc(100vw - 16px));
+    max-height: calc(100dvh - 16px);
+  }
+}
+
+/* Reference layout for the organizer-scope modal only. */
+.ajustes-organizer-permissions-dialog-backdrop {
+  padding: 24px;
+  background: rgb(12 28 22 / 32%);
+  backdrop-filter: blur(6px);
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog {
+  display: flex;
+  width: 100%;
+  max-width: 920px;
+  height: min(620px, calc(100dvh - 48px));
+  max-height: none;
+  flex-direction: column;
+  border-radius: 18px;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__header {
+  flex: none;
+  padding: 22px 24px 18px;
+  border-bottom-color: #e4e9e6;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__header
+  h2 {
+  margin: 10px 0 3px;
+  color: #15231e;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__header
+  p {
+  color: #66756f;
+  font-size: 13.5px;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__body {
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__people {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  border-right-color: #e4e9e6;
+  background: #f8faf9;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__people-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 16px 12px;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__people-heading
+  span {
+  color: #66756f;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__people-heading
+  strong {
+  color: #66756f;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__search {
+  flex: none;
+  padding: 0 16px 14px;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__search
+  > div {
+  min-height: 40px;
+  border-color: #e4e9e6;
+  border-radius: 10px;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__people-list {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  padding: 0 10px 16px;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__person {
+  grid-template-columns: 36px minmax(0, 1fr) auto auto;
+  gap: 12px;
+  min-height: 54px;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__person:hover,
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__person:focus-visible {
+  border-color: transparent;
+  background: #eef2f0;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__person.is-selected {
+  border-color: #e4e9e6;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(16 24 20 / 5%);
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__avatar {
+  width: 36px;
+  height: 36px;
+  border-color: #e4e9e6;
+  background: #fff;
+  color: #66756f;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__person.is-selected
+  .ajustes-permissions-dialog__avatar {
+  border-color: #b9dccb;
+  background: #e8f3ee;
+  color: #0f4c3a;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__person
+  strong {
+  color: #15231e;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__person
+  small {
+  margin-top: 2px;
+  color: #66756f;
+  font-size: 12.5px;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__person-count {
+  min-width: 0;
+  padding: 2px 7px;
+  background: #e8f3ee;
+  color: #0f4c3a;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__person-dirty-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #d9a441;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__editor {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  background: #fff;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__card {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__employee-header {
+  flex: none;
+  gap: 16px;
+  padding: 20px 28px 18px;
+  border-bottom: 1px solid #e4e9e6;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__employee-avatar {
+  width: 44px;
+  height: 44px;
+  border-color: #b9dccb;
+  background: #e8f3ee;
+  color: #0f4c3a;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__employee-header
+  strong {
+  color: #15231e;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__employee-header
+  div
+  > span {
+  color: #66756f;
+  font-size: 13px;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__selection {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 20px 28px 24px;
+  border-top: 0;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__selection-header {
+  position: sticky;
+  top: -20px;
+  z-index: 1;
+  flex: none;
+  margin: -20px -28px 12px;
+  padding: 20px 28px 12px;
+  background: #fff;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__selection-header
+  strong {
+  color: #15231e;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__selection-header
+  strong
+  span {
+  color: #66756f;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__selection-header
+  button {
+  color: #0f4c3a;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  max-height: none;
+  margin: 0 -10px;
+  padding: 0 10px;
+  overflow: visible;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer:hover:not(:disabled),
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer:focus-visible:not(:disabled) {
+  border: 0;
+  background: #f5f7f6;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer.is-selected,
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer.is-selected:hover:not(:disabled),
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer.is-selected:focus-visible:not(:disabled) {
+  border: 0;
+  background: #e8f3ee;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer-check {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid #cfd8d3;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer.is-selected
+  .ajustes-organizer-permissions-dialog__organizer-check {
+  border-color: #0f4c3a;
+  background: #0f4c3a;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer
+  strong {
+  color: #15231e;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer
+  small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  color: #0f4c3a;
+  font-size: 12px;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__organizer:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__footer {
+  flex: none;
+  min-height: 68px;
+  padding: 14px 24px;
+  border-top-color: #e4e9e6;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__footer
+  > span {
+  color: #66756f;
+  font-size: 13px;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__footer
+  > span.is-dirty,
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__footer
+  > span.is-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__footer
+  > span.is-dirty::before,
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__footer
+  > span.is-saved::before {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: #d9a441;
+  content: "";
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__footer
+  > span.is-saved::before {
+  background: #2f9e6e;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__footer
+  button.is-primary {
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 10px;
+  background: #0f4c3a;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__footer
+  button.is-primary:hover:not(:disabled),
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__footer
+  button.is-primary:focus-visible:not(:disabled) {
+  background: #0b3d2e;
+}
+
+.ajustes-organizer-permissions-dialog__mobile-back {
+  display: none;
+}
+
+@media (min-width: 681px) and (max-width: 860px) {
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__body {
+    grid-template-columns: 250px minmax(0, 1fr);
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__organizer-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .ajustes-organizer-permissions-dialog-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog {
+    width: 100%;
+    height: 92dvh;
+    max-width: none;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__header {
+    padding: 18px 18px 14px;
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__header
+    p {
+    display: none;
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__body {
+    display: block;
+    overflow: hidden;
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-permissions-dialog__people {
+    height: 100%;
+    border-right: 0;
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__body.is-mobile-detail-open
+    .ajustes-permissions-dialog__people {
+    display: none;
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__editor {
+    display: none;
+    height: 100%;
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__body.is-mobile-detail-open
+    .ajustes-organizer-permissions-dialog__editor {
+    display: flex;
+  }
+
+  .ajustes-organizer-permissions-dialog__mobile-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: fit-content;
+    min-height: 40px;
+    padding: 0 18px;
+    border: 0;
+    background: transparent;
+    color: #0f4c3a;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .ajustes-organizer-permissions-dialog__mobile-back svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__selection {
+    padding: 16px 18px 20px;
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__selection-header {
+    position: static;
+    margin: 0 0 10px;
+    padding: 0;
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__organizer-list {
+    grid-template-columns: 1fr;
+    margin: 0;
+    padding: 0;
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__footer {
+    align-items: stretch;
+    flex-direction: row;
+    gap: 8px;
+    padding: 10px 14px;
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__footer
+    > span {
+    display: none;
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__footer
+    > div {
+    width: 100%;
+  }
+
+  .ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+    .ajustes-organizer-permissions-dialog__footer
+    button {
+    flex: 1;
+    min-height: 46px;
+  }
+}
+
+/* Keep avatar initials optically centered regardless of inherited line-height. */
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-permissions-dialog__avatar,
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__employee-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  text-align: center;
+}
+
+.ajustes-permissions-dialog.ajustes-organizer-permissions-dialog
+  .ajustes-organizer-permissions-dialog__avatar-text {
+  display: block;
+  height: 1em;
+  line-height: 1em;
+  transform: translateY(0.03em);
 }

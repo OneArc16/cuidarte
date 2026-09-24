@@ -252,6 +252,7 @@ function employeeRecord(role: EmpleadoRecord["role"]): EmpleadoRecord {
     role,
     isActive: true,
     isTenantOwner: false,
+    actividadGrupalAllowedOrganizers: [],
     latestSignature: signature,
     currentDirectorSignatureAssignment: null,
     directorSignatureAssignmentHistory: [],

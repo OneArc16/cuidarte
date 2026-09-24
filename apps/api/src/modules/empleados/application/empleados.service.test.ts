@@ -73,6 +73,7 @@ const records: EmpleadoRecord[] = [
     role: "medico",
     isActive: true,
     isTenantOwner: false,
+    actividadGrupalAllowedOrganizers: [],
     latestSignature: null,
     tenantActiveSigner: null,
     currentDirectorSignatureAssignment: null,
@@ -95,6 +96,7 @@ const records: EmpleadoRecord[] = [
     role: "director",
     isActive: true,
     isTenantOwner: false,
+    actividadGrupalAllowedOrganizers: [],
     latestSignature: null,
     tenantActiveSigner: null,
     currentDirectorSignatureAssignment: null,
@@ -455,6 +457,7 @@ function createRepository(
       return [];
     },
     async replacePermissions() {},
+    async updateActividadGrupalOrganizerPermission() {},
     async findLatestSignatureVersionByEmployeeId() {
       return null;
     },

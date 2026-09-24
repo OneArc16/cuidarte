@@ -7,9 +7,13 @@ import {
   type TenantActiveSignerResponse,
   type UpdateEmpleadoRequest,
   type EmpleadoPermissionsResponse,
+  type EmpleadoActividadGrupalOrganizerPermissionResponse,
+  type UpdateEmpleadoActividadGrupalOrganizerPermissionRequest,
   type UpdateEmpleadoPermissionsRequest,
   empleadoPermissionsResponseSchema,
   updateEmpleadoPermissionsRequestSchema,
+  empleadoActividadGrupalOrganizerPermissionResponseSchema,
+  updateEmpleadoActividadGrupalOrganizerPermissionRequestSchema,
   empleadoDetailResponseSchema,
   empleadoListResponseSchema,
   empleadoTenantOptionsResponseSchema,
@@ -63,6 +67,29 @@ export function updateEmpleadoPermissions(
     {
       method: "PUT",
       body: updateEmpleadoPermissionsRequestSchema.parse(request),
+    },
+  );
+}
+
+export function getEmpleadoActividadGrupalOrganizerPermission(
+  empleadoId: string,
+): Promise<EmpleadoActividadGrupalOrganizerPermissionResponse> {
+  return fetchJson(
+    getApiBaseUrl() + "/empleados/" + empleadoId + "/activity-organizer-permission",
+    empleadoActividadGrupalOrganizerPermissionResponseSchema,
+  );
+}
+
+export function updateEmpleadoActividadGrupalOrganizerPermission(
+  empleadoId: string,
+  request: UpdateEmpleadoActividadGrupalOrganizerPermissionRequest,
+): Promise<EmpleadoActividadGrupalOrganizerPermissionResponse> {
+  return fetchJson(
+    getApiBaseUrl() + "/empleados/" + empleadoId + "/activity-organizer-permission",
+    empleadoActividadGrupalOrganizerPermissionResponseSchema,
+    {
+      method: "PUT",
+      body: updateEmpleadoActividadGrupalOrganizerPermissionRequestSchema.parse(request),
     },
   );
 }

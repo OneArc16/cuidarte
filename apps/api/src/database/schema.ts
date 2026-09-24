@@ -284,6 +284,10 @@ export const users = pgTable(
     phone: varchar("phone", { length: 40 }),
     role: userRole("role").notNull(),
     isTenantOwner: boolean("is_tenant_owner").notNull().default(false),
+    actividadGrupalAllowedOrganizers: jsonb("actividad_grupal_allowed_organizers")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     passwordHash: text("password_hash").notNull(),
     passwordSetByAdmin: boolean("password_set_by_admin").notNull().default(true),
     passwordChangedAt: timestamp("password_changed_at", { withTimezone: true }),

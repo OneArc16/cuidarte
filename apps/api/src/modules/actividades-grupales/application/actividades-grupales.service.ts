@@ -50,6 +50,7 @@ import {
   canBulkCorrectActividadGrupalActaNumbers,
   canViewActividadGrupal,
   canTrashActividadGrupal,
+  canCreateActividadGrupalWithOrganizer,
   resolvePermittedActividadGrupalOrganizers,
   resolveActividadesGrupalesScope,
 } from "../domain/actividad-grupal.policy";
@@ -199,6 +200,10 @@ export class ActividadesGrupalesService {
   ): Promise<ActividadGrupalListItem> {
     this.ensureCanCreateActivities(actor);
     this.resolveScopeOrThrow(actor);
+
+    if (!canCreateActividadGrupalWithOrganizer(actor, command.organizer)) {
+      throw new ForbiddenException("No tienes permiso para crear actividades de otro organizador.");
+    }
 
     const tenantId = this.resolveTenantIdForCreate(actor, command.tenantId);
     const activityType = await this.actividadGrupalTiposService.resolveForSessionCreate(

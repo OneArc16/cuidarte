@@ -20,6 +20,7 @@ import {
   type TenantActiveSignerResolutionRecord,
   type UpdateEmpleadoRecordCommand,
   type ReplaceEmpleadoPermissionsCommand,
+  type UpdateEmpleadoActividadGrupalOrganizerPermissionCommand,
 } from "./empleado.types";
 
 export const EMPLEADOS_REPOSITORY = Symbol("EMPLEADOS_REPOSITORY");
@@ -33,6 +34,10 @@ export type EmpleadosRepository = {
   findPermissionsByUserId(userId: string): Promise<UserPermission[]>;
   replacePermissions(
     command: ReplaceEmpleadoPermissionsCommand,
+    audit: EmpleadoAuditCommand,
+  ): Promise<void>;
+  updateActividadGrupalOrganizerPermission(
+    command: UpdateEmpleadoActividadGrupalOrganizerPermissionCommand,
     audit: EmpleadoAuditCommand,
   ): Promise<void>;
   findLatestSignatureVersionByEmployeeId(

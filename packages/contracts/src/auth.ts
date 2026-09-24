@@ -256,10 +256,36 @@ export const updateEmpleadoPermissionsRequestSchema = z.object({
   permissions: z.array(userPermissionSchema).max(userPermissionValues.length),
 });
 
+const actividadGrupalOrganizerPermissionSchema = z.enum([
+  "director",
+  "medico",
+  "enfermeria",
+  "psicologa",
+  "trabajadora_social",
+  "nutricionista",
+  "fisioterapeuta",
+  "recreacionista",
+]);
+
+export const empleadoActividadGrupalOrganizerPermissionResponseSchema = z.object({
+  employeeId: z.uuid(),
+  allowedOrganizers: z.array(actividadGrupalOrganizerPermissionSchema),
+});
+
+export const updateEmpleadoActividadGrupalOrganizerPermissionRequestSchema = z.object({
+  allowedOrganizers: z.array(actividadGrupalOrganizerPermissionSchema).max(8),
+});
+
 export type UserPermission = (typeof userPermissionValues)[number];
 export type EmpleadoPermissionsResponse = z.infer<typeof empleadoPermissionsResponseSchema>;
 export type UpdateEmpleadoPermissionsRequest = z.infer<
   typeof updateEmpleadoPermissionsRequestSchema
+>;
+export type EmpleadoActividadGrupalOrganizerPermissionResponse = z.infer<
+  typeof empleadoActividadGrupalOrganizerPermissionResponseSchema
+>;
+export type UpdateEmpleadoActividadGrupalOrganizerPermissionRequest = z.infer<
+  typeof updateEmpleadoActividadGrupalOrganizerPermissionRequestSchema
 >;
 
 export function hasUserPermission(
@@ -279,6 +305,7 @@ export const authUserSchema = z.object({
   role: userRoleSchema,
   passwordSetByAdmin: z.boolean(),
   permissions: z.array(userPermissionSchema).optional(),
+  allowedActividadGrupalOrganizers: z.array(actividadGrupalOrganizerPermissionSchema).optional(),
 });
 
 export const loginRequestSchema = z.object({

@@ -313,13 +313,39 @@ describe("ActividadesGrupalesService", () => {
         organizer: "fisioterapeuta",
         employeeIds: [medicoUserId, enfermeriaUserId],
       },
-      medicoUser,
+      { ...medicoUser, allowedActividadGrupalOrganizers: ["fisioterapeuta"] },
     );
 
     assert.equal(result.tenantId, tenantId);
     assert.equal(result.actaNumber, "FISIO-001");
     assert.equal(repository.created[0]?.tenantId, tenantId);
     assert.deepEqual(repository.created[0]?.employeeIds, [medicoUserId, enfermeriaUserId]);
+  });
+
+  it("rejects creation for a different organizer when the person lacks the explicit scope", async () => {
+    const repository = createRepository();
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+
+    await assert.rejects(
+      () =>
+        service.createActividadGrupal(
+          {
+            tenantId: null,
+            activityName: "Jornada psicomotriz",
+            activityType: "fisioterapia",
+            activityTypeId,
+            activityDate: "2026-04-23",
+            startTime: "08:30",
+            endTime: "10:00",
+            organizer: "fisioterapeuta",
+            employeeIds: [medicoUserId, enfermeriaUserId],
+          },
+          medicoUser,
+        ),
+      { constructor: ForbiddenException },
+    );
+
+    assert.equal(repository.created.length, 0);
   });
 
   it("synchronizes the activity organizer when correcting its acta", async () => {
@@ -354,7 +380,7 @@ describe("ActividadesGrupalesService", () => {
             organizer: "nutricionista",
             employeeIds: [medicoUserId, inactiveEmpleadoId],
           },
-          medicoUser,
+          { ...medicoUser, allowedActividadGrupalOrganizers: ["nutricionista"] },
         ),
       { constructor: BadRequestException },
     );

@@ -2,6 +2,7 @@ import {
   type ActividadGrupalFormOptionsResponse,
   type ActividadGrupalTipoSummary,
   type ActividadGrupalTenantOption,
+  type AuthUser,
 } from "@cuidarte/contracts";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Save, Search, Sparkles, X } from "lucide-react";
@@ -13,6 +14,7 @@ import { formatEmpleadoRole } from "@/features/empleados/lib/empleados-formatter
 
 import {
   formatActividadGrupalOrganizer,
+  getCreatableActividadGrupalOrganizerOptions,
   getActividadGrupalOrganizerOptions,
 } from "../lib/actividades-grupales-formatters";
 import {
@@ -23,6 +25,7 @@ import {
 import { ActividadGrupalFieldGroup } from "./actividad-grupal-field-group";
 
 type ActividadGrupalFormProps = {
+  user: AuthUser;
   mode: "create" | "edit";
   error: string | null;
   formOptions: ActividadGrupalFormOptionsResponse | null;
@@ -40,8 +43,10 @@ type ActividadGrupalFormProps = {
 };
 
 const EXCLUDED_SESSION_EMPLOYEE_ROLES: ReadonlySet<string> = new Set(["admin", "auditor"]);
+const ALL_EMPLOYEES_ANIMATION_TARGET = "__all__";
 
 export function ActividadGrupalForm({
+  user,
   mode,
   error,
   formOptions,
@@ -58,6 +63,10 @@ export function ActividadGrupalForm({
   tenantOptions,
 }: ActividadGrupalFormProps) {
   const [employeeSearch, setEmployeeSearch] = useState("");
+  const [employeeSelectionAnimation, setEmployeeSelectionAnimation] = useState<{
+    employeeId: string;
+    sequence: number;
+  } | null>(null);
   const form = useForm<ActividadGrupalFormValues>({
     resolver: zodResolver(actividadGrupalFormSchema) as Resolver<ActividadGrupalFormValues>,
     defaultValues: initialValues ?? createDefaultActividadGrupalFormValues(),
@@ -94,6 +103,13 @@ export function ActividadGrupalForm({
 
     return options;
   }, [currentActivityType, formOptions?.activityTypes, selectedTenantId]);
+  const organizerOptions = useMemo(
+    () =>
+      mode === "create"
+        ? getCreatableActividadGrupalOrganizerOptions(user)
+        : getActividadGrupalOrganizerOptions(),
+    [mode, user],
+  );
   const filteredEmployees = useMemo(() => {
     const search = employeeSearch.trim().toLowerCase();
 
@@ -129,6 +145,14 @@ export function ActividadGrupalForm({
   }, [selectedTenantId, setValue]);
 
   useEffect(() => {
+    if (mode !== "create" || organizerOptions.includes(organizerValue)) {
+      return;
+    }
+
+    setValue("organizer", organizerOptions[0] ?? "director", { shouldDirty: false });
+  }, [mode, organizerOptions, organizerValue, setValue]);
+
+  useEffect(() => {
     if (!isTenantSelected || isFormOptionsLoading || formOptions === null) {
       return;
     }
@@ -161,6 +185,10 @@ export function ActividadGrupalForm({
   }
 
   function toggleEmployee(employeeId: string) {
+    setEmployeeSelectionAnimation((current) => ({
+      employeeId,
+      sequence: (current?.sequence ?? 0) + 1,
+    }));
     const currentValue = getValues("employeeIds");
     const nextValue = currentValue.includes(employeeId)
       ? currentValue.filter((id) => id !== employeeId)
@@ -174,6 +202,10 @@ export function ActividadGrupalForm({
   }
 
   function selectAllEmployees() {
+    setEmployeeSelectionAnimation((current) => ({
+      employeeId: ALL_EMPLOYEES_ANIMATION_TARGET,
+      sequence: (current?.sequence ?? 0) + 1,
+    }));
     setValue(
       "employeeIds",
       availableEmployees.map((employee) => employee.id),
@@ -346,7 +378,7 @@ export function ActividadGrupalForm({
                 value={mode === "edit" ? organizerValue : undefined}
                 {...(mode === "create" ? form.register("organizer") : {})}
               >
-                {getActividadGrupalOrganizerOptions().map((option) => (
+                {organizerOptions.map((option) => (
                   <option key={option} value={option}>
                     {formatActividadGrupalOrganizer(option)}
                   </option>
@@ -407,15 +439,20 @@ export function ActividadGrupalForm({
           <div className="actividad-empleados-list">
             {filteredEmployees.map((empleado) => {
               const isChecked = employeeIds.includes(empleado.id);
+              const isAnimating =
+                employeeSelectionAnimation?.employeeId === empleado.id ||
+                employeeSelectionAnimation?.employeeId === ALL_EMPLOYEES_ANIMATION_TARGET;
 
               return (
                 <label
-                  key={empleado.id}
-                  className={
-                    isChecked
-                      ? "actividad-empleado-option actividad-empleado-option--checked"
-                      : "actividad-empleado-option"
-                  }
+                  key={`${empleado.id}-${isAnimating ? employeeSelectionAnimation?.sequence : 0}`}
+                  className={[
+                    "actividad-empleado-option",
+                    isChecked ? "actividad-empleado-option--checked" : "",
+                    isAnimating ? "actividad-empleado-option--just-toggled" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                 >
                   <input
                     type="checkbox"

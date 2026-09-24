@@ -2332,6 +2332,50 @@
   }
 }
 
+/* Selection feedback for the involved employees. */
+.actividad-empleado-option--just-toggled {
+  animation: actividad-empleado-selection-pop 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.actividad-empleado-option--just-toggled input {
+  animation: actividad-empleado-checkbox-pop 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes actividad-empleado-selection-pop {
+  0% {
+    transform: translateY(0) scale(0.985);
+  }
+
+  60% {
+    transform: translateY(-1px) scale(1.012);
+  }
+
+  100% {
+    transform: translateY(-1px) scale(1);
+  }
+}
+
+@keyframes actividad-empleado-checkbox-pop {
+  0% {
+    transform: scale(0.72);
+  }
+
+  65% {
+    transform: scale(1.16);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .actividad-empleado-option--just-toggled,
+  .actividad-empleado-option--just-toggled input {
+    animation: none;
+  }
+}
+
 @media (max-width: 640px) {
   .actividad-delete-dialog-backdrop {
     padding: 10px;

@@ -386,6 +386,20 @@
       "when": 1790210000000,
       "tag": "0054_production_actividad_grupal_series",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1790211000000,
+      "tag": "0055_employees_activity_organizer_permission",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1790212000000,
+      "tag": "0056_employees_activity_organizer_permissions",
+      "breakpoints": true
     }
   ]
 }

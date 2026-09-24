@@ -2,6 +2,7 @@ import {
   type ActividadGrupalOrganizer,
   type ActividadGrupalResponsibleDepartment,
   type ActividadGrupalType,
+  type AuthUser,
   actividadGrupalOrganizerValues,
   actividadGrupalResponsibleDepartmentValues,
   actividadGrupalTypeValues,
@@ -61,6 +62,34 @@ export function getActividadGrupalTypeOptions(): readonly ActividadGrupalType[] 
 
 export function getActividadGrupalOrganizerOptions(): readonly ActividadGrupalOrganizer[] {
   return actividadGrupalOrganizerValues;
+}
+
+const OWN_ORGANIZER_BY_ROLE: Partial<Record<AuthUser["role"], ActividadGrupalOrganizer>> = {
+  director: "director",
+  enfermeria: "enfermeria",
+  fisioterapeuta: "fisioterapeuta",
+  medico: "medico",
+  nutricionista: "nutricionista",
+  psicologo: "psicologa",
+  recreacionista: "recreacionista",
+  trabajadora_social: "trabajadora_social",
+};
+
+export function getCreatableActividadGrupalOrganizerOptions(
+  user: Pick<AuthUser, "role" | "allowedActividadGrupalOrganizers">,
+): readonly ActividadGrupalOrganizer[] {
+  if (user.role === "super_admin" || user.role === "admin") {
+    return getActividadGrupalOrganizerOptions();
+  }
+
+  const ownOrganizer = OWN_ORGANIZER_BY_ROLE[user.role];
+  const allowedOrganizers = user.allowedActividadGrupalOrganizers ?? [];
+
+  return [
+    ...new Set(
+      ownOrganizer === undefined ? allowedOrganizers : [ownOrganizer, ...allowedOrganizers],
+    ),
+  ];
 }
 
 export function getActividadGrupalOrganizerFilterOptions(): readonly {

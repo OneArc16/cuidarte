@@ -3,6 +3,7 @@ import {
   type SetTenantActiveSignerRequest,
   type UpdateEmpleadoRequest,
   type UpdateEmpleadoPermissionsRequest,
+  type UpdateEmpleadoActividadGrupalOrganizerPermissionRequest,
 } from "@cuidarte/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -14,6 +15,8 @@ export const empleadosQueryKeys = {
   tenantOptions: () => ["empleados", "tenant-options"] as const,
   signaturePreview: (empleadoId: string) => ["empleados", empleadoId, "signature-preview"] as const,
   permissions: (empleadoId: string) => ["empleados", empleadoId, "permissions"] as const,
+  activityOrganizerPermission: (empleadoId: string) =>
+    ["empleados", empleadoId, "activity-organizer-permission"] as const,
 };
 
 export function useEmpleadosQuery(params: { search: string }) {
@@ -69,6 +72,41 @@ export function useUpdateEmpleadoPermissionsMutation(empleadoId: string) {
     onSuccess: async (response) => {
       queryClient.setQueryData(empleadosQueryKeys.permissions(empleadoId), response);
       await queryClient.invalidateQueries({ queryKey: empleadosQueryKeys.permissions(empleadoId) });
+    },
+  });
+}
+
+export function useEmpleadoActividadGrupalOrganizerPermissionQuery(
+  empleadoId: string,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: empleadosQueryKeys.activityOrganizerPermission(empleadoId),
+    queryFn: () => empleadosApi.getEmpleadoActividadGrupalOrganizerPermission(empleadoId),
+    enabled,
+    retry: false,
+  });
+}
+
+export function useUpdateEmpleadoActividadGrupalOrganizerPermissionMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      empleadoId,
+      request,
+    }: {
+      empleadoId: string;
+      request: UpdateEmpleadoActividadGrupalOrganizerPermissionRequest;
+    }) => empleadosApi.updateEmpleadoActividadGrupalOrganizerPermission(empleadoId, request),
+    onSuccess: async (response) => {
+      queryClient.setQueryData(
+        empleadosQueryKeys.activityOrganizerPermission(response.employeeId),
+        response,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: empleadosQueryKeys.activityOrganizerPermission(response.employeeId),
+      });
     },
   });
 }

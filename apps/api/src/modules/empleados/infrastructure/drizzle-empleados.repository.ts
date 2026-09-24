@@ -1,4 +1,4 @@
-import { type UserPermission } from "@cuidarte/contracts";
+import { type ActividadGrupalOrganizer, type UserPermission } from "@cuidarte/contracts";
 import { Injectable } from "@nestjs/common";
 import { and, asc, desc, eq, ilike, isNull, ne, or, type SQL } from "drizzle-orm";
 
@@ -33,6 +33,7 @@ import {
   type TenantActiveSignerResolutionRecord,
   type UpdateEmpleadoRecordCommand,
   type ReplaceEmpleadoPermissionsCommand,
+  type UpdateEmpleadoActividadGrupalOrganizerPermissionCommand,
 } from "../domain/empleado.types";
 import { type EmpleadosRepository } from "../domain/empleados.repository";
 
@@ -51,6 +52,7 @@ type EmpleadoSelectionRow = {
   role: EmpleadoRecord["role"];
   isActive: boolean;
   isTenantOwner: boolean;
+  actividadGrupalAllowedOrganizers: string[];
   createdAt: Date;
   updatedAt: Date;
 };
@@ -179,6 +181,23 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
           })),
         );
       }
+
+      await tx.insert(auditLogs).values(this.toAuditInsert(audit, command.employeeId));
+    });
+  }
+
+  async updateActividadGrupalOrganizerPermission(
+    command: UpdateEmpleadoActividadGrupalOrganizerPermissionCommand,
+    audit: EmpleadoAuditCommand,
+  ): Promise<void> {
+    await this.database.db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({
+          actividadGrupalAllowedOrganizers: command.allowedOrganizers,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, command.employeeId));
 
       await tx.insert(auditLogs).values(this.toAuditInsert(audit, command.employeeId));
     });
@@ -650,6 +669,7 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       role: users.role,
       isActive: users.isActive,
       isTenantOwner: users.isTenantOwner,
+      actividadGrupalAllowedOrganizers: users.actividadGrupalAllowedOrganizers,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
     };
@@ -776,6 +796,8 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
   ): EmpleadoRecord {
     return {
       ...row,
+      actividadGrupalAllowedOrganizers:
+        row.actividadGrupalAllowedOrganizers as ActividadGrupalOrganizer[],
       latestSignature: relations?.latestSignature ?? null,
       tenantActiveSigner: relations?.tenantActiveSigner ?? null,
       currentDirectorSignatureAssignment: relations?.currentDirectorSignatureAssignment ?? null,

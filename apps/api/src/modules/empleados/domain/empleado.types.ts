@@ -1,4 +1,8 @@
-import { type UserPermission, type UserRole } from "@cuidarte/contracts";
+import {
+  type ActividadGrupalOrganizer,
+  type UserPermission,
+  type UserRole,
+} from "@cuidarte/contracts";
 
 export type EmpleadosScope =
   | {
@@ -113,6 +117,11 @@ export type ReplaceEmpleadoPermissionsCommand = {
   permissions: UserPermission[];
 };
 
+export type UpdateEmpleadoActividadGrupalOrganizerPermissionCommand = {
+  employeeId: string;
+  allowedOrganizers: ActividadGrupalOrganizer[];
+};
+
 export type EmpleadoAuditCommand = {
   actorUserId: string;
   action:
@@ -126,7 +135,8 @@ export type EmpleadoAuditCommand = {
     | "empleados.active_signer_cleared"
     | "empleados.director_signature_assigned"
     | "empleados.director_signature_assignment_closed"
-    | "empleados.permissions_updated";
+    | "empleados.permissions_updated"
+    | "empleados.activity_organizer_permission_updated";
   targetTenantId: string | null;
   summary: string;
   metadata: Record<string, unknown>;
@@ -195,6 +205,7 @@ export type EmpleadoRecord = {
   role: UserRole;
   isActive: boolean;
   isTenantOwner: boolean;
+  actividadGrupalAllowedOrganizers: ActividadGrupalOrganizer[];
   latestSignature: EmpleadoSignatureVersionRecord | null;
   tenantActiveSigner: TenantActiveSignerRecord | null;
   currentDirectorSignatureAssignment: DirectorSignatureAssignmentRecord | null;

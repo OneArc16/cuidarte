@@ -228,6 +228,7 @@ export class AuthService {
       role: user.role,
       passwordSetByAdmin: user.passwordSetByAdmin,
       permissions,
+      allowedActividadGrupalOrganizers: user.actividadGrupalAllowedOrganizers,
     });
   }
 }

@@ -212,7 +212,7 @@ export function ActividadesGrupalesToolbar({
           value={selectedActivityTypeId}
           onChange={(event) => onActivityTypeIdChange(event.target.value)}
         >
-          <option value="">Todos los tipos</option>
+          <option value="">Todas las actividades</option>
           {unifiedActivityTypeOptions.map((activityType) => (
             <option key={activityType.id} value={activityType.id}>
               {activityType.name}

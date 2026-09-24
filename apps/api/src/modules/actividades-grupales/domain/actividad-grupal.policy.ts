@@ -22,6 +22,17 @@ const ORGANIZERS_BY_PROFESSIONAL_ROLE: Partial<
   trabajadora_social: ["psicologa", "trabajadora_social"],
 };
 
+const OWN_ORGANIZER_BY_ROLE: Partial<Record<UserRole, ActividadGrupalOrganizer>> = {
+  director: "director",
+  enfermeria: "enfermeria",
+  fisioterapeuta: "fisioterapeuta",
+  medico: "medico",
+  nutricionista: "nutricionista",
+  psicologo: "psicologa",
+  recreacionista: "recreacionista",
+  trabajadora_social: "trabajadora_social",
+};
+
 /**
  * Null means that the role is allowed to see every organizing team.
  * Professional teams are intentionally defined by the activity organizer, which
@@ -31,6 +42,39 @@ export function resolvePermittedActividadGrupalOrganizers(
   user: Pick<AuthUser, "role">,
 ): readonly ActividadGrupalOrganizer[] | null {
   return ORGANIZERS_BY_PROFESSIONAL_ROLE[user.role] ?? null;
+}
+
+export function resolveCreatableActividadGrupalOrganizers(
+  user: Pick<AuthUser, "role" | "allowedActividadGrupalOrganizers">,
+): readonly ActividadGrupalOrganizer[] {
+  if (user.role === "super_admin" || user.role === "admin") {
+    return [
+      "director",
+      "medico",
+      "enfermeria",
+      "psicologa",
+      "trabajadora_social",
+      "nutricionista",
+      "fisioterapeuta",
+      "recreacionista",
+    ];
+  }
+
+  const ownOrganizer = OWN_ORGANIZER_BY_ROLE[user.role];
+  const allowedOrganizers = user.allowedActividadGrupalOrganizers ?? [];
+
+  return [
+    ...new Set(
+      ownOrganizer === undefined ? allowedOrganizers : [ownOrganizer, ...allowedOrganizers],
+    ),
+  ];
+}
+
+export function canCreateActividadGrupalWithOrganizer(
+  user: Pick<AuthUser, "role" | "allowedActividadGrupalOrganizers">,
+  organizer: ActividadGrupalOrganizer,
+): boolean {
+  return resolveCreatableActividadGrupalOrganizers(user).includes(organizer);
 }
 
 export function canViewActividadGrupal(
