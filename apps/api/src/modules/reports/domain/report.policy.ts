@@ -1,8 +1,12 @@
-import { type AuthUser } from "@cuidarte/contracts";
+import { hasUserPermission, type AuthUser } from "@cuidarte/contracts";
 import { ForbiddenException, BadRequestException } from "@nestjs/common";
 
 export function assertCanUseReports(actor: AuthUser): void {
-  if (actor.role === "super_admin" || actor.role === "admin" || actor.role === "director") {
+  if (
+    actor.permissions === undefined
+      ? actor.role === "super_admin" || actor.role === "admin" || actor.role === "director"
+      : hasUserPermission(actor, "reportes.view")
+  ) {
     return;
   }
 

@@ -1,0 +1,396 @@
+.ajustes-permissions-dialog {
+  width: min(1180px, calc(100vw - 36px));
+  height: min(834px, calc(100dvh - 42px));
+  max-height: min(834px, calc(100dvh - 42px));
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: #fff;
+}
+
+.ajustes-permissions-dialog__header {
+  padding: 30px 34px 24px;
+}
+
+.ajustes-permissions-dialog__header h2 {
+  margin-top: 12px;
+  font-size: clamp(1.55rem, 2.2vw, 2rem);
+  letter-spacing: -0.035em;
+}
+
+.ajustes-permissions-dialog__header p {
+  font-size: 1rem;
+}
+
+.ajustes-permissions-dialog__body {
+  grid-template-columns: 324px minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ajustes-permissions-dialog__people {
+  gap: 15px;
+  min-height: 0;
+  padding: 26px 18px 18px;
+  border-right: 1px solid #dfe8e4;
+  background: #f7faf9;
+}
+
+.ajustes-permissions-dialog__people-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 6px;
+  color: #4b7167;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ajustes-permissions-dialog__people-heading strong {
+  color: #71817c;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.ajustes-permissions-dialog__search > div {
+  min-height: 48px;
+  border-color: #dbe5e1;
+  border-radius: 12px;
+}
+
+.ajustes-permissions-dialog__search input {
+  min-height: 46px;
+  font-size: 0.95rem;
+}
+
+.ajustes-permissions-dialog__people-list {
+  max-height: none;
+  padding: 1px 4px 1px 0;
+}
+
+.ajustes-permissions-dialog__person {
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 12px;
+  min-height: 68px;
+  padding: 10px 12px;
+  border-color: transparent;
+  border-radius: 15px;
+}
+
+.ajustes-permissions-dialog__person.is-selected {
+  border-color: #d6e4df;
+  box-shadow: 0 5px 12px rgb(21 57 47 / 6%);
+}
+
+.ajustes-permissions-dialog__avatar {
+  width: 44px;
+  height: 44px;
+  background: #fff;
+  font-size: 0.82rem;
+}
+
+.ajustes-permissions-dialog__person strong {
+  font-size: 0.94rem;
+}
+
+.ajustes-permissions-dialog__person small {
+  margin-top: 3px;
+  font-size: 0.8rem;
+}
+
+.ajustes-permissions-dialog__editor {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 34px;
+}
+
+.ajustes-permissions-dialog__employee-header {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 25px 0 20px;
+}
+
+.ajustes-permissions-dialog__employee-avatar {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border: 1px solid #b8ddd0;
+  border-radius: 50%;
+  background: #e8f6f0;
+  color: #0e5947;
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+.ajustes-permissions-dialog__employee-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ajustes-permissions-dialog__employee-copy strong {
+  overflow: hidden;
+  color: #1b2c2a;
+  font-size: 1.2rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ajustes-permissions-dialog__employee-copy span {
+  overflow: hidden;
+  color: #71817c;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ajustes-permissions-dialog__permission-count {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  column-gap: 5px;
+  white-space: nowrap;
+}
+
+.ajustes-permissions-dialog__permission-count strong {
+  color: #1b2c2a;
+  font-size: 1.05rem;
+}
+
+.ajustes-permissions-dialog__permission-count span {
+  color: #71817c;
+}
+
+.ajustes-permissions-dialog__permission-count button {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-top: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #0e5947;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.ajustes-permissions-dialog__permission-count button:hover,
+.ajustes-permissions-dialog__permission-count button:focus-visible {
+  text-decoration: underline;
+}
+
+.ajustes-permissions-dialog__matrix-scroll {
+  min-width: 0;
+  min-height: 0;
+  max-height: 100%;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #c4d3cc transparent;
+}
+
+.ajustes-permissions-dialog__matrix-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.ajustes-permissions-dialog__matrix-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #c4d3cc;
+}
+
+.ajustes-permissions-dialog__matrix {
+  min-width: 940px;
+}
+
+.ajustes-permissions-dialog__matrix-row {
+  display: grid;
+  grid-template-columns: minmax(250px, 1fr) repeat(8, 78px);
+  align-items: center;
+  min-height: 78px;
+  border-bottom: 1px solid #e1e9e5;
+}
+
+.ajustes-permissions-dialog__matrix-row--heading {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  min-height: 42px;
+  border-bottom-color: #d6e2dd;
+  background: #fff;
+  color: #4b7167;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.ajustes-permissions-dialog__matrix-row--heading span:first-child {
+  text-align: left;
+}
+
+.ajustes-permissions-dialog__module-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 13px 12px 13px 0;
+}
+
+.ajustes-permissions-dialog__module-copy strong {
+  color: #243a35;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.ajustes-permissions-dialog__module-copy small {
+  max-width: 230px;
+  color: #71817c;
+  font-size: 0.83rem;
+  line-height: 1.25;
+}
+
+.ajustes-permissions-dialog__matrix-check {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  justify-self: center;
+  border: 1px solid #cbd9d3;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.ajustes-permissions-dialog__matrix-check input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.ajustes-permissions-dialog__matrix-check:focus-within {
+  outline: 3px solid rgb(29 158 117 / 18%);
+  outline-offset: 2px;
+}
+
+.ajustes-permissions-dialog__matrix-check.is-selected {
+  border-color: #0e5947;
+  background: #0e5947;
+  color: #fff;
+}
+
+.ajustes-permissions-dialog__matrix-check svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 3;
+}
+
+.ajustes-permissions-dialog__matrix-unavailable {
+  justify-self: center;
+  color: #c6d1cc;
+  font-size: 1rem;
+}
+
+.ajustes-permissions-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 34px 17px;
+  border-top: 1px solid #dfe8e4;
+  background: #fff;
+}
+
+.ajustes-permissions-dialog__save {
+  min-width: 202px;
+  min-height: 48px;
+  border-radius: 12px;
+}
+
+.ajustes-permissions-dialog__save:disabled {
+  opacity: 0.62;
+}
+
+@media (max-width: 900px) {
+  .ajustes-permissions-dialog {
+    width: min(100%, 760px);
+  }
+
+  .ajustes-permissions-dialog__body {
+    grid-template-columns: 250px minmax(0, 1fr);
+  }
+
+  .ajustes-permissions-dialog__editor {
+    padding: 0 22px;
+  }
+
+  .ajustes-permissions-dialog__employee-header {
+    grid-template-columns: 50px minmax(0, 1fr);
+  }
+
+  .ajustes-permissions-dialog__employee-avatar {
+    width: 48px;
+    height: 48px;
+  }
+
+  .ajustes-permissions-dialog__permission-count {
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .ajustes-permissions-dialog-backdrop {
+    padding: 0;
+    align-items: end;
+  }
+
+  .ajustes-permissions-dialog {
+    width: 100%;
+    height: 94dvh;
+    max-height: 94dvh;
+    border-radius: 20px 20px 0 0;
+  }
+
+  .ajustes-permissions-dialog__header {
+    padding: 22px 20px 18px;
+  }
+
+  .ajustes-permissions-dialog__body {
+    grid-template-columns: 1fr;
+    overflow: auto;
+  }
+
+  .ajustes-permissions-dialog__people {
+    min-height: 0;
+    padding: 18px 14px 12px;
+    border-right: 0;
+    border-bottom: 1px solid #dfe8e4;
+  }
+
+  .ajustes-permissions-dialog__people-list {
+    max-height: 190px;
+  }
+
+  .ajustes-permissions-dialog__editor {
+    display: block;
+    overflow: visible;
+    padding: 0 18px;
+  }
+
+  .ajustes-permissions-dialog__employee-header {
+    padding: 18px 0;
+  }
+
+  .ajustes-permissions-dialog__employee-copy strong {
+    font-size: 1rem;
+  }
+
+  .ajustes-permissions-dialog__footer {
+    padding: 12px 16px 16px;
+  }
+
+  .ajustes-permissions-dialog__save {
+    width: 100%;
+  }
+}

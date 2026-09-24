@@ -34,7 +34,7 @@ type EmpleadoFormProps =
       onCancel: () => void;
       onSubmit: (values: CreateEmpleadoRequest) => void;
     }
-    | {
+  | {
       mode: "edit";
       currentUserRole: AuthUser["role"];
       detail: EmpleadoDetail;
@@ -49,12 +49,14 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
   const detail = props.mode === "edit" ? props.detail : null;
   const editFooterAction =
     props.mode === "edit"
-      ? props.footerAction ?? <EmpleadoDirectorSignerToggle detail={props.detail} />
+      ? (props.footerAction ?? <EmpleadoDirectorSignerToggle detail={props.detail} />)
       : null;
   const form = useForm<EmpleadoFormValues>({
     resolver: zodResolver(empleadoFormSchema) as Resolver<EmpleadoFormValues>,
     defaultValues:
-      props.mode === "edit" ? toEmpleadoFormValues(props.detail) : createDefaultEmpleadoFormValues(),
+      props.mode === "edit"
+        ? toEmpleadoFormValues(props.detail)
+        : createDefaultEmpleadoFormValues(),
     mode: "onBlur",
   });
   const { reset, setError, setValue, watch } = form;

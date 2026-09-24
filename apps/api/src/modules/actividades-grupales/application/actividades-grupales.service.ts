@@ -1,5 +1,6 @@
 import {
   type ActividadGrupalEditDetail,
+  hasUserPermission,
   type ActividadGrupalDiligenciamientoDetail,
   type ActividadGrupalEmpleadoOption,
   type ActividadGrupalIntegranteOption,
@@ -176,7 +177,7 @@ export class ActividadesGrupalesService {
     query: { tenantId: string | null },
     actor: AuthUser,
   ): Promise<ActividadGrupalFormOptionsResponse> {
-    this.ensureCanManageActivities(actor);
+    this.ensureCanCreateActivities(actor);
     const tenantId = this.resolveTenantIdForForm(actor, query.tenantId);
     const [empleados, activityTypes] = await Promise.all([
       this.actividadesGrupalesRepository.findActiveEmpleadoOptions(tenantId),
@@ -195,7 +196,7 @@ export class ActividadesGrupalesService {
     command: CreateActividadGrupalRequest,
     actor: AuthUser,
   ): Promise<ActividadGrupalListItem> {
-    this.ensureCanManageActivities(actor);
+    this.ensureCanCreateActivities(actor);
     this.resolveScopeOrThrow(actor);
 
     const tenantId = this.resolveTenantIdForCreate(actor, command.tenantId);
@@ -203,13 +204,17 @@ export class ActividadesGrupalesService {
       command.activityTypeId,
       tenantId,
     );
+    const customConsecutive = activityType.consecutiveConfig;
 
     if (
       activityType.consecutiveConfig !== null &&
-      !activityType.consecutiveConfig.creatorRoles.includes(actor.role)
+      !activityType.consecutiveConfig.creatorUserIds.includes(actor.id)
     ) {
-      throw new ForbiddenException("No tienes permiso para crear esta actividad con su consecutivo especial.");
+      throw new ForbiddenException(
+        "No tienes permiso para crear esta actividad con su consecutivo especial.",
+      );
     }
+
     const activeEmpleados =
       await this.actividadesGrupalesRepository.findActiveEmpleadoOptions(tenantId);
     const activeEmpleadoIds = new Set(activeEmpleados.map((empleado) => empleado.id));
@@ -234,7 +239,7 @@ export class ActividadesGrupalesService {
       endTime: command.endTime,
       organizer: command.organizer,
       employeeIds: command.employeeIds,
-      customConsecutive: activityType.consecutiveConfig,
+      customConsecutive,
     });
 
     return this.toListItem(record, actor);
@@ -244,7 +249,7 @@ export class ActividadesGrupalesService {
     activityId: string,
     actor: AuthUser,
   ): Promise<ActividadGrupalEditDetail> {
-    this.ensureCanManageActivities(actor);
+    this.ensureCanEditActivities(actor);
     const detail = await this.getEditableActivityOrThrow(activityId, actor);
 
     return actividadGrupalEditDetailSchema.parse({
@@ -261,7 +266,7 @@ export class ActividadesGrupalesService {
     command: UpdateActividadGrupalRequest,
     actor: AuthUser,
   ): Promise<ActividadGrupalListItem> {
-    this.ensureCanManageActivities(actor);
+    this.ensureCanEditActivities(actor);
     const detail = await this.getEditableActivityOrThrow(activityId, actor);
     await this.actividadGrupalTiposService.resolveForSessionUpdate(
       command.activityTypeId,
@@ -458,7 +463,7 @@ export class ActividadesGrupalesService {
     query: ActividadGrupalIntegranteOptionsQuery,
     actor: AuthUser,
   ): Promise<ActividadGrupalIntegranteOption[]> {
-    this.ensureCanManageActivities(actor);
+    this.ensureCanEditActivities(actor);
     const detail = await this.getPermittedDiligenciamientoOrThrow(activityId, actor);
     const integrantes = await this.actividadesGrupalesRepository.searchIntegranteOptions({
       tenantId: detail.activity.tenantId,
@@ -472,7 +477,7 @@ export class ActividadesGrupalesService {
     command: SaveActividadGrupalDiligenciamientoCommand,
     actor: AuthUser,
   ): Promise<ActividadGrupalDiligenciamientoDetail> {
-    this.ensureCanManageActivities(actor);
+    this.ensureCanEditActivities(actor);
     const detail = await this.getPermittedDiligenciamientoOrThrow(command.activityId, actor);
     const removedPhotoIds = new Set(command.payload.removedPhotoFileIds);
     const currentPhotoFiles = detail.photoFiles.filter((file) => !removedPhotoIds.has(file.id));
@@ -590,7 +595,11 @@ export class ActividadesGrupalesService {
       throw new NotFoundException("La actividad grupal no fue encontrada.");
     }
 
-    this.assertCanEditActivity(detail.activity, actor);
+    this.assertCanEditActivity(
+      detail.activity,
+      actor,
+      detail.assignedProfessionals.some((professional) => professional.id === actor.id),
+    );
 
     return detail;
   }
@@ -614,13 +623,37 @@ export class ActividadesGrupalesService {
     throw new ForbiddenException("No tienes permisos para diligenciar esta sesion.");
   }
 
-  private assertCanEditActivity(activity: ActividadGrupalRecord, actor: AuthUser): void {
-    if (!canEditActividadGrupal(activity, actor)) {
+  private assertCanEditActivity(
+    activity: ActividadGrupalRecord,
+    actor: AuthUser,
+    isAssignedProfessional = false,
+  ): void {
+    if (!canEditActividadGrupal(activity, actor, isAssignedProfessional)) {
       throw new ForbiddenException("No tienes permisos para editar o eliminar esta actividad.");
     }
   }
 
-  private ensureCanManageActivities(actor: Pick<AuthUser, "role">) {
+  private ensureCanCreateActivities(actor: Pick<AuthUser, "role" | "permissions">) {
+    if (
+      !(actor.permissions === undefined
+        ? actor.role !== "auditor"
+        : hasUserPermission(actor, "actividades_grupales.create"))
+    ) {
+      throw new ForbiddenException("No tienes permisos para crear actividades.");
+    }
+  }
+
+  private ensureCanEditActivities(actor: Pick<AuthUser, "role" | "permissions">) {
+    if (
+      !(actor.permissions === undefined
+        ? actor.role !== "auditor"
+        : hasUserPermission(actor, "actividades_grupales.edit"))
+    ) {
+      throw new ForbiddenException("No tienes permisos para editar actividades.");
+    }
+  }
+
+  private ensureCanManageActivities(actor: Pick<AuthUser, "role" | "permissions">) {
     if (!canManageActividadesGrupales(actor)) {
       throw new ForbiddenException("No tienes permisos para crear o diligenciar actividades.");
     }
@@ -856,7 +889,11 @@ export class ActividadesGrupalesService {
       endTime: record.endTime,
       organizer: record.organizer,
       involvedEmployeesCount: record.involvedEmployeesCount,
-      canEdit: this.canEditActivity(record, actor),
+      canEdit: this.canEditActivity(
+        record,
+        actor,
+        record.assignedEmployeeIds?.includes(actor.id) ?? false,
+      ),
       canDelete: canTrashActividadGrupal(record, actor),
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
@@ -898,19 +935,23 @@ export class ActividadesGrupalesService {
     });
   }
 
-  private canEditActivity(activity: ActividadGrupalRecord, actor: AuthUser): boolean {
-    return canEditActividadGrupal(activity, actor);
+  private canEditActivity(
+    activity: ActividadGrupalRecord,
+    actor: AuthUser,
+    isAssignedProfessional = false,
+  ): boolean {
+    return canEditActividadGrupal(activity, actor, isAssignedProfessional);
   }
 
   private canEditDiligenciamiento(
     detail: ActividadGrupalDiligenciamientoDetailRecord,
     actor: AuthUser,
   ): boolean {
-    if (this.canEditActivity(detail.activity, actor)) {
-      return true;
-    }
-
-    return detail.assignedProfessionals.some((professional) => professional.id === actor.id);
+    return (
+      this.canEditActivity(detail.activity, actor) ||
+      (hasUserPermission(actor, "actividades_grupales.edit") &&
+        detail.assignedProfessionals.some((professional) => professional.id === actor.id))
+    );
   }
 
   private toSupportFile(file: ActividadGrupalSupportFileRecord): ActividadGrupalSupportFile {

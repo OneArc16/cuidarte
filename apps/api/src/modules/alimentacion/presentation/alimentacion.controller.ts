@@ -29,7 +29,6 @@ import {
   alimentacionAdultoOptionsResponseSchema,
   alimentacionDetailSchema,
   alimentacionFormatoEntregaExportQuerySchema,
-  alimentacionEditorRoleValues,
   alimentacionImportedFormatoUploadResponseSchema,
   alimentacionImportedFormatoVersionsResponseSchema,
   alimentacionListQuerySchema,
@@ -48,8 +47,6 @@ import { z } from "zod";
 
 import { parseZodSchema } from "../../../common/parse-zod-schema";
 import { type AuthenticatedRequest } from "../../auth/authenticated-request";
-import { RequireRoles } from "../../auth/roles.decorator";
-import { RolesGuard } from "../../auth/roles.guard";
 import { SessionGuard } from "../../auth/session.guard";
 import { AlimentacionFormatoExportService } from "../application/alimentacion-formato-export.service";
 import { AlimentacionImportedFormatoService } from "../application/alimentacion-imported-formato.service";
@@ -283,8 +280,6 @@ export class AlimentacionController {
   }
 
   @Delete(":id")
-  @UseGuards(RolesGuard)
-  @RequireRoles(...alimentacionEditorRoleValues)
   @ApiOkResponse({ description: "Registro de alimentacion eliminado." })
   @ApiNotFoundResponse({ description: "Registro no encontrado." })
   @ApiForbiddenResponse({ description: "El usuario no puede eliminar el registro solicitado." })

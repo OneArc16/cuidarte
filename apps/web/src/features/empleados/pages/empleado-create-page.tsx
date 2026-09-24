@@ -22,9 +22,7 @@ export function EmpleadoCreatePage({ navigate, user }: EmpleadoCreatePageProps) 
   const tenantOptionsQuery = useEmpleadoTenantOptionsQuery(shouldSelectTenant);
   const createMutation = useCreateEmpleadoMutation();
   const tenantOptions = tenantOptionsQuery.data?.tenants ?? [];
-  const queryError = shouldSelectTenant
-    ? resolveEmpleadosApiError(tenantOptionsQuery.error)
-    : null;
+  const queryError = shouldSelectTenant ? resolveEmpleadosApiError(tenantOptionsQuery.error) : null;
   const mutationError = resolveEmpleadosApiError(createMutation.error);
 
   return (
@@ -57,9 +55,7 @@ export function EmpleadoCreatePage({ navigate, user }: EmpleadoCreatePageProps) 
         onSubmit={(values) => {
           createMutation.mutate(values, {
             onSuccess: (detail) => {
-              navigate(
-                canEditEmpleados(user) ? buildEmpleadoEditPath(detail.id) : EMPLEADOS_PATH,
-              );
+              navigate(canEditEmpleados(user) ? buildEmpleadoEditPath(detail.id) : EMPLEADOS_PATH);
             },
           });
         }}

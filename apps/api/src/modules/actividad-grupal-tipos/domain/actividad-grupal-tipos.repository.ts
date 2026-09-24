@@ -22,4 +22,5 @@ export type ActividadGrupalTiposRepository = {
   updateConsecutiveConfig(
     command: UpdateActividadGrupalTipoConsecutiveConfigCommand,
   ): Promise<ActividadGrupalTipoRecord>;
+  findCreatorOptions(tenantId: string): Promise<import("./actividad-grupal-tipo.types").ActividadGrupalTipoCreatorOptionRecord[]>;
 };

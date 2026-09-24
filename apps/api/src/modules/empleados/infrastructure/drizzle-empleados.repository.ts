@@ -1,3 +1,4 @@
+import { type UserPermission } from "@cuidarte/contracts";
 import { Injectable } from "@nestjs/common";
 import { and, asc, desc, eq, ilike, isNull, ne, or, type SQL } from "drizzle-orm";
 
@@ -9,6 +10,7 @@ import {
   tenantDirectorSignatureAssignments,
   tenants,
   users,
+  userPermissions,
 } from "../../../database/schema";
 import {
   type CreateEmpleadoRecordCommand,
@@ -30,6 +32,7 @@ import {
   type TenantActiveSignerRecord,
   type TenantActiveSignerResolutionRecord,
   type UpdateEmpleadoRecordCommand,
+  type ReplaceEmpleadoPermissionsCommand,
 } from "../domain/empleado.types";
 import { type EmpleadosRepository } from "../domain/empleados.repository";
 
@@ -86,7 +89,9 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       directorSignatureAssignmentHistory,
     ] = await Promise.all([
       this.findLatestSignatureVersionByEmployeeId(row.id),
-      row.tenantId === null ? Promise.resolve(null) : this.findTenantActiveSignerByTenantId(row.tenantId),
+      row.tenantId === null
+        ? Promise.resolve(null)
+        : this.findTenantActiveSignerByTenantId(row.tenantId),
       this.findCurrentDirectorSignatureAssignmentByEmployeeId(row.id),
       row.tenantId === null || row.role !== "director"
         ? Promise.resolve([])
@@ -122,10 +127,7 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
     const conditions =
       query.tenantId === null
         ? [isNull(users.tenantId), eq(users.documentNumber, query.documentNumber)]
-        : [
-            eq(users.tenantId, query.tenantId),
-            eq(users.documentNumber, query.documentNumber),
-          ];
+        : [eq(users.tenantId, query.tenantId), eq(users.documentNumber, query.documentNumber)];
 
     if (query.excludeId !== undefined) {
       conditions.push(ne(users.id, query.excludeId));
@@ -150,6 +152,36 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       .from(tenants)
       .where(eq(tenants.isActive, true))
       .orderBy(asc(tenants.name));
+  }
+
+  async findPermissionsByUserId(userId: string): Promise<UserPermission[]> {
+    const rows = await this.database.db
+      .select({ permission: userPermissions.permission })
+      .from(userPermissions)
+      .where(eq(userPermissions.userId, userId))
+      .orderBy(asc(userPermissions.permission));
+
+    return rows.map((row) => row.permission as UserPermission);
+  }
+
+  async replacePermissions(
+    command: ReplaceEmpleadoPermissionsCommand,
+    audit: EmpleadoAuditCommand,
+  ): Promise<void> {
+    await this.database.db.transaction(async (tx) => {
+      await tx.delete(userPermissions).where(eq(userPermissions.userId, command.employeeId));
+
+      if (command.permissions.length > 0) {
+        await tx.insert(userPermissions).values(
+          command.permissions.map((permission) => ({
+            userId: command.employeeId,
+            permission,
+          })),
+        );
+      }
+
+      await tx.insert(auditLogs).values(this.toAuditInsert(audit, command.employeeId));
+    });
   }
 
   async findLatestSignatureVersionByEmployeeId(
@@ -387,12 +419,24 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
         throw new Error("No fue posible crear el usuario.");
       }
 
+      if (command.permissions.length > 0) {
+        await tx.insert(userPermissions).values(
+          command.permissions.map((permission) => ({
+            userId: created.id,
+            permission,
+          })),
+        );
+      }
+
       await tx.insert(auditLogs).values(this.toAuditInsert(audit, created.id));
 
       return created.id;
     });
 
-    return await this.getEmpleadoRecordByIdOrThrow(createdId, "No fue posible consultar el usuario creado.");
+    return await this.getEmpleadoRecordByIdOrThrow(
+      createdId,
+      "No fue posible consultar el usuario creado.",
+    );
   }
 
   async update(
@@ -423,9 +467,9 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
         throw new Error("No fue posible actualizar el usuario.");
       }
 
-      await tx.insert(auditLogs).values(
-        auditEntries.map((audit) => this.toAuditInsert(audit, command.id)),
-      );
+      await tx
+        .insert(auditLogs)
+        .values(auditEntries.map((audit) => this.toAuditInsert(audit, command.id)));
 
       return updated.id;
     });
@@ -640,7 +684,10 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
     };
   }
 
-  private async getEmpleadoRecordByIdOrThrow(id: string, errorMessage: string): Promise<EmpleadoRecord> {
+  private async getEmpleadoRecordByIdOrThrow(
+    id: string,
+    errorMessage: string,
+  ): Promise<EmpleadoRecord> {
     const [row] = await this.database.db
       .select(this.getEmpleadoSelection())
       .from(users)
@@ -659,7 +706,9 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       directorSignatureAssignmentHistory,
     ] = await Promise.all([
       this.findLatestSignatureVersionByEmployeeId(id),
-      row.tenantId === null ? Promise.resolve(null) : this.findTenantActiveSignerByTenantId(row.tenantId),
+      row.tenantId === null
+        ? Promise.resolve(null)
+        : this.findTenantActiveSignerByTenantId(row.tenantId),
       this.findCurrentDirectorSignatureAssignmentByEmployeeId(id),
       row.tenantId === null || row.role !== "director"
         ? Promise.resolve([])
@@ -729,10 +778,8 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       ...row,
       latestSignature: relations?.latestSignature ?? null,
       tenantActiveSigner: relations?.tenantActiveSigner ?? null,
-      currentDirectorSignatureAssignment:
-        relations?.currentDirectorSignatureAssignment ?? null,
-      directorSignatureAssignmentHistory:
-        relations?.directorSignatureAssignmentHistory ?? [],
+      currentDirectorSignatureAssignment: relations?.currentDirectorSignatureAssignment ?? null,
+      directorSignatureAssignmentHistory: relations?.directorSignatureAssignmentHistory ?? [],
     };
   }
 }
@@ -747,12 +794,7 @@ function joinFullName(command: {
   firstSurname: string;
   secondSurname: string | null;
 }): string {
-  return [
-    command.firstName,
-    command.middleName,
-    command.firstSurname,
-    command.secondSurname,
-  ]
+  return [command.firstName, command.middleName, command.firstSurname, command.secondSurname]
     .filter((namePart): namePart is string => namePart !== null && namePart.trim() !== "")
     .join(" ");
 }

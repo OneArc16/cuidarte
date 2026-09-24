@@ -125,9 +125,18 @@ export const reportStatus = pgEnum("report_status", [
   "cancelled",
   "expired",
 ]);
-export const reportAnalyticsExportFormat = pgEnum("report_analytics_export_format", ["xlsx", "pdf", "pptx"]);
+export const reportAnalyticsExportFormat = pgEnum("report_analytics_export_format", [
+  "xlsx",
+  "pdf",
+  "pptx",
+]);
 export const reportAnalyticsExportStatus = pgEnum("report_analytics_export_status", [
-  "pending", "processing", "ready", "failed", "cancelled", "expired",
+  "pending",
+  "processing",
+  "ready",
+  "failed",
+  "cancelled",
+  "expired",
 ]);
 export const atencionEnfermeriaCareType = pgEnum("atencion_enfermeria_care_type", [
   "control_signos_vitales",
@@ -297,6 +306,24 @@ export const users = pgTable(
       .on(table.documentNumber)
       .where(sql`${table.tenantId} is null and ${table.documentNumber} is not null`),
     index("users_tenant_id_idx").on(table.tenantId),
+  ],
+);
+
+export const userPermissions = pgTable(
+  "user_permissions",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    permission: varchar("permission", { length: 80 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      name: "user_permissions_pk",
+      columns: [table.userId, table.permission],
+    }),
+    index("user_permissions_permission_idx").on(table.permission),
   ],
 );
 
@@ -720,6 +747,36 @@ export const actividadGrupalActaCorrectionOperations = pgTable(
   ],
 );
 
+export const actividadGrupalGlobalSeries = pgTable(
+  "actividad_grupal_global_series",
+  {
+    id: integer("id").primaryKey().default(1),
+    enabled: boolean("enabled").notNull().default(false),
+    prefix: varchar("prefix", { length: 24 }),
+    updatedByUserId: uuid("updated_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check("actividad_grupal_global_series_singleton", sql`${table.id} = 1`),
+    check(
+      "actividad_grupal_global_series_config_complete",
+      sql`(${table.enabled} = false and ${table.prefix} is null) or (${table.enabled} = true and ${table.prefix} is not null)`,
+    ),
+  ],
+);
+
+export const actividadGrupalGlobalSeriesCounters = pgTable(
+  "actividad_grupal_global_series_counters",
+  {
+    tenantId: uuid("tenant_id")
+      .primaryKey()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    lastValue: integer("last_value").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+);
+
 export const actividadGrupalTipos = pgTable(
   "actividad_grupal_tipos",
   {
@@ -731,8 +788,8 @@ export const actividadGrupalTipos = pgTable(
     normalizedName: varchar("normalized_name", { length: 120 }).notNull(),
     consecutivePrefix: varchar("consecutive_prefix", { length: 24 }),
     consecutiveNextValue: integer("consecutive_next_value"),
-    consecutiveCreatorRoles: jsonb("consecutive_creator_roles")
-      .$type<(typeof userRole.enumValues)[number][]>()
+    consecutiveCreatorUserIds: jsonb("consecutive_creator_user_ids")
+      .$type<string[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
     isActive: boolean("is_active").notNull().default(true),
@@ -803,11 +860,9 @@ export const actividadesGrupales = pgTable(
     uniqueIndex("actividades_grupales_tenant_acta_unique")
       .on(table.tenantId, table.actaNumber)
       .where(sql`${table.deletedAt} is null`),
-    uniqueIndex("actividades_grupales_tenant_acta_series_unique").on(
-      table.tenantId,
-      table.actaOrganizer,
-      table.actaSequence,
-    ).where(sql`${table.deletedAt} is null`),
+    uniqueIndex("actividades_grupales_tenant_acta_series_unique")
+      .on(table.tenantId, table.actaOrganizer, table.actaSequence)
+      .where(sql`${table.deletedAt} is null`),
     index("actividades_grupales_tenant_acta_series_idx").on(
       table.tenantId,
       table.actaOrganizer,
@@ -1312,7 +1367,9 @@ export const reportAnalyticsExports = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "restrict" }),
     tenantName: varchar("tenant_name", { length: 160 }),
-    requestedByUserId: uuid("requested_by_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+    requestedByUserId: uuid("requested_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
     requestedByRole: userRole("requested_by_role").notNull(),
     format: reportAnalyticsExportFormat("format").notNull(),
     from: date("from").notNull(),

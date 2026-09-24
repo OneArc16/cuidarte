@@ -1512,3 +1512,239 @@
     align-items: start;
   }
 }
+
+/* Rediseño del diálogo de papelera de Adultos Mayores */
+.adulto-trash-dialog-backdrop {
+  padding: 16px;
+  background: rgb(38 55 51 / 42%);
+  backdrop-filter: blur(6px);
+}
+
+.adulto-trash-dialog {
+  width: min(100%, 600px);
+  gap: 20px;
+  padding: 30px;
+  border: 1px solid rgb(225 232 229 / 92%);
+  border-radius: 22px;
+  background: #ffffff;
+  box-shadow:
+    0 28px 65px rgb(25 43 39 / 22%),
+    0 6px 18px rgb(25 43 39 / 9%);
+}
+
+.adulto-trash-dialog__header {
+  align-items: flex-start;
+}
+
+.adulto-trash-dialog__header > div {
+  display: grid;
+  gap: 0;
+}
+
+.adulto-trash-dialog__header h2 {
+  font-size: 1.42rem;
+}
+
+.adulto-trash-dialog__eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: rgb(117 145 136 / 11%);
+  color: #6d7e78;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.adulto-trash-dialog__eyebrow svg {
+  width: 15px;
+  height: 15px;
+}
+
+.adulto-trash-dialog__header button {
+  margin-top: 3px;
+  color: var(--color-muted);
+}
+
+.adulto-trash-dialog__header button:hover,
+.adulto-trash-dialog__header button:focus-visible {
+  background: rgb(239 245 242);
+  color: var(--color-deep);
+}
+
+.adulto-trash-dialog__description {
+  color: var(--color-muted);
+  font-size: 1rem;
+  line-height: 1.45;
+}
+
+.adulto-trash-dialog__hero {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 16px 20px;
+  border: 1px solid #dde5e1;
+  border-radius: 15px;
+  background: #f5f8f6;
+  color: var(--color-deep);
+}
+
+.adulto-trash-dialog__avatar {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e7f3ee;
+  color: var(--color-deep);
+  font-size: 1.08rem;
+  font-weight: 850;
+}
+
+.adulto-trash-dialog__hero div {
+  min-width: 0;
+  gap: 4px;
+}
+
+.adulto-trash-dialog__hero strong,
+.adulto-trash-dialog__hero span {
+  overflow-wrap: anywhere;
+}
+
+.adulto-trash-dialog__hero strong {
+  color: var(--color-deep);
+  font-size: 1rem;
+  font-weight: 850;
+}
+
+.adulto-trash-dialog__hero span {
+  color: var(--color-muted);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.adulto-trash-dialog__hero span b {
+  color: #8a9a94;
+  font-weight: 700;
+}
+
+.adulto-trash-dialog__reason {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  color: var(--color-deep);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.adulto-trash-dialog__reason em {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.adulto-trash-dialog__reason textarea {
+  grid-column: 1 / -1;
+  min-height: 120px;
+  padding: 16px;
+  border: 1px solid #d8e2de;
+  border-radius: 13px;
+  background: #ffffff;
+  color: var(--color-deep);
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.adulto-trash-dialog__reason textarea::placeholder {
+  color: #9baaa4;
+  font-weight: 500;
+}
+
+.adulto-trash-dialog__reason textarea:focus-visible {
+  border-color: #75a596;
+  box-shadow: 0 0 0 3px rgb(117 165 150 / 15%);
+}
+
+.adulto-trash-dialog__reason small {
+  grid-column: 2;
+  justify-self: end;
+  color: #9baaa4;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.adulto-trash-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
+  margin-top: 4px;
+}
+
+.adulto-trash-dialog__cancel,
+.adulto-trash-dialog__confirm {
+  min-height: 50px;
+  border-radius: 12px;
+  font-size: 0.98rem;
+  font-weight: 850;
+}
+
+.adulto-trash-dialog__cancel {
+  min-width: auto;
+  padding-inline: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+}
+
+.adulto-trash-dialog__cancel:hover,
+.adulto-trash-dialog__cancel:focus-visible {
+  background: transparent;
+  color: var(--color-deep);
+}
+
+.adulto-trash-dialog__confirm {
+  min-width: 222px;
+  background: #e7aba1;
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.adulto-trash-dialog__confirm:not(:disabled):hover,
+.adulto-trash-dialog__confirm:not(:disabled):focus-visible {
+  background: #d98f83;
+}
+
+.adulto-trash-dialog__confirm:disabled {
+  background: #e7aba1;
+  color: #ffffff;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+@media (max-width: 640px) {
+  .adulto-trash-dialog {
+    width: 100%;
+    padding: 20px;
+    border-radius: 18px;
+  }
+
+  .adulto-trash-dialog footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .adulto-trash-dialog__cancel,
+  .adulto-trash-dialog__confirm {
+    width: auto;
+    min-width: 0;
+    padding-inline: 12px;
+  }
+}

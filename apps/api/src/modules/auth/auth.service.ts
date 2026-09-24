@@ -1,13 +1,18 @@
 import { randomBytes, createHash } from "node:crypto";
 
-import { type AuthUser, authUserSchema, type LoginRequest } from "@cuidarte/contracts";
+import {
+  type AuthUser,
+  authUserSchema,
+  type LoginRequest,
+  type UserPermission,
+} from "@cuidarte/contracts";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { verify } from "argon2";
 
 import { getEnv } from "../../config/env";
 import { DatabaseService } from "../../database/database.service";
-import { tenants, userSessions, users } from "../../database/schema";
+import { tenants, userPermissions, userSessions, users } from "../../database/schema";
 
 type LoginMetadata = {
   ip: string | null;
@@ -71,10 +76,12 @@ export class AuthService {
       })
       .where(eq(users.id, user.id));
 
+    const permissions = await this.findUserPermissions(user.id);
+
     return {
       token,
       expiresAt,
-      user: this.toAuthUser(user, tenant),
+      user: this.toAuthUser(user, tenant, permissions),
     };
   }
 
@@ -115,7 +122,9 @@ export class AuthService {
       .set({ lastUsedAt: now })
       .where(eq(userSessions.id, session.id));
 
-    return this.toAuthUser(user, tenant);
+    const permissions = await this.findUserPermissions(user.id);
+
+    return this.toAuthUser(user, tenant, permissions);
   }
 
   async logout(token: string | undefined): Promise<void> {
@@ -195,7 +204,20 @@ export class AuthService {
     return createHash("sha256").update(token).digest("hex");
   }
 
-  private toAuthUser(user: UserRow, tenant: TenantRow | null): AuthUser {
+  private async findUserPermissions(userId: string): Promise<UserPermission[]> {
+    const rows = await this.database.db
+      .select({ permission: userPermissions.permission })
+      .from(userPermissions)
+      .where(eq(userPermissions.userId, userId));
+
+    return rows.map((row) => row.permission as UserPermission);
+  }
+
+  private toAuthUser(
+    user: UserRow,
+    tenant: TenantRow | null,
+    permissions: UserPermission[],
+  ): AuthUser {
     return authUserSchema.parse({
       id: user.id,
       tenantId: user.tenantId,
@@ -205,6 +227,7 @@ export class AuthService {
       fullName: user.fullName,
       role: user.role,
       passwordSetByAdmin: user.passwordSetByAdmin,
+      permissions,
     });
   }
 }

@@ -1,7 +1,9 @@
-import { type AuthUser } from "@cuidarte/contracts";
+import { hasUserPermission, type AuthUser } from "@cuidarte/contracts";
 
-export function canImportAdultosMayores(user: Pick<AuthUser, "role">): boolean {
-  return user.role === "super_admin" || user.role === "admin" || user.role === "director";
+export function canImportAdultosMayores(user: Pick<AuthUser, "role" | "permissions">): boolean {
+  return user.permissions === undefined
+    ? user.role === "super_admin" || user.role === "admin" || user.role === "director"
+    : hasUserPermission(user, "adultos_mayores.import");
 }
 
 export function resolveAdultoMayorImportTenantForValidate(
@@ -15,7 +17,10 @@ export function resolveAdultoMayorImportTenantForValidate(
   return user.tenantId;
 }
 
-export function resolveAdultoMayorImportTenantForConfirm(user: AuthUser, tenantId: string): string | null {
+export function resolveAdultoMayorImportTenantForConfirm(
+  user: AuthUser,
+  tenantId: string,
+): string | null {
   if (user.role === "super_admin") {
     return tenantId;
   }

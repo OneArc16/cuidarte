@@ -1,5 +1,5 @@
 import { type AdultoMayorListItem } from "@cuidarte/contracts";
-import { AlertTriangle, LoaderCircle, Trash2, X } from "lucide-react";
+import { LoaderCircle, RotateCcw, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { formatAdultoMayorDocument } from "../lib/adultos-mayores-formatters";
@@ -20,6 +20,9 @@ export function AdultoMayorTrashDialog({
   onConfirm,
 }: AdultoMayorTrashDialogProps) {
   const [reason, setReason] = useState("");
+  const initials = (
+    adultoMayor.names.trim().charAt(0) + adultoMayor.surnames.trim().charAt(0)
+  ).toUpperCase();
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -46,41 +49,72 @@ export function AdultoMayorTrashDialog({
         onMouseDown={(event) => event.stopPropagation()}
       >
         <header className="adulto-trash-dialog__header">
-          <h2 id="adulto-trash-dialog-title">Enviar a papelera</h2>
-          <button type="button" aria-label="Cerrar confirmacion" disabled={isPending} onClick={onClose}>
+          <div>
+            <p className="adulto-trash-dialog__eyebrow">
+              <RotateCcw aria-hidden="true" />
+              Acción reversible
+            </p>
+            <h2 id="adulto-trash-dialog-title">Enviar a papelera</h2>
+          </div>
+          <button
+            type="button"
+            aria-label="Cerrar confirmación"
+            disabled={isPending}
+            onClick={onClose}
+          >
             <X aria-hidden="true" />
           </button>
         </header>
 
+        <p className="adulto-trash-dialog__description">
+          Se ocultará de listados, buscadores y reportes. Podrás restaurarlo desde la papelera
+          cuando lo necesites.
+        </p>
+
         <div className="adulto-trash-dialog__hero">
-          <AlertTriangle aria-hidden="true" />
+          <span className="adulto-trash-dialog__avatar" aria-hidden="true">
+            {initials}
+          </span>
           <div>
-            <strong>{adultoMayor.names} {adultoMayor.surnames}</strong>
-            <span>{formatAdultoMayorDocument(adultoMayor.documentType, adultoMayor.documentNumber)}</span>
-            <span>{adultoMayor.tenantName}</span>
+            <strong>
+              {adultoMayor.names} {adultoMayor.surnames}
+            </strong>
+            <span>
+              {formatAdultoMayorDocument(adultoMayor.documentType, adultoMayor.documentNumber)}
+              <b aria-hidden="true"> • </b>
+              {adultoMayor.tenantName}
+            </span>
           </div>
         </div>
 
-        <p className="adulto-trash-dialog__description">
-          Se ocultara de listados, buscadores y reportes. Podras restaurarlo despues.
-        </p>
-
         <label className="adulto-trash-dialog__reason">
-          <span>Motivo <em>Obligatorio</em></span>
+          <span>
+            Motivo <em>Obligatorio</em>
+          </span>
           <textarea
             aria-label="Motivo"
             value={reason}
-            maxLength={500}
+            maxLength={250}
             disabled={isPending}
             onChange={(event) => setReason(event.target.value)}
-            placeholder="Ej. Registro duplicado"
+            placeholder="Escribe el motivo de la eliminación"
           />
+          <small>{reason.length}/250</small>
         </label>
 
-        {errorMessage !== null ? <p className="form-error" role="alert">{errorMessage}</p> : null}
+        {errorMessage !== null ? (
+          <p className="form-error" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
 
         <footer>
-          <button className="outline-action adulto-trash-dialog__cancel" type="button" disabled={isPending} onClick={onClose}>
+          <button
+            className="outline-action adulto-trash-dialog__cancel"
+            type="button"
+            disabled={isPending}
+            onClick={onClose}
+          >
             Cancelar
           </button>
           <button

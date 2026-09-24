@@ -1,8 +1,8 @@
 import { Injectable } from "@nestjs/common";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
-import { actividadGrupalTipos, auditLogs } from "../../../database/schema";
+import { actividadGrupalTipos, auditLogs, users } from "../../../database/schema";
 import {
   type ActividadGrupalTipoRecord,
   type CreateActividadGrupalTipoCommand,
@@ -167,7 +167,9 @@ export class DrizzleActividadGrupalTiposRepository implements ActividadGrupalTip
     });
   }
 
-  async updateConsecutiveConfig(command: UpdateActividadGrupalTipoConsecutiveConfigCommand): Promise<ActividadGrupalTipoRecord> {
+  async updateConsecutiveConfig(
+    command: UpdateActividadGrupalTipoConsecutiveConfigCommand,
+  ): Promise<ActividadGrupalTipoRecord> {
     return await this.database.db.transaction(async (tx) => {
       const now = new Date();
       const [updated] = await tx
@@ -175,7 +177,8 @@ export class DrizzleActividadGrupalTiposRepository implements ActividadGrupalTip
         .set({
           consecutivePrefix: command.prefix,
           consecutiveNextValue: command.nextValue,
-          consecutiveCreatorRoles: command.creatorRoles as (typeof actividadGrupalTipos.$inferInsert)["consecutiveCreatorRoles"],
+          consecutiveCreatorUserIds:
+            command.creatorUserIds as (typeof actividadGrupalTipos.$inferInsert)["consecutiveCreatorUserIds"],
           updatedAt: now,
         })
         .where(eq(actividadGrupalTipos.id, command.id))
@@ -194,12 +197,32 @@ export class DrizzleActividadGrupalTiposRepository implements ActividadGrupalTip
           activityTypeId: updated.id,
           prefix: command.prefix,
           nextValue: command.nextValue,
-          creatorRoles: command.creatorRoles,
+          creatorUserIds: command.creatorUserIds,
         },
       });
 
       return updated;
     });
+  }
+
+  async findCreatorOptions(tenantId: string) {
+    return await this.database.db
+      .select({
+        id: users.id,
+        fullName: users.fullName,
+        role: users.role,
+      })
+      .from(users)
+      .where(
+        and(
+          eq(users.isActive, true),
+          or(
+            eq(users.tenantId, tenantId),
+            and(isNull(users.tenantId), eq(users.role, "super_admin")),
+          ),
+        ),
+      )
+      .orderBy(asc(users.fullName));
   }
 
   private getSelection() {
@@ -210,7 +233,7 @@ export class DrizzleActividadGrupalTiposRepository implements ActividadGrupalTip
       normalizedName: actividadGrupalTipos.normalizedName,
       consecutivePrefix: actividadGrupalTipos.consecutivePrefix,
       consecutiveNextValue: actividadGrupalTipos.consecutiveNextValue,
-      consecutiveCreatorRoles: actividadGrupalTipos.consecutiveCreatorRoles,
+      consecutiveCreatorUserIds: actividadGrupalTipos.consecutiveCreatorUserIds,
       isActive: actividadGrupalTipos.isActive,
       createdAt: actividadGrupalTipos.createdAt,
       updatedAt: actividadGrupalTipos.updatedAt,

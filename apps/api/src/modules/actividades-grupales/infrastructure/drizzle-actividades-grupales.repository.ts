@@ -24,6 +24,7 @@ import {
   actividadGrupalDiligenciamientoIntegrantes,
   actividadGrupalDiligenciamientos,
   actividadGrupalEmpleados,
+  actividadGrupalGlobalSeriesCounters,
   actividadGrupalTipos,
   actividadesGrupales,
   adultosMayores,
@@ -104,11 +105,16 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       .where(this.buildWhere(query))
       .orderBy(desc(actividadesGrupales.activityDate), desc(actividadesGrupales.startTime));
 
-    const countByActivityId = await this.findInvolvedEmployeeCounts(rows.map((row) => row.id));
+    const activityIds = rows.map((row) => row.id);
+    const [countByActivityId, assignedEmployeeIdsByActivityId] = await Promise.all([
+      this.findInvolvedEmployeeCounts(activityIds),
+      this.findAssignedEmployeeIds(activityIds),
+    ]);
 
     return rows.map((row) => ({
       ...row,
       involvedEmployeesCount: countByActivityId.get(row.id) ?? 0,
+      assignedEmployeeIds: assignedEmployeeIdsByActivityId.get(row.id) ?? [],
     }));
   }
 
@@ -382,8 +388,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     return await this.database.db.transaction(async (tx) => {
       const now = new Date();
       const actaOrganizer = resolveActividadGrupalActaOrganizer(command.organizer);
-      const actaSeriesKey =
-        command.customConsecutive === null
+      const isGlobalSeries = command.customConsecutive?.scope === "global";
+      const actaSeriesKey = isGlobalSeries
+        ? "global"
+        : command.customConsecutive === null
           ? `legacy:${actaOrganizer}`
           : `activity-type:${command.activityTypeId}`;
       await tx.execute(
@@ -395,38 +403,48 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .where(
           and(
             eq(actividadesGrupales.tenantId, command.tenantId),
-            eq(actividadesGrupales.actaSeriesKey, actaSeriesKey),
+            ...(isGlobalSeries ? [] : [eq(actividadesGrupales.actaSeriesKey, actaSeriesKey)]),
             isNull(actividadesGrupales.deletedAt),
           ),
-        );
-      const nextSequence =
-        command.customConsecutive?.nextValue ??
-        findNextAvailableActividadGrupalActaSequence(
-          activeActaSequences.map((row) => row.actaSequence),
         );
       const highestActiveSequence = activeActaSequences.reduce(
         (highest, row) => Math.max(highest, row.actaSequence),
         0,
       );
+      const [globalCounter] = isGlobalSeries
+        ? await tx
+            .select({ lastValue: actividadGrupalGlobalSeriesCounters.lastValue })
+            .from(actividadGrupalGlobalSeriesCounters)
+            .where(eq(actividadGrupalGlobalSeriesCounters.tenantId, command.tenantId))
+        : [];
+      const nextSequence = isGlobalSeries
+        ? Math.max((globalCounter?.lastValue ?? 0) + 1, highestActiveSequence + 1)
+        : (command.customConsecutive?.nextValue ??
+          findNextAvailableActividadGrupalActaSequence(
+            activeActaSequences.map((row) => row.actaSequence),
+          ));
       const counterFloor = Math.max(nextSequence, highestActiveSequence);
-      await tx
-        .insert(actividadGrupalActaOrganizerCounters)
-        .values({
-          tenantId: command.tenantId,
-          organizer: actaOrganizer,
-          lastValue: counterFloor,
-          updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: [
-            actividadGrupalActaOrganizerCounters.tenantId,
-            actividadGrupalActaOrganizerCounters.organizer,
-          ],
-          set: {
-            lastValue: sql`greatest(${actividadGrupalActaOrganizerCounters.lastValue}, ${counterFloor})`,
+
+      if (!isGlobalSeries) {
+        await tx
+          .insert(actividadGrupalActaOrganizerCounters)
+          .values({
+            tenantId: command.tenantId,
+            organizer: actaOrganizer,
+            lastValue: counterFloor,
             updatedAt: now,
-          },
-        });
+          })
+          .onConflictDoUpdate({
+            target: [
+              actividadGrupalActaOrganizerCounters.tenantId,
+              actividadGrupalActaOrganizerCounters.organizer,
+            ],
+            set: {
+              lastValue: sql`greatest(${actividadGrupalActaOrganizerCounters.lastValue}, ${counterFloor})`,
+              updatedAt: now,
+            },
+          });
+      }
 
       const actaNumber =
         command.customConsecutive === null
@@ -458,7 +476,22 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         throw new Error("No fue posible crear la actividad grupal.");
       }
 
-      if (command.customConsecutive !== null) {
+      if (isGlobalSeries) {
+        await tx
+          .insert(actividadGrupalGlobalSeriesCounters)
+          .values({
+            tenantId: command.tenantId,
+            lastValue: nextSequence,
+            updatedAt: now,
+          })
+          .onConflictDoUpdate({
+            target: actividadGrupalGlobalSeriesCounters.tenantId,
+            set: {
+              lastValue: nextSequence,
+              updatedAt: now,
+            },
+          });
+      } else if (command.customConsecutive !== null) {
         await tx
           .update(actividadGrupalTipos)
           .set({ consecutiveNextValue: nextSequence + 1, updatedAt: now })
@@ -867,7 +900,9 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         operation.activityTypeId === null ||
         operation.targetPrefix === null
       ) {
-        throw new ActaCorrectionConflictError("La vista previa de migración de prefijo ya no está vigente.");
+        throw new ActaCorrectionConflictError(
+          "La vista previa de migración de prefijo ya no está vigente.",
+        );
       }
 
       await tx.execute(
@@ -887,7 +922,9 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .limit(1);
 
       if (lockedOperation === undefined || lockedOperation.expiresAt <= new Date()) {
-        throw new ActaCorrectionConflictError("La vista previa de migración de prefijo ya no está vigente.");
+        throw new ActaCorrectionConflictError(
+          "La vista previa de migración de prefijo ya no está vigente.",
+        );
       }
 
       const rows = await tx
@@ -1509,6 +1546,30 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       deletionReason: actividadesGrupales.deletionReason,
       deletedByUserFullName: users.fullName,
     };
+  }
+
+  private async findAssignedEmployeeIds(activityIds: string[]): Promise<Map<string, string[]>> {
+    if (activityIds.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.database.db
+      .select({
+        activityId: actividadGrupalEmpleados.activityId,
+        employeeId: actividadGrupalEmpleados.employeeId,
+      })
+      .from(actividadGrupalEmpleados)
+      .where(inArray(actividadGrupalEmpleados.activityId, activityIds));
+
+    const assigned = new Map<string, string[]>();
+
+    for (const row of rows) {
+      const employeeIds = assigned.get(row.activityId) ?? [];
+      employeeIds.push(row.employeeId);
+      assigned.set(row.activityId, employeeIds);
+    }
+
+    return assigned;
   }
 
   private async findInvolvedEmployeeCounts(activityIds: string[]): Promise<Map<string, number>> {

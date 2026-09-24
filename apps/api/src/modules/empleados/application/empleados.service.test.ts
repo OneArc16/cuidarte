@@ -412,10 +412,12 @@ function createCommand() {
   };
 }
 
-function createRepository(overrides: {
-  currentRecord?: EmpleadoRecord;
-  documentConflict?: EmpleadoRecord;
-} = {}) {
+function createRepository(
+  overrides: {
+    currentRecord?: EmpleadoRecord;
+    documentConflict?: EmpleadoRecord;
+  } = {},
+) {
   const repository = {
     queries: [] as FindEmpleadosQuery[],
     created: [] as Array<Parameters<EmpleadosRepository["create"]>[0]>,
@@ -429,7 +431,8 @@ function createRepository(overrides: {
       );
     },
     async findById(query) {
-      const availableRecords = overrides.currentRecord === undefined ? records : [overrides.currentRecord, ...records];
+      const availableRecords =
+        overrides.currentRecord === undefined ? records : [overrides.currentRecord, ...records];
 
       return (
         availableRecords.find(

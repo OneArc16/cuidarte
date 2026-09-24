@@ -1,4 +1,5 @@
 import {
+  hasUserPermission,
   type AtencionEnfermeriaHistoryAccess,
   atencionEnfermeriaCrossReadRoleValues,
   atencionEnfermeriaModuleRoleValues,
@@ -25,6 +26,10 @@ const CREATE_ROLES: ReadonlySet<AuthUser["role"]> = new Set(["enfermeria"]);
 const TRASH_ROLES: ReadonlySet<AuthUser["role"]> = new Set(["super_admin", "admin", "director"]);
 
 export function resolveAtencionEnfermeriaScope(user: AuthUser): AtencionEnfermeriaScope | null {
+  if (user.permissions !== undefined && !hasUserPermission(user, "atenciones_enfermeria.view")) {
+    return null;
+  }
+
   if (user.role === "super_admin") {
     return { type: "all" };
   }
@@ -36,27 +41,44 @@ export function resolveAtencionEnfermeriaScope(user: AuthUser): AtencionEnfermer
   return { type: "tenant", tenantId: user.tenantId };
 }
 
-export function canOpenAtencionEnfermeriaModule(user: Pick<AuthUser, "role">): boolean {
-  return MODULE_ROLES.has(user.role);
+export function canOpenAtencionEnfermeriaModule(
+  user: Pick<AuthUser, "role" | "permissions">,
+): boolean {
+  return user.permissions === undefined
+    ? MODULE_ROLES.has(user.role)
+    : hasUserPermission(user, "atenciones_enfermeria.view");
 }
 
-export function canReadAtencionEnfermeriaModule(user: Pick<AuthUser, "role">): boolean {
-  return VIEW_ROLES.has(user.role);
+export function canReadAtencionEnfermeriaModule(
+  user: Pick<AuthUser, "role" | "permissions">,
+): boolean {
+  return user.permissions === undefined
+    ? VIEW_ROLES.has(user.role)
+    : hasUserPermission(user, "atenciones_enfermeria.view");
 }
 
-export function canCreateAtencionEnfermeria(user: Pick<AuthUser, "role">): boolean {
-  return CREATE_ROLES.has(user.role);
+export function canCreateAtencionEnfermeria(user: Pick<AuthUser, "role" | "permissions">): boolean {
+  return user.permissions === undefined
+    ? CREATE_ROLES.has(user.role)
+    : hasUserPermission(user, "atenciones_enfermeria.create");
 }
 
-export function canManageAtencionEnfermeriaTrash(user: Pick<AuthUser, "role">): boolean {
-  return TRASH_ROLES.has(user.role);
+export function canManageAtencionEnfermeriaTrash(
+  user: Pick<AuthUser, "role" | "permissions">,
+): boolean {
+  return user.permissions === undefined
+    ? TRASH_ROLES.has(user.role)
+    : hasUserPermission(user, "atenciones_enfermeria.delete");
 }
 
 export function resolveAtencionEnfermeriaAccess(
-  user: Pick<AuthUser, "id" | "role" | "tenantId">,
+  user: Pick<AuthUser, "id" | "role" | "tenantId" | "permissions">,
   record: AtencionEnfermeriaOwnership,
 ): AtencionEnfermeriaHistoryAccess | null {
-  if (user.role === "super_admin") {
+  if (
+    user.role === "super_admin" &&
+    (user.permissions === undefined || hasUserPermission(user, "atenciones_enfermeria.view"))
+  ) {
     return "view";
   }
 
@@ -64,22 +86,33 @@ export function resolveAtencionEnfermeriaAccess(
     return null;
   }
 
-  if (user.role === "enfermeria" && record.createdByUserId === user.id) {
+  if (
+    (user.permissions === undefined
+      ? user.role === "enfermeria"
+      : hasUserPermission(user, "atenciones_enfermeria.edit")) &&
+    record.createdByUserId === user.id
+  ) {
     return "edit";
   }
 
-  return VIEW_ROLES.has(user.role) ? "view" : null;
+  return user.permissions === undefined
+    ? VIEW_ROLES.has(user.role)
+      ? "view"
+      : null
+    : hasUserPermission(user, "atenciones_enfermeria.view")
+      ? "view"
+      : null;
 }
 
 export function canViewAtencionEnfermeria(
-  user: Pick<AuthUser, "id" | "role" | "tenantId">,
+  user: Pick<AuthUser, "id" | "role" | "tenantId" | "permissions">,
   record: AtencionEnfermeriaOwnership,
 ): boolean {
   return resolveAtencionEnfermeriaAccess(user, record) !== null;
 }
 
 export function canEditAtencionEnfermeria(
-  user: Pick<AuthUser, "id" | "role" | "tenantId">,
+  user: Pick<AuthUser, "id" | "role" | "tenantId" | "permissions">,
   record: AtencionEnfermeriaOwnership,
 ): boolean {
   return resolveAtencionEnfermeriaAccess(user, record) === "edit";

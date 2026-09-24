@@ -1,8 +1,6 @@
 import { type TenantActiveSignerRecord } from "../domain/empleado.types";
 
-export function toTenantActiveSignerResponse(
-  activeSigner: TenantActiveSignerRecord | null,
-): {
+export function toTenantActiveSignerResponse(activeSigner: TenantActiveSignerRecord | null): {
   tenantId: string;
   employeeId: string;
   signatureVersionId: string;

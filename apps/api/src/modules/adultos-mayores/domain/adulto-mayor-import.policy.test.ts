@@ -44,7 +44,13 @@ describe("adulto-mayor-import.policy", () => {
   });
 
   it("keeps super admin tenant selection flexible", () => {
-    assert.equal(resolveAdultoMayorImportTenantForValidate(superAdminUser, otherTenantId), otherTenantId);
-    assert.equal(resolveAdultoMayorImportTenantForConfirm(superAdminUser, otherTenantId), otherTenantId);
+    assert.equal(
+      resolveAdultoMayorImportTenantForValidate(superAdminUser, otherTenantId),
+      otherTenantId,
+    );
+    assert.equal(
+      resolveAdultoMayorImportTenantForConfirm(superAdminUser, otherTenantId),
+      otherTenantId,
+    );
   });
 });

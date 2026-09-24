@@ -1,4 +1,4 @@
-import { type UserRole } from "@cuidarte/contracts";
+import { type UserPermission, type UserRole } from "@cuidarte/contracts";
 
 export type EmpleadosScope =
   | {
@@ -80,11 +80,10 @@ export type DirectorSignatureAssignmentRecord = {
   createdAt: Date;
 };
 
-export type DirectorSignatureAssignmentHistoryRecord =
-  DirectorSignatureAssignmentRecord & {
-    employeeFullName: string;
-    signatureOriginalName: string;
-  };
+export type DirectorSignatureAssignmentHistoryRecord = DirectorSignatureAssignmentRecord & {
+  employeeFullName: string;
+  signatureOriginalName: string;
+};
 
 export type EmpleadoCommandRecord = {
   tenantId: string | null;
@@ -102,10 +101,16 @@ export type EmpleadoCommandRecord = {
 
 export type CreateEmpleadoRecordCommand = EmpleadoCommandRecord & {
   passwordHash: string;
+  permissions: UserPermission[];
 };
 
 export type UpdateEmpleadoRecordCommand = Omit<EmpleadoCommandRecord, "tenantId"> & {
   id: string;
+};
+
+export type ReplaceEmpleadoPermissionsCommand = {
+  employeeId: string;
+  permissions: UserPermission[];
 };
 
 export type EmpleadoAuditCommand = {
@@ -120,7 +125,8 @@ export type EmpleadoAuditCommand = {
     | "empleados.active_signer_updated"
     | "empleados.active_signer_cleared"
     | "empleados.director_signature_assigned"
-    | "empleados.director_signature_assignment_closed";
+    | "empleados.director_signature_assignment_closed"
+    | "empleados.permissions_updated";
   targetTenantId: string | null;
   summary: string;
   metadata: Record<string, unknown>;

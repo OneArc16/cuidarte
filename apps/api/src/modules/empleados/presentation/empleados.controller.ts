@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   Patch,
+  Put,
   Post,
   Query,
   Req,
@@ -29,6 +30,8 @@ import {
   empleadoListResponseSchema,
   empleadoTenantOptionsResponseSchema,
   updateEmpleadoRequestSchema,
+  empleadoPermissionsResponseSchema,
+  updateEmpleadoPermissionsRequestSchema,
 } from "@cuidarte/contracts";
 import { type FastifyReply } from "fastify";
 import { type Multipart, type MultipartFile } from "@fastify/multipart";
@@ -63,10 +66,7 @@ export class EmpleadosController {
   @ApiForbiddenResponse({ description: "El usuario no tiene permisos de empleados." })
   async listEmpleados(@Query() query: unknown, @Req() request: AuthenticatedRequest) {
     const parsedQuery = parseZodSchema(empleadoListQuerySchema, query);
-    const empleados = await this.empleadosService.listEmpleados(
-      parsedQuery,
-      request.currentUser,
-    );
+    const empleados = await this.empleadosService.listEmpleados(parsedQuery, request.currentUser);
 
     return empleadoListResponseSchema.parse({ empleados });
   }
@@ -116,6 +116,43 @@ export class EmpleadosController {
     return empleadoDetailResponseSchema.parse(detail);
   }
 
+  @Get(":id/permissions")
+  @ApiOkResponse({ description: "Permisos del empleado." })
+  @ApiNotFoundResponse({ description: "Usuario no encontrado." })
+  @ApiForbiddenResponse({ description: "Solo Admin y Superadmin pueden administrar permisos." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async getEmpleadoPermissions(@Param("id") id: string, @Req() request: AuthenticatedRequest) {
+    const empleadoId = parseZodSchema(empleadoIdParamSchema, id);
+    const permissions = await this.empleadosService.getEmpleadoPermissions(
+      empleadoId,
+      request.currentUser,
+    );
+
+    return empleadoPermissionsResponseSchema.parse(permissions);
+  }
+
+  @Put(":id/permissions")
+  @ApiOkResponse({ description: "Permisos del empleado actualizados." })
+  @ApiBadRequestResponse({ description: "Solicitud invalida." })
+  @ApiNotFoundResponse({ description: "Usuario no encontrado." })
+  @ApiForbiddenResponse({ description: "Solo Admin y Superadmin pueden administrar permisos." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async updateEmpleadoPermissions(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const empleadoId = parseZodSchema(empleadoIdParamSchema, id);
+    const command = parseZodSchema(updateEmpleadoPermissionsRequestSchema, body);
+    const permissions = await this.empleadosService.updateEmpleadoPermissions(
+      empleadoId,
+      command,
+      request.currentUser,
+    );
+
+    return empleadoPermissionsResponseSchema.parse(permissions);
+  }
+
   @Post(":id/signature")
   @ApiOkResponse({ description: "Firma del usuario cargada." })
   @ApiConsumes("multipart/form-data")
@@ -123,10 +160,7 @@ export class EmpleadosController {
   @ApiNotFoundResponse({ description: "Usuario no encontrado." })
   @ApiForbiddenResponse({ description: "El usuario no tiene permisos de empleados." })
   @ApiUnauthorizedResponse({ description: "Sesion requerida." })
-  async uploadSignature(
-    @Param("id") id: string,
-    @Req() request: MultipartAuthenticatedRequest,
-  ) {
+  async uploadSignature(@Param("id") id: string, @Req() request: MultipartAuthenticatedRequest) {
     const empleadoId = parseZodSchema(empleadoIdParamSchema, id);
     const signature = await parseEmpleadoSignatureMultipartRequest(request);
 

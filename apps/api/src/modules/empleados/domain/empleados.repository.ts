@@ -1,3 +1,5 @@
+import { type UserPermission } from "@cuidarte/contracts";
+
 import {
   type CreateEmpleadoRecordCommand,
   type CreateEmpleadoSignatureVersionCommand,
@@ -17,6 +19,7 @@ import {
   type TenantActiveSignerRecord,
   type TenantActiveSignerResolutionRecord,
   type UpdateEmpleadoRecordCommand,
+  type ReplaceEmpleadoPermissionsCommand,
 } from "./empleado.types";
 
 export const EMPLEADOS_REPOSITORY = Symbol("EMPLEADOS_REPOSITORY");
@@ -27,6 +30,11 @@ export type EmpleadosRepository = {
   findByEmail(query: FindEmpleadoByEmailQuery): Promise<EmpleadoRecord | null>;
   findByDocument(query: FindEmpleadoByDocumentQuery): Promise<EmpleadoRecord | null>;
   findTenantOptions(): Promise<EmpleadoTenantOptionRecord[]>;
+  findPermissionsByUserId(userId: string): Promise<UserPermission[]>;
+  replacePermissions(
+    command: ReplaceEmpleadoPermissionsCommand,
+    audit: EmpleadoAuditCommand,
+  ): Promise<void>;
   findLatestSignatureVersionByEmployeeId(
     employeeId: string,
   ): Promise<EmpleadoSignatureVersionRecord | null>;
@@ -46,7 +54,10 @@ export type EmpleadosRepository = {
   findDirectorSignatureAssignmentHistoryByTenantId(
     tenantId: string,
   ): Promise<DirectorSignatureAssignmentHistoryRecord[]>;
-  create(command: CreateEmpleadoRecordCommand, audit: EmpleadoAuditCommand): Promise<EmpleadoRecord>;
+  create(
+    command: CreateEmpleadoRecordCommand,
+    audit: EmpleadoAuditCommand,
+  ): Promise<EmpleadoRecord>;
   update(
     command: UpdateEmpleadoRecordCommand,
     auditEntries: EmpleadoAuditCommand[],

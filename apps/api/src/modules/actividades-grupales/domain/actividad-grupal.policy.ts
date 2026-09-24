@@ -1,4 +1,9 @@
-import { type ActividadGrupalOrganizer, type AuthUser, type UserRole } from "@cuidarte/contracts";
+import {
+  hasUserPermission,
+  type ActividadGrupalOrganizer,
+  type AuthUser,
+  type UserRole,
+} from "@cuidarte/contracts";
 
 import {
   type ActividadGrupalRecord,
@@ -30,8 +35,12 @@ export function resolvePermittedActividadGrupalOrganizers(
 
 export function canViewActividadGrupal(
   activity: Pick<ActividadGrupalRecord, "organizer">,
-  user: Pick<AuthUser, "role">,
+  user: Pick<AuthUser, "role" | "permissions">,
 ): boolean {
+  if (user.permissions !== undefined && !hasUserPermission(user, "actividades_grupales.view")) {
+    return false;
+  }
+
   const permittedOrganizers = resolvePermittedActividadGrupalOrganizers(user);
 
   return permittedOrganizers === null || permittedOrganizers.includes(activity.organizer);
@@ -52,48 +61,75 @@ export function resolveActividadesGrupalesScope(user: AuthUser): ActividadesGrup
   };
 }
 
-export function canManageActividadesGrupales(user: Pick<AuthUser, "role">): boolean {
-  return user.role !== "auditor";
+export function canManageActividadesGrupales(
+  user: Pick<AuthUser, "role" | "permissions">,
+): boolean {
+  return user.permissions === undefined
+    ? user.role !== "auditor"
+    : hasUserPermission(user, "actividades_grupales.create") ||
+        hasUserPermission(user, "actividades_grupales.edit");
 }
 
-export function canCorrectActividadGrupalActaNumber(user: Pick<AuthUser, "role">): boolean {
-  return user.role === "super_admin";
+export function canCorrectActividadGrupalActaNumber(
+  user: Pick<AuthUser, "role" | "permissions">,
+): boolean {
+  return user.permissions === undefined
+    ? user.role === "super_admin"
+    : hasUserPermission(user, "actividades_grupales.correct");
 }
 
-export function canBulkCorrectActividadGrupalActaNumbers(user: Pick<AuthUser, "role">): boolean {
-  return user.role === "super_admin";
+export function canBulkCorrectActividadGrupalActaNumbers(
+  user: Pick<AuthUser, "role" | "permissions">,
+): boolean {
+  return user.permissions === undefined
+    ? user.role === "super_admin"
+    : hasUserPermission(user, "actividades_grupales.correct");
 }
 
 export function canListTrashActividadesGrupales(
-  user: Pick<AuthUser, "role" | "tenantId">,
+  user: Pick<AuthUser, "role" | "tenantId" | "permissions">,
 ): boolean {
-  if (user.role === "super_admin") {
-    return true;
+  if (user.permissions === undefined) {
+    return user.role === "super_admin" || (user.role === "admin" && user.tenantId !== null);
   }
 
-  return user.role === "admin" && user.tenantId !== null;
+  return (
+    hasUserPermission(user, "actividades_grupales.delete") &&
+    (user.role === "super_admin" || user.tenantId !== null)
+  );
 }
 
 export function canTrashActividadGrupal(
   activity: Pick<ActividadGrupalRecord, "tenantId">,
   actor: AuthUser,
 ): boolean {
-  if (actor.role === "super_admin") {
-    return true;
+  if (actor.permissions === undefined) {
+    return (
+      actor.role === "super_admin" ||
+      (actor.role === "admin" && actor.tenantId === activity.tenantId)
+    );
   }
 
-  return actor.role === "admin" && actor.tenantId === activity.tenantId;
+  if (!hasUserPermission(actor, "actividades_grupales.delete")) {
+    return false;
+  }
+
+  return actor.role === "super_admin" || actor.tenantId === activity.tenantId;
 }
 
 export function canEditActividadGrupal(
   activity: Pick<ActividadGrupalRecord, "createdByUserId" | "tenantId">,
   actor: AuthUser,
+  isAssignedProfessional = false,
 ): boolean {
+  if (actor.permissions !== undefined && !hasUserPermission(actor, "actividades_grupales.edit")) {
+    return false;
+  }
   if (actor.role === "super_admin") {
     return true;
   }
 
-  if (activity.createdByUserId === actor.id) {
+  if (activity.createdByUserId === actor.id || isAssignedProfessional) {
     return true;
   }
 

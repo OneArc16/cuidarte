@@ -81,7 +81,7 @@ export type CreateActividadGrupalRecordCommand = {
   endTime: string;
   organizer: ActividadGrupalOrganizer;
   employeeIds: string[];
-  customConsecutive: { prefix: string; nextValue: number } | null;
+  customConsecutive: { prefix: string; nextValue: number; scope?: "global" | "activity-type" } | null;
 };
 
 export type UpdateActividadGrupalRecordCommand = {
@@ -212,6 +212,7 @@ export type ActividadGrupalRecord = {
   endTime: string;
   organizer: ActividadGrupalOrganizer;
   involvedEmployeesCount: number;
+  assignedEmployeeIds?: string[];
   createdAt: Date;
   updatedAt: Date;
 };

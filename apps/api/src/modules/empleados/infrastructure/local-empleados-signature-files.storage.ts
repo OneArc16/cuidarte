@@ -130,7 +130,10 @@ function resolvePrimaryBaseDir(configuredDirectory: string): string {
   return path.resolve(API_ROOT_DIR, configuredDirectory);
 }
 
-function resolveBaseDirFromCwd(configuredDirectory: string, currentWorkingDirectory: string): string {
+function resolveBaseDirFromCwd(
+  configuredDirectory: string,
+  currentWorkingDirectory: string,
+): string {
   if (path.isAbsolute(configuredDirectory)) {
     return path.resolve(configuredDirectory);
   }

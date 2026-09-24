@@ -8,6 +8,9 @@
 @import "../features/atenciones-enfermeria/atenciones-enfermeria.css";
 @import "../features/alimentacion/alimentacion.css";
 @import "../features/actividades-grupales/actividades-grupales.css";
+@import "../features/ajustes/ajustes.css";
+@import "../features/ajustes/ajustes-permissions-matrix.css";
+@import "../features/ajustes/ajustes-global-series.css";
 @import "../features/empleados/empleados.css";
 @import "../shared/components/searchable-combobox.css";
 @import "./responsive.css";
@@ -55,5 +58,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-tooltip { transition: none; }
+  .app-tooltip {
+    transition: none;
+  }
 }

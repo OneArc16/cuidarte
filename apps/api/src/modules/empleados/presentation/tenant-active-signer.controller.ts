@@ -37,9 +37,8 @@ export class TenantActiveSignerController {
     @Req() _request: AuthenticatedRequest,
   ) {
     const tenantId = parseZodSchema(tenantIdParamSchema, tenantIdValue);
-    const activeSigner = await this.empleadosSignatureService.findTenantActiveSignerByTenantId(
-      tenantId,
-    );
+    const activeSigner =
+      await this.empleadosSignatureService.findTenantActiveSignerByTenantId(tenantId);
 
     return tenantActiveSignerResponseSchema.parse({
       activeSigner: toTenantActiveSignerResponse(activeSigner),

@@ -10,6 +10,7 @@ import {
   empleadoDetailSchema,
   empleadoListItemSchema,
   empleadoTenantOptionSchema,
+  userPermissionCatalog,
 } from "@cuidarte/contracts";
 import {
   BadRequestException,
@@ -22,16 +23,15 @@ import {
 
 import {
   canCreateEmpleados,
+  canViewEmpleados,
+  defaultEmpleadoPermissions,
   canAssignEmpleadoRole,
   canManageEmpleados,
   resolveEmpleadoTenantForCreate,
   resolveEmpleadosScope,
 } from "../domain/empleado.policy";
 import { type EmpleadoAuditCommand, type EmpleadoRecord } from "../domain/empleado.types";
-import {
-  EMPLEADOS_REPOSITORY,
-  type EmpleadosRepository,
-} from "../domain/empleados.repository";
+import { EMPLEADOS_REPOSITORY, type EmpleadosRepository } from "../domain/empleados.repository";
 
 @Injectable()
 export class EmpleadosService {
@@ -41,6 +41,9 @@ export class EmpleadosService {
   ) {}
 
   async listEmpleados(query: EmpleadoListQuery, actor: AuthUser): Promise<EmpleadoListItem[]> {
+    if (!canViewEmpleados(actor)) {
+      throw new ForbiddenException("No tienes permisos para consultar empleados.");
+    }
     const scope = this.resolveScopeOrThrow(actor);
     const records = await this.empleadosRepository.findMany({
       search: query.search,
@@ -61,6 +64,9 @@ export class EmpleadosService {
   }
 
   async getEmpleado(empleadoId: string, actor: AuthUser): Promise<EmpleadoDetail> {
+    if (!canViewEmpleados(actor)) {
+      throw new ForbiddenException("No tienes permisos para consultar empleados.");
+    }
     const scope = this.resolveScopeOrThrow(actor);
     const record = await this.empleadosRepository.findById({ id: empleadoId, scope });
 
@@ -71,10 +77,66 @@ export class EmpleadosService {
     return this.toDetail(record);
   }
 
-  async createEmpleado(
-    command: CreateEmpleadoRequest,
+  async getEmpleadoPermissions(
+    empleadoId: string,
     actor: AuthUser,
-  ): Promise<EmpleadoDetail> {
+  ): Promise<import("@cuidarte/contracts").EmpleadoPermissionsResponse> {
+    this.ensureCanManagePermissions(actor);
+    const scope = this.resolveScopeOrThrow(actor);
+    const record = await this.empleadosRepository.findById({ id: empleadoId, scope });
+
+    if (record === null) {
+      throw new NotFoundException("Usuario no encontrado.");
+    }
+
+    const permissions = await this.empleadosRepository.findPermissionsByUserId(empleadoId);
+
+    return {
+      employeeId: empleadoId,
+      permissions,
+      catalog: [...userPermissionCatalog],
+    };
+  }
+
+  async updateEmpleadoPermissions(
+    empleadoId: string,
+    command: import("@cuidarte/contracts").UpdateEmpleadoPermissionsRequest,
+    actor: AuthUser,
+  ): Promise<import("@cuidarte/contracts").EmpleadoPermissionsResponse> {
+    this.ensureCanManagePermissions(actor);
+    const scope = this.resolveScopeOrThrow(actor);
+    const record = await this.empleadosRepository.findById({ id: empleadoId, scope });
+
+    if (record === null) {
+      throw new NotFoundException("Usuario no encontrado.");
+    }
+
+    const permissions = [...new Set(command.permissions)];
+
+    await this.empleadosRepository.replacePermissions(
+      {
+        employeeId: empleadoId,
+        permissions,
+      },
+      {
+        actorUserId: actor.id,
+        action: "empleados.permissions_updated",
+        targetTenantId: record.tenantId,
+        summary: `Permisos actualizados: ${record.fullName}`,
+        metadata: {
+          permissions,
+        },
+      },
+    );
+
+    return {
+      employeeId: empleadoId,
+      permissions,
+      catalog: [...userPermissionCatalog],
+    };
+  }
+
+  async createEmpleado(command: CreateEmpleadoRequest, actor: AuthUser): Promise<EmpleadoDetail> {
     this.ensureCanCreate(actor);
     this.ensureCanAssignRole(actor, command.role);
 
@@ -96,6 +158,7 @@ export class EmpleadosService {
           ...command,
           tenantId,
           passwordHash: await hash(command.password),
+          permissions: defaultEmpleadoPermissions(command.role),
         },
         {
           actorUserId: actor.id,
@@ -148,7 +211,10 @@ export class EmpleadosService {
       throw new BadRequestException("El propietario del centro debe conservar el rol Admin.");
     }
 
-    if (currentRecord.tenantActiveSigner?.employeeId === currentRecord.id && command.role !== "director") {
+    if (
+      currentRecord.tenantActiveSigner?.employeeId === currentRecord.id &&
+      command.role !== "director"
+    ) {
       throw new BadRequestException(
         "No puedes cambiar el rol de un director que es el firmante activo del centro.",
       );
@@ -209,6 +275,12 @@ export class EmpleadosService {
   private ensureCanManage(actor: AuthUser) {
     if (!canManageEmpleados(actor)) {
       throw new ForbiddenException("No tienes permisos para gestionar empleados.");
+    }
+  }
+
+  private ensureCanManagePermissions(actor: AuthUser) {
+    if (actor.role !== "admin" && actor.role !== "super_admin") {
+      throw new ForbiddenException("Solo Admin y SuperAdmin pueden administrar permisos.");
     }
   }
 
@@ -416,12 +488,7 @@ function joinFullName(command: {
   firstSurname: string;
   secondSurname: string | null;
 }): string {
-  return [
-    command.firstName,
-    command.middleName,
-    command.firstSurname,
-    command.secondSurname,
-  ]
+  return [command.firstName, command.middleName, command.firstSurname, command.secondSurname]
     .filter((namePart): namePart is string => namePart !== null && namePart.trim() !== "")
     .join(" ");
 }
@@ -440,12 +507,8 @@ function resolveNameParts(record: EmpleadoRecord) {
   const [firstName = record.fullName, ...rest] = parts;
   const middleName = rest.length > 2 ? rest.slice(0, -2).join(" ") : null;
   const firstSurname =
-    rest.length === 0
-      ? "Sin apellido"
-      : rest.length === 1
-        ? rest[0]
-        : rest[rest.length - 2];
-  const secondSurname = rest.length > 1 ? rest.at(-1) ?? null : null;
+    rest.length === 0 ? "Sin apellido" : rest.length === 1 ? rest[0] : rest[rest.length - 2];
+  const secondSurname = rest.length > 1 ? (rest.at(-1) ?? null) : null;
 
   return {
     firstName,

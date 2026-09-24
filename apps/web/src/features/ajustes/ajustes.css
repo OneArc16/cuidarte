@@ -1,0 +1,318 @@
+.ajustes-page__icon-button {
+  display: inline-grid;
+  width: 38px;
+  height: 38px;
+  min-height: 38px;
+  place-items: center;
+  border: 1px solid rgb(8 80 65 / 16%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 88%);
+  color: var(--color-deep);
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgb(8 80 65 / 7%);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.ajustes-page__icon-button:hover,
+.ajustes-page__icon-button:focus-visible {
+  border-color: rgb(29 158 117 / 42%);
+  background: #eff9f4;
+  color: var(--color-care);
+  transform: translateY(-1px);
+}
+
+.ajustes-page__icon-button svg {
+  width: 19px;
+  height: 19px;
+}
+
+.ajustes-permissions-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(20 39 34 / 42%);
+  backdrop-filter: blur(6px);
+}
+
+.ajustes-permissions-dialog {
+  display: grid;
+  width: min(1040px, calc(100vw - 48px));
+  max-height: min(820px, calc(100dvh - 48px));
+  overflow: hidden;
+  border: 1px solid rgb(8 80 65 / 14%);
+  border-radius: 18px;
+  background: #f9fcfb;
+  box-shadow: 0 28px 70px rgb(20 39 34 / 24%);
+}
+
+.ajustes-permissions-dialog__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 26px 30px 22px;
+  border-bottom: 1px solid #e2ebe7;
+  background: #fff;
+}
+
+.ajustes-permissions-dialog__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #0e5947;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ajustes-permissions-dialog__eyebrow svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ajustes-permissions-dialog__header h2 {
+  margin: 8px 0 4px;
+  color: #1b2c2a;
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+}
+
+.ajustes-permissions-dialog__header p {
+  margin: 0;
+  color: #71817c;
+}
+
+.ajustes-permissions-dialog__close {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  place-items: center;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #687873;
+  cursor: pointer;
+}
+
+.ajustes-permissions-dialog__close:hover,
+.ajustes-permissions-dialog__close:focus-visible {
+  background: #eef6f2;
+  color: #0e5947;
+}
+
+.ajustes-permissions-dialog__close svg {
+  width: 20px;
+  height: 20px;
+}
+
+.ajustes-permissions-dialog__body {
+  display: grid;
+  grid-template-columns: 284px minmax(0, 1fr);
+  min-height: 0;
+  overflow: auto;
+}
+
+.ajustes-permissions-dialog__people {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+  padding: 22px 18px;
+  border-right: 1px solid #e2ebe7;
+  background: #f1f7f4;
+}
+
+.ajustes-permissions-dialog__search {
+  display: grid;
+  gap: 7px;
+}
+
+.ajustes-permissions-dialog__search > span {
+  color: #31584f;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.ajustes-permissions-dialog__search > div {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  min-height: 40px;
+  border: 1px solid #d7e4de;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.ajustes-permissions-dialog__search svg {
+  justify-self: center;
+  width: 17px;
+  height: 17px;
+  color: #5b8b7c;
+}
+
+.ajustes-permissions-dialog__search input {
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 10px 0 0;
+  border: 0;
+  background: transparent;
+  color: #243a35;
+  outline: 0;
+}
+
+.ajustes-permissions-dialog__people-list {
+  display: grid;
+  gap: 5px;
+  max-height: 480px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #c4d3cc transparent;
+}
+
+.ajustes-permissions-dialog__people-list::-webkit-scrollbar {
+  width: 7px;
+}
+
+.ajustes-permissions-dialog__people-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #c4d3cc;
+}
+
+.ajustes-permissions-dialog__person {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: #243a35;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.ajustes-permissions-dialog__person:hover,
+.ajustes-permissions-dialog__person:focus-visible,
+.ajustes-permissions-dialog__person.is-selected {
+  border-color: #c7e2d7;
+  background: #fff;
+}
+
+.ajustes-permissions-dialog__avatar {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid #d6e4de;
+  border-radius: 50%;
+  background: #e5f3ed;
+  color: #0e5947;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.ajustes-permissions-dialog__person strong,
+.ajustes-permissions-dialog__person small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ajustes-permissions-dialog__person strong {
+  font-size: 0.82rem;
+}
+
+.ajustes-permissions-dialog__person small,
+.ajustes-permissions-dialog__muted {
+  color: #71817c;
+  font-size: 0.74rem;
+}
+
+.ajustes-permissions-dialog__muted {
+  margin: 4px 0;
+}
+
+.ajustes-permissions-dialog__editor {
+  min-width: 0;
+  overflow: auto;
+  padding: 0 26px 26px;
+  background: #fff;
+}
+
+.ajustes-permissions-dialog__editor .empleado-permissions-panel {
+  margin: 0;
+  padding: 24px 0 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.ajustes-permissions-dialog__empty {
+  display: grid;
+  min-height: 360px;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  color: #71817c;
+  text-align: center;
+}
+
+.ajustes-permissions-dialog__empty svg {
+  width: 32px;
+  height: 32px;
+  color: #5b8b7c;
+}
+
+.ajustes-permissions-dialog__empty strong {
+  color: #243a35;
+}
+
+.ajustes-permissions-dialog__empty p {
+  max-width: 280px;
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+@media (max-width: 800px) {
+  .ajustes-permissions-dialog-backdrop {
+    padding: 12px;
+  }
+
+  .ajustes-permissions-dialog {
+    width: min(100%, 620px);
+    max-height: calc(100dvh - 24px);
+  }
+
+  .ajustes-permissions-dialog__body {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .ajustes-permissions-dialog__people {
+    border-right: 0;
+    border-bottom: 1px solid #e2ebe7;
+  }
+
+  .ajustes-permissions-dialog__people-list {
+    max-height: 210px;
+  }
+
+  .ajustes-permissions-dialog__editor {
+    overflow: visible;
+    padding: 0 18px 18px;
+  }
+}

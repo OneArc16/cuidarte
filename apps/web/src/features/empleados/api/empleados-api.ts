@@ -6,6 +6,10 @@ import {
   type SetTenantActiveSignerRequest,
   type TenantActiveSignerResponse,
   type UpdateEmpleadoRequest,
+  type EmpleadoPermissionsResponse,
+  type UpdateEmpleadoPermissionsRequest,
+  empleadoPermissionsResponseSchema,
+  updateEmpleadoPermissionsRequestSchema,
   empleadoDetailResponseSchema,
   empleadoListResponseSchema,
   empleadoTenantOptionsResponseSchema,
@@ -25,7 +29,10 @@ export function listEmpleados(params: ListEmpleadosParams): Promise<EmpleadoList
 }
 
 export function listEmpleadoTenantOptions(): Promise<EmpleadoTenantOptionsResponse> {
-  return fetchJson(`${getApiBaseUrl()}/empleados/tenant-options`, empleadoTenantOptionsResponseSchema);
+  return fetchJson(
+    `${getApiBaseUrl()}/empleados/tenant-options`,
+    empleadoTenantOptionsResponseSchema,
+  );
 }
 
 export function getEmpleado(empleadoId: string): Promise<EmpleadoDetailResponse> {
@@ -37,6 +44,27 @@ export function createEmpleado(request: CreateEmpleadoRequest): Promise<Empleado
     method: "POST",
     body: request,
   });
+}
+
+export function getEmpleadoPermissions(empleadoId: string): Promise<EmpleadoPermissionsResponse> {
+  return fetchJson(
+    getApiBaseUrl() + "/empleados/" + empleadoId + "/permissions",
+    empleadoPermissionsResponseSchema,
+  );
+}
+
+export function updateEmpleadoPermissions(
+  empleadoId: string,
+  request: UpdateEmpleadoPermissionsRequest,
+): Promise<EmpleadoPermissionsResponse> {
+  return fetchJson(
+    getApiBaseUrl() + "/empleados/" + empleadoId + "/permissions",
+    empleadoPermissionsResponseSchema,
+    {
+      method: "PUT",
+      body: updateEmpleadoPermissionsRequestSchema.parse(request),
+    },
+  );
 }
 
 export function updateEmpleado(
@@ -56,10 +84,14 @@ export async function uploadEmpleadoSignature(
   const formData = new FormData();
   formData.set("signature", await toMultipartBlob(file), file.name);
 
-  return fetchJson(`${getApiBaseUrl()}/empleados/${empleadoId}/signature`, empleadoDetailResponseSchema, {
-    method: "POST",
-    body: formData,
-  });
+  return fetchJson(
+    `${getApiBaseUrl()}/empleados/${empleadoId}/signature`,
+    empleadoDetailResponseSchema,
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
 }
 
 export function getTenantActiveSigner(tenantId: string): Promise<TenantActiveSignerResponse> {

@@ -1,11 +1,14 @@
 import {
   type ActividadGrupalTipo,
+  type ActividadGrupalTipoCreatorOption,
   type ActividadGrupalTiposListQuery,
   type AuthUser,
   type CreateActividadGrupalTipoRequest,
   type UpdateActividadGrupalTipoRequest,
   type UpdateActividadGrupalTipoStatusRequest,
   type UpdateActividadGrupalTipoConsecutiveConfigRequest,
+  type UpdateActividadGrupalTipoGlobalConsecutiveConfigRequest,
+  actividadGrupalTipoCreatorOptionSchema,
   actividadGrupalTipoSchema,
 } from "@cuidarte/contracts";
 import {
@@ -131,21 +134,111 @@ export class ActividadGrupalTiposService {
     actor: AuthUser,
   ): Promise<ActividadGrupalTipo> {
     const current = await this.findAccessibleOrThrow(id, actor);
-    const prefix = command.prefix.trim().toUpperCase();
+    const enabled = command.enabled;
+    const prefix = enabled ? (command.prefix?.trim().toUpperCase() ?? "") : null;
 
-    if (!/^[A-Z0-9]{2,24}$/.test(prefix)) {
+    if (enabled && !/^[A-Z0-9]{2,24}$/.test(prefix ?? "")) {
       throw new BadRequestException("El prefijo solo puede incluir letras y números.");
+    }
+
+    const creatorUserIds = enabled ? [...new Set(command.creatorUserIds)] : [];
+    const creatorOptions = enabled
+      ? await this.actividadGrupalTiposRepository.findCreatorOptions(current.tenantId)
+      : [];
+    const allowedCreatorIds = new Set(creatorOptions.map((creator) => creator.id));
+
+    if (
+      enabled &&
+      (creatorUserIds.length === 0 ||
+        creatorUserIds.some((userId) => !allowedCreatorIds.has(userId)))
+    ) {
+      throw new BadRequestException("Selecciona personas activas del centro.");
     }
 
     const record = await this.actividadGrupalTiposRepository.updateConsecutiveConfig({
       id: current.id,
       actorUserId: actor.id,
       prefix,
-      nextValue: command.nextValue,
-      creatorRoles: command.creatorRoles,
+      nextValue: enabled ? (command.nextValue ?? null) : null,
+      creatorUserIds,
     });
 
     return this.toResponse(record);
+  }
+
+  async updateGlobalConsecutiveConfig(
+    command: UpdateActividadGrupalTipoGlobalConsecutiveConfigRequest,
+    actor: AuthUser,
+  ): Promise<ActividadGrupalTipo[]> {
+    if (actor.role !== "super_admin") {
+      throw new ForbiddenException(
+        "Solo un super administrador puede configurar una actividad en todos los centros.",
+      );
+    }
+
+    const activityTypeIds = [...new Set(command.activityTypeIds)];
+    const activityTypes = await Promise.all(
+      activityTypeIds.map(async (id) => {
+        const record = await this.actividadGrupalTiposRepository.findById(id);
+
+        if (record === null) {
+          throw new NotFoundException("La actividad configurada no fue encontrada.");
+        }
+
+        return record;
+      }),
+    );
+    const normalizedNames = new Set(
+      activityTypes.map((activityType) => activityType.normalizedName),
+    );
+
+    if (normalizedNames.size !== 1) {
+      throw new BadRequestException("Selecciona la misma actividad en todos los centros.");
+    }
+
+    const prefix = command.enabled ? (command.prefix?.trim().toUpperCase() ?? "") : null;
+
+    if (command.enabled && !/^[A-Z0-9]{2,24}$/.test(prefix ?? "")) {
+      throw new BadRequestException("El prefijo solo puede incluir letras y números.");
+    }
+
+    const records = await Promise.all(
+      activityTypes.map(async (activityType) => {
+        const creatorUserIds = command.enabled
+          ? activityType.consecutiveCreatorUserIds.length > 0
+            ? activityType.consecutiveCreatorUserIds
+            : (
+                await this.actividadGrupalTiposRepository.findCreatorOptions(activityType.tenantId)
+              ).map((creator) => creator.id)
+          : [];
+
+        if (command.enabled && creatorUserIds.length === 0) {
+          throw new BadRequestException(
+            "Cada centro debe tener al menos una persona activa para esta actividad.",
+          );
+        }
+
+        return await this.actividadGrupalTiposRepository.updateConsecutiveConfig({
+          id: activityType.id,
+          actorUserId: actor.id,
+          prefix,
+          nextValue: command.enabled ? (activityType.consecutiveNextValue ?? 1) : null,
+          creatorUserIds,
+        });
+      }),
+    );
+
+    return records.map((record) => this.toResponse(record));
+  }
+
+  async listCreatorOptions(
+    id: string,
+    actor: AuthUser,
+  ): Promise<ActividadGrupalTipoCreatorOption[]> {
+    const current = await this.findAccessibleOrThrow(id, actor);
+    const records = await this.actividadGrupalTiposRepository.findCreatorOptions(current.tenantId);
+
+    return records.map((record) => actividadGrupalTipoCreatorOptionSchema.parse(record));
   }
 
   async listForSessionForm(tenantId: string): Promise<ActividadGrupalTipo[]> {
@@ -255,7 +348,7 @@ export class ActividadGrupalTiposService {
           : {
               prefix: record.consecutivePrefix,
               nextValue: record.consecutiveNextValue,
-              creatorRoles: record.consecutiveCreatorRoles,
+              creatorUserIds: record.consecutiveCreatorUserIds,
             },
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),

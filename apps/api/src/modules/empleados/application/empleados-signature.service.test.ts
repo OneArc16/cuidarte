@@ -5,10 +5,7 @@ import { type AuthUser } from "@cuidarte/contracts";
 import { NotFoundException } from "@nestjs/common";
 
 import { EmpleadoSignatureStoredFileNotFoundError } from "../domain/empleados-signature-files.storage";
-import {
-  type EmpleadoRecord,
-  type EmpleadoSignatureVersionRecord,
-} from "../domain/empleado.types";
+import { type EmpleadoRecord, type EmpleadoSignatureVersionRecord } from "../domain/empleado.types";
 import { EmpleadosSignatureService } from "./empleados-signature.service";
 
 const tenantId = "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054";
@@ -91,7 +88,10 @@ describe("EmpleadosSignatureService", () => {
       relativePath: `${tenantId}/${employeeId}/firma.jpeg`,
       uploadedByUserId: actor.id,
     });
-    assert.equal((createdAudit as { action?: string } | undefined)?.action, "empleados.signature_uploaded");
+    assert.equal(
+      (createdAudit as { action?: string } | undefined)?.action,
+      "empleados.signature_uploaded",
+    );
   });
 
   it("activates the selected director signature for the tenant", async () => {
@@ -144,7 +144,10 @@ describe("EmpleadosSignatureService", () => {
       signatureVersionId,
       activatedByUserId: actor.id,
     });
-    assert.equal((receivedAudit as { action?: string } | undefined)?.action, "empleados.active_signer_updated");
+    assert.equal(
+      (receivedAudit as { action?: string } | undefined)?.action,
+      "empleados.active_signer_updated",
+    );
   });
 
   it("clears the active signer for a tenant", async () => {
@@ -176,7 +179,10 @@ describe("EmpleadosSignatureService", () => {
       tenantId,
       deactivatedByUserId: actor.id,
     });
-    assert.equal((receivedAudit as { action?: string } | undefined)?.action, "empleados.active_signer_cleared");
+    assert.equal(
+      (receivedAudit as { action?: string } | undefined)?.action,
+      "empleados.active_signer_cleared",
+    );
   });
 
   it("resolves the active signer signature for a tenant", async () => {
