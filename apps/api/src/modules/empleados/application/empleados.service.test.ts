@@ -451,6 +451,10 @@ function createRepository(
     async findTenantOptions() {
       return [{ id: tenantId, name: "Centro de Vida Demo" }];
     },
+    async findPermissionsByUserId() {
+      return [];
+    },
+    async replacePermissions() {},
     async findLatestSignatureVersionByEmployeeId() {
       return null;
     },
@@ -542,6 +546,9 @@ function createRepository(
     },
     async setTenantActiveSigner() {
       throw new Error("No implementado para esta prueba.");
+    },
+    async clearTenantActiveSigner() {
+      return null;
     },
   } satisfies EmpleadosRepository & {
     queries: FindEmpleadosQuery[];

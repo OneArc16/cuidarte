@@ -201,6 +201,7 @@ describe("AlimentacionService", () => {
           {
             search: "Rosa",
             deliveryDate: "2026-04-24",
+            limit: "all",
             tenantId: null,
           },
           superAdminUser,
@@ -217,6 +218,7 @@ describe("AlimentacionService", () => {
       {
         search: "1020304050",
         deliveryDate: "2026-04-24",
+        limit: "all",
         tenantId: null,
       },
       adminUser,
@@ -228,6 +230,7 @@ describe("AlimentacionService", () => {
       tenantId,
       deliveryDate: "2026-04-24",
       search: "1020304050",
+      limit: "all",
     });
   });
 

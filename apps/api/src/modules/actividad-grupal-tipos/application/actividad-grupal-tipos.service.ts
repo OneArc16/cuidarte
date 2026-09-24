@@ -246,13 +246,23 @@ export class ActividadGrupalTiposService {
     return records.map((record) => actividadGrupalTipoCreatorOptionSchema.parse(record));
   }
 
-  async listForSessionForm(tenantId: string): Promise<ActividadGrupalTipo[]> {
+  async listForSessionForm(
+    tenantId: string,
+    actor: Pick<AuthUser, "id">,
+  ): Promise<ActividadGrupalTipo[]> {
     const records = await this.actividadGrupalTiposRepository.findMany({
       tenantId,
       includeInactive: false,
     });
 
-    return records.map((record) => this.toResponse(record));
+    return records
+      .filter(
+        (record) =>
+          record.consecutivePrefix === null ||
+          record.consecutiveNextValue === null ||
+          record.consecutiveCreatorUserIds.includes(actor.id),
+      )
+      .map((record) => this.toResponse(record));
   }
 
   async resolveForSessionCreate(

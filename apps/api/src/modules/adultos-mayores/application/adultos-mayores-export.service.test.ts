@@ -42,7 +42,7 @@ describe("AdultosMayoresExportService", () => {
 function buildListItem(overrides: Partial<AdultoMayorListItem> = {}): AdultoMayorListItem {
   return {
     id: "0b17e370-8f81-48c0-b707-c7046f497855",
-    tenantId: actor.tenantId,
+    tenantId: "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054",
     tenantName: "Centro Demo",
     documentType: "cc",
     documentNumber: "1020304050",

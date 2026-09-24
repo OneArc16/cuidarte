@@ -68,7 +68,10 @@ export function ActividadGrupalForm({
   const organizerValue = watch("organizer");
   const isTenantSelected = !shouldSelectTenant || selectedTenantId.trim() !== "";
   const availableEmployees = useMemo(
-    () => (formOptions?.empleados ?? []).filter((employee) => !EXCLUDED_SESSION_EMPLOYEE_ROLES.has(employee.role)),
+    () =>
+      (formOptions?.empleados ?? []).filter(
+        (employee) => !EXCLUDED_SESSION_EMPLOYEE_ROLES.has(employee.role),
+      ),
     [formOptions?.empleados],
   );
   const activityTypeOptions = useMemo(() => {
@@ -286,12 +289,18 @@ export function ActividadGrupalForm({
                 {...form.register("activityTypeId")}
               >
                 <option value="">Seleccionar</option>
-                {activityTypeOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.name}
-                    {option.isActive ? "" : " (Inactiva)"}
+                {activityTypeOptions.length === 0 ? (
+                  <option value="" disabled>
+                    No hay tipos disponibles para tu usuario
                   </option>
-                ))}
+                ) : (
+                  activityTypeOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                      {option.isActive ? "" : " (Inactiva)"}
+                    </option>
+                  ))
+                )}
               </select>
             </ActividadGrupalFieldGroup>
 
@@ -358,7 +367,12 @@ export function ActividadGrupalForm({
             <button
               className="outline-action actividad-empleados-select-all"
               type="button"
-              disabled={!isTenantSelected || isFormOptionsLoading || availableEmployees.length === 0 || availableEmployees.every((employee) => employeeIds.includes(employee.id))}
+              disabled={
+                !isTenantSelected ||
+                isFormOptionsLoading ||
+                availableEmployees.length === 0 ||
+                availableEmployees.every((employee) => employeeIds.includes(employee.id))
+              }
               onClick={selectAllEmployees}
             >
               Agregar todos
@@ -417,7 +431,6 @@ export function ActividadGrupalForm({
             })}
           </div>
         )}
-
       </section>
 
       {error !== null ? (

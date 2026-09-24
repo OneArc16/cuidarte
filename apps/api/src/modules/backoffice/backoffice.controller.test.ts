@@ -16,13 +16,13 @@ const currentUser: AuthUser = {
 };
 
 const tenantId = "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054";
-const departmentId = "11111111-1111-1111-1111-111111111111";
-const municipalityId = "22222222-2222-2222-2222-222222222222";
+const departmentId = "11111111-1111-4111-8111-111111111111";
+const municipalityId = "22222222-2222-4222-8222-222222222222";
 
 describe("BackofficeController", () => {
   it("envia los IDs de ubicacion validados al crear un tenant", async () => {
     const service = createBackofficeService();
-    const controller = new BackofficeController(service as never, {} as never);
+    const controller = new BackofficeController(service as never, {} as never, {} as never);
     const body = createCommandBody();
 
     await controller.createTenant(body, { currentUser } as never);
@@ -44,7 +44,7 @@ describe("BackofficeController", () => {
 
   it("rechaza comandos que no incluyen los IDs de ubicacion", async () => {
     const service = createBackofficeService();
-    const controller = new BackofficeController(service as never, {} as never);
+    const controller = new BackofficeController(service as never, {} as never, {} as never);
     const body = createCommandBody();
 
     await assert.rejects(

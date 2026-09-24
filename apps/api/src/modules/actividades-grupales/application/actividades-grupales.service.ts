@@ -182,7 +182,7 @@ export class ActividadesGrupalesService {
     const tenantId = this.resolveTenantIdForForm(actor, query.tenantId);
     const [empleados, activityTypes] = await Promise.all([
       this.actividadesGrupalesRepository.findActiveEmpleadoOptions(tenantId),
-      this.actividadGrupalTiposService.listForSessionForm(tenantId),
+      this.actividadGrupalTiposService.listForSessionForm(tenantId, actor),
     ]);
 
     return {
