@@ -148,6 +148,21 @@ describe("DrizzleActividadesGrupalesRepository correction planning", () => {
     );
   });
 
+  it("allows the same sequence in separate activity series", () => {
+    const activeRows = [
+      { ...active("activity-001", "SALU-001", 1), actaSeriesKey: "activity-type:health" },
+      active("legacy-001", "MED-001", 1, "director"),
+    ];
+
+    assert.doesNotThrow(() =>
+      assertCorrectionFinalStateIsUnique(
+        activeRows,
+        [target("activity-001", "SALU-001", 1)],
+        "activity-type:health",
+      ),
+    );
+  });
+
   it("rejects a final acta-number collision with an active acta outside the organizer filter", () => {
     const activeRows = [
       active("psico-003", "PSICO-003", 3),

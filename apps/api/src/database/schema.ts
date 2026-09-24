@@ -753,7 +753,9 @@ export const actividadGrupalGlobalSeries = pgTable(
     id: integer("id").primaryKey().default(1),
     enabled: boolean("enabled").notNull().default(false),
     prefix: varchar("prefix", { length: 24 }),
-    updatedByUserId: uuid("updated_by_user_id").references(() => users.id, { onDelete: "set null" }),
+    updatedByUserId: uuid("updated_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -861,11 +863,11 @@ export const actividadesGrupales = pgTable(
       .on(table.tenantId, table.actaNumber)
       .where(sql`${table.deletedAt} is null`),
     uniqueIndex("actividades_grupales_tenant_acta_series_unique")
-      .on(table.tenantId, table.actaOrganizer, table.actaSequence)
+      .on(table.tenantId, table.actaSeriesKey, table.actaSequence)
       .where(sql`${table.deletedAt} is null`),
-    index("actividades_grupales_tenant_acta_series_idx").on(
+    index("actividades_grupales_tenant_acta_series_key_idx").on(
       table.tenantId,
-      table.actaOrganizer,
+      table.actaSeriesKey,
       table.actaSequence,
     ),
     check("actividades_grupales_acta_sequence_positive", sql`${table.actaSequence} > 0`),

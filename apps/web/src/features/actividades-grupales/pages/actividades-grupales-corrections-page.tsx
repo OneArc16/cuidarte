@@ -1,11 +1,20 @@
 import {
   type ActividadGrupalActaCorrectionPreviewResponse,
-  type ActividadGrupalOrganizer,
   type ActividadGrupalTipo,
   type AuthUser,
 } from "@cuidarte/contracts";
-import { ChevronLeft, LoaderCircle, RefreshCw, ShieldAlert } from "lucide-react";
-import { useState } from "react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  ChevronLeft,
+  Clock3,
+  LoaderCircle,
+  RefreshCw,
+  ShieldCheck,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
@@ -18,55 +27,117 @@ import { CREACION_ACTIVIDADES_PATH } from "../lib/actividades-grupales-paths";
 import { useActividadGrupalTiposQuery } from "@/features/actividad-grupal-tipos/model/actividad-grupal-tipos-queries";
 import {
   useActividadGrupalTenantOptionsQuery,
-  useApplyActividadGrupalActaCorrectionMutation,
   useApplyActividadGrupalActaPrefixCorrectionMutation,
   usePreviewActividadGrupalActaPrefixCorrectionMutation,
-  usePreviewActividadGrupalActaCorrectionMutation,
 } from "../model/actividades-grupales-queries";
 
 type Props = { navigate: Navigate; user: AuthUser };
+type PreviewRow = ActividadGrupalActaCorrectionPreviewResponse["rows"][number];
 
-const ACTA_SERIES_OPTIONS: readonly { value: ActividadGrupalOrganizer; label: string }[] = [
-  { value: "director", label: "DIREC — Director" },
-  { value: "medico", label: "SALUD — Médico y Enfermería" },
-  { value: "psicologa", label: "PSICO — Psicología y Trabajo Social" },
-  { value: "nutricionista", label: "NUTRI — Nutrición" },
-  { value: "fisioterapeuta", label: "FISIO — Fisioterapia" },
-  { value: "recreacionista", label: "RECRE — Recreación" },
-];
+const activityDateFormatter = new Intl.DateTimeFormat("es-CO", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+});
+const activityWeekdayFormatter = new Intl.DateTimeFormat("es-CO", { weekday: "long" });
+
+function formatActivityDate(value: string) {
+  const date = new Date(value + "T12:00:00");
+  return {
+    date: activityDateFormatter.format(date).replace(".", ""),
+    weekday: activityWeekdayFormatter.format(date),
+  };
+}
+
+function resolveScheduleWarningIds(rows: readonly PreviewRow[]) {
+  const warningIds = new Set<string>();
+
+  for (let index = 0; index < rows.length; index += 1) {
+    const current = rows[index];
+    if (current === undefined) continue;
+
+    for (let nextIndex = index + 1; nextIndex < rows.length; nextIndex += 1) {
+      const next = rows[nextIndex];
+      if (next === undefined || next.activityDate !== current.activityDate) continue;
+      if (next.startTime >= current.endTime) break;
+
+      if (current.startTime < next.endTime && next.startTime < current.endTime) {
+        warningIds.add(current.activityId);
+        warningIds.add(next.activityId);
+      }
+    }
+  }
+
+  return warningIds;
+}
+
+function formatRemainingTime(expiresAt: string, now: number) {
+  const remainingSeconds = Math.max(0, Math.ceil((Date.parse(expiresAt) - now) / 1000));
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = String(remainingSeconds % 60).padStart(2, "0");
+  return minutes + ":" + seconds;
+}
 
 export function ActividadesGrupalesCorrectionsPage({ navigate, user }: Props) {
   const [tenantId, setTenantId] = useState("");
-  const [seriesOrganizer, setSeriesOrganizer] = useState<ActividadGrupalOrganizer | null>(null);
-  const [reason, setReason] = useState("Normalizacion inicial de consecutivos por serie");
-  const [preview, setPreview] = useState<ActividadGrupalActaCorrectionPreviewResponse | null>(null);
-  const [prefixPreview, setPrefixPreview] = useState<ActividadGrupalActaCorrectionPreviewResponse | null>(null);
-  const [prefixActivityTypeId, setPrefixActivityTypeId] = useState("");
+  const [activityTypeId, setActivityTypeId] = useState("");
   const [targetPrefix, setTargetPrefix] = useState("");
+  const [reason, setReason] = useState("");
+  const [isReasonDialogOpen, setIsReasonDialogOpen] = useState(false);
+  const [preview, setPreview] = useState<ActividadGrupalActaCorrectionPreviewResponse | null>(null);
+  const [previewCreatedAt, setPreviewCreatedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const tenantOptionsQuery = useActividadGrupalTenantOptionsQuery(user.role === "super_admin");
-  const previewMutation = usePreviewActividadGrupalActaCorrectionMutation();
-  const applyMutation = useApplyActividadGrupalActaCorrectionMutation();
-  const prefixPreviewMutation = usePreviewActividadGrupalActaPrefixCorrectionMutation();
-  const prefixApplyMutation = useApplyActividadGrupalActaPrefixCorrectionMutation();
+  const previewMutation = usePreviewActividadGrupalActaPrefixCorrectionMutation();
+  const applyMutation = useApplyActividadGrupalActaPrefixCorrectionMutation();
   const activityTypesQuery = useActividadGrupalTiposQuery(
     { tenantId: tenantId === "" ? null : tenantId, includeInactive: false },
     tenantId !== "",
   );
-  const specialActivityTypes = (activityTypesQuery.data?.activityTypes ?? []).filter(
-    (activityType) => activityType.consecutiveConfig !== null,
+  const activityTypes = activityTypesQuery.data?.activityTypes ?? [];
+  const selectedActivityType = activityTypes.find(
+    (activityType) => activityType.id === activityTypeId,
   );
-  const canApply = preview !== null && reason.trim().length > 0;
+  const warningIds = useMemo(
+    () => (preview === null ? new Set<string>() : resolveScheduleWarningIds(preview.rows)),
+    [preview],
+  );
+  const canPreview =
+    tenantId !== "" &&
+    activityTypeId !== "" &&
+    /^[A-Z0-9]{2,24}$/.test(targetPrefix) &&
+    !previewMutation.isPending &&
+    !applyMutation.isPending;
+  const currentPrefix = selectedActivityType?.consecutiveConfig?.prefix ?? "Serie general";
+  const selectedTenant = tenantOptionsQuery.data?.tenants.find((tenant) => tenant.id === tenantId);
+  const selectedTenantName = selectedTenant?.name ?? "el centro seleccionado";
+  const selectedActivityName = selectedActivityType?.name ?? "la actividad seleccionada";
+  const previewTimeLabel =
+    previewCreatedAt === null
+      ? ""
+      : new Intl.DateTimeFormat("es-CO", { hour: "2-digit", minute: "2-digit" }).format(
+          previewCreatedAt,
+        );
+
+  useEffect(() => {
+    if (preview === null) return;
+    const intervalId = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, [preview]);
 
   function loadPreview() {
-    if (tenantId === "") {
-      toast.error("Selecciona un centro.");
+    if (!canPreview) {
+      toast.error("Selecciona un centro, una actividad y un prefijo válido.");
       return;
     }
 
     previewMutation.mutate(
-      { tenantId, organizer: seriesOrganizer },
+      { tenantId, activityTypeId, prefix: targetPrefix },
       {
-        onSuccess: setPreview,
+        onSuccess: (result) => {
+          setPreview(result);
+          setPreviewCreatedAt(Date.now());
+        },
         onError: (error) =>
           toast.error(
             resolveActividadesGrupalesApiError(error) ?? "No fue posible generar la vista previa.",
@@ -75,54 +146,23 @@ export function ActividadesGrupalesCorrectionsPage({ navigate, user }: Props) {
     );
   }
 
-  function applyCorrection() {
-    if (!canApply || preview === null) return;
+  function openReasonDialog() {
+    setReason("");
+    setIsReasonDialogOpen(true);
+  }
+
+  function applyNormalization() {
+    if (preview === null || reason.trim() === "") return;
 
     applyMutation.mutate(
       { operationToken: preview.operationToken, reason: reason.trim() },
       {
         onSuccess: (result) => {
-          toast.success(`${result.changedCount} actas corregidas correctamente.`);
+          toast.success(result.changedCount + " actas normalizadas correctamente.");
           setPreview(null);
-        },
-        onError: (error) =>
-          toast.error(
-            resolveActividadesGrupalesApiError(error) ?? "La vista previa ya no esta vigente.",
-          ),
-      },
-    );
-  }
-
-  function loadPrefixPreview() {
-    if (tenantId === "" || prefixActivityTypeId === "") {
-      toast.error("Selecciona un centro y una actividad especial.");
-      return;
-    }
-
-    prefixPreviewMutation.mutate(
-      { tenantId, activityTypeId: prefixActivityTypeId, prefix: targetPrefix },
-      {
-        onSuccess: (result) => {
-          setPreview(null);
-          setPrefixPreview(result);
-        },
-        onError: (error) =>
-          toast.error(
-            resolveActividadesGrupalesApiError(error) ?? "No fue posible generar la vista previa.",
-          ),
-      },
-    );
-  }
-
-  function applyPrefixCorrection() {
-    if (prefixPreview === null || reason.trim() === "") return;
-
-    prefixApplyMutation.mutate(
-      { operationToken: prefixPreview.operationToken, reason: reason.trim() },
-      {
-        onSuccess: (result) => {
-          toast.success(`${result.changedCount} actas migradas al nuevo prefijo.`);
-          setPrefixPreview(null);
+          setPreviewCreatedAt(null);
+          setIsReasonDialogOpen(false);
+          setReason("");
         },
         onError: (error) =>
           toast.error(
@@ -131,33 +171,34 @@ export function ActividadesGrupalesCorrectionsPage({ navigate, user }: Props) {
       },
     );
   }
+
   return (
-
-
     <section className="actividades-corrections" aria-label="Normalizar consecutivos de actas">
-      <div className="actividades-form-nav">
+      <div className="actividades-corrections__toolbar">
         <button
-          className="outline-action actividades-back-action"
+          className="actividades-corrections__back"
           type="button"
           onClick={() => navigate(CREACION_ACTIVIDADES_PATH)}
         >
           <ChevronLeft aria-hidden="true" />
-          <span>Volver</span>
+          Corrección administrativa
         </button>
-        <span className="actividades-form-nav__context">Correccion administrativa</span>
       </div>
 
-      <section className="actividades-corrections__controls" aria-label="Parametros de correccion">
-        <label className="actividades-corrections__tenant-field">
+      <section
+        className="actividades-corrections__filters"
+        aria-label="Parámetros de normalización"
+      >
+        <label className="actividades-corrections__field">
           <span>Centro</span>
           <select
             value={tenantId}
             onChange={(event) => {
               setTenantId(event.target.value);
-              setPreview(null);
-              setPrefixPreview(null);
-              setPrefixActivityTypeId("");
+              setActivityTypeId("");
               setTargetPrefix("");
+              setPreview(null);
+              setPreviewCreatedAt(null);
             }}
             disabled={
               tenantOptionsQuery.isLoading || previewMutation.isPending || applyMutation.isPending
@@ -171,225 +212,272 @@ export function ActividadesGrupalesCorrectionsPage({ navigate, user }: Props) {
             ))}
           </select>
         </label>
-        <label className="actividades-corrections__tenant-field">
-          <span>Serie de consecutivos</span>
+
+        <label className="actividades-corrections__field">
+          <span>Actividad</span>
           <select
-            value={seriesOrganizer ?? ""}
+            value={activityTypeId}
             onChange={(event) => {
-              const value = event.target.value;
-              setSeriesOrganizer(value === "" ? null : (value as ActividadGrupalOrganizer));
+              const nextActivityTypeId = event.target.value;
+              setActivityTypeId(nextActivityTypeId);
+              const activityType = activityTypes.find((item) => item.id === nextActivityTypeId);
+              setTargetPrefix(activityType?.consecutiveConfig?.prefix ?? "");
               setPreview(null);
+              setPreviewCreatedAt(null);
             }}
             disabled={
-              tenantOptionsQuery.isLoading || previewMutation.isPending || applyMutation.isPending
+              tenantId === "" ||
+              activityTypesQuery.isLoading ||
+              previewMutation.isPending ||
+              applyMutation.isPending
             }
           >
-            <option value="">Todas las series</option>
-            {ACTA_SERIES_OPTIONS.map((series) => (
-              <option key={series.value} value={series.value}>
-                {series.label}
+            <option value="">Seleccionar actividad</option>
+            {activityTypes.map((activityType: ActividadGrupalTipo) => (
+              <option key={activityType.id} value={activityType.id}>
+                {activityType.name} · {activityType.consecutiveConfig?.prefix ?? "Serie general"}
               </option>
             ))}
           </select>
+          <small>
+            Prefijo actual {currentPrefix}
+            {preview === null ? "" : " · " + preview.totalCount + " sesiones"}
+          </small>
         </label>
-        <button
-          className="outline-action actividades-corrections__preview-action"
-          type="button"
-          aria-label="Generar vista previa"
-          data-tooltip="Generar vista previa"
-          onClick={loadPreview}
-          disabled={tenantId === "" || previewMutation.isPending || applyMutation.isPending}
-        >
-          {previewMutation.isPending ? (
-            <LoaderCircle className="actividad-delete-dialog__spinner" aria-hidden="true" />
-          ) : (
-            <RefreshCw aria-hidden="true" />
-          )}
-        </button>
-      </section>
 
-      <section className="actividades-corrections__prefix-migration" aria-label="Migrar prefijo histórico">
-        <div>
-          <span className="eyebrow">Serie especial</span>
-          <h2>Migrar prefijo histórico</h2>
-          <p>Conserva el consecutivo y actualiza las actas diligenciadas al nuevo prefijo.</p>
-        </div>
-        <div className="actividades-corrections__controls">
-          <label className="actividades-corrections__tenant-field">
-            <span>Actividad especial</span>
-            <select
-              value={prefixActivityTypeId}
-              onChange={(event) => {
-                const activityTypeId = event.target.value;
-                setPrefixActivityTypeId(activityTypeId);
-                const activityType = specialActivityTypes.find((item) => item.id === activityTypeId);
-                setTargetPrefix(activityType?.consecutiveConfig?.prefix ?? "");
-                setPrefixPreview(null);
-              }}
-              disabled={tenantId === "" || activityTypesQuery.isLoading || prefixPreviewMutation.isPending || prefixApplyMutation.isPending}
-            >
-              <option value="">Seleccionar actividad</option>
-              {specialActivityTypes.map((activityType: ActividadGrupalTipo) => (
-                <option key={activityType.id} value={activityType.id}>
-                  {activityType.name} · {activityType.consecutiveConfig?.prefix}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="actividades-corrections__tenant-field">
+        <label className="actividades-corrections__field">
+          <span className="actividades-corrections__field-label">
             <span>Nuevo prefijo</span>
-            <input
-              value={targetPrefix}
-              maxLength={24}
-              placeholder="NUEVO"
-              onChange={(event) => {
-                setTargetPrefix(event.target.value.toUpperCase());
-                setPrefixPreview(null);
-              }}
-              disabled={prefixActivityTypeId === "" || prefixPreviewMutation.isPending || prefixApplyMutation.isPending}
-            />
-          </label>
-          <button
-            className="outline-action actividades-corrections__preview-action"
-            type="button"
-            aria-label="Vista previa de migración de prefijo"
-            data-tooltip="Vista previa de prefijo"
-            onClick={loadPrefixPreview}
-            disabled={
-              tenantId === "" ||
-              prefixActivityTypeId === "" ||
-              !/^[A-Z0-9]{2,24}$/.test(targetPrefix) ||
-              prefixPreviewMutation.isPending ||
-              prefixApplyMutation.isPending
-            }
-          >
-            {prefixPreviewMutation.isPending ? (
-              <LoaderCircle className="actividad-delete-dialog__spinner" aria-hidden="true" />
-            ) : (
-              <RefreshCw aria-hidden="true" />
-            )}
-          </button>
-        </div>
+            <strong className={/^[A-Z0-9]{2,24}$/.test(targetPrefix) ? "is-valid" : ""}>
+              {/^[A-Z0-9]{2,24}$/.test(targetPrefix) ? <CheckCircle2 aria-hidden="true" /> : null}
+              {/^[A-Z0-9]{2,24}$/.test(targetPrefix) ? "Válido" : ""}
+            </strong>
+          </span>
+          <input
+            value={targetPrefix}
+            maxLength={24}
+            placeholder="Ej. SALUD"
+            onChange={(event) => {
+              setTargetPrefix(event.target.value.toUpperCase());
+              setPreview(null);
+              setPreviewCreatedAt(null);
+            }}
+            disabled={activityTypeId === "" || previewMutation.isPending || applyMutation.isPending}
+            aria-invalid={targetPrefix !== "" && !/^[A-Z0-9]{2,24}$/.test(targetPrefix)}
+          />
+          <small>Mayúsculas y números</small>
+        </label>
       </section>
-
-      {prefixPreview !== null ? (
-        <section className="actividades-corrections__preview" aria-live="polite">
-          <div className="actividades-corrections__summary">
-            <div><strong>{prefixPreview.totalCount}</strong><span>Total</span></div>
-            <div><strong>{prefixPreview.changedCount}</strong><span>Migrarán</span></div>
-            <div><strong>{prefixPreview.unchangedCount}</strong><span>Sin cambios</span></div>
-          </div>
-          <p className="actividades-corrections__notice">
-            <ShieldAlert aria-hidden="true" /> Confirma cada cambio. El número anterior quedará en el historial y esta vista previa vence en 15 minutos.
-          </p>
-          <div className="actividades-table-wrap">
-            <table className="actividades-table actividades-corrections__table">
-              <thead><tr><th>Fecha</th><th>Actual</th><th>Nuevo</th></tr></thead>
-              <tbody>
-                {prefixPreview.rows.map((row) => (
-                  <tr key={row.activityId}>
-                    <td>{row.activityDate}</td>
-                    <td>{row.currentActaNumber}</td>
-                    <td><strong>{row.proposedActaNumber}</strong></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="actividades-corrections__apply">
-            <label>
-              Motivo de la migración
-              <input value={reason} maxLength={500} onChange={(event) => setReason(event.target.value)} />
-            </label>
-            <button
-              className="outline-action actividades-corrections__apply-action"
-              type="button"
-              onClick={applyPrefixCorrection}
-              disabled={reason.trim() === "" || prefixApplyMutation.isPending}
-            >
-              {prefixApplyMutation.isPending ? <LoaderCircle className="actividad-delete-dialog__spinner" aria-hidden="true" /> : null}
-              Migrar prefijo
-            </button>
-          </div>
-        </section>
-      ) : null}
 
       {preview !== null ? (
-        <section className="actividades-corrections__preview" aria-live="polite">
+        <section className="actividades-corrections__preview-card" aria-live="polite">
+          <header className="actividades-corrections__preview-header">
+            <div>
+              <h1>Vista previa</h1>
+              <p>Generada a las {previewTimeLabel} · ordenada por fecha y hora</p>
+            </div>
+            <div className="actividades-corrections__preview-tools">
+              <span className="actividades-corrections__expiry">
+                <Clock3 aria-hidden="true" />
+                Vence en {formatRemainingTime(preview.previewExpiresAt, now)}
+              </span>
+              <button
+                className="actividades-corrections__refresh"
+                type="button"
+                onClick={loadPreview}
+                disabled={!canPreview}
+              >
+                {previewMutation.isPending ? (
+                  <LoaderCircle aria-hidden="true" />
+                ) : (
+                  <RefreshCw aria-hidden="true" />
+                )}
+                Actualizar
+              </button>
+            </div>
+          </header>
+
           <div className="actividades-corrections__summary">
             <div>
               <strong>{preview.totalCount}</strong>
-              <span>Total</span>
+              <span>Sesiones</span>
             </div>
             <div>
               <strong>{preview.changedCount}</strong>
-              <span>Cambiaran</span>
+              <span>Se normalizarán</span>
             </div>
             <div>
               <strong>{preview.unchangedCount}</strong>
               <span>Sin cambios</span>
             </div>
-            <div>
+            <div className={preview.warningCount > 0 ? "is-warning" : ""}>
               <strong>{preview.warningCount}</strong>
               <span>Revisar horario</span>
             </div>
           </div>
-          <p className="actividades-corrections__notice">
-            <ShieldAlert aria-hidden="true" /> Revisa que las horas historicas esten en formato de
-            24 horas. Esta vista previa vence en 15 minutos.
-          </p>
-          <div className="actividades-table-wrap">
-            <table className="actividades-table actividades-corrections__table">
+
+          {preview.warningCount > 0 ? (
+            <div className="actividades-corrections__warning">
+              <AlertTriangle aria-hidden="true" />
+              {preview.warningCount} sesiones se cruzan en horario con otra el mismo día. Revísalas
+              antes de normalizar.
+            </div>
+          ) : null}
+
+          <div className="actividades-corrections__table-wrap">
+            <table className="actividades-corrections__modern-table">
               <thead>
                 <tr>
+                  <th>#</th>
                   <th>Fecha</th>
                   <th>Hora</th>
                   <th>Organizador</th>
-                  <th>Actual</th>
-                  <th>Nuevo</th>
+                  <th>Código</th>
                   <th>Estado</th>
                 </tr>
               </thead>
               <tbody>
-                {preview.rows.map((row) => (
-                  <tr key={row.activityId}>
-                    <td>{row.activityDate}</td>
-                    <td>
-                      {row.startTime} - {row.endTime}
-                    </td>
-                    <td>{formatActividadGrupalOrganizer(row.organizer)}</td>
-                    <td>{row.currentActaNumber}</td>
-                    <td>
-                      <strong>{row.proposedActaNumber}</strong>
-                    </td>
-                    <td>{row.isDeleted ? "Eliminada" : "Activa"}</td>
-                  </tr>
-                ))}
+                {preview.rows.map((row, index) => {
+                  const formattedDate = formatActivityDate(row.activityDate);
+                  const hasScheduleWarning = warningIds.has(row.activityId);
+                  return (
+                    <tr className={hasScheduleWarning ? "is-warning" : ""} key={row.activityId}>
+                      <td className="actividades-corrections__index">{index + 1}</td>
+                      <td>
+                        <strong>{formattedDate.date}</strong>
+                        <small>{formattedDate.weekday}</small>
+                      </td>
+                      <td>
+                        {row.startTime} - {row.endTime}
+                      </td>
+                      <td>{formatActividadGrupalOrganizer(row.organizer)}</td>
+                      <td>
+                        <span className="actividades-corrections__code-change">
+                          <span>{row.currentActaNumber}</span>
+                          <ArrowRight aria-hidden="true" />
+                          <strong>{row.proposedActaNumber}</strong>
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          className={
+                            hasScheduleWarning
+                              ? "actividades-corrections__status is-warning"
+                              : "actividades-corrections__status"
+                          }
+                        >
+                          <i aria-hidden="true" />
+                          {hasScheduleWarning
+                            ? "Revisar horario"
+                            : row.isDeleted
+                              ? "Eliminada"
+                              : "Activa"}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-          <div className="actividades-corrections__apply">
-            <label>
-              Motivo de la correccion
-              <input
+
+          <footer className="actividades-corrections__footer">
+            <p>
+              <ShieldCheck aria-hidden="true" /> Se pedirá un motivo antes de aplicar el cambio.
+            </p>
+            <button
+              className="actividades-corrections__apply-action"
+              type="button"
+              onClick={openReasonDialog}
+              disabled={applyMutation.isPending || preview.totalCount === 0}
+            >
+              Normalizar {preview.totalCount} sesiones
+            </button>
+          </footer>
+        </section>
+      ) : (
+        <section className="actividades-corrections__empty" aria-live="polite">
+          <RefreshCw aria-hidden="true" />
+          <strong>Genera una vista previa</strong>
+          <span>
+            Selecciona el centro, la actividad y el prefijo para revisar las sesiones antes de
+            normalizar.
+          </span>
+          <button type="button" onClick={loadPreview} disabled={!canPreview}>
+            Generar vista previa
+          </button>
+        </section>
+      )}
+
+      {isReasonDialogOpen ? (
+        <div className="actividades-corrections__dialog-backdrop">
+          <section
+            className="actividades-corrections__reason-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="normalization-reason-title"
+          >
+            <button
+              className="actividades-corrections__dialog-close"
+              type="button"
+              aria-label="Cerrar"
+              onClick={() => setIsReasonDialogOpen(false)}
+            >
+              <X aria-hidden="true" />
+            </button>
+            <span className="actividades-corrections__dialog-badge">Corrección masiva</span>
+            <h2 id="normalization-reason-title">Normalizar consecutivos</h2>
+            <p>
+              Se reasignarán {preview?.totalCount ?? 0} actas de {selectedActivityName} en{" "}
+              {selectedTenantName}, en orden de fecha y hora.
+            </p>
+            <div className="actividades-corrections__prefix-change" aria-label="Cambio de prefijo">
+              <strong>{currentPrefix}</strong>
+              <ArrowRight aria-hidden="true" />
+              <strong className="is-new">{targetPrefix}</strong>
+            </div>
+            <label className="actividades-corrections__reason-field">
+              <span>
+                Motivo
+                <em>Obligatorio</em>
+              </span>
+              <textarea
+                autoFocus
                 value={reason}
                 maxLength={500}
+                placeholder="Ej. Normalización inicial de consecutivos"
                 onChange={(event) => setReason(event.target.value)}
               />
             </label>
-            <button
-              className="outline-action actividades-corrections__apply-action"
-              type="button"
-              onClick={applyCorrection}
-              disabled={!canApply || applyMutation.isPending}
+            <div
+              className="actividades-corrections__reason-suggestions"
+              aria-label="Motivos sugeridos"
             >
-              {applyMutation.isPending ? (
-                <LoaderCircle className="actividad-delete-dialog__spinner" aria-hidden="true" />
-              ) : null}
-              Aplicar correccion
-            </button>
-          </div>
-        </section>
+              <button
+                type="button"
+                onClick={() => setReason("Normalización inicial de consecutivos")}
+              >
+                Normalización inicial de consecutivos
+              </button>
+              <button type="button" onClick={() => setReason("Cambio de prefijo de la actividad")}>
+                Cambio de prefijo de la actividad
+              </button>
+            </div>
+            <div className="actividades-corrections__dialog-actions">
+              <button type="button" onClick={() => setIsReasonDialogOpen(false)}>
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={applyNormalization}
+                disabled={reason.trim() === "" || applyMutation.isPending}
+              >
+                {applyMutation.isPending ? <LoaderCircle aria-hidden="true" /> : null}
+                Normalizar {preview?.totalCount ?? 0} sesiones
+              </button>
+            </div>
+          </section>
+        </div>
       ) : null}
     </section>
   );

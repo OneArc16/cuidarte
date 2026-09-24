@@ -806,15 +806,12 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         and(
           eq(actividadGrupalTipos.id, command.activityTypeId),
           eq(actividadGrupalTipos.tenantId, command.tenantId),
-          isNotNull(actividadGrupalTipos.consecutivePrefix),
         ),
       )
       .limit(1);
 
     if (activityType === undefined) {
-      throw new ActaCorrectionConflictError(
-        "La actividad no tiene una serie especial configurada para este centro.",
-      );
+      throw new ActaCorrectionConflictError("La actividad no existe en el centro seleccionado.");
     }
 
     const rows = await this.database.db
@@ -825,6 +822,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         endTime: actividadesGrupales.endTime,
         organizer: actividadesGrupales.organizer,
         actaNumber: actividadesGrupales.actaNumber,
+        actaSeriesKey: actividadesGrupales.actaSeriesKey,
         actaOrganizer: actividadesGrupales.actaOrganizer,
         actaSequence: actividadesGrupales.actaSequence,
         createdAt: actividadesGrupales.createdAt,
@@ -836,11 +834,16 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         and(
           eq(actividadesGrupales.tenantId, command.tenantId),
           eq(actividadesGrupales.activityTypeId, command.activityTypeId),
-          eq(actividadesGrupales.actaSeriesKey, `activity-type:${command.activityTypeId}`),
           isNull(actividadesGrupales.deletedAt),
         ),
       )
-      .orderBy(asc(actividadesGrupales.actaSequence));
+      .orderBy(
+        asc(actividadesGrupales.activityDate),
+        asc(actividadesGrupales.startTime),
+        asc(actividadesGrupales.endTime),
+        asc(actividadesGrupales.createdAt),
+        asc(actividadesGrupales.id),
+      );
 
     const previewRows = buildPrefixCorrectionPreviewRows(rows, prefix);
     const snapshotHash = hashCorrectionSnapshot(rows);
@@ -858,12 +861,18 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       .returning({ id: actividadGrupalActaCorrectionOperations.id });
 
     if (operation === undefined) {
-      throw new Error("No fue posible preparar la migración de prefijo.");
+      throw new Error("No fue posible preparar la normalización.");
     }
 
-    const changedCount = previewRows.filter(
-      (row) => row.currentActaNumber !== row.proposedActaNumber,
-    ).length;
+    const changedCount = previewRows.filter((row, index) => {
+      const source = rows[index];
+      return (
+        source?.actaNumber !== row.proposedActaNumber ||
+        source?.actaOrganizer !== resolveActividadGrupalActaOrganizer(row.organizer) ||
+        source?.actaSequence !== row.sequence ||
+        source?.actaSeriesKey !== `activity-type:${command.activityTypeId}`
+      );
+    }).length;
 
     return {
       operationToken: operation.id,
@@ -873,7 +882,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       totalCount: previewRows.length,
       changedCount,
       unchangedCount: previewRows.length - changedCount,
-      warningCount: 0,
+      warningCount: countScheduleWarnings(previewRows),
       rows: previewRows,
     };
   }
@@ -901,7 +910,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         operation.targetPrefix === null
       ) {
         throw new ActaCorrectionConflictError(
-          "La vista previa de migración de prefijo ya no está vigente.",
+          "La vista previa de normalización ya no está vigente.",
         );
       }
 
@@ -923,7 +932,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
 
       if (lockedOperation === undefined || lockedOperation.expiresAt <= new Date()) {
         throw new ActaCorrectionConflictError(
-          "La vista previa de migración de prefijo ya no está vigente.",
+          "La vista previa de normalización ya no está vigente.",
         );
       }
 
@@ -935,6 +944,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           endTime: actividadesGrupales.endTime,
           organizer: actividadesGrupales.organizer,
           actaNumber: actividadesGrupales.actaNumber,
+          actaSeriesKey: actividadesGrupales.actaSeriesKey,
           actaOrganizer: actividadesGrupales.actaOrganizer,
           actaSequence: actividadesGrupales.actaSequence,
           createdAt: actividadesGrupales.createdAt,
@@ -946,20 +956,42 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           and(
             eq(actividadesGrupales.tenantId, operation.tenantId),
             eq(actividadesGrupales.activityTypeId, operation.activityTypeId),
-            eq(actividadesGrupales.actaSeriesKey, `activity-type:${operation.activityTypeId}`),
             isNull(actividadesGrupales.deletedAt),
           ),
         )
-        .orderBy(asc(actividadesGrupales.actaSequence));
+        .orderBy(
+          asc(actividadesGrupales.activityDate),
+          asc(actividadesGrupales.startTime),
+          asc(actividadesGrupales.endTime),
+          asc(actividadesGrupales.createdAt),
+          asc(actividadesGrupales.id),
+        );
 
       if (hashCorrectionSnapshot(rows) !== operation.snapshotHash) {
         throw new ActaCorrectionConflictError();
       }
 
+      const targetSeriesKey = `activity-type:${operation.activityTypeId}`;
       const previewRows = buildPrefixCorrectionPreviewRows(rows, operation.targetPrefix);
-      const sourceIds = new Set(rows.map((row) => row.id));
-      const activeActaNumbers = await tx
-        .select({ id: actividadesGrupales.id, actaNumber: actividadesGrupales.actaNumber })
+      const sourceRowsById = new Map(rows.map((row) => [row.id, row]));
+      const changedRows = previewRows.filter((row) => {
+        const source = sourceRowsById.get(row.activityId);
+        return (
+          source?.actaNumber !== row.proposedActaNumber ||
+          source?.actaOrganizer !== resolveActividadGrupalActaOrganizer(row.organizer) ||
+          source?.actaSequence !== row.sequence ||
+          source?.actaSeriesKey !== targetSeriesKey
+        );
+      });
+
+      const activeTenantRows = await tx
+        .select({
+          id: actividadesGrupales.id,
+          actaNumber: actividadesGrupales.actaNumber,
+          actaSeriesKey: actividadesGrupales.actaSeriesKey,
+          actaOrganizer: actividadesGrupales.actaOrganizer,
+          actaSequence: actividadesGrupales.actaSequence,
+        })
         .from(actividadesGrupales)
         .where(
           and(
@@ -967,29 +999,43 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
             isNull(actividadesGrupales.deletedAt),
           ),
         );
-      const usedNumbers = new Set(
-        activeActaNumbers.filter((row) => !sourceIds.has(row.id)).map((row) => row.actaNumber),
-      );
 
-      for (const row of previewRows) {
-        if (usedNumbers.has(row.proposedActaNumber)) {
-          throw new ActaCorrectionConflictError(
-            `El prefijo produciría un acta duplicada: ${row.proposedActaNumber}.`,
-          );
-        }
-        usedNumbers.add(row.proposedActaNumber);
+      assertCorrectionFinalStateIsUnique(activeTenantRows, previewRows, targetSeriesKey);
+
+      const temporaryRows = buildTemporaryCorrectionRows({
+        operationId: operation.id,
+        activeRows: activeTenantRows,
+        changedRows,
+        targetSeriesKey,
+      });
+
+      for (const row of temporaryRows) {
+        await tx
+          .update(actividadesGrupales)
+          .set({
+            actaNumber: row.temporaryActaNumber,
+            actaSeriesKey: row.actaSeriesKey,
+            actaOrganizer: row.actaOrganizer,
+            actaSequence: row.temporaryActaSequence,
+            updatedAt: new Date(),
+          })
+          .where(eq(actividadesGrupales.id, row.id));
       }
 
-      const changedRows = previewRows.filter(
-        (row) => row.currentActaNumber !== row.proposedActaNumber,
-      );
-
       for (const row of changedRows) {
+        const source = sourceRowsById.get(row.activityId);
+        if (source === undefined) {
+          throw new ActaCorrectionConflictError();
+        }
         await tx
           .update(actividadesGrupales)
           .set({
             actaNumber: row.proposedActaNumber,
-            previousActaNumber: row.currentActaNumber,
+            actaSeriesKey: targetSeriesKey,
+            actaOrganizer: resolveActividadGrupalActaOrganizer(row.organizer),
+            actaSequence: row.sequence,
+            previousActaNumber:
+              source.actaNumber === row.proposedActaNumber ? undefined : source.actaNumber,
             actaNumberCorrectedAt: new Date(),
             actaNumberCorrectedByUserId: command.actorUserId,
             updatedAt: new Date(),
@@ -998,15 +1044,19 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
 
         await tx.insert(auditLogs).values({
           actorUserId: command.actorUserId,
-          action: "actividades-grupales.acta-prefix-migrated",
+          action: "actividades-grupales.acta-normalized",
           targetTenantId: operation.tenantId,
-          summary: `Prefijo de acta migrado de ${row.currentActaNumber} a ${row.proposedActaNumber}.`,
+          summary: `Acta normalizada de ${source.actaNumber} a ${row.proposedActaNumber}.`,
           metadata: {
             operationId: operation.id,
             activityId: row.activityId,
             activityTypeId: operation.activityTypeId,
-            previousActaNumber: row.currentActaNumber,
+            previousActaNumber: source.actaNumber,
             newActaNumber: row.proposedActaNumber,
+            previousSeriesKey: source.actaSeriesKey,
+            newSeriesKey: targetSeriesKey,
+            previousSequence: source.actaSequence,
+            newSequence: row.sequence,
             reason: command.reason,
           },
         });
@@ -1014,19 +1064,25 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
 
       await tx
         .update(actividadGrupalTipos)
-        .set({ consecutivePrefix: operation.targetPrefix, updatedAt: new Date() })
+        .set({
+          consecutivePrefix: operation.targetPrefix,
+          consecutiveNextValue: previewRows.length + 1,
+          updatedAt: new Date(),
+        })
         .where(eq(actividadGrupalTipos.id, operation.activityTypeId));
       await tx.insert(auditLogs).values({
         actorUserId: command.actorUserId,
-        action: "actividades-grupales.acta-prefix-migration-applied",
+        action: "actividades-grupales.acta-normalization-applied",
         targetTenantId: operation.tenantId,
-        summary: `Migración histórica de prefijo aplicada a  actas.`,
+        summary: `Consecutivos normalizados y actas migradas a la serie ${operation.targetPrefix}.`,
         metadata: {
           operationId: operation.id,
           activityTypeId: operation.activityTypeId,
           targetPrefix: operation.targetPrefix,
+          targetSeriesKey,
           totalCount: previewRows.length,
           changedCount: changedRows.length,
+          nextValue: previewRows.length + 1,
           reason: command.reason,
         },
       });
@@ -1093,6 +1149,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           endTime: actividadesGrupales.endTime,
           organizer: actividadesGrupales.organizer,
           actaNumber: actividadesGrupales.actaNumber,
+          actaSeriesKey: actividadesGrupales.actaSeriesKey,
           actaOrganizer: actividadesGrupales.actaOrganizer,
           actaSequence: actividadesGrupales.actaSequence,
           createdAt: actividadesGrupales.createdAt,
@@ -1132,6 +1189,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .select({
           id: actividadesGrupales.id,
           actaNumber: actividadesGrupales.actaNumber,
+          actaSeriesKey: actividadesGrupales.actaSeriesKey,
           actaOrganizer: actividadesGrupales.actaOrganizer,
           actaSequence: actividadesGrupales.actaSequence,
         })
@@ -1156,6 +1214,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           .update(actividadesGrupales)
           .set({
             actaNumber: row.temporaryActaNumber,
+            actaSeriesKey: row.actaSeriesKey,
             actaOrganizer: row.actaOrganizer,
             actaSequence: row.temporaryActaSequence,
             updatedAt: new Date(),
@@ -1744,6 +1803,7 @@ type ActaCorrectionSourceRow = {
   endTime: string;
   organizer: ActividadGrupalRecord["organizer"];
   actaNumber: string;
+  actaSeriesKey?: string;
   actaOrganizer: ActividadGrupalRecord["actaOrganizer"];
   actaSequence: number;
   createdAt: Date;
@@ -1753,11 +1813,12 @@ type ActaCorrectionSourceRow = {
 
 type ActaCorrectionFinalStateRow = Pick<
   ActaCorrectionSourceRow,
-  "id" | "actaNumber" | "actaOrganizer" | "actaSequence"
+  "id" | "actaNumber" | "actaSeriesKey" | "actaOrganizer" | "actaSequence"
 >;
 
 type TemporaryCorrectionRow = {
   id: string;
+  actaSeriesKey: string;
   actaOrganizer: ActividadGrupalRecord["actaOrganizer"];
   temporaryActaNumber: string;
   temporaryActaSequence: number;
@@ -1793,17 +1854,42 @@ export function buildPrefixCorrectionPreviewRows(
   rows: ActaCorrectionSourceRow[],
   prefix: string,
 ): ActaCorrectionPreviewRow[] {
-  return rows.map((row) => ({
-    activityId: row.id,
-    activityDate: row.activityDate,
-    startTime: row.startTime,
-    endTime: row.endTime,
-    organizer: row.organizer,
-    currentActaNumber: row.actaNumber,
-    proposedActaNumber: `${prefix}-${String(row.actaSequence).padStart(3, "0")}`,
-    sequence: row.actaSequence,
-    isDeleted: row.deletedAt !== null,
-  }));
+  return rows.map((row, index) => {
+    const sequence = index + 1;
+    return {
+      activityId: row.id,
+      activityDate: row.activityDate,
+      startTime: row.startTime,
+      endTime: row.endTime,
+      organizer: row.organizer,
+      currentActaNumber: row.actaNumber,
+      proposedActaNumber: `${prefix}-${String(sequence).padStart(3, "0")}`,
+      sequence,
+      isDeleted: row.deletedAt !== null,
+    };
+  });
+}
+
+export function countScheduleWarnings(rows: readonly ActaCorrectionPreviewRow[]): number {
+  const warningIds = new Set<string>();
+
+  for (let index = 0; index < rows.length; index += 1) {
+    const current = rows[index];
+    if (current === undefined) continue;
+
+    for (let nextIndex = index + 1; nextIndex < rows.length; nextIndex += 1) {
+      const next = rows[nextIndex];
+      if (next === undefined || next.activityDate !== current.activityDate) continue;
+      if (next.startTime >= current.endTime) break;
+
+      if (current.startTime < next.endTime && next.startTime < current.endTime) {
+        warningIds.add(current.activityId);
+        warningIds.add(next.activityId);
+      }
+    }
+  }
+
+  return warningIds.size;
 }
 
 export function hashCorrectionSnapshot(rows: ActaCorrectionSourceRow[]): string {
@@ -1814,6 +1900,8 @@ export function hashCorrectionSnapshot(rows: ActaCorrectionSourceRow[]): string 
     row.endTime,
     row.organizer,
     row.actaNumber,
+    row.actaSeriesKey ?? null,
+    row.actaSequence,
     row.createdAt.toISOString(),
     row.updatedAt.toISOString(),
     row.deletedAt?.toISOString() ?? null,
@@ -1840,6 +1928,7 @@ function hasCorrectionTargetChanged(
 export function assertCorrectionFinalStateIsUnique(
   activeRows: ActaCorrectionFinalStateRow[],
   targetRows: ActaCorrectionPreviewRow[],
+  targetSeriesKey?: string,
 ): void {
   const targetById = new Map(targetRows.map((row) => [row.activityId, row]));
   const actaNumbers = new Set<string>();
@@ -1853,22 +1942,32 @@ export function assertCorrectionFinalStateIsUnique(
         ? row.actaOrganizer
         : resolveActividadGrupalActaOrganizer(target.organizer);
     const actaSequence = target?.sequence ?? row.actaSequence;
-    const seriesKey = `${actaOrganizer}\u0000${actaSequence}`;
+    const seriesKey =
+      target === undefined
+        ? (row.actaSeriesKey ?? "legacy:" + row.actaOrganizer)
+        : (targetSeriesKey ?? row.actaSeriesKey ?? "legacy:" + actaOrganizer);
+    const seriesIdentity = seriesKey + "\u0000" + actaSequence;
 
     if (actaNumbers.has(actaNumber)) {
       throw new ActaCorrectionConflictError(
-        `La normalizacion produciria una acta duplicada (${actaNumber}) entre actas activas del centro.`,
+        "La normalizacion produciria una acta duplicada (" +
+          actaNumber +
+          ") entre actas activas del centro.",
       );
     }
 
-    if (actaSeries.has(seriesKey)) {
+    if (actaSeries.has(seriesIdentity)) {
       throw new ActaCorrectionConflictError(
-        `La normalizacion produciria una secuencia duplicada para ${actaOrganizer} (${actaSequence}).`,
+        "La normalizacion produciria una secuencia duplicada para " +
+          seriesKey +
+          " (" +
+          actaSequence +
+          ").",
       );
     }
 
     actaNumbers.add(actaNumber);
-    actaSeries.add(seriesKey);
+    actaSeries.add(seriesIdentity);
   }
 }
 
@@ -1876,40 +1975,43 @@ export function buildTemporaryCorrectionRows({
   operationId,
   activeRows,
   changedRows,
+  targetSeriesKey,
 }: {
   operationId: string;
   activeRows: ActaCorrectionFinalStateRow[];
   changedRows: ActaCorrectionPreviewRow[];
+  targetSeriesKey?: string;
 }): TemporaryCorrectionRow[] {
-  const maxSequenceByOrganizer = new Map<ActividadGrupalRecord["actaOrganizer"], number>();
-  const changedCountByOrganizer = new Map<ActividadGrupalRecord["actaOrganizer"], number>();
+  const maxSequenceBySeries = new Map<string, number>();
+  const changedCountBySeries = new Map<string, number>();
 
   for (const row of activeRows) {
-    maxSequenceByOrganizer.set(
-      row.actaOrganizer,
-      Math.max(maxSequenceByOrganizer.get(row.actaOrganizer) ?? 0, row.actaSequence),
+    const seriesKey = row.actaSeriesKey ?? "legacy:" + row.actaOrganizer;
+    maxSequenceBySeries.set(
+      seriesKey,
+      Math.max(maxSequenceBySeries.get(seriesKey) ?? 0, row.actaSequence),
     );
   }
 
   for (const row of changedRows) {
     const actaOrganizer = resolveActividadGrupalActaOrganizer(row.organizer);
-    changedCountByOrganizer.set(
-      actaOrganizer,
-      (changedCountByOrganizer.get(actaOrganizer) ?? 0) + 1,
-    );
+    const seriesKey = targetSeriesKey ?? "legacy:" + actaOrganizer;
+    changedCountBySeries.set(seriesKey, (changedCountBySeries.get(seriesKey) ?? 0) + 1);
   }
 
-  for (const [actaOrganizer, changedCount] of changedCountByOrganizer) {
-    const maxSequence = maxSequenceByOrganizer.get(actaOrganizer) ?? 0;
+  for (const [seriesKey, changedCount] of changedCountBySeries) {
+    const maxSequence = maxSequenceBySeries.get(seriesKey) ?? 0;
     if (maxSequence > POSTGRES_INTEGER_MAX - changedCount) {
       throw new ActaCorrectionConflictError(
-        `No hay secuencias temporales disponibles para ${actaOrganizer} sin exceder el limite de PostgreSQL.`,
+        "No hay secuencias temporales disponibles para " +
+          seriesKey +
+          " sin exceder el limite de PostgreSQL.",
       );
     }
   }
 
   const usedActaNumbers = new Set(activeRows.map((row) => row.actaNumber));
-  const nextTemporarySequenceByOrganizer = new Map(maxSequenceByOrganizer);
+  const nextTemporarySequenceBySeries = new Map(maxSequenceBySeries);
 
   return changedRows.map((row, index) => {
     const temporaryActaNumber = buildUniqueTemporaryActaNumber({
@@ -1918,11 +2020,13 @@ export function buildTemporaryCorrectionRows({
       usedActaNumbers,
     });
     const actaOrganizer = resolveActividadGrupalActaOrganizer(row.organizer);
-    const temporaryActaSequence = (nextTemporarySequenceByOrganizer.get(actaOrganizer) ?? 0) + 1;
-    nextTemporarySequenceByOrganizer.set(actaOrganizer, temporaryActaSequence);
+    const actaSeriesKey = targetSeriesKey ?? "legacy:" + actaOrganizer;
+    const temporaryActaSequence = (nextTemporarySequenceBySeries.get(actaSeriesKey) ?? 0) + 1;
+    nextTemporarySequenceBySeries.set(actaSeriesKey, temporaryActaSequence);
 
     return {
       id: row.activityId,
+      actaSeriesKey,
       actaOrganizer,
       temporaryActaNumber,
       temporaryActaSequence,
