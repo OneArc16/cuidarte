@@ -32,6 +32,7 @@ import {
   reportsDashboardExportListResponseSchema,
 } from "@cuidarte/contracts";
 
+import { buildContentDisposition } from "../../../common/content-disposition";
 import { parseZodSchema } from "../../../common/parse-zod-schema";
 import { type AuthenticatedRequest } from "../../auth/authenticated-request";
 import { SessionGuard } from "../../auth/session.guard";
@@ -70,7 +71,7 @@ export class ReportsController {
 
     reply
       .header("Content-Type", file.contentType)
-      .header("Content-Disposition", `attachment; filename="${file.filename}"`)
+      .header("Content-Disposition", buildContentDisposition("attachment", file.filename))
       .send(file.buffer);
   }
 
@@ -89,7 +90,7 @@ export class ReportsController {
 
     reply
       .header("Content-Type", file.contentType)
-      .header("Content-Disposition", `attachment; filename="${file.filename}"`)
+      .header("Content-Disposition", buildContentDisposition("attachment", file.filename))
       .send(file.buffer);
   }
 
@@ -108,7 +109,7 @@ export class ReportsController {
 
     reply
       .header("Content-Type", file.contentType)
-      .header("Content-Disposition", `attachment; filename="${file.filename}"`)
+      .header("Content-Disposition", buildContentDisposition("attachment", file.filename))
       .send(file.buffer);
   }
 
@@ -177,7 +178,7 @@ export class ReportsController {
       request.currentUser,
     );
     reply
-      .header("Content-Disposition", `attachment; filename="${download.filename}"`)
+      .header("Content-Disposition", buildContentDisposition("attachment", download.filename))
       .header("Content-Length", String(download.sizeBytes));
     return download.file;
   }
@@ -248,7 +249,7 @@ export class ReportsController {
     const reportId = parseZodSchema(reportIdParamSchema, reportIdValue);
     const download = await this.reportsService.downloadReport(reportId, request.currentUser);
 
-    reply.header("Content-Disposition", `attachment; filename="${download.filename}"`);
+    reply.header("Content-Disposition", buildContentDisposition("attachment", download.filename));
     reply.header("Content-Length", String(download.sizeBytes));
 
     return download.file;
