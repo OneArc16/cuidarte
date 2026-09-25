@@ -37,6 +37,9 @@ export type ActividadesGrupalesRepository = {
   findActaReportCandidates?(query: {
     tenantId: string;
     period: string;
+    search: string | null;
+    activityTypeId: string | null;
+    organizer: import("@cuidarte/contracts").ActividadGrupalOrganizer | null;
   }): Promise<ActividadGrupalReportCandidateRecord[]>;
   findActiveEmpleadoOptions(tenantId: string): Promise<ActividadGrupalEmpleadoOptionRecord[]>;
   searchIntegranteOptions(
@@ -57,8 +60,12 @@ export type ActividadesGrupalesRepository = {
     organizer: import("@cuidarte/contracts").ActividadGrupalOrganizer | null,
   ): Promise<ActaCorrectionPreview>;
   applyActaNumberCorrection(command: ApplyActaCorrectionCommand): Promise<AppliedActaCorrection>;
-  previewActaPrefixCorrection?(command: PreviewActaPrefixCorrectionCommand): Promise<ActaCorrectionPreview>;
-  applyActaPrefixCorrection?(command: ApplyActaPrefixCorrectionCommand): Promise<AppliedActaCorrection>;
+  previewActaPrefixCorrection?(
+    command: PreviewActaPrefixCorrectionCommand,
+  ): Promise<ActaCorrectionPreview>;
+  applyActaPrefixCorrection?(
+    command: ApplyActaPrefixCorrectionCommand,
+  ): Promise<AppliedActaCorrection>;
   delete(command: DeleteActividadGrupalRecordCommand): Promise<void>;
   saveDiligenciamiento(
     command: SaveActividadGrupalDiligenciamientoRecordCommand,

@@ -1,7 +1,11 @@
 import { Download, LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { type ReportType } from "@cuidarte/contracts";
+import {
+  buildReportFilterKey,
+  type ReportActivityFilters,
+  type ReportType,
+} from "@cuidarte/contracts";
 
 import * as reportsApi from "../api/reports-api";
 import { useReportDownloads } from "../model/report-downloads-context";
@@ -11,16 +15,23 @@ type ReportExportButtonProps = {
   period: string;
   tenantId: string | null;
   className?: string;
+  filters?: ReportActivityFilters;
 };
 
-export function ReportExportButton({ type, period, tenantId, className }: ReportExportButtonProps) {
+export function ReportExportButton({
+  type,
+  period,
+  tenantId,
+  className,
+  filters,
+}: ReportExportButtonProps) {
   const [isRequesting, setIsRequesting] = useState(false);
   const { tasks, registerReport } = useReportDownloads();
 
   async function exportReport() {
     setIsRequesting(true);
     try {
-      const response = await reportsApi.createReport({ type, period, tenantId });
+      const response = await reportsApi.createReport({ type, period, tenantId, filters });
       registerReport(response.report);
       toast.info("Exportación iniciada. El ZIP se descargará al estar listo.");
     } catch (error) {
@@ -32,12 +43,14 @@ export function ReportExportButton({ type, period, tenantId, className }: Report
     }
   }
 
+  const filterKey = buildReportFilterKey(type, filters);
   const isBusy =
     isRequesting ||
     tasks.some(
       (task) =>
         task.type === type &&
         task.period === period &&
+        (task.filterKey ?? "") === filterKey &&
         (task.status === "pending" || task.status === "processing" || task.status === "ready"),
     );
   const isDisabled = isBusy || tenantId === null;

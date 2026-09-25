@@ -1,6 +1,7 @@
 import { createReadStream } from "node:fs";
 
 import {
+  buildReportFilterKey,
   type AuthUser,
   type CreateReportRequest,
   type ReportAvailabilityQuery,
@@ -85,7 +86,12 @@ export class ReportsService implements OnModuleInit {
   async createReport(command: CreateReportRequest, actor: AuthUser): Promise<ReportJob> {
     const scope = await this.resolveScope(actor, command.tenantId);
     const source = this.resolveSource(command.type);
-    const availability = await source.count(scope, command.period);
+    const activityFilters =
+      command.type === "ACTAS_SESIONES_GRUPALES"
+        ? normalizeReportActivityFilters(command.filters)
+        : EMPTY_REPORT_ACTIVITY_FILTERS;
+    const filterKey = buildReportFilterKey(command.type, activityFilters);
+    const availability = await source.count(scope, command.period, activityFilters);
 
     if (availability.availableDocuments === 0) {
       throw new ConflictException("No hay documentos para generar este reporte.");
@@ -95,6 +101,7 @@ export class ReportsService implements OnModuleInit {
       tenantId: scope.tenantId,
       type: command.type,
       period: command.period,
+      filterKey,
     });
 
     if (duplicate !== null) {
@@ -108,6 +115,9 @@ export class ReportsService implements OnModuleInit {
       requestedByRole: actor.role,
       type: command.type,
       period: command.period,
+      filterKey,
+      activityFilters,
+      totalDocuments: availability.availableDocuments,
       downloadFilename: buildReportZipFilename({
         type: command.type,
         tenantName: scope.tenantName,
@@ -125,6 +135,7 @@ export class ReportsService implements OnModuleInit {
         type: command.type,
         period: command.period,
         availableDocuments: availability.availableDocuments,
+        filters: activityFilters,
       },
     });
     await this.queue.enqueue(report.id);
@@ -230,7 +241,8 @@ export class ReportsService implements OnModuleInit {
       passwordSetByAdmin: false,
     };
     const source = this.resolveSource(report.type);
-    const availability = await source.count(report, report.period);
+    const availability = await source.count(report, report.period, report.activityFilters);
+    await this.reportsRepository.setTotalDocuments(report.id, availability.availableDocuments);
     this.logger.log(
       `reportId=${report.id} tenantId=${report.tenantId} type=${report.type} period=${report.period} event=report_started attempt=${context.attempt}/${context.maxAttempts} availableDocuments=${availability.availableDocuments}`,
     );
@@ -290,7 +302,7 @@ export class ReportsService implements OnModuleInit {
       };
 
       await this.archiveWriter.writeZip(
-        entries(source.documents(report, report.period, actor)),
+        entries(source.documents(report, report.period, actor, report.activityFilters)),
         reservedFile.temporaryPath,
       );
       const currentBeforeCommit = await this.reportsRepository.findJobById(report.id);
@@ -463,6 +475,7 @@ export class ReportsService implements OnModuleInit {
       tenantId: report.tenantId,
       tenantName: report.tenantName,
       requestedByUserId: report.requestedByUserId,
+      filterKey: report.filterKey,
       totalDocuments: report.totalDocuments,
       processedDocuments: report.processedDocuments,
       failedDocuments: report.failedDocuments,
@@ -485,6 +498,22 @@ class ReportCancelledError extends Error {
     super("Reporte cancelado.");
     this.name = "ReportCancelledError";
   }
+}
+
+const EMPTY_REPORT_ACTIVITY_FILTERS: ReportJobRecord["activityFilters"] = {
+  search: null,
+  activityTypeId: null,
+  organizer: null,
+};
+
+function normalizeReportActivityFilters(
+  filters: CreateReportRequest["filters"],
+): ReportJobRecord["activityFilters"] {
+  return {
+    search: filters?.search?.trim() || null,
+    activityTypeId: filters?.activityTypeId ?? null,
+    organizer: filters?.organizer ?? null,
+  };
 }
 
 function resolveReportMessage(report: ReportJobRecord): string | null {

@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { and, desc, eq, inArray, lt, or, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, lt, or, sql, type SQL } from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
 import { auditLogs, reportJobs, tenants } from "../../../database/schema";
@@ -29,6 +29,7 @@ export class DrizzleReportsRepository implements ReportsRepository {
     tenantId: string;
     type: CreateReportJobCommand["type"];
     period: string;
+    filterKey: string;
   }): Promise<ReportJobRecord | null> {
     const [row] = await this.database.db
       .select()
@@ -38,6 +39,7 @@ export class DrizzleReportsRepository implements ReportsRepository {
           eq(reportJobs.tenantId, command.tenantId),
           eq(reportJobs.type, command.type),
           eq(reportJobs.period, command.period),
+          eq(reportJobs.filterKey, command.filterKey),
           inArray(reportJobs.status, ["pending", "processing"]),
         ),
       )
@@ -57,6 +59,11 @@ export class DrizzleReportsRepository implements ReportsRepository {
         requestedByRole: command.requestedByRole,
         type: command.type,
         period: command.period,
+        filterKey: command.filterKey,
+        activitySearch: command.activityFilters.search,
+        activityTypeId: command.activityFilters.activityTypeId,
+        activityOrganizer: command.activityFilters.organizer,
+        totalDocuments: command.totalDocuments,
         downloadFilename: command.downloadFilename,
       })
       .returning();
@@ -159,6 +166,13 @@ export class DrizzleReportsRepository implements ReportsRepository {
       .returning();
 
     return row === undefined ? await this.findJobById(reportId) : this.toRecord(row);
+  }
+
+  async setTotalDocuments(reportId: string, totalDocuments: number): Promise<void> {
+    await this.database.db
+      .update(reportJobs)
+      .set({ totalDocuments, updatedAt: new Date() })
+      .where(eq(reportJobs.id, reportId));
   }
 
   async updateProgress(
@@ -266,6 +280,12 @@ export class DrizzleReportsRepository implements ReportsRepository {
   private toRecord(row: typeof reportJobs.$inferSelect): ReportJobRecord {
     return {
       id: row.id,
+      filterKey: row.filterKey,
+      activityFilters: {
+        search: row.activitySearch,
+        activityTypeId: row.activityTypeId,
+        organizer: row.activityOrganizer,
+      },
       tenantId: row.tenantId,
       tenantName: row.tenantName,
       requestedByUserId: row.requestedByUserId,

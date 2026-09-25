@@ -91,8 +91,8 @@ describe("ReportDownloadDialog", () => {
     expect(dialog).toBeInTheDocument();
     expect(within(dialog).getByText(/Sede Norte/)).toBeInTheDocument();
     expect(within(dialog).getByText(/Sede Centro/)).toBeInTheDocument();
-    expect(screen.getByText("37%")).toBeInTheDocument();
-    expect(screen.getByText("0%")).toBeInTheDocument();
+    expect(screen.getByText(/37%/)).toBeInTheDocument();
+    expect(screen.getByText(/0%/)).toBeInTheDocument();
   });
 
   it("minimizes the modal without removing its tasks and reopens it", async () => {
@@ -143,6 +143,7 @@ function buildReport(task: ReportDownloadTask): ReportJob {
     tenantId: "00000000-0000-4000-8000-000000000001",
     tenantName: task.tenantName,
     requestedByUserId: "00000000-0000-4000-8000-000000000002",
+    filterKey: "",
     totalDocuments: task.totalDocuments,
     processedDocuments: task.processedDocuments,
     failedDocuments: 0,

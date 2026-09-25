@@ -12,6 +12,7 @@ import {
   type ReportDocument,
   type ReportScope,
   type ReportSource,
+  type ReportJobRecord,
 } from "../domain/report.types";
 
 @Injectable()
@@ -22,8 +23,12 @@ export class ActividadesGrupalesReportSource implements ReportSource {
     private readonly actaExportService: ActividadesGrupalesActaExportService,
   ) {}
 
-  async count(scope: ReportScope, period: string): Promise<ReportAvailability> {
-    const candidates = await this.findCandidates(scope.tenantId, period);
+  async count(
+    scope: ReportScope,
+    period: string,
+    filters?: ReportJobRecord["activityFilters"],
+  ): Promise<ReportAvailability> {
+    const candidates = await this.findCandidates(scope.tenantId, period, filters);
 
     return {
       ...scope,
@@ -37,8 +42,9 @@ export class ActividadesGrupalesReportSource implements ReportSource {
     scope: ReportScope,
     period: string,
     actor: AuthUser,
+    filters?: ReportJobRecord["activityFilters"],
   ): AsyncIterable<ReportDocument> {
-    const candidates = await this.findCandidates(scope.tenantId, period);
+    const candidates = await this.findCandidates(scope.tenantId, period, filters);
     const usedFilenames = new Set<string>();
 
     for (const candidate of candidates) {
@@ -60,7 +66,11 @@ export class ActividadesGrupalesReportSource implements ReportSource {
     }
   }
 
-  private async findCandidates(tenantId: string, period: string) {
+  private async findCandidates(
+    tenantId: string,
+    period: string,
+    filters?: ReportJobRecord["activityFilters"],
+  ) {
     if (this.actividadesRepository.findActaReportCandidates === undefined) {
       throw new Error("La fuente de reportes de actas no esta disponible.");
     }
@@ -68,6 +78,9 @@ export class ActividadesGrupalesReportSource implements ReportSource {
     return await this.actividadesRepository.findActaReportCandidates({
       tenantId,
       period,
+      search: filters?.search ?? null,
+      activityTypeId: filters?.activityTypeId ?? null,
+      organizer: filters?.organizer ?? null,
     });
   }
 }

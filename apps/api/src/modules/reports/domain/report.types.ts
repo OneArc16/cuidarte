@@ -1,4 +1,9 @@
-import { type AuthUser, type ReportStatus, type ReportType } from "@cuidarte/contracts";
+import {
+  type AuthUser,
+  type ReportActivityFilters,
+  type ReportStatus,
+  type ReportType,
+} from "@cuidarte/contracts";
 
 export type ReportScope = {
   tenantId: string;
@@ -14,6 +19,12 @@ export type ReportAvailability = ReportScope & {
 };
 
 export type ReportJobRecord = {
+  filterKey: string;
+  activityFilters: {
+    search: string | null;
+    activityTypeId: string | null;
+    organizer: ReportActivityFilters["organizer"] | null;
+  };
   id: string;
   tenantId: string;
   tenantName: string;
@@ -42,6 +53,9 @@ export type CreateReportJobCommand = {
   requestedByRole: AuthUser["role"];
   type: ReportType;
   period: string;
+  filterKey: string;
+  activityFilters: ReportJobRecord["activityFilters"];
+  totalDocuments: number;
   downloadFilename: string;
 };
 
@@ -58,6 +72,15 @@ export type ReportDocument = {
 };
 
 export type ReportSource = {
-  count(scope: ReportScope, period: string): Promise<ReportAvailability>;
-  documents(scope: ReportScope, period: string, actor: AuthUser): AsyncIterable<ReportDocument>;
+  count(
+    scope: ReportScope,
+    period: string,
+    filters?: ReportJobRecord["activityFilters"],
+  ): Promise<ReportAvailability>;
+  documents(
+    scope: ReportScope,
+    period: string,
+    actor: AuthUser,
+    filters?: ReportJobRecord["activityFilters"],
+  ): AsyncIterable<ReportDocument>;
 };

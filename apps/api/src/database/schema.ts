@@ -1397,6 +1397,10 @@ export const reportJobs = pgTable(
     requestedByRole: userRole("requested_by_role").notNull(),
     type: reportType("type").notNull(),
     period: varchar("period", { length: 7 }).notNull(),
+    filterKey: varchar("filter_key", { length: 240 }).notNull().default(""),
+    activitySearch: varchar("activity_search", { length: 120 }),
+    activityTypeId: uuid("activity_type_id"),
+    activityOrganizer: actividadGrupalOrganizer("activity_organizer"),
     status: reportStatus("status").notNull().default("pending"),
     totalDocuments: integer("total_documents"),
     processedDocuments: integer("processed_documents").notNull().default(0),
@@ -1415,7 +1419,7 @@ export const reportJobs = pgTable(
     index("report_jobs_status_expires_at_idx").on(table.status, table.expiresAt),
     index("report_jobs_requested_by_user_idx").on(table.requestedByUserId, table.createdAt),
     uniqueIndex("report_jobs_active_unique")
-      .on(table.tenantId, table.type, table.period)
+      .on(table.tenantId, table.type, table.period, table.filterKey)
       .where(sql`${table.status} in ('pending', 'processing')`),
     check(
       "report_jobs_period_format",

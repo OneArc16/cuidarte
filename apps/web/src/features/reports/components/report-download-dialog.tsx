@@ -100,7 +100,11 @@ function ReportDownloadTaskRow({
       <div className="report-download-task__body">
         <div className="report-download-task__heading">
           <div>
-            <h3>{task.analyticsFormat ? `Estadisticas en ${task.analyticsFormat.toUpperCase()}` : formatReportType(task.type)}</h3>
+            <h3>
+              {task.analyticsFormat
+                ? `Estadisticas en ${task.analyticsFormat.toUpperCase()}`
+                : formatReportType(task.type)}
+            </h3>
             <p>
               {task.tenantName} <span className="report-download-task__period">{task.period}</span>
             </p>
@@ -199,7 +203,9 @@ function getTaskProgress(task: ReportDownloadTask): number | null {
 
 function formatProgressLabel(task: ReportDownloadTask, progress: number | null): string {
   if (task.transferStatus === "preparing") {
-    return task.analyticsFormat ? `Preparando ${task.analyticsFormat.toUpperCase()}` : "Preparando ZIP";
+    return task.analyticsFormat
+      ? `Preparando ${task.analyticsFormat.toUpperCase()}`
+      : "Preparando ZIP";
   }
 
   if (task.transferStatus === "downloading") {
@@ -214,7 +220,7 @@ function formatProgressLabel(task: ReportDownloadTask, progress: number | null):
     return "En curso";
   }
 
-  return `${progress}%`;
+  return `${progress}% · ${task.processedDocuments}/${task.totalDocuments}`;
 }
 
 function formatReportType(type: ReportDownloadTask["type"]): string {

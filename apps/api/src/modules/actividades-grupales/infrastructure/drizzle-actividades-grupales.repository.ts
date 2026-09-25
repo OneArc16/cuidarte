@@ -258,6 +258,9 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
   async findActaReportCandidates(query: {
     tenantId: string;
     period: string;
+    search: string | null;
+    activityTypeId: string | null;
+    organizer: import("@cuidarte/contracts").ActividadGrupalOrganizer | null;
   }): Promise<ActividadGrupalReportCandidateRecord[]> {
     const monthRange = query.period === "ALL" ? null : resolveMonthRange(query.period);
     const conditions: SQL[] = [
@@ -269,6 +272,28 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       conditions.push(
         gte(actividadesGrupales.activityDate, monthRange.startDate),
         lt(actividadesGrupales.activityDate, monthRange.endDateExclusive),
+      );
+    }
+
+    if (query.activityTypeId !== null) {
+      conditions.push(eq(actividadesGrupales.activityTypeId, query.activityTypeId));
+    }
+
+    if (query.organizer !== null) {
+      conditions.push(this.buildOrganizerFilterCondition(query.organizer));
+    }
+
+    if (query.search !== null) {
+      const searchPattern = "%".concat(escapeLikePattern(query.search), "%");
+      conditions.push(
+        or(
+          ilike(actividadesGrupales.activityName, searchPattern),
+          ilike(actividadGrupalTipos.name, searchPattern),
+          ilike(actividadesGrupales.actaNumber, searchPattern),
+          ilike(actividadesGrupales.previousActaNumber, searchPattern),
+          sql`${actividadesGrupales.activityType}::text ilike ${searchPattern}`,
+          sql`${actividadesGrupales.organizer}::text ilike ${searchPattern}`,
+        )!,
       );
     }
 

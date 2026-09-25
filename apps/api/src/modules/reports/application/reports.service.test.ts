@@ -166,6 +166,8 @@ function createReportRecord(overrides: Partial<ReportJobRecord> = {}): ReportJob
 
   return {
     id: "report-1",
+    filterKey: "",
+    activityFilters: { search: null, activityTypeId: null, organizer: null },
     tenantId: actor.tenantId!,
     tenantName: "Centro Demo",
     requestedByUserId: actor.id,
@@ -227,7 +229,10 @@ class InMemoryReportsRepository implements ReportsRepository {
   }
 
   async markProcessing(reportId: string, startedAt: Date): Promise<ReportJobRecord | null> {
-    if (reportId !== this.report.id && this.recoverableReports.every((job) => job.id !== reportId)) {
+    if (
+      reportId !== this.report.id &&
+      this.recoverableReports.every((job) => job.id !== reportId)
+    ) {
       return null;
     }
 
@@ -239,6 +244,10 @@ class InMemoryReportsRepository implements ReportsRepository {
     this.report.updatedAt = startedAt;
 
     return this.report;
+  }
+
+  async setTotalDocuments(_reportId: string, totalDocuments: number): Promise<void> {
+    this.report.totalDocuments = totalDocuments;
   }
 
   async updateProgress(
@@ -377,7 +386,11 @@ class StaticReportSource implements ReportSource {
     };
   }
 
-  async *documents(): AsyncIterable<{ filename: string; buffer: Buffer; contentType: "application/pdf" }> {
+  async *documents(): AsyncIterable<{
+    filename: string;
+    buffer: Buffer;
+    contentType: "application/pdf";
+  }> {
     for (const filename of this.filenames) {
       yield {
         filename,

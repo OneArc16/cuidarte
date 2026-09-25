@@ -1,4 +1,5 @@
 import type { UserRole } from "./auth.js";
+import { actividadGrupalOrganizerSchema } from "./actividades-grupales.js";
 import { z } from "zod";
 
 export const reportAccessRoleValues = [
@@ -30,6 +31,12 @@ export const reportPeriodSchema = z.union([
 ]);
 export const nullableReportTenantIdSchema = z.uuid().nullable();
 
+export const reportActivityFiltersSchema = z.object({
+  search: z.string().trim().max(120).nullable().optional(),
+  activityTypeId: z.uuid().nullable().optional(),
+  organizer: actividadGrupalOrganizerSchema.nullable().optional(),
+});
+
 export const reportAvailabilityQuerySchema = z.object({
   type: reportTypeSchema,
   period: reportPeriodSchema,
@@ -40,6 +47,7 @@ export const createReportRequestSchema = z.object({
   type: reportTypeSchema,
   period: reportPeriodSchema,
   tenantId: nullableReportTenantIdSchema.optional().default(null),
+  filters: reportActivityFiltersSchema.optional(),
 });
 
 export const reportListQuerySchema = z.object({
@@ -67,6 +75,7 @@ export const reportJobSchema = z.object({
   tenantId: z.uuid(),
   tenantName: z.string().min(1),
   requestedByUserId: z.uuid(),
+  filterKey: z.string().max(240),
   totalDocuments: z.number().int().min(0).nullable(),
   processedDocuments: z.number().int().min(0),
   failedDocuments: z.number().int().min(0),
@@ -202,6 +211,7 @@ export type ReportType = z.infer<typeof reportTypeSchema>;
 export type ReportStatus = z.infer<typeof reportStatusSchema>;
 export type ReportAvailabilityQuery = z.infer<typeof reportAvailabilityQuerySchema>;
 export type CreateReportRequest = z.infer<typeof createReportRequestSchema>;
+export type ReportActivityFilters = z.infer<typeof reportActivityFiltersSchema>;
 export type ReportListQuery = z.infer<typeof reportListQuerySchema>;
 export type ReportAvailabilityResponse = z.infer<typeof reportAvailabilityResponseSchema>;
 export type ReportJob = z.infer<typeof reportJobSchema>;
@@ -220,6 +230,21 @@ export type CreateReportsDashboardExportRequest = z.infer<
   typeof createReportsDashboardExportRequestSchema
 >;
 export type ReportsDashboardExport = z.infer<typeof reportsDashboardExportSchema>;
+
+export function buildReportFilterKey(
+  type: ReportType,
+  filters: ReportActivityFilters | null | undefined,
+): string {
+  if (type !== "ACTAS_SESIONES_GRUPALES") {
+    return "";
+  }
+
+  return [
+    filters?.search?.trim() ?? "",
+    filters?.activityTypeId ?? "",
+    filters?.organizer ?? "",
+  ].join("\u001f");
+}
 
 function differenceInCalendarDays(from: string, to: string): number {
   const fromTime = Date.parse(`${from}T00:00:00Z`);

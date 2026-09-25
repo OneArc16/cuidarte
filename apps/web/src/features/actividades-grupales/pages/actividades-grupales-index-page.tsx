@@ -146,6 +146,11 @@ export function ActividadesGrupalesIndexPage({
               period={reportPeriod}
               tenantId={reportTenantId}
               type="ACTAS_SESIONES_GRUPALES"
+              filters={{
+                search: search.trim() || null,
+                activityTypeId: activityTypeId === "" ? null : activityTypeId,
+                organizer: selectedOrganizer === "" ? null : selectedOrganizer,
+              }}
             />
             <ReportHistoryButton
               period={reportPeriod}
