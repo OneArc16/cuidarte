@@ -80,6 +80,7 @@ type AdultoMayorSelectionRow = {
   socialProgramBeneficiary: boolean;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt: Date | null;
 };
 
 @Injectable()
@@ -605,6 +606,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       socialProgramBeneficiary: adultosMayores.socialProgramBeneficiary,
       createdAt: adultosMayores.createdAt,
       updatedAt: adultosMayores.updatedAt,
+      deletedAt: adultosMayores.deletedAt,
     };
   }
 

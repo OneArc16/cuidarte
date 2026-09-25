@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { type AuthUser } from "@cuidarte/contracts";
-import { ForbiddenException } from "@nestjs/common";
+import { ConflictException, ForbiddenException } from "@nestjs/common";
 
 import { calculateAgeFromBirthDate } from "./age";
 import { AdultosMayoresService } from "./adultos-mayores.service";
@@ -261,6 +261,33 @@ describe("AdultosMayoresService", () => {
     await assert.rejects(
       () => service.updateAdultoMayor(currentRecord.id, createCommand(), tenantAuditorUser),
       { constructor: ForbiddenException },
+    );
+  });
+
+  it("explains when the duplicate adulto mayor is in trash", async () => {
+    const repository = createRepository();
+    const trashedRecord = records[0]!;
+    repository.findByDocument = async () => ({
+      ...trashedRecord,
+      deletedAt: new Date("2026-04-22T12:00:00.000Z"),
+    });
+    const service = createService(repository);
+
+    await assert.rejects(
+      () =>
+        service.createAdultoMayor(
+          {
+            ...createCommand(),
+            documentType: trashedRecord.documentType,
+            documentNumber: trashedRecord.documentNumber,
+          },
+          tenantAdminUser,
+        ),
+      {
+        constructor: ConflictException,
+        message:
+          "El adulto mayor con ese documento está en la papelera. Puedes restaurarlo desde la papelera antes de crearlo nuevamente.",
+      },
     );
   });
 

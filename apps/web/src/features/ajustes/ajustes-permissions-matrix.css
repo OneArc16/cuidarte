@@ -204,12 +204,12 @@
 }
 
 .ajustes-permissions-dialog__matrix {
-  min-width: 940px;
+  min-width: 952px;
 }
 
 .ajustes-permissions-dialog__matrix-row {
   display: grid;
-  grid-template-columns: minmax(250px, 1fr) repeat(8, 78px);
+  grid-template-columns: minmax(250px, 1fr) repeat(9, 78px);
   align-items: center;
   min-height: 78px;
   border-bottom: 1px solid #e1e9e5;

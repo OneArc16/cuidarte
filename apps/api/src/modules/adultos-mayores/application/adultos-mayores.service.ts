@@ -469,7 +469,11 @@ export class AdultosMayoresService {
     const existingRecord = await this.adultosMayoresRepository.findByDocument(command);
 
     if (existingRecord !== null) {
-      throw new ConflictException("Ya existe un adulto mayor con ese documento en este centro.");
+      throw new ConflictException(
+        existingRecord.deletedAt !== undefined && existingRecord.deletedAt !== null
+          ? "El adulto mayor con ese documento está en la papelera. Puedes restaurarlo desde la papelera antes de crearlo nuevamente."
+          : "Ya existe un adulto mayor con ese documento en este centro.",
+      );
     }
   }
 

@@ -146,6 +146,7 @@ export type AdultoMayorRecord = {
   createdAt: Date;
   updatedAt: Date;
   documentFile: AdultoMayorDocumentRecord | null;
+  deletedAt?: Date | null;
 };
 
 export type AdultoMayorTrashRecord = Pick<

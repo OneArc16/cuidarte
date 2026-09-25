@@ -24,6 +24,7 @@ type AjustesPermissionsDialogProps = {
 const PERMISSION_COLUMNS = [
   { key: "view", label: "VER" },
   { key: "create", label: "CREAR" },
+  { key: "create_multiple_dates", label: "VARIOS DÍAS" },
   { key: "edit", label: "EDITAR" },
   { key: "delete", label: "ELIMINAR" },
   { key: "correct", label: "CORREGIR" },
