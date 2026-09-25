@@ -36,6 +36,7 @@ services:
   api:
     image: ${CUIDARTE_API_IMAGE:?Define CUIDARTE_API_IMAGE en .env.vps}
     restart: unless-stopped
+    init: true
     env_file:
       - ${CUIDARTE_ENV_FILE:-.env.vps}
     environment:

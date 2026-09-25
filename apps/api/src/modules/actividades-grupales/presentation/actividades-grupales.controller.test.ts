@@ -307,7 +307,10 @@ describe("ActividadesGrupalesController", () => {
     assert.equal(receivedActivityId, "5f0361fb-ff51-43d7-a6e8-83c58df345b6");
     assert.equal(receivedActorId, currentUser.id);
     assert.equal(headers["Content-Type"], "application/pdf");
-    assert.equal(headers["Content-Disposition"], 'inline; filename="acta-sesion-grupal-0004.pdf"');
+    assert.equal(
+      headers["Content-Disposition"],
+      'inline; filename="acta-sesion-grupal-0004.pdf"; filename*=UTF-8\'\'acta-sesion-grupal-0004.pdf',
+    );
     assert.equal(Buffer.isBuffer(sentPayload), true);
     assert.equal((sentPayload as Buffer).toString("utf8"), "pdf");
   });

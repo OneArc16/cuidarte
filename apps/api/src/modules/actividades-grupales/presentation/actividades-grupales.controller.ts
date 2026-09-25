@@ -49,6 +49,7 @@ import { type FastifyReply } from "fastify";
 import { type Multipart, type MultipartFile } from "@fastify/multipart";
 import { z } from "zod";
 
+import { buildContentDisposition } from "../../../common/content-disposition";
 import { parseZodSchema } from "../../../common/parse-zod-schema";
 import { type AuthenticatedRequest } from "../../auth/authenticated-request";
 import { SessionGuard } from "../../auth/session.guard";
@@ -401,7 +402,7 @@ function sendFile(
   disposition: "attachment" | "inline",
 ) {
   reply.header("Content-Type", file.contentType);
-  reply.header("Content-Disposition", `${disposition}; filename="${file.filename}"`);
+  reply.header("Content-Disposition", buildContentDisposition(disposition, file.filename));
 
   return reply.send(file.buffer);
 }
