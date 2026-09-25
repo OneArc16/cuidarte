@@ -27,6 +27,12 @@ export function canManageAlimentacion(user: Pick<AuthUser, "role" | "permissions
         hasUserPermission(user, "alimentacion.edit");
 }
 
+export function canImportAlimentacion(user: Pick<AuthUser, "role" | "permissions">): boolean {
+  return user.permissions === undefined
+    ? ALIMENTACION_EDITOR_ROLES.has(user.role)
+    : hasUserPermission(user, "alimentacion.import") || canManageAlimentacion(user);
+}
+
 export function canDeleteAlimentacion(user: Pick<AuthUser, "role" | "permissions">): boolean {
   return user.permissions === undefined
     ? ALIMENTACION_EDITOR_ROLES.has(user.role)

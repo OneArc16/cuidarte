@@ -4,10 +4,14 @@ import {
   type AlimentacionFormatoEntregaRecord,
   type AlimentacionFormatoReportCandidateRecord,
   type AlimentacionImportedFormatoVersionRecord,
+  type AlimentacionBulkImportBatchRecord,
+  type AlimentacionBulkImportItemRecord,
   type AlimentacionRecord,
   type AlimentacionTenantOptionRecord,
   type CreateAlimentacionFormatoEmissionCommand,
   type CreateAlimentacionImportedFormatoVersionCommand,
+  type CreateAlimentacionBulkImportBatchCommand,
+  type CreateAlimentacionBulkImportItemCommand,
   type CreateAlimentacionFormatoEntregaExportAuditCommand,
   type CreateAlimentacionImportedFormatoDownloadAuditCommand,
   type CreateAlimentacionBatchRecordCommand,
@@ -78,4 +82,25 @@ export type AlimentacionRepository = {
   createImportedFormatoVersion(
     command: CreateAlimentacionImportedFormatoVersionCommand,
   ): Promise<AlimentacionImportedFormatoVersionRecord>;
+  createBulkImportBatch?(
+    command: CreateAlimentacionBulkImportBatchCommand,
+  ): Promise<AlimentacionBulkImportBatchRecord>;
+  createBulkImportItems?(
+    commands: CreateAlimentacionBulkImportItemCommand[],
+  ): Promise<AlimentacionBulkImportItemRecord[]>;
+  findBulkImportBatch?(id: string): Promise<AlimentacionBulkImportBatchRecord | null>;
+  findBulkImportItems?(batchId: string): Promise<AlimentacionBulkImportItemRecord[]>;
+  updateBulkImportItem?(
+    id: string,
+    patch: Partial<
+      Pick<
+        AlimentacionBulkImportItemRecord,
+        "status" | "reasonCode" | "reasonMessage" | "importedVersionId" | "importedVersion"
+      >
+    >,
+  ): Promise<AlimentacionBulkImportItemRecord>;
+  findAdultosByNormalizedDocumentNumbers?(
+    tenantId: string,
+    normalizedDocumentNumbers: string[],
+  ): Promise<AlimentacionAdultoOptionRecord[]>;
 };

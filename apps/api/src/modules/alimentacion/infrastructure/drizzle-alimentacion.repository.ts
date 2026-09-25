@@ -18,6 +18,8 @@ import {
 import { DatabaseService } from "../../../database/database.service";
 import {
   adultosMayores,
+  alimentacionBulkImportBatches,
+  alimentacionBulkImportItems,
   alimentacionFormatoEmissions,
   alimentacionFormatoImportedVersions,
   alimentacionRegistros,
@@ -31,10 +33,14 @@ import {
   type AlimentacionFormatoEntregaRecord,
   type AlimentacionFormatoReportCandidateRecord,
   type AlimentacionImportedFormatoVersionRecord,
+  type AlimentacionBulkImportBatchRecord,
+  type AlimentacionBulkImportItemRecord,
   type AlimentacionRecord,
   type AlimentacionTenantOptionRecord,
   type CreateAlimentacionFormatoEmissionCommand,
   type CreateAlimentacionImportedFormatoVersionCommand,
+  type CreateAlimentacionBulkImportBatchCommand,
+  type CreateAlimentacionBulkImportItemCommand,
   type CreateAlimentacionFormatoEntregaExportAuditCommand,
   type CreateAlimentacionImportedFormatoDownloadAuditCommand,
   type CreateAlimentacionBatchRecordCommand,
@@ -300,6 +306,35 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       .limit(1);
 
     return row === undefined ? null : this.toAdultoOption(row);
+  }
+
+  async findAdultosByNormalizedDocumentNumbers(
+    tenantId: string,
+    normalizedDocumentNumbers: string[],
+  ): Promise<AlimentacionAdultoOptionRecord[]> {
+    if (normalizedDocumentNumbers.length === 0) return [];
+
+    const rows = await this.database.db
+      .select({
+        id: adultosMayores.id,
+        tenantId: adultosMayores.tenantId,
+        tenantName: tenants.name,
+        tenantCity: tenants.city,
+        tenantDepartment: tenants.department,
+        documentNumber: adultosMayores.documentNumber,
+        names: adultosMayores.names,
+        surnames: adultosMayores.surnames,
+        status: adultosMayores.status,
+        deathDate: adultosMayores.deathDate,
+      })
+      .from(adultosMayores)
+      .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
+      .where(and(eq(adultosMayores.tenantId, tenantId), isNull(adultosMayores.deletedAt)));
+
+    const wanted = new Set(normalizedDocumentNumbers);
+    return rows
+      .filter((row) => wanted.has(normalizeBulkDocumentNumber(row.documentNumber)))
+      .map((row) => this.toAdultoOption(row));
   }
 
   async findFormatoEntregaByAdultoAndMonth(
@@ -977,6 +1012,100 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
     return importedVersion;
   }
 
+  async createBulkImportBatch(
+    command: CreateAlimentacionBulkImportBatchCommand,
+  ): Promise<AlimentacionBulkImportBatchRecord> {
+    const [row] = await this.database.db
+      .insert(alimentacionBulkImportBatches)
+      .values(command)
+      .returning();
+    if (row === undefined) throw new Error("No fue posible crear el lote de importacion.");
+    return { ...row, mode: row.mode as "month" | "all" };
+  }
+
+  async createBulkImportItems(
+    commands: CreateAlimentacionBulkImportItemCommand[],
+  ): Promise<AlimentacionBulkImportItemRecord[]> {
+    if (commands.length === 0) return [];
+    const rows = await this.database.db
+      .insert(alimentacionBulkImportItems)
+      .values(commands)
+      .returning();
+    return rows.map((row) => ({
+      ...row,
+      importedVersion: null,
+    })) as AlimentacionBulkImportItemRecord[];
+  }
+
+  async findBulkImportBatch(id: string): Promise<AlimentacionBulkImportBatchRecord | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(alimentacionBulkImportBatches)
+      .where(eq(alimentacionBulkImportBatches.id, id))
+      .limit(1);
+    return row === undefined ? null : { ...row, mode: row.mode as "month" | "all" };
+  }
+
+  async findBulkImportItems(batchId: string): Promise<AlimentacionBulkImportItemRecord[]> {
+    const rows = await this.database.db
+      .select({
+        id: alimentacionBulkImportItems.id,
+        batchId: alimentacionBulkImportItems.batchId,
+        tenantId: alimentacionBulkImportItems.tenantId,
+        originalName: alimentacionBulkImportItems.originalName,
+        documentNumber: alimentacionBulkImportItems.documentNumber,
+        deliveryMonth: alimentacionBulkImportItems.deliveryMonth,
+        adultoMayorId: alimentacionBulkImportItems.adultoMayorId,
+        adultoMayorFullName: alimentacionBulkImportItems.adultoMayorFullName,
+        sha256: alimentacionBulkImportItems.sha256,
+        sizeBytes: alimentacionBulkImportItems.sizeBytes,
+        stagedRelativePath: alimentacionBulkImportItems.stagedRelativePath,
+        status: alimentacionBulkImportItems.status,
+        reasonCode: alimentacionBulkImportItems.reasonCode,
+        reasonMessage: alimentacionBulkImportItems.reasonMessage,
+        existingVersion: alimentacionBulkImportItems.existingVersion,
+        importedVersionId: alimentacionBulkImportItems.importedVersionId,
+        importedVersion: alimentacionFormatoImportedVersions.version,
+      })
+      .from(alimentacionBulkImportItems)
+      .leftJoin(
+        alimentacionFormatoImportedVersions,
+        eq(alimentacionFormatoImportedVersions.id, alimentacionBulkImportItems.importedVersionId),
+      )
+      .where(eq(alimentacionBulkImportItems.batchId, batchId))
+      .orderBy(asc(alimentacionBulkImportItems.createdAt));
+    return rows as AlimentacionBulkImportItemRecord[];
+  }
+
+  async updateBulkImportItem(
+    id: string,
+    patch: Partial<
+      Pick<
+        AlimentacionBulkImportItemRecord,
+        "status" | "reasonCode" | "reasonMessage" | "importedVersionId" | "importedVersion"
+      >
+    >,
+  ): Promise<AlimentacionBulkImportItemRecord> {
+    const [row] = await this.database.db
+      .update(alimentacionBulkImportItems)
+      .set({
+        ...(patch.status === undefined ? {} : { status: patch.status }),
+        ...(patch.reasonCode === undefined ? {} : { reasonCode: patch.reasonCode }),
+        ...(patch.reasonMessage === undefined ? {} : { reasonMessage: patch.reasonMessage }),
+        ...(patch.importedVersionId === undefined
+          ? {}
+          : { importedVersionId: patch.importedVersionId }),
+        updatedAt: new Date(),
+      })
+      .where(eq(alimentacionBulkImportItems.id, id))
+      .returning();
+    if (row === undefined) throw new Error("El item de importacion no fue encontrado.");
+    return {
+      ...row,
+      importedVersion: patch.importedVersion ?? null,
+    } as AlimentacionBulkImportItemRecord;
+  }
+
   private getRecordSelection() {
     return {
       id: alimentacionRegistros.id,
@@ -1360,6 +1489,10 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       importedAt: row.importedAt,
     };
   }
+}
+
+function normalizeBulkDocumentNumber(value: string): string {
+  return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 }
 
 function escapeLikePattern(value: string): string {

@@ -16,7 +16,7 @@ import {
 
 import {
   canAccessAlimentacion,
-  canManageAlimentacion,
+  canImportAlimentacion,
   resolveAlimentacionScope,
 } from "../domain/alimentacion.policy";
 import {
@@ -187,7 +187,7 @@ export class AlimentacionImportedFormatoService {
   }
 
   private ensureCanManage(actor: Pick<AuthUser, "role">) {
-    if (!canManageAlimentacion(actor)) {
+    if (!canImportAlimentacion(actor)) {
       throw new ForbiddenException("No tienes permisos para importar formatos de alimentacion.");
     }
   }

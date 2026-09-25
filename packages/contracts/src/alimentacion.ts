@@ -102,6 +102,91 @@ export const alimentacionFormatoEntregaExportQuerySchema = z.object({
   deliveryMonth: alimentacionDeliveryMonthSchema,
 });
 
+export const alimentacionBulkImportModeSchema = z.enum(["month", "all"]);
+export const alimentacionBulkImportItemStatusSchema = z.enum([
+  "ready",
+  "warning",
+  "error",
+  "imported",
+  "skipped",
+]);
+export const alimentacionBulkImportDecisionSchema = z.enum(["import", "skip"]);
+export const alimentacionBulkImportReasonCodeSchema = z.enum([
+  "INVALID_FILENAME",
+  "INVALID_MONTH",
+  "INVALID_PDF",
+  "ADULTO_NOT_FOUND",
+  "AMBIGUOUS_ADULTO",
+  "DUPLICATE_IN_BATCH",
+  "ALREADY_IMPORTED",
+  "DUPLICATE_FILE",
+  "BATCH_EXPIRED",
+]);
+
+export const alimentacionBulkImportValidateQuerySchema = z
+  .object({
+    mode: alimentacionBulkImportModeSchema,
+    deliveryMonth: nullableMonthSchema.optional().default(null),
+    tenantId: nullableTenantIdSchema.optional().default(null),
+  })
+  .superRefine((value, context) => {
+    if (value.mode === "month" && value.deliveryMonth === null) {
+      context.addIssue({
+        code: "custom",
+        path: ["deliveryMonth"],
+        message: "El mes es obligatorio cuando la importacion es mensual.",
+      });
+    }
+  });
+
+const alimentacionBulkImportSummarySchema = z.object({
+  total: z.number().int().min(0),
+  ready: z.number().int().min(0),
+  warnings: z.number().int().min(0),
+  errors: z.number().int().min(0),
+  imported: z.number().int().min(0).default(0),
+  skipped: z.number().int().min(0).default(0),
+});
+
+export const alimentacionBulkImportItemSchema = z.object({
+  itemId: z.uuid(),
+  originalName: z.string().min(1).max(260),
+  status: alimentacionBulkImportItemStatusSchema,
+  reasonCode: alimentacionBulkImportReasonCodeSchema.nullable().default(null),
+  reasonMessage: z.string().min(1).max(300).nullable().default(null),
+  documentNumber: z.string().min(1).max(80).nullable().default(null),
+  deliveryMonth: alimentacionDeliveryMonthSchema.nullable().default(null),
+  adultoMayorId: z.uuid().nullable().default(null),
+  adultoMayorFullName: z.string().min(1).max(360).nullable().default(null),
+  existingVersion: z.number().int().positive().nullable().default(null),
+  importedVersion: z.number().int().positive().nullable().default(null),
+});
+
+export const alimentacionBulkImportValidateResponseSchema = z.object({
+  batchId: z.uuid(),
+  expiresAt: z.string().min(1),
+  summary: alimentacionBulkImportSummarySchema,
+  items: z.array(alimentacionBulkImportItemSchema),
+});
+
+export const alimentacionBulkImportConfirmRequestSchema = z.object({
+  batchId: z.uuid(),
+  items: z
+    .array(
+      z.object({
+        itemId: z.uuid(),
+        decision: alimentacionBulkImportDecisionSchema,
+      }),
+    )
+    .min(1),
+});
+
+export const alimentacionBulkImportConfirmResponseSchema = z.object({
+  batchId: z.uuid(),
+  summary: alimentacionBulkImportSummarySchema,
+  items: z.array(alimentacionBulkImportItemSchema),
+});
+
 export const alimentacionImportedFormatoVersionSchema = z.object({
   id: z.uuid(),
   version: z.number().int().positive(),
@@ -214,6 +299,26 @@ export type AlimentacionLookupByAdultoMayorQuery = z.infer<
 >;
 export type AlimentacionFormatoEntregaExportQuery = z.infer<
   typeof alimentacionFormatoEntregaExportQuerySchema
+>;
+export type AlimentacionBulkImportMode = z.infer<typeof alimentacionBulkImportModeSchema>;
+export type AlimentacionBulkImportItemStatus = z.infer<
+  typeof alimentacionBulkImportItemStatusSchema
+>;
+export type AlimentacionBulkImportReasonCode = z.infer<
+  typeof alimentacionBulkImportReasonCodeSchema
+>;
+export type AlimentacionBulkImportValidateQuery = z.infer<
+  typeof alimentacionBulkImportValidateQuerySchema
+>;
+export type AlimentacionBulkImportItem = z.infer<typeof alimentacionBulkImportItemSchema>;
+export type AlimentacionBulkImportValidateResponse = z.infer<
+  typeof alimentacionBulkImportValidateResponseSchema
+>;
+export type AlimentacionBulkImportConfirmRequest = z.infer<
+  typeof alimentacionBulkImportConfirmRequestSchema
+>;
+export type AlimentacionBulkImportConfirmResponse = z.infer<
+  typeof alimentacionBulkImportConfirmResponseSchema
 >;
 export type AlimentacionImportedFormatoVersion = z.infer<
   typeof alimentacionImportedFormatoVersionSchema

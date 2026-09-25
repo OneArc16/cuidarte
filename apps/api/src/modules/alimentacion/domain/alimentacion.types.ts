@@ -1,5 +1,8 @@
 import {
   type AdultoMayorStatus,
+  type AlimentacionBulkImportItemStatus,
+  type AlimentacionBulkImportMode,
+  type AlimentacionBulkImportReasonCode,
   type AlimentacionOrganizer,
   type AlimentacionStatus,
   type UserRole,
@@ -126,6 +129,64 @@ export type AlimentacionImportedFormatoVersionRecord = {
   importedByUserId: string;
   importedByUserFullName: string;
   importedAt: Date;
+};
+
+export type AlimentacionBulkImportBatchRecord = {
+  id: string;
+  tenantId: string;
+  mode: AlimentacionBulkImportMode;
+  deliveryMonth: string | null;
+  status: string;
+  createdByUserId: string;
+  expiresAt: Date;
+};
+
+export type AlimentacionBulkImportItemRecord = {
+  id: string;
+  batchId: string;
+  tenantId: string;
+  originalName: string;
+  documentNumber: string | null;
+  deliveryMonth: string | null;
+  adultoMayorId: string | null;
+  adultoMayorFullName: string | null;
+  sha256: string;
+  sizeBytes: number;
+  stagedRelativePath: string;
+  status: AlimentacionBulkImportItemStatus;
+  reasonCode: AlimentacionBulkImportReasonCode | null;
+  reasonMessage: string | null;
+  existingVersion: number | null;
+  importedVersionId: string | null;
+  importedVersion: number | null;
+};
+
+export type CreateAlimentacionBulkImportBatchCommand = {
+  id: string;
+  tenantId: string;
+  mode: AlimentacionBulkImportMode;
+  deliveryMonth: string | null;
+  createdByUserId: string;
+  expiresAt: Date;
+};
+
+export type CreateAlimentacionBulkImportItemCommand = {
+  id: string;
+  batchId: string;
+  tenantId: string;
+  originalName: string;
+  documentNumber: string | null;
+  normalizedDocumentNumber: string | null;
+  deliveryMonth: string | null;
+  adultoMayorId: string | null;
+  adultoMayorFullName: string | null;
+  sha256: string;
+  sizeBytes: number;
+  stagedRelativePath: string;
+  status: AlimentacionBulkImportItemStatus;
+  reasonCode: AlimentacionBulkImportReasonCode | null;
+  reasonMessage: string | null;
+  existingVersion: number | null;
 };
 
 export type BufferedAlimentacionFormatoPdfUpload = {

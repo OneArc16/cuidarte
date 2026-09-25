@@ -3,7 +3,7 @@ import {
   type AlimentacionListItem,
   type AuthUser,
 } from "@cuidarte/contracts";
-import { Plus } from "lucide-react";
+import { Files, Plus } from "lucide-react";
 import { type ChangeEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -16,6 +16,7 @@ import {
 import { AlimentacionDeleteDialog } from "../components/alimentacion-delete-dialog";
 import { AlimentacionImportedPdfDialog } from "../components/alimentacion-imported-pdf-dialog";
 import { AlimentacionImportedPdfVersionsDialog } from "../components/alimentacion-imported-pdf-versions-dialog";
+import { AlimentacionBulkImportDialog } from "../components/alimentacion-bulk-import-dialog";
 import { AlimentacionTable } from "../components/alimentacion-table";
 import { AlimentacionToolbar } from "../components/alimentacion-toolbar";
 import { ReportExportButton } from "@/features/reports/components/report-export-button";
@@ -24,7 +25,7 @@ import {
   REGISTRO_ALIMENTACION_NEW_PATH,
   buildAlimentacionEditPath,
 } from "../lib/alimentacion-paths";
-import { canManageAlimentacion } from "../lib/alimentacion-permissions";
+import { canImportAlimentacion, canManageAlimentacion } from "../lib/alimentacion-permissions";
 import {
   getCurrentMonthInputValue,
   resolveAlimentacionApiError,
@@ -74,6 +75,7 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
   const [importDialog, setImportDialog] = useState<ImportDialogState | null>(null);
   const [historyTarget, setHistoryTarget] = useState<ImportedFormatoHistoryTarget | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AlimentacionListItem | null>(null);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [downloadingImportedVersionId, setDownloadingImportedVersionId] = useState<string | null>(
     null,
   );
@@ -81,6 +83,7 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
   const showTenantFilter = user.role === "super_admin";
   const tenantOptionsQuery = useAlimentacionTenantOptionsQuery(showTenantFilter);
   const canManageRecords = canManageAlimentacion(user);
+  const canImportRecords = canImportAlimentacion(user);
   const effectiveDeliveryMonth = deliveryMonth.trim() === "" ? null : deliveryMonth;
   const reportPeriod = effectiveDeliveryMonth ?? "ALL";
   const reportTenantId = showTenantFilter
@@ -276,8 +279,28 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
         tenantOptions={tenantOptionsQuery.data?.tenants ?? []}
         exportButton={
           <div className="module-report-actions">
-            <ReportExportButton className="alimentacion-zip-action" period={reportPeriod} tenantId={reportTenantId} type="FORMATOS_ENTREGA_ALIMENTACION" />
-            <ReportHistoryButton period={reportPeriod} tenantId={reportTenantId} type="FORMATOS_ENTREGA_ALIMENTACION" />
+            <button
+              className="alimentacion-bulk-import-action"
+              type="button"
+              aria-label="Importar formatos masivos"
+              data-tooltip="Importar formatos masivos"
+              disabled={!canImportRecords}
+              onClick={() => setBulkImportOpen(true)}
+            >
+              <Files aria-hidden="true" />
+              <span className="visually-hidden">Importar formatos masivos</span>
+            </button>
+            <ReportExportButton
+              className="alimentacion-zip-action"
+              period={reportPeriod}
+              tenantId={reportTenantId}
+              type="FORMATOS_ENTREGA_ALIMENTACION"
+            />
+            <ReportHistoryButton
+              period={reportPeriod}
+              tenantId={reportTenantId}
+              type="FORMATOS_ENTREGA_ALIMENTACION"
+            />
           </div>
         }
         onMonthChange={setDeliveryMonth}
@@ -340,6 +363,20 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
         >
           <Plus aria-hidden="true" />
         </button>
+      ) : null}
+
+      {bulkImportOpen ? (
+        <AlimentacionBulkImportDialog
+          deliveryMonth={effectiveDeliveryMonth ?? getCurrentMonthInputValue()}
+          selectedTenantId={selectedTenantId}
+          showTenantSelection={showTenantFilter}
+          tenantOptions={tenantOptionsQuery.data?.tenants ?? []}
+          onClose={() => setBulkImportOpen(false)}
+          onCompleted={() => {
+            setBulkImportOpen(false);
+            void registrosQuery.refetch();
+          }}
+        />
       ) : null}
 
       {importDialog !== null ? (

@@ -83,6 +83,34 @@ export class LocalAlimentacionFormatoFilesStorage implements AlimentacionFormato
     }
   }
 
+  async saveStagedFile(
+    batchId: string,
+    itemId: string,
+    file: { filename: string; contentType: string; buffer: Buffer },
+  ): Promise<StoredAlimentacionFormatoFile> {
+    const storedName = `${itemId}.pdf`;
+    const relativePath = path.posix.join("_staging", batchId, storedName);
+    const absolutePath = this.resolveStoredPath(relativePath);
+    const temporaryPath = `${absolutePath}.${randomUUID()}.part`;
+    await mkdir(path.dirname(absolutePath), { recursive: true, mode: 0o750 });
+    try {
+      await writeFile(temporaryPath, file.buffer, { flag: "wx", mode: 0o640 });
+      await rename(temporaryPath, absolutePath);
+    } catch (error) {
+      await unlink(temporaryPath).catch(() => undefined);
+      throw error;
+    }
+    return { filename: file.filename, storedName, contentType: file.contentType, relativePath };
+  }
+
+  async readStagedFile(relativePath: string, filename: string) {
+    return this.readFile(relativePath, filename, "application/pdf");
+  }
+
+  async deleteStagedFile(relativePath: string): Promise<void> {
+    return this.deleteFile(relativePath);
+  }
+
   private resolveStoredPath(relativePath: string): string {
     const safeRelativePath = relativePath.replace(/\\/g, "/");
     const resolvedPath = path.resolve(this.baseDir, safeRelativePath);

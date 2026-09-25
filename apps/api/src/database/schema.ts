@@ -1096,6 +1096,73 @@ export const alimentacionFormatoImportedVersions = pgTable(
   ],
 );
 
+export const alimentacionBulkImportBatches = pgTable(
+  "alimentacion_bulk_import_batches",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    mode: varchar("mode", { length: 12 }).notNull(),
+    deliveryMonth: varchar("delivery_month", { length: 7 }),
+    status: varchar("status", { length: 20 }).notNull().default("validated"),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("alimentacion_bulk_import_batches_tenant_idx").on(table.tenantId),
+    index("alimentacion_bulk_import_batches_expiry_idx").on(table.expiresAt),
+    index("alimentacion_bulk_import_batches_created_by_idx").on(table.createdByUserId),
+  ],
+);
+
+export const alimentacionBulkImportItems = pgTable(
+  "alimentacion_bulk_import_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    batchId: uuid("batch_id")
+      .notNull()
+      .references(() => alimentacionBulkImportBatches.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    originalName: varchar("original_name", { length: 260 }).notNull(),
+    documentNumber: varchar("document_number", { length: 80 }),
+    normalizedDocumentNumber: varchar("normalized_document_number", { length: 80 }),
+    deliveryMonth: varchar("delivery_month", { length: 7 }),
+    adultoMayorId: uuid("adulto_mayor_id").references(() => adultosMayores.id, {
+      onDelete: "restrict",
+    }),
+    adultoMayorFullName: varchar("adulto_mayor_full_name", { length: 360 }),
+    sha256: varchar("sha256", { length: 64 }).notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    stagedRelativePath: varchar("staged_relative_path", { length: 500 }).notNull(),
+    status: varchar("status", { length: 20 }).notNull(),
+    reasonCode: varchar("reason_code", { length: 40 }),
+    reasonMessage: varchar("reason_message", { length: 300 }),
+    existingVersion: integer("existing_version"),
+    importedVersionId: uuid("imported_version_id").references(
+      () => alimentacionFormatoImportedVersions.id,
+      { onDelete: "set null" },
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("alimentacion_bulk_import_items_batch_idx").on(table.batchId),
+    index("alimentacion_bulk_import_items_lookup_idx").on(
+      table.tenantId,
+      table.normalizedDocumentNumber,
+      table.deliveryMonth,
+    ),
+    index("alimentacion_bulk_import_items_hash_idx").on(table.sha256),
+  ],
+);
+
 export const atencionIndividualCounters = pgTable(
   "atencion_individual_counters",
   {

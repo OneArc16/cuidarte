@@ -1,6 +1,8 @@
 import {
   type CreateAlimentacionBatchRequest,
   type AlimentacionImportedFormatoUploadResponse,
+  type AlimentacionBulkImportConfirmRequest,
+  type AlimentacionBulkImportValidateQuery,
   type UpdateAlimentacionRequest,
 } from "@cuidarte/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -22,6 +24,7 @@ export const alimentacionQueryKeys = {
     ["alimentacion", "adulto-lookup", adultoMayorId, deliveryDate] as const,
   importedVersions: (adultoMayorId: string, deliveryMonth: string) =>
     ["alimentacion", "imported-formato-versions", adultoMayorId, deliveryMonth] as const,
+  bulkImport: () => ["alimentacion", "bulk-import"] as const,
 };
 
 export function useAlimentacionListQuery(params: {
@@ -193,6 +196,26 @@ export function useImportAlimentacionFormatoEntregaMutation() {
           ),
         }),
       ]);
+    },
+  });
+}
+
+export function useValidateBulkAlimentacionFormatoEntregaMutation() {
+  return useMutation({
+    mutationKey: alimentacionQueryKeys.bulkImport(),
+    mutationFn: ({ query, files }: { query: AlimentacionBulkImportValidateQuery; files: File[] }) =>
+      alimentacionApi.validateBulkAlimentacionFormatoEntregaPdfs(query, files),
+  });
+}
+
+export function useConfirmBulkAlimentacionFormatoEntregaMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: alimentacionQueryKeys.bulkImport(),
+    mutationFn: (request: AlimentacionBulkImportConfirmRequest) =>
+      alimentacionApi.confirmBulkAlimentacionFormatoEntregaPdfs(request),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["alimentacion"] });
     },
   });
 }
