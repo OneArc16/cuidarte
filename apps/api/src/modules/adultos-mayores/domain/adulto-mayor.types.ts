@@ -173,12 +173,14 @@ export type AdultoMayorTrashRecord = Pick<
 export type SendAdultoMayorToTrashCommand = {
   id: string;
   actorUserId: string;
+  tenantId: string | null;
   reason: string;
 };
 
 export type RestoreAdultoMayorCommand = {
   id: string;
   actorUserId: string;
+  tenantId: string | null;
 };
 
 export type AdultoMayorStatusHistoryRecord = {

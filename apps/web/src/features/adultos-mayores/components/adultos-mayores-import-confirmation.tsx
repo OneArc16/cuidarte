@@ -4,12 +4,14 @@ type AdultosMayoresImportConfirmationProps = {
   detail: AdultoMayorImportDetail;
   isPending: boolean;
   onConfirm: () => void;
+  onCancel?: () => void;
 };
 
 export function AdultosMayoresImportConfirmation({
   detail,
   isPending,
   onConfirm,
+  onCancel,
 }: AdultosMayoresImportConfirmationProps) {
   return (
     <section className="import-confirmation" aria-labelledby="import-confirmation-title">
@@ -37,14 +39,35 @@ export function AdultosMayoresImportConfirmation({
         </div>
       </dl>
 
-      <button
-        className="primary-action import-primary-action"
-        type="button"
-        disabled={!detail.canConfirm || isPending}
-        onClick={onConfirm}
+      <div
+        className="import-confirmation__floating-bar"
+        role="group"
+        aria-label="Acciones de importación"
       >
-        {isPending ? "Confirmando..." : "Confirmar importacion"}
-      </button>
+        <strong className="import-confirmation__floating-label">
+          {detail.canConfirm
+            ? detail.summary.readyRows + detail.summary.updateRows + " adultos listos para importar"
+            : "Revisa los errores antes de continuar"}
+        </strong>
+        <div className="import-confirmation__floating-actions">
+          <button
+            className="outline-action import-confirmation__cancel"
+            type="button"
+            disabled={isPending}
+            onClick={onCancel}
+          >
+            Cancelar
+          </button>
+          <button
+            className="primary-action import-confirmation__confirm"
+            type="button"
+            disabled={!detail.canConfirm || isPending}
+            onClick={onConfirm}
+          >
+            {isPending ? "Confirmando..." : "Confirmar importacion"}
+          </button>
+        </div>
+      </div>
     </section>
   );
 }

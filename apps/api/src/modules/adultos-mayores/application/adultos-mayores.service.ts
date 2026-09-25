@@ -31,6 +31,7 @@ import {
   canManageAdultosMayoresTrash,
   resolveAdultoMayorTenantForCreate,
   resolveAdultosMayoresScope,
+  resolveAdultosMayoresTrashScope,
 } from "../domain/adulto-mayor.policy";
 import {
   ADULTOS_MAYORES_REPOSITORY,
@@ -96,9 +97,10 @@ export class AdultosMayoresService {
     actor: AuthUser,
   ): Promise<AdultoMayorTrashListItem[]> {
     this.ensureCanManageTrash(actor);
+    const scope = this.resolveTrashScopeOrThrow(actor);
     const records = await this.adultosMayoresRepository.findTrashMany({
       search: query.search,
-      scope: { type: "all" },
+      scope,
     });
 
     return records.map((record) =>
@@ -131,9 +133,11 @@ export class AdultosMayoresService {
     actor: AuthUser,
   ): Promise<void> {
     this.ensureCanManageTrash(actor);
+    const scope = this.resolveTrashScopeOrThrow(actor);
     const deleted = await this.adultosMayoresRepository.sendToTrash({
       id: adultoMayorId,
       actorUserId: actor.id,
+      tenantId: scope.type === "tenant" ? scope.tenantId : null,
       reason: command.reason,
     });
 
@@ -142,9 +146,11 @@ export class AdultosMayoresService {
 
   async restoreAdultoMayor(adultoMayorId: string, actor: AuthUser): Promise<void> {
     this.ensureCanManageTrash(actor);
+    const scope = this.resolveTrashScopeOrThrow(actor);
     const restored = await this.adultosMayoresRepository.restore({
       id: adultoMayorId,
       actorUserId: actor.id,
+      tenantId: scope.type === "tenant" ? scope.tenantId : null,
     });
 
     if (!restored) throw new NotFoundException("Adulto mayor en papelera no encontrado.");
@@ -423,6 +429,18 @@ export class AdultosMayoresService {
 
     if (scope === null) {
       throw new ForbiddenException("No tienes un centro asociado para gestionar adultos mayores.");
+    }
+
+    return scope;
+  }
+
+  private resolveTrashScopeOrThrow(actor: AuthUser) {
+    const scope = resolveAdultosMayoresTrashScope(actor);
+
+    if (scope === null) {
+      throw new ForbiddenException(
+        "No tienes un centro asociado para gestionar la papelera de adultos mayores.",
+      );
     }
 
     return scope;

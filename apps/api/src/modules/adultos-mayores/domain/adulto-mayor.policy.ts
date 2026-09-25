@@ -34,6 +34,23 @@ export function resolveAdultosMayoresScope(user: AuthUser): AdultosMayoresScope 
   };
 }
 
+export function resolveAdultosMayoresTrashScope(
+  user: Pick<AuthUser, "role" | "tenantId">,
+): AdultosMayoresScope | null {
+  if (user.role === "super_admin") {
+    return { type: "all" };
+  }
+
+  if (user.tenantId === null) {
+    return null;
+  }
+
+  return {
+    type: "tenant",
+    tenantId: user.tenantId,
+  };
+}
+
 export function resolveAdultoMayorTenantForCreate(
   user: AuthUser,
   requestedTenantId: string | null,

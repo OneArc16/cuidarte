@@ -11,21 +11,36 @@ export function HomeModuleButton({ module, isActive, variant, onClick }: HomeMod
   const Icon = module.icon;
 
   return (
-    <button
+    <a
       className={
         isActive
           ? `module-button module-button--${variant} module-button--active`
           : `module-button module-button--${variant}`
       }
-      type="button"
+      href={module.path}
+      role="button"
       aria-label={module.label}
       aria-current={isActive ? "page" : undefined}
-      onClick={onClick}
+      onClick={(event) => {
+        if (
+          onClick === undefined ||
+          event.button !== 0 ||
+          event.metaKey ||
+          event.ctrlKey ||
+          event.shiftKey ||
+          event.altKey
+        ) {
+          return;
+        }
+
+        event.preventDefault();
+        onClick();
+      }}
     >
       <span className="module-button__icon" aria-hidden="true">
         <Icon />
       </span>
       <span className="module-button__label">{module.label}</span>
-    </button>
+    </a>
   );
 }

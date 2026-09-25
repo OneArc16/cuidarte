@@ -427,6 +427,15 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
 
   async sendToTrash(command: SendAdultoMayorToTrashCommand): Promise<boolean> {
     return await this.database.db.transaction(async (tx) => {
+      const conditions: SQL[] = [
+        eq(adultosMayores.id, command.id),
+        isNull(adultosMayores.deletedAt),
+      ];
+
+      if (command.tenantId !== null) {
+        conditions.push(eq(adultosMayores.tenantId, command.tenantId));
+      }
+
       const [deleted] = await tx
         .update(adultosMayores)
         .set({
@@ -435,7 +444,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
           deletionReason: command.reason,
           updatedAt: new Date(),
         })
-        .where(and(eq(adultosMayores.id, command.id), isNull(adultosMayores.deletedAt)))
+        .where(and(...conditions))
         .returning({
           id: adultosMayores.id,
           tenantId: adultosMayores.tenantId,
@@ -464,6 +473,15 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
 
   async restore(command: RestoreAdultoMayorCommand): Promise<boolean> {
     return await this.database.db.transaction(async (tx) => {
+      const conditions: SQL[] = [
+        eq(adultosMayores.id, command.id),
+        isNotNull(adultosMayores.deletedAt),
+      ];
+
+      if (command.tenantId !== null) {
+        conditions.push(eq(adultosMayores.tenantId, command.tenantId));
+      }
+
       const [restored] = await tx
         .update(adultosMayores)
         .set({
@@ -472,7 +490,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
           deletionReason: null,
           updatedAt: new Date(),
         })
-        .where(and(eq(adultosMayores.id, command.id), isNotNull(adultosMayores.deletedAt)))
+        .where(and(...conditions))
         .returning({ id: adultosMayores.id, tenantId: adultosMayores.tenantId });
 
       if (restored === undefined) return false;
