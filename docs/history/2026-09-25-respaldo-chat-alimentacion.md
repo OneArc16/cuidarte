@@ -3,7 +3,7 @@
 Fecha: 2026-09-25
 Repositorio: `OneArc16/cuidarte`
 Rama: `feat/actas-alimentacion-home-incremental`
-Último commit publicado: `c8d51ea fix(adultos): informa cuando el duplicado esta en papelera`
+Último commit publicado: `5c48fdd feat(reportes): respetar filtros y mostrar progreso de exportaciones`
 Remoto: `origin/feat/actas-alimentacion-home-incremental`
 
 ## Propósito
@@ -74,6 +74,24 @@ Archivos principales:
 
 El error `connect ECONNREFUSED 127.0.0.1:6379` significa que la API no logra conectarse a Redis en el puerto 6379. Afecta principalmente la cola `ReportJobsQueue`. Redis debe estar activo y la API debe reiniciarse después de corregir la conexión.
 
+## Exportación de ZIP de sesiones y progreso
+
+- La exportación de actas de sesiones grupales respeta los filtros actuales del listado: sede, mes, búsqueda, tipo de actividad y organizador.
+- Los filtros se envían al backend y se persisten en cada trabajo asíncrono para que el worker genere exactamente el subconjunto solicitado.
+- Se agregó una clave de filtros para evitar duplicar trabajos activos con filtros distintos.
+- El modal de descargas muestra el porcentaje y el detalle de documentos procesados, por ejemplo: 37% · 149/400.
+- El total de documentos se guarda desde la creación y se actualiza cuando inicia el worker, incluyendo trabajos recuperados.
+- Nueva migración aplicada: `apps/api/drizzle/0059_noisy_tarantula.sql`.
+
+Archivos principales:
+
+- `apps/web/src/features/actividades-grupales/pages/actividades-grupales-index-page.tsx`
+- `apps/web/src/features/reports/components/report-export-button.tsx`
+- `apps/web/src/features/reports/components/report-download-dialog.tsx`
+- `apps/api/src/modules/reports/application/reports.service.ts`
+- `apps/api/src/modules/actividades-grupales/infrastructure/drizzle-actividades-grupales.repository.ts`
+- `packages/contracts/src/reports.ts`
+
 ## Commits recientes
 
 - `e57572a feat: improve adult management and sidebar navigation`
@@ -84,6 +102,7 @@ El error `connect ECONNREFUSED 127.0.0.1:6379` significa que la API no logra con
 - `938d73a fix(alimentacion): mejora modal de importacion masiva`
 - `2d9742a fix(api): permite validar bloques de hasta 100 pdf`
 - `c8d51ea fix(adultos): informa cuando el duplicado esta en papelera`
+- `5c48fdd feat(reportes): respetar filtros y mostrar progreso de exportaciones`
 
 Todos los commits anteriores fueron enviados al remoto.
 
@@ -93,7 +112,11 @@ Todos los commits anteriores fueron enviados al remoto.
 - `pnpm --filter @cuidarte/api typecheck`
 - `pnpm --filter @cuidarte/api build`
 - Pruebas específicas de `AdultosMayoresService`: 12/12 correctas.
-- Migraciones de API ejecutadas correctamente en el entorno local.
+- Migraciones de API ejecutadas correctamente en el entorno local, incluida la 0059 de filtros de reportes.
+- Typecheck completo: 4 paquetes correctos.
+- Test aislado del modal: 3/3 correctos.
+- Test aislado del servicio de reportes: 7/7 correctos.
+- La suite completa conserva fallos no relacionados en fixtures de controller, tenant branding y pruebas de UI con handlers MSW ausentes.
 
 La ejecución completa de pruebas de API contiene algunos fallos preexistentes o no relacionados en pruebas de controller y tenant branding; el typecheck, build y la prueba específica del cambio de papelera pasan.
 
@@ -107,7 +130,7 @@ git log -1 --oneline
 git branch -vv
 ```
 
-La rama debe estar sincronizada con `origin/feat/actas-alimentacion-home-incremental` en `c8d51ea`.
+La rama debe estar sincronizada con `origin/feat/actas-alimentacion-home-incremental` en `5c48fdd`.
 
 No agregar estos directorios temporales:
 
