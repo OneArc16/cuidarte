@@ -1979,12 +1979,14 @@
   background: rgb(12 28 22 / 32%);
   backdrop-filter: blur(6px);
   padding: 16px;
+  overflow-y: auto;
 }
 
 .alimentacion-bulk-dialog {
   width: 100%;
   max-width: 560px;
-  max-height: calc(100vh - 32px);
+  max-height: min(760px, calc(100dvh - 32px));
+  grid-template-rows: auto minmax(0, 1fr) auto;
   border-radius: 18px;
   box-shadow:
     0 1px 2px rgb(16 24 20 / 4%),
@@ -2037,6 +2039,11 @@
 
 .alimentacion-bulk-dialog__body {
   flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: #b7c9c1 transparent;
+  scrollbar-width: thin;
   padding: 20px 24px 24px;
 }
 

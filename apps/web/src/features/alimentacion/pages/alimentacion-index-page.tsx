@@ -285,7 +285,13 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
               aria-label="Importar formatos masivos"
               data-tooltip="Importar formatos masivos"
               disabled={!canImportRecords}
-              onClick={() => setBulkImportOpen(true)}
+              onClick={() => {
+                if (showTenantFilter && selectedTenantId === "") {
+                  toast.warning("Selecciona un centro antes de importar formatos masivos.");
+                  return;
+                }
+                setBulkImportOpen(true);
+              }}
             >
               <Files aria-hidden="true" />
               <span className="visually-hidden">Importar formatos masivos</span>
