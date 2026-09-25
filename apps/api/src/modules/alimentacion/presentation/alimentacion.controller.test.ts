@@ -76,7 +76,7 @@ describe("AlimentacionController", () => {
     const result = await controller.createBatch(
       {
         tenantId: null,
-        deliveryDate: "2026-04-24",
+        deliveryDates: ["2026-04-24"],
         organizer: "nutricionista",
         registros: [
           {
@@ -93,7 +93,7 @@ describe("AlimentacionController", () => {
 
     assert.deepEqual(receivedCommand, {
       tenantId: null,
-      deliveryDate: "2026-04-24",
+      deliveryDates: ["2026-04-24"],
       organizer: "nutricionista",
       registros: [
         {

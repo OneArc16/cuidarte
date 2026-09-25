@@ -171,7 +171,7 @@ describe("AlimentacionService", () => {
     const result = await service.createBatch(
       {
         tenantId: null,
-        deliveryDate: "2026-04-24",
+        deliveryDates: ["2026-04-24"],
         organizer: "director",
         registros: [
           {
@@ -200,7 +200,7 @@ describe("AlimentacionService", () => {
         service.searchAdultosMayoresOptions(
           {
             search: "Rosa",
-            deliveryDate: "2026-04-24",
+            deliveryDates: ["2026-04-24"],
             limit: "all",
             tenantId: null,
           },
@@ -217,7 +217,7 @@ describe("AlimentacionService", () => {
     const result = await service.searchAdultosMayoresOptions(
       {
         search: "1020304050",
-        deliveryDate: "2026-04-24",
+        deliveryDates: ["2026-04-24"],
         limit: "all",
         tenantId: null,
       },
@@ -228,7 +228,7 @@ describe("AlimentacionService", () => {
     assert.equal(result[0]?.documentNumber, "1020304050");
     assert.deepEqual(repository.adultoOptionsQueries[0], {
       tenantId,
-      deliveryDate: "2026-04-24",
+      deliveryDates: ["2026-04-24"],
       search: "1020304050",
       limit: "all",
     });
@@ -241,7 +241,7 @@ describe("AlimentacionService", () => {
     const result = await service.createBatch(
       {
         tenantId: null,
-        deliveryDate: "2026-04-24",
+        deliveryDates: ["2026-04-24"],
         organizer: "nutricionista",
         registros: [
           {
@@ -261,9 +261,64 @@ describe("AlimentacionService", () => {
     assert.equal(repository.createdCommands[0]?.registros[0]?.adultoMayorId, adultoMayorId);
   });
 
+  it("creates one record per selected date", async () => {
+    const repository = createRepository();
+    const service = new AlimentacionService(repository);
+
+    const result = await service.createBatch(
+      {
+        tenantId: null,
+        deliveryDates: ["2026-04-24", "2026-04-27"],
+        organizer: "nutricionista",
+        registros: [
+          {
+            adultoMayorId,
+            refrigerio1: "entregado",
+            almuerzo: "entregado",
+            refrigerio2: "no_aplica",
+            auxilioTransporte: "no_entregado",
+          },
+        ],
+      },
+      adminUser,
+    );
+
+    assert.equal(result.createdCount, 2);
+    assert.equal(result.dateCount, 2);
+    assert.equal(result.adultoMayorCount, 1);
+    assert.deepEqual(repository.createdCommands[0]?.deliveryDates, ["2026-04-24", "2026-04-27"]);
+  });
+
+  it("rejects multiple dates when the person lacks the permission", async () => {
+    const repository = createRepository();
+    const service = new AlimentacionService(repository);
+
+    await assert.rejects(
+      () =>
+        service.createBatch(
+          {
+            tenantId: null,
+            deliveryDates: ["2026-04-24", "2026-04-27"],
+            organizer: "director",
+            registros: [
+              {
+                adultoMayorId,
+                refrigerio1: "entregado",
+                almuerzo: "entregado",
+                refrigerio2: "no_aplica",
+                auxilioTransporte: "no_entregado",
+              },
+            ],
+          },
+          directorUser,
+        ),
+      { constructor: ForbiddenException },
+    );
+  });
+
   it("rejects batch creation when a record already exists for the same date", async () => {
     const repository = createRepository({
-      existingByAdultosAndDate: [alimentacionRecord],
+      existingByAdultosAndDates: [alimentacionRecord],
     });
     const service = new AlimentacionService(repository);
 
@@ -272,7 +327,7 @@ describe("AlimentacionService", () => {
         service.createBatch(
           {
             tenantId: null,
-            deliveryDate: "2026-04-24",
+            deliveryDates: ["2026-04-24"],
             organizer: "nutricionista",
             registros: [
               {
@@ -490,7 +545,7 @@ describe("AlimentacionService", () => {
         service.createBatch(
           {
             tenantId: null,
-            deliveryDate: "2026-04-24",
+            deliveryDates: ["2026-04-24"],
             organizer: "director",
             registros: [
               {
@@ -512,7 +567,7 @@ describe("AlimentacionService", () => {
         service.createBatch(
           {
             tenantId: null,
-            deliveryDate: "2026-04-24",
+            deliveryDates: ["2026-04-24"],
             organizer: "director",
             registros: [
               {
@@ -598,7 +653,7 @@ describe("AlimentacionService", () => {
 
 function createRepository(
   overrides: {
-    existingByAdultosAndDate?: AlimentacionRecord[];
+    existingByAdultosAndDates?: AlimentacionRecord[];
     existingByAdultoAndDate?: AlimentacionRecord | null;
     records?: AlimentacionRecord[];
     adultoMayorById?: AlimentacionAdultoOptionRecord | null;
@@ -618,7 +673,7 @@ function createRepository(
   createdCommands: Array<{
     tenantId: string;
     actorUserId: string;
-    deliveryDate: string;
+    deliveryDates: string[];
     organizer: AlimentacionRecord["organizer"];
     registros: Array<{
       adultoMayorId: string;
@@ -642,7 +697,7 @@ function createRepository(
   const createdCommands: Array<{
     tenantId: string;
     actorUserId: string;
-    deliveryDate: string;
+    deliveryDates: string[];
     organizer: AlimentacionRecord["organizer"];
     registros: Array<{
       adultoMayorId: string;
@@ -741,8 +796,8 @@ function createRepository(
     async findImportedFormatoVersionById() {
       return null;
     },
-    async findExistingByAdultosAndDate() {
-      return overrides.existingByAdultosAndDate ?? [];
+    async findExistingByAdultosAndDates() {
+      return overrides.existingByAdultosAndDates ?? [];
     },
     async findByAdultoMayorAndDate({ excludeId }) {
       if (overrides.existingByAdultoAndDate === undefined) {
@@ -760,7 +815,7 @@ function createRepository(
     },
     async createMany(command) {
       createdCommands.push(command);
-      return command.registros.length;
+      return command.registros.length * command.deliveryDates.length;
     },
     async update(command) {
       return {

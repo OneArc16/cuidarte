@@ -31,7 +31,7 @@ export type FindAlimentacionRecordByIdQuery = {
 
 export type SearchAlimentacionAdultosMayoresOptionsQuery = {
   tenantId: string;
-  deliveryDate: string;
+  deliveryDates: string[];
   search: string | null;
   limit: "suggestions" | "all";
 };
@@ -65,9 +65,9 @@ export type FindAlimentacionImportedFormatoVersionByIdQuery = {
   adultoMayorId: string;
 };
 
-export type FindAlimentacionExistingRecordsByAdultosAndDateQuery = {
+export type FindAlimentacionExistingRecordsByAdultosAndDatesQuery = {
   tenantId: string;
-  deliveryDate: string;
+  deliveryDates: string[];
   adultoMayorIds: string[];
 };
 
@@ -92,6 +92,7 @@ export type AlimentacionAdultoOptionRecord = {
   documentNumber: string;
   fullName: string;
   alreadyRegistered?: boolean;
+  registeredDeliveryDates?: string[];
   status?: AdultoMayorStatus;
   deathDate?: string | null;
 };
@@ -294,7 +295,7 @@ export type CreateAlimentacionImportedFormatoVersionCommand = {
 export type CreateAlimentacionBatchRecordCommand = {
   tenantId: string;
   actorUserId: string;
-  deliveryDate: string;
+  deliveryDates: string[];
   organizer: AlimentacionOrganizer;
   registros: Array<{
     adultoMayorId: string;

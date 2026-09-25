@@ -33,6 +33,14 @@ export function canImportAlimentacion(user: Pick<AuthUser, "role" | "permissions
     : hasUserPermission(user, "alimentacion.import") || canManageAlimentacion(user);
 }
 
+export function canCreateMultipleDateAlimentacion(
+  user: Pick<AuthUser, "role" | "permissions">,
+): boolean {
+  return user.permissions === undefined
+    ? user.role === "super_admin" || user.role === "admin"
+    : hasUserPermission(user, "alimentacion.create_multiple_dates");
+}
+
 export function canDeleteAlimentacion(user: Pick<AuthUser, "role" | "permissions">): boolean {
   return user.permissions === undefined
     ? ALIMENTACION_EDITOR_ROLES.has(user.role)

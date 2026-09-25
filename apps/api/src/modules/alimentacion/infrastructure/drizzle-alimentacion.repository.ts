@@ -50,7 +50,7 @@ import {
   type FindAlimentacionFormatoEntregaByAdultoAndMonthQuery,
   type FindAlimentacionImportedFormatoVersionByIdQuery,
   type FindAlimentacionImportedFormatoVersionsQuery,
-  type FindAlimentacionExistingRecordsByAdultosAndDateQuery,
+  type FindAlimentacionExistingRecordsByAdultosAndDatesQuery,
   type FindAlimentacionRecordByAdultoMayorAndDateQuery,
   type FindAlimentacionRecordByIdQuery,
   type FindAlimentacionRecordsQuery,
@@ -87,6 +87,7 @@ type AlimentacionAdultoOptionRow = {
   names: string;
   surnames: string;
   alreadyRegistered?: boolean;
+  registeredDeliveryDates?: string[];
   status: AlimentacionAdultoOptionRecord["status"];
   deathDate: string | null;
 };
@@ -192,10 +193,16 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
   async searchAdultosMayoresOptions(
     query: SearchAlimentacionAdultosMayoresOptionsQuery,
   ): Promise<AlimentacionAdultoOptionRecord[]> {
+    const latestDeliveryDate = [...query.deliveryDates].sort().at(-1);
+
+    if (latestDeliveryDate === undefined) {
+      return [];
+    }
+
     const conditions: SQL[] = [
       eq(adultosMayores.tenantId, query.tenantId),
       isNull(adultosMayores.deletedAt),
-      or(isNull(adultosMayores.deathDate), gte(adultosMayores.deathDate, query.deliveryDate))!,
+      or(isNull(adultosMayores.deathDate), gte(adultosMayores.deathDate, latestDeliveryDate))!,
     ];
 
     if (query.search !== null) {
@@ -220,7 +227,10 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         documentNumber: adultosMayores.documentNumber,
         names: adultosMayores.names,
         surnames: adultosMayores.surnames,
-        alreadyRegistered: sql<boolean>`${alimentacionRegistros.id} is not null`,
+        alreadyRegistered: sql<boolean>`count(${alimentacionRegistros.id}) > 0`,
+        registeredDeliveryDates: sql<
+          string[]
+        >`coalesce(json_agg(distinct ${alimentacionRegistros.deliveryDate}::text) filter (where ${alimentacionRegistros.deliveryDate} is not null), '[]'::json)`,
         status: adultosMayores.status,
         deathDate: adultosMayores.deathDate,
       })
@@ -230,10 +240,22 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         alimentacionRegistros,
         and(
           eq(alimentacionRegistros.adultoMayorId, adultosMayores.id),
-          eq(alimentacionRegistros.deliveryDate, query.deliveryDate),
+          inArray(alimentacionRegistros.deliveryDate, query.deliveryDates),
         ),
       )
       .where(and(...conditions))
+      .groupBy(
+        adultosMayores.id,
+        adultosMayores.tenantId,
+        tenants.name,
+        tenants.city,
+        tenants.department,
+        adultosMayores.documentNumber,
+        adultosMayores.names,
+        adultosMayores.surnames,
+        adultosMayores.status,
+        adultosMayores.deathDate,
+      )
       .orderBy(asc(adultosMayores.surnames), asc(adultosMayores.names))
       .limit(query.limit === "all" ? 1_000 : 12);
 
@@ -633,10 +655,10 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
     return row === undefined ? null : this.toImportedFormatoVersionRecord(row);
   }
 
-  async findExistingByAdultosAndDate(
-    query: FindAlimentacionExistingRecordsByAdultosAndDateQuery,
+  async findExistingByAdultosAndDates(
+    query: FindAlimentacionExistingRecordsByAdultosAndDatesQuery,
   ): Promise<AlimentacionRecord[]> {
-    if (query.adultoMayorIds.length === 0) {
+    if (query.adultoMayorIds.length === 0 || query.deliveryDates.length === 0) {
       return [];
     }
 
@@ -648,11 +670,15 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       .where(
         and(
           eq(alimentacionRegistros.tenantId, query.tenantId),
-          eq(alimentacionRegistros.deliveryDate, query.deliveryDate),
+          inArray(alimentacionRegistros.deliveryDate, query.deliveryDates),
           inArray(alimentacionRegistros.adultoMayorId, query.adultoMayorIds),
         ),
       )
-      .orderBy(asc(adultosMayores.surnames), asc(adultosMayores.names));
+      .orderBy(
+        asc(adultosMayores.surnames),
+        asc(adultosMayores.names),
+        asc(alimentacionRegistros.deliveryDate),
+      );
 
     return rows.map((row) => this.toRecord(row));
   }
@@ -687,20 +713,22 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       const createdRows = await tx
         .insert(alimentacionRegistros)
         .values(
-          command.registros.map((registro) => ({
-            tenantId: command.tenantId,
-            adultoMayorId: registro.adultoMayorId,
-            deliveryDate: command.deliveryDate,
-            organizer: command.organizer,
-            refrigerio1: registro.refrigerio1,
-            almuerzo: registro.almuerzo,
-            refrigerio2: registro.refrigerio2,
-            auxilioTransporte: registro.auxilioTransporte,
-            createdByUserId: command.actorUserId,
-            updatedByUserId: command.actorUserId,
-            createdAt: now,
-            updatedAt: now,
-          })),
+          command.deliveryDates.flatMap((deliveryDate) =>
+            command.registros.map((registro) => ({
+              tenantId: command.tenantId,
+              adultoMayorId: registro.adultoMayorId,
+              deliveryDate,
+              organizer: command.organizer,
+              refrigerio1: registro.refrigerio1,
+              almuerzo: registro.almuerzo,
+              refrigerio2: registro.refrigerio2,
+              auxilioTransporte: registro.auxilioTransporte,
+              createdByUserId: command.actorUserId,
+              updatedByUserId: command.actorUserId,
+              createdAt: now,
+              updatedAt: now,
+            })),
+          ),
         )
         .returning({ id: alimentacionRegistros.id });
 
@@ -710,8 +738,9 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         targetTenantId: command.tenantId,
         summary: `Registros de alimentacion creados: ${createdRows.length}`,
         metadata: {
-          deliveryDate: command.deliveryDate,
+          deliveryDates: command.deliveryDates,
           organizer: command.organizer,
+          adultoMayorCount: command.registros.length,
           createdCount: createdRows.length,
         },
       });
@@ -1200,6 +1229,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       documentNumber: row.documentNumber,
       fullName: `${row.names} ${row.surnames}`.trim(),
       alreadyRegistered: row.alreadyRegistered ?? false,
+      registeredDeliveryDates: row.registeredDeliveryDates ?? [],
       ...(row.status === undefined ? {} : { status: row.status }),
       deathDate: row.deathDate,
     };

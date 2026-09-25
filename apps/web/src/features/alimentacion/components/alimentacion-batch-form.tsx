@@ -1,4 +1,5 @@
 import {
+  ALIMENTACION_MAX_BATCH_RECORDS,
   type AlimentacionAdultoOption,
   type AlimentacionStatus,
   type AlimentacionTenantOption,
@@ -27,10 +28,12 @@ import {
   isAlimentacionBatchRowComplete,
   toCreateAlimentacionBatchRequest,
 } from "../schemas/alimentacion-batch-form.schema";
+import { AlimentacionDatePicker } from "./alimentacion-date-picker";
 import { AlimentacionFieldGroup } from "./alimentacion-field-group";
 
 type AlimentacionBatchFormProps = {
   error: string | null;
+  canCreateMultipleDates: boolean;
   isPending: boolean;
   isTenantOptionsLoading: boolean;
   prefilledAdultoMayor: AlimentacionAdultoOption | null;
@@ -62,6 +65,7 @@ function withUniformStatus(
 
 export function AlimentacionBatchForm({
   error,
+  canCreateMultipleDates,
   isPending,
   isTenantOptionsLoading,
   onCancel,
@@ -84,13 +88,13 @@ export function AlimentacionBatchForm({
     mode: "onBlur",
   });
   const { setError, setValue, watch } = form;
-  const deliveryDate = watch("deliveryDate");
+  const deliveryDates = watch("deliveryDates");
   const canSearchAdults =
-    deliveryDate.trim() !== "" && (!shouldSelectTenant || selectedTenantId.trim() !== "");
+    deliveryDates.length > 0 && (!shouldSelectTenant || selectedTenantId.trim() !== "");
   const adultosOptionsQuery = useAlimentacionAdultosMayoresOptionsQuery(
     {
       search: deferredAdultoSearch,
-      deliveryDate,
+      deliveryDates,
       limit: "suggestions",
       tenantId: selectedTenantId.trim() === "" ? null : selectedTenantId,
     },
@@ -99,7 +103,7 @@ export function AlimentacionBatchForm({
   const allAdultosOptionsQuery = useAlimentacionAdultosMayoresOptionsQuery(
     {
       search: "",
-      deliveryDate,
+      deliveryDates,
       limit: "all",
       tenantId: selectedTenantId.trim() === "" ? null : selectedTenantId,
     },
@@ -156,8 +160,9 @@ export function AlimentacionBatchForm({
 
   function addAdultoMayor(adultoMayor: AlimentacionAdultoOption) {
     if (adultoMayor.alreadyRegistered) {
+      const registeredDates = adultoMayor.registeredDeliveryDates ?? [];
       toast.warning(
-        `${adultoMayor.fullName} ya tiene alimentos registrados para la fecha seleccionada.`,
+        `${adultoMayor.fullName} ya tiene alimentos registrados para ${registeredDates.length === 1 ? "el día seleccionado" : `${registeredDates.length} días seleccionados`}.`,
       );
       return;
     }
@@ -171,7 +176,25 @@ export function AlimentacionBatchForm({
   }
 
   async function addAllAdultosMayores() {
+    if (!canSearchAdults) {
+      toast.warning(
+        shouldSelectTenant
+          ? "Selecciona un centro antes de agregar todos los adultos mayores."
+          : "Selecciona una fecha antes de agregar todos los adultos mayores.",
+      );
+      return;
+    }
+
     const result = await allAdultosOptionsQuery.refetch();
+
+    if (result.error !== null || result.data === undefined) {
+      toast.error(
+        resolveAlimentacionApiError(result.error) ??
+          "No fue posible cargar los adultos mayores del centro.",
+      );
+      return;
+    }
+
     const adultosMayores = result.data?.adultosMayores ?? [];
     const alreadyRegisteredCount = adultosMayores.filter(
       (adultoMayor) => adultoMayor.alreadyRegistered,
@@ -189,9 +212,14 @@ export function AlimentacionBatchForm({
     setSelectedRowsError(null);
     setAdultoSearch("");
 
+    if (adultosMayores.length === 0) {
+      toast.info("No hay adultos mayores disponibles en el centro seleccionado.");
+      return;
+    }
+
     if (alreadyRegisteredCount > 0) {
       toast.warning(
-        `${alreadyRegisteredCount} adulto${alreadyRegisteredCount === 1 ? "" : "s"} mayor${alreadyRegisteredCount === 1 ? "" : "es"} ya tiene${alreadyRegisteredCount === 1 ? "" : "n"} alimentos registrados para la fecha seleccionada y fue${alreadyRegisteredCount === 1 ? "" : "ron"} omitido${alreadyRegisteredCount === 1 ? "" : "s"}.`,
+        `${alreadyRegisteredCount} adulto${alreadyRegisteredCount === 1 ? "" : "s"} mayor${alreadyRegisteredCount === 1 ? "" : "es"} ya tiene${alreadyRegisteredCount === 1 ? "" : "n"} alimentos registrados para uno o más días y fue${alreadyRegisteredCount === 1 ? "" : "ron"} omitido${alreadyRegisteredCount === 1 ? "" : "s"}.`,
       );
     }
   }
@@ -271,6 +299,14 @@ export function AlimentacionBatchForm({
             return;
           }
 
+          const projectedRecordCount = selectedRows.length * values.deliveryDates.length;
+          if (projectedRecordCount > ALIMENTACION_MAX_BATCH_RECORDS) {
+            setSelectedRowsError(
+              "El lote supera el maximo de 10.000 entregas. Reduce los adultos o los dias seleccionados.",
+            );
+            return;
+          }
+
           if (!selectedRows.every(isAlimentacionBatchRowComplete)) {
             setSelectedRowsError(
               "Completa los estados de alimentacion de todos los adultos mayores agregados.",
@@ -285,9 +321,11 @@ export function AlimentacionBatchForm({
       <section className="alimentacion-form-shell">
         <aside className="alimentacion-form-summary">
           <div className="alimentacion-form-summary__metric">
-            <span className="eyebrow">Lote diario</span>
-            <strong>{selectedRows.length}</strong>
-            <small>Adultos mayores agregados para la fecha seleccionada.</small>
+            <span className="eyebrow">Entregas proyectadas</span>
+            <strong>{selectedRows.length * deliveryDates.length}</strong>
+            <small>
+              Para {deliveryDates.length} {deliveryDates.length === 1 ? "día" : "días"}
+            </small>
           </div>
         </aside>
 
@@ -304,7 +342,7 @@ export function AlimentacionBatchForm({
                     },
                   })}
                 >
-                  <option value="">Seleccionar</option>
+                  <option value="">Seleccionar centro</option>
                   {tenantOptions.map((tenant) => (
                     <option key={tenant.id} value={tenant.id}>
                       {tenant.name}
@@ -314,13 +352,16 @@ export function AlimentacionBatchForm({
               </AlimentacionFieldGroup>
             ) : null}
 
-            <AlimentacionFieldGroup label="Fecha" error={getError("deliveryDate")}>
-              <input
-                type="date"
-                aria-invalid={getError("deliveryDate") === undefined ? "false" : "true"}
-                {...form.register("deliveryDate")}
-              />
-            </AlimentacionFieldGroup>
+            <AlimentacionDatePicker
+              label="Días de entrega"
+              mode={canCreateMultipleDates ? "multiple" : "single"}
+              value={deliveryDates}
+              onChange={(dates) => {
+                setValue("deliveryDates", dates, { shouldDirty: true, shouldValidate: true });
+                setSelectedRowsError(null);
+              }}
+              error={getError("deliveryDates")}
+            />
 
             <AlimentacionFieldGroup label="Organizador" error={getError("organizer")}>
               <select
@@ -343,15 +384,25 @@ export function AlimentacionBatchForm({
           <div>
             <h2>Agregar adultos mayores</h2>
             <p className="muted-copy">
-              Busca por nombre o documento y arma el lote del día con la tabla de alimentación.
+              Busca por nombre o documento y arma el lote de los días seleccionados con la tabla de
+              alimentación.
             </p>
           </div>
           <div className="alimentacion-add-adults-actions">
-            <span>{selectedRows.length} agregados</span>
+            <span>
+              {selectedRows.length} adultos · {deliveryDates.length}{" "}
+              {deliveryDates.length === 1 ? "día" : "días"}
+            </span>
             <button
               className="alimentacion-soft-action"
               type="button"
-              disabled={!canSearchAdults || allAdultosOptionsQuery.isFetching}
+              aria-disabled={!canSearchAdults}
+              disabled={allAdultosOptionsQuery.isFetching}
+              title={
+                canSearchAdults
+                  ? "Agregar todos los adultos mayores disponibles"
+                  : "Selecciona un centro y una fecha"
+              }
               onClick={() => {
                 void addAllAdultosMayores();
               }}
@@ -626,20 +677,41 @@ export function AlimentacionBatchForm({
         <button className="outline-action" type="button" onClick={onCancel}>
           Cancelar
         </button>
-        <button className="primary-action" type="submit" disabled={isPending}>
-          {isPending ? "Guardando..." : "Guardar"}
+        <button
+          className="primary-action"
+          type="submit"
+          aria-label="Guardar alimentación"
+          disabled={isPending}
+        >
+          {isPending
+            ? "Guardando..."
+            : `Guardar ${selectedRows.length * deliveryDates.length} entregas`}
         </button>
       </div>
 
       {selectedRows.length >= 4 ? (
         <div className="alimentacion-floating-actions" role="region" aria-label="Acciones del lote">
-          <span>{selectedRows.length} adultos seleccionados</span>
+          <span>
+            {selectedRows.length} adultos · {deliveryDates.length}{" "}
+            {deliveryDates.length === 1 ? "día" : "días"}
+          </span>
           <div>
-            <button className="alimentacion-floating-actions__cancel" type="button" onClick={onCancel}>
+            <button
+              className="alimentacion-floating-actions__cancel"
+              type="button"
+              onClick={onCancel}
+            >
               Cancelar
             </button>
-            <button className="alimentacion-floating-actions__save" type="submit" disabled={isPending}>
-              {isPending ? "Guardando..." : "Guardar"}
+            <button
+              className="alimentacion-floating-actions__save"
+              type="submit"
+              aria-label="Guardar alimentación"
+              disabled={isPending}
+            >
+              {isPending
+                ? "Guardando..."
+                : `Guardar ${selectedRows.length * deliveryDates.length} entregas`}
             </button>
           </div>
         </div>

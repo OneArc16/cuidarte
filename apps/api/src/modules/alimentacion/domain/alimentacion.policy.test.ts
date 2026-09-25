@@ -5,6 +5,7 @@ import { type AuthUser } from "@cuidarte/contracts";
 
 import {
   canAccessAlimentacion,
+  canCreateMultipleDateAlimentacion,
   canDeleteAlimentacion,
   canManageAlimentacion,
   resolveAlimentacionScope,
@@ -73,6 +74,26 @@ describe("alimentacion policy", () => {
     assert.equal(canDeleteAlimentacion(auditorUser), false);
     assert.equal(canDeleteAlimentacion(directorUser), true);
     assert.equal(canDeleteAlimentacion(medicoUser), false);
+  });
+
+  it("allows multiple dates only to explicitly authorized people", () => {
+    assert.equal(canCreateMultipleDateAlimentacion(adminUser), true);
+    assert.equal(canCreateMultipleDateAlimentacion(superAdminUser), true);
+    assert.equal(canCreateMultipleDateAlimentacion(directorUser), false);
+    assert.equal(
+      canCreateMultipleDateAlimentacion({
+        ...adminUser,
+        permissions: ["alimentacion.create"],
+      }),
+      false,
+    );
+    assert.equal(
+      canCreateMultipleDateAlimentacion({
+        ...adminUser,
+        permissions: ["alimentacion.create_multiple_dates"],
+      }),
+      true,
+    );
   });
 
   it("scopes supported roles by tenant and keeps super admin global", () => {

@@ -190,7 +190,7 @@ describe("App alimentacion flow", () => {
   it("warns when the adult already has feeding registered for the selected day", async () => {
     const warningToastSpy = vi.spyOn(toast, "warning");
     server.use(
-      mockAuthMe(authUserFixture),
+      mockAuthMe(directorUserFixture),
       mockAlimentacionLookup({
         adultoMayor: alimentacionAdultoOptionFixture,
         existingRecordId: alimentacionFixture.id,
@@ -479,7 +479,7 @@ describe("App alimentacion flow", () => {
     ).toBeInTheDocument();
     expect(createPayload).toMatchObject({
       tenantId: alimentacionAdultoOptionFixture.tenantId,
-      deliveryDate: "2026-04-24",
+      deliveryDates: ["2026-04-24"],
       organizer: "nutricionista",
       registros: [
         {

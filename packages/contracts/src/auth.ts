@@ -33,6 +33,7 @@ export const userPermissionValues = [
   "adultos_mayores.import",
   "alimentacion.view",
   "alimentacion.create",
+  "alimentacion.create_multiple_dates",
   "alimentacion.edit",
   "alimentacion.delete",
   "alimentacion.import",
@@ -147,6 +148,12 @@ export const userPermissionCatalog = [
     group: "Alimentación",
     label: "Crear alimentación",
     description: "Registrar entregas de alimentación.",
+  },
+  {
+    key: "alimentacion.create_multiple_dates",
+    group: "Alimentación",
+    label: "Registrar alimentación para múltiples días",
+    description: "Crear registros de alimentación para varios días mediante selección múltiple.",
   },
   {
     key: "alimentacion.edit",

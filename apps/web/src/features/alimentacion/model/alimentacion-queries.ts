@@ -16,7 +16,7 @@ export const alimentacionQueryKeys = {
   tenantOptions: () => ["alimentacion", "tenant-options"] as const,
   adultoOptions: (params: {
     search: string;
-    deliveryDate: string;
+    deliveryDates: string[];
     limit?: "suggestions" | "all";
     tenantId: string | null;
   }) => ["alimentacion", "adultos-mayores-options", params] as const,
@@ -51,7 +51,7 @@ export function useAlimentacionTenantOptionsQuery(enabled: boolean) {
 export function useAlimentacionAdultosMayoresOptionsQuery(
   params: {
     search: string;
-    deliveryDate: string;
+    deliveryDates: string[];
     limit?: "suggestions" | "all";
     tenantId: string | null;
   },

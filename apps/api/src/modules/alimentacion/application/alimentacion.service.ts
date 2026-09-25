@@ -27,6 +27,7 @@ import {
 
 import {
   canAccessAlimentacion,
+  canCreateMultipleDateAlimentacion,
   canDeleteAlimentacion,
   canManageAlimentacion,
   resolveAlimentacionScope,
@@ -89,7 +90,7 @@ export class AlimentacionService {
     const tenantId = this.resolveTenantIdForSelection(actor, query.tenantId);
     const records = await this.alimentacionRepository.searchAdultosMayoresOptions({
       tenantId,
-      deliveryDate: query.deliveryDate,
+      deliveryDates: query.deliveryDates,
       search: query.search,
       limit: query.limit,
     });
@@ -134,8 +135,14 @@ export class AlimentacionService {
   async createBatch(
     command: CreateAlimentacionBatchRequest,
     actor: AuthUser,
-  ): Promise<{ createdCount: number }> {
+  ): Promise<{ createdCount: number; dateCount: number; adultoMayorCount: number }> {
     this.ensureCanManage(actor);
+    const deliveryDates = [...new Set(command.deliveryDates)].sort();
+
+    if (deliveryDates.length > 1) {
+      this.ensureCanCreateMultipleDates(actor);
+    }
+
     const tenantId = this.resolveTenantIdForCreate(actor, command.tenantId);
     const adultoMayorIds = command.registros.map((registro) => registro.adultoMayorId);
     const adultosMayores = await this.alimentacionRepository.findAdultosMayoresByIds(
@@ -150,35 +157,46 @@ export class AlimentacionService {
     }
 
     for (const adultoMayor of adultosMayores) {
-      assertAdultoMayorRecordDateAllowed({
-        status: adultoMayor.status,
-        deathDate: adultoMayor.deathDate,
-        recordDate: command.deliveryDate,
-      });
+      for (const deliveryDate of deliveryDates) {
+        assertAdultoMayorRecordDateAllowed({
+          status: adultoMayor.status,
+          deathDate: adultoMayor.deathDate,
+          recordDate: deliveryDate,
+        });
+      }
     }
 
-    const existingRecords = await this.alimentacionRepository.findExistingByAdultosAndDate({
+    const existingRecords = await this.alimentacionRepository.findExistingByAdultosAndDates({
       tenantId,
-      deliveryDate: command.deliveryDate,
+      deliveryDates,
       adultoMayorIds,
     });
 
     if (existingRecords.length > 0) {
-      throw new ConflictException(
-        "Ya existen registros de alimentacion para algunos adultos mayores en la fecha seleccionada.",
-      );
+      throw new ConflictException({
+        message: "Ya existen registros de alimentacion para algunas fechas seleccionadas.",
+        conflicts: existingRecords.map((record) => ({
+          adultoMayorId: record.adultoMayorId,
+          fullName: record.fullName,
+          deliveryDate: record.deliveryDate,
+        })),
+      });
     }
 
     try {
       const createdCount = await this.alimentacionRepository.createMany({
         tenantId,
         actorUserId: actor.id,
-        deliveryDate: command.deliveryDate,
+        deliveryDates,
         organizer: command.organizer,
         registros: command.registros,
       });
 
-      return { createdCount };
+      return {
+        createdCount,
+        dateCount: deliveryDates.length,
+        adultoMayorCount: command.registros.length,
+      };
     } catch (error: unknown) {
       this.throwConflictForUniqueViolation(error);
       throw error;
@@ -379,6 +397,14 @@ export class AlimentacionService {
     if (!canManageAlimentacion(actor)) {
       throw new ForbiddenException(
         "No tienes permisos para crear o editar registros de alimentacion.",
+      );
+    }
+  }
+
+  private ensureCanCreateMultipleDates(actor: Pick<AuthUser, "role" | "permissions">) {
+    if (!canCreateMultipleDateAlimentacion(actor)) {
+      throw new ForbiddenException(
+        "No tienes permisos para registrar alimentacion para multiples dias.",
       );
     }
   }

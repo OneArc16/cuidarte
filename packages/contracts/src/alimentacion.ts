@@ -31,7 +31,16 @@ export const alimentacionEditorRoleValues = [
 export const alimentacionStatusSchema = z.enum(alimentacionStatusValues);
 export const alimentacionOrganizerSchema = z.enum(alimentacionOrganizerValues);
 
-const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+export const alimentacionDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+export const ALIMENTACION_MAX_BATCH_DATES = 31;
+export const ALIMENTACION_MAX_BATCH_RECORDS = 10_000;
+
+const deliveryDatesSchema = z
+  .array(alimentacionDateSchema)
+  .min(1, "Selecciona al menos un día.")
+  .max(ALIMENTACION_MAX_BATCH_DATES, "Puedes seleccionar máximo 31 días.")
+  .refine((dates) => new Set(dates).size === dates.length, "No repitas días.");
+
 export const alimentacionDeliveryMonthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 
 const nullableSearchSchema = z
@@ -89,13 +98,16 @@ export const alimentacionListQuerySchema = z.object({
 
 export const alimentacionAdultoOptionsQuerySchema = z.object({
   search: nullableSearchSchema.optional().default(null),
-  deliveryDate: dateSchema,
+  deliveryDates: z.preprocess(
+    (value) => (Array.isArray(value) ? value : value === undefined ? [] : [value]),
+    deliveryDatesSchema,
+  ),
   limit: z.enum(["suggestions", "all"]).optional().default("suggestions"),
   tenantId: nullableTenantIdSchema.optional().default(null),
 });
 
 export const alimentacionLookupByAdultoMayorQuerySchema = z.object({
-  deliveryDate: dateSchema,
+  deliveryDate: alimentacionDateSchema,
 });
 
 export const alimentacionFormatoEntregaExportQuerySchema = z.object({
@@ -218,6 +230,7 @@ export const alimentacionAdultoOptionSchema = z.object({
   documentNumber: z.string().min(1).max(80),
   fullName: z.string().min(1).max(180),
   alreadyRegistered: z.boolean().default(false),
+  registeredDeliveryDates: z.array(alimentacionDateSchema).default([]),
 });
 
 export const alimentacionListItemSchema = z.object({
@@ -227,7 +240,7 @@ export const alimentacionListItemSchema = z.object({
   adultoMayorId: z.uuid(),
   documentNumber: z.string().min(1).max(80),
   fullName: z.string().min(1).max(180),
-  deliveryDate: dateSchema,
+  deliveryDate: alimentacionDateSchema,
   organizer: alimentacionOrganizerSchema,
   refrigerio1: alimentacionStatusSchema,
   almuerzo: alimentacionStatusSchema,
@@ -243,7 +256,7 @@ export const alimentacionDetailSchema = alimentacionListItemSchema;
 
 export const createAlimentacionBatchRequestSchema = z.object({
   tenantId: nullableTenantIdSchema.optional().default(null),
-  deliveryDate: dateSchema,
+  deliveryDates: deliveryDatesSchema,
   organizer: alimentacionOrganizerSchema,
   registros: z
     .array(alimentacionBatchRecordSchema)
@@ -254,10 +267,19 @@ export const createAlimentacionBatchRequestSchema = z.object({
         message: "No repitas adultos mayores en el mismo registro.",
       },
     ),
-});
+})
+  .superRefine((request, context) => {
+    if (request.deliveryDates.length * request.registros.length > ALIMENTACION_MAX_BATCH_RECORDS) {
+      context.addIssue({
+        code: "custom",
+        path: ["deliveryDates"],
+        message: "El lote supera el máximo de entregas permitidas.",
+      });
+    }
+  });
 
 export const updateAlimentacionRequestSchema = z.object({
-  deliveryDate: dateSchema,
+  deliveryDate: alimentacionDateSchema,
   organizer: alimentacionOrganizerSchema,
   refrigerio1: alimentacionStatusSchema,
   almuerzo: alimentacionStatusSchema,
@@ -279,6 +301,8 @@ export const alimentacionAdultoOptionsResponseSchema = z.object({
 
 export const createAlimentacionBatchResponseSchema = z.object({
   createdCount: z.number().int().min(1),
+  dateCount: z.number().int().min(1).optional(),
+  adultoMayorCount: z.number().int().min(1).optional(),
 });
 
 export const deleteAlimentacionResponseSchema = z.object({

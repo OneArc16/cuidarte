@@ -21,7 +21,7 @@ import {
   type FindAlimentacionFormatoEntregaByAdultoAndMonthQuery,
   type FindAlimentacionImportedFormatoVersionByIdQuery,
   type FindAlimentacionImportedFormatoVersionsQuery,
-  type FindAlimentacionExistingRecordsByAdultosAndDateQuery,
+  type FindAlimentacionExistingRecordsByAdultosAndDatesQuery,
   type FindAlimentacionRecordByAdultoMayorAndDateQuery,
   type FindAlimentacionRecordByIdQuery,
   type FindAlimentacionRecordsQuery,
@@ -61,8 +61,8 @@ export type AlimentacionRepository = {
   findImportedFormatoVersionById(
     query: FindAlimentacionImportedFormatoVersionByIdQuery,
   ): Promise<AlimentacionImportedFormatoVersionRecord | null>;
-  findExistingByAdultosAndDate(
-    query: FindAlimentacionExistingRecordsByAdultosAndDateQuery,
+  findExistingByAdultosAndDates(
+    query: FindAlimentacionExistingRecordsByAdultosAndDatesQuery,
   ): Promise<AlimentacionRecord[]>;
   findByAdultoMayorAndDate(
     query: FindAlimentacionRecordByAdultoMayorAndDateQuery,

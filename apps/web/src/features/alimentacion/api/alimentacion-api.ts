@@ -39,7 +39,7 @@ type ListAlimentacionParams = {
 
 type SearchAlimentacionAdultosParams = {
   search: string;
-  deliveryDate: string;
+  deliveryDates: string[];
   limit?: "suggestions" | "all";
   tenantId: string | null;
 };
@@ -60,9 +60,11 @@ export function listAlimentacionTenantOptions(): Promise<AlimentacionTenantOptio
 export function searchAlimentacionAdultosMayoresOptions(
   params: SearchAlimentacionAdultosParams,
 ): Promise<AlimentacionAdultoOptionsResponse> {
-  const searchParams = new URLSearchParams({
-    deliveryDate: params.deliveryDate,
-  });
+  const searchParams = new URLSearchParams();
+
+  for (const deliveryDate of params.deliveryDates) {
+    searchParams.append("deliveryDates", deliveryDate);
+  }
 
   if (params.search.trim() !== "") {
     searchParams.set("search", params.search.trim());
