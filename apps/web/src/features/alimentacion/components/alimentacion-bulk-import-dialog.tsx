@@ -42,7 +42,7 @@ type BulkDecisionItem = AlimentacionBulkImportItem & {
 const BULK_IMPORT_BLOCK_SIZE = 100;
 const BULK_IMPORT_MAX_FILE_SIZE = 10 * 1024 * 1024;
 const BULK_IMPORT_MAX_BLOCK_BYTES = 100 * 1024 * 1024;
-const BULK_FILENAME_PATTERN = /^([A-Za-z0-9.-]+)-(\d{4}-(0[1-9]|1[0-2]))\.pdf$/i;
+const BULK_FILENAME_PATTERN = /^([A-Za-z0-9._-]+?)[_-](\d{4})[_-](0[1-9]|1[0-2])\.pdf$/i;
 
 export function AlimentacionBulkImportDialog({
   deliveryMonth,
@@ -316,19 +316,19 @@ export function AlimentacionBulkImportDialog({
                         ? "el mes seleccionado"
                         : formatMonthLong(selectedMonth)}
                     </strong>{" "}
-                    y terminar en <code>-{selectedMonth || "AAAA-MM"}.pdf</code>
+                    y usar guiones o guiones bajos entre cédula, año y mes.
                   </>
                 ) : (
                   <>
-                    Cada archivo indica su mes al final del nombre: <code>-AAAA-MM.pdf</code>
+                    Cada archivo indica su mes al final, usando guiones o guiones bajos.
                   </>
                 )}
                 <small>
                   Ejemplo:{" "}
                   <code>
                     {mode === "month"
-                      ? "1004462425-" + (selectedMonth || "AAAA-MM")
-                      : "1004462425-2026-08"}
+                      ? "1004462425_" + (selectedMonth || "AAAA-MM").replace("-", "_")
+                      : "1004462425_2026_08"}
                     .pdf
                   </code>
                 </small>
@@ -609,10 +609,10 @@ function validateLocalFiles(
     else if (parsed === null)
       error =
         mode === "month"
-          ? "Falta el mes al final: -AAAA-MM.pdf"
-          : "Falta el mes al final: -AAAA-MM.pdf";
+          ? "Falta el mes al final: -AAAA-MM.pdf o _AAAA_MM.pdf"
+          : "Falta el mes al final: -AAAA-MM.pdf o _AAAA_MM.pdf";
     else if (mode === "month" && parsed.month !== deliveryMonth)
-      error = "Debe terminar en -" + deliveryMonth + ".pdf";
+      error = "Debe indicar el mes " + deliveryMonth + " al final del nombre.";
     return {
       ...entry,
       error,
@@ -625,7 +625,7 @@ function validateLocalFiles(
 function parseLocalFilename(filename: string): { documentNumber: string; month: string } | null {
   const match = BULK_FILENAME_PATTERN.exec(filename.split(/[\/]/).pop()?.trim() ?? "");
   if (match === null) return null;
-  return { documentNumber: match[1]!, month: match[2]! };
+  return { documentNumber: match[1]!, month: `${match[2]}-${match[3]}` };
 }
 
 function formatLocalFileStatus(entry: LocalFile): string {
