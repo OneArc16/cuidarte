@@ -53,7 +53,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantId,
             adultoMayorId,
             deliveryMonth: "2026-07",
-            issuedAt: new Date("2026-09-01T19:00:00.000Z"),
+            issuedAt: new Date("2026-10-06T00:00:00.000Z"),
             pdfRelativePath: `${tenantId}/historic.pdf`,
             filename: "historic.pdf",
             signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -133,7 +133,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantId,
             adultoMayorId,
             deliveryMonth: "2026-07",
-            issuedAt: new Date("2026-09-01T19:00:00.000Z"),
+            issuedAt: new Date("2026-10-06T00:00:00.000Z"),
             pdfRelativePath: `${tenantId}/historic.pdf`,
             filename: "historic.pdf",
             signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -261,7 +261,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
     assert.equal(resolvedSignerRequested, true);
   });
 
-  it("reissues emissions created before the dated visit list rollout", async () => {
+  it("reissues emissions created before the 15-day block format rollout", async () => {
     let savedPdfCount = 0;
     let createdEmissionCount = 0;
     let logoWasResolved = false;
@@ -273,7 +273,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantId,
             adultoMayorId,
             deliveryMonth: "2026-07",
-            issuedAt: new Date("2026-09-01T18:00:00.000Z"),
+            issuedAt: new Date("2026-10-05T15:56:19.999Z"),
             pdfRelativePath: `${tenantId}/historic.pdf`,
             filename: "historic.pdf",
             signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -350,7 +350,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
                 almuerzo: "entregado",
                 refrigerio2: "entregado",
                 auxilioTransporte: "entregado",
-                updatedAt: new Date("2026-09-01T20:00:00.000Z"),
+                updatedAt: new Date("2026-10-05T15:56:21.000Z"),
               },
             ],
           };
@@ -360,7 +360,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantId,
             adultoMayorId,
             deliveryMonth: "2026-07",
-            issuedAt: new Date("2026-09-01T19:00:00.000Z"),
+            issuedAt: new Date("2026-10-05T15:56:20.000Z"),
             pdfRelativePath: `${tenantId}/historic.pdf`,
             filename: "historic.pdf",
             signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -442,7 +442,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantId,
             adultoMayorId,
             deliveryMonth: "2026-07",
-            issuedAt: new Date("2026-09-01T19:00:00.000Z"),
+            issuedAt: new Date("2026-10-06T00:00:00.000Z"),
             pdfRelativePath: `${tenantId}/historic.pdf`,
             filename: "historic.pdf",
             signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",

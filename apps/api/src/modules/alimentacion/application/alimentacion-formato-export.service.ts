@@ -42,6 +42,7 @@ type CurrentFormatoDependencies = {
 
 const INSTITUTIONAL_LOGO_RELATIVE_PATH = path.join("public", "logos", "gobernacion-magdalena.png");
 const DATED_VISIT_LIST_FORMAT_ROLLOUT_AT = new Date("2026-09-01T18:27:35.000Z");
+const FIFTEEN_DAY_BLOCK_FORMAT_ROLLOUT_AT = new Date("2026-10-05T15:56:20.000Z");
 
 let cachedInstitutionalLogoDataUrl: string | null | undefined;
 
@@ -284,6 +285,10 @@ export class AlimentacionFormatoExportService {
     currentDependencies: CurrentFormatoDependencies,
   ): boolean {
     if (existingEmission.issuedAt < DATED_VISIT_LIST_FORMAT_ROLLOUT_AT) {
+      return false;
+    }
+
+    if (existingEmission.issuedAt < FIFTEEN_DAY_BLOCK_FORMAT_ROLLOUT_AT) {
       return false;
     }
 
