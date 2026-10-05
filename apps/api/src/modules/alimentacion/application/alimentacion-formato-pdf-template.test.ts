@@ -59,10 +59,10 @@ describe("alimentacion-formato-pdf-template", () => {
     );
     assert.match(html, /EL BANCO - MAGDALENA/);
     assert.equal((html.match(/>Dia<br>1<\/th>/g) ?? []).length, 2);
-    assert.equal((html.match(/>Dia<br>12<\/th>/g) ?? []).length, 2);
-    assert.ok(!html.includes("Dia<br>13"));
-    assert.ok(!html.includes("Dia<br>24"));
-    assert.ok(!html.includes("Dia<br>25"));
+    assert.equal((html.match(/>Dia<br>15<\/th>/g) ?? []).length, 2);
+    assert.ok(!html.includes("Dia<br>16"));
+    assert.ok(!html.includes("Dia<br>30"));
+    assert.ok(!html.includes("Dia<br>31"));
     assert.equal((html.match(/data-block-index="/g) ?? []).length, 2);
     assert.equal((html.match(/>X</g) ?? []).length, 8);
     assert.match(html, /class="delivery-dates">01-04-2026, 13-04-2026, 25-04-2026<\/td>/);
@@ -74,7 +74,7 @@ describe("alimentacion-formato-pdf-template", () => {
     assert.match(html, /stub-logo--tenant/);
   });
 
-  it("uses the lower stub for visits 13 to 24 without changing the visual day labels", () => {
+  it("uses the lower stub for visits 16 to 30 without changing the visual day labels", () => {
     const html = buildFormatoEntregaPdfHtml({
       data: {
         tenantId: "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054",
@@ -85,13 +85,13 @@ describe("alimentacion-formato-pdf-template", () => {
         documentNumber: "1020304050",
         fullName: "Rosa Elena Martinez Rojas",
         deliveryMonth: "2026-04",
-        records: Array.from({ length: 13 }, (_, index) => ({
+        records: Array.from({ length: 16 }, (_, index) => ({
           deliveryDate: `2026-04-${String(index + 1).padStart(2, "0")}`,
           organizer: "director" as const,
-          refrigerio1: index === 12 ? "entregado" : "no_entregado",
-          almuerzo: index === 12 ? "entregado" : "no_entregado",
-          refrigerio2: index === 12 ? "entregado" : "no_entregado",
-          auxilioTransporte: index === 12 ? "entregado" : "no_entregado",
+          refrigerio1: index === 15 ? "entregado" : "no_entregado",
+          almuerzo: index === 15 ? "entregado" : "no_entregado",
+          refrigerio2: index === 15 ? "entregado" : "no_entregado",
+          auxilioTransporte: index === 15 ? "entregado" : "no_entregado",
           updatedAt: new Date(`2026-04-${String(index + 1).padStart(2, "0")}T12:00:00.000Z`),
         })),
       },
@@ -102,8 +102,8 @@ describe("alimentacion-formato-pdf-template", () => {
 
     assert.equal((html.match(/>X</g) ?? []).length, 4);
     assert.equal((html.match(/>Dia<br>1<\/th>/g) ?? []).length, 2);
-    assert.ok(!html.includes("Dia<br>13"));
-    assert.match(html, /class="delivery-dates">13-04-2026<\/td>/);
+    assert.ok(!html.includes("Dia<br>16"));
+    assert.match(html, /class="delivery-dates">16-04-2026<\/td>/);
     assert.equal((html.match(/class="delivery-dates"><\/td>/g) ?? []).length, 1);
   });
 

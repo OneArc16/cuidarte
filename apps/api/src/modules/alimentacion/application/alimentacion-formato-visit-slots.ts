@@ -1,6 +1,6 @@
 import { type AlimentacionFormatoEntregaExportRecord } from "./alimentacion-formato-export.types";
 
-export const FORMATO_ENTREGA_VISITS_PER_BLOCK = 12;
+export const FORMATO_ENTREGA_VISITS_PER_BLOCK = 15;
 export const FORMATO_ENTREGA_TOTAL_VISITS =
   FORMATO_ENTREGA_VISITS_PER_BLOCK * 2;
 

@@ -9,7 +9,7 @@ import {
 import { type AlimentacionFormatoEntregaExportRecord } from "./alimentacion-formato-export.types";
 
 describe("alimentacion-formato-visit-slots", () => {
-  it("builds 24 empty slots when there are no visits", () => {
+  it("builds 30 empty slots when there are no visits", () => {
     const blocks = buildFormatoEntregaVisitBlocks([]);
 
     assert.equal(blocks.length, 2);
@@ -56,7 +56,7 @@ describe("alimentacion-formato-visit-slots", () => {
     assert.equal(firstBlock?.slots[5]?.deliveryDate, null);
   });
 
-  it("uses all 24 slots when there are exactly 24 visits", () => {
+  it("uses all 30 slots when there are exactly 30 visits", () => {
     const blocks = buildFormatoEntregaVisitBlocks(
       Array.from({ length: FORMATO_ENTREGA_TOTAL_VISITS }, (_, index) =>
         record(`2026-08-${String(index + 1).padStart(2, "0")}`, "entregado"),
@@ -65,23 +65,23 @@ describe("alimentacion-formato-visit-slots", () => {
 
     const slots = blocks.flatMap((block) => block.slots);
 
-    assert.equal(slots.filter((slot) => slot.deliveryDate !== null).length, 24);
-    assert.equal(slots[23]?.visitNumber, 24);
-    assert.equal(slots[23]?.columnLabel, 12);
+    assert.equal(slots.filter((slot) => slot.deliveryDate !== null).length, 30);
+    assert.equal(slots[29]?.visitNumber, 30);
+    assert.equal(slots[29]?.columnLabel, 15);
   });
 
-  it("truncates visits beyond slot 24", () => {
+  it("truncates visits beyond slot 30", () => {
     const blocks = buildFormatoEntregaVisitBlocks(
-      Array.from({ length: 30 }, (_, index) =>
+      Array.from({ length: 31 }, (_, index) =>
         record(`2026-08-${String((index % 28) + 1).padStart(2, "0")}`, "entregado"),
       ),
     );
 
     const slots = blocks.flatMap((block) => block.slots);
 
-    assert.equal(slots.length, 24);
-    assert.equal(slots.filter((slot) => slot.deliveryDate !== null).length, 24);
-    assert.equal(slots.at(-1)?.visitNumber, 24);
+    assert.equal(slots.length, 30);
+    assert.equal(slots.filter((slot) => slot.deliveryDate !== null).length, 30);
+    assert.equal(slots.at(-1)?.visitNumber, 30);
   });
 
   it("marks only delivered products with X", () => {

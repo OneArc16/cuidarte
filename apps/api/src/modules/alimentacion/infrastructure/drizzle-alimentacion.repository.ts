@@ -59,6 +59,8 @@ import {
 } from "../domain/alimentacion.types";
 import { type AlimentacionRepository } from "../domain/alimentacion.repository";
 
+const CREATE_MANY_INSERT_BATCH_SIZE = 1_000;
+
 type AlimentacionRecordRow = {
   id: string;
   tenantId: string;
@@ -710,42 +712,51 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
   async createMany(command: CreateAlimentacionBatchRecordCommand): Promise<number> {
     return await this.database.db.transaction(async (tx) => {
       const now = new Date();
-      const createdRows = await tx
-        .insert(alimentacionRegistros)
-        .values(
-          command.deliveryDates.flatMap((deliveryDate) =>
-            command.registros.map((registro) => ({
-              tenantId: command.tenantId,
-              adultoMayorId: registro.adultoMayorId,
-              deliveryDate,
-              organizer: command.organizer,
-              refrigerio1: registro.refrigerio1,
-              almuerzo: registro.almuerzo,
-              refrigerio2: registro.refrigerio2,
-              auxilioTransporte: registro.auxilioTransporte,
-              createdByUserId: command.actorUserId,
-              updatedByUserId: command.actorUserId,
-              createdAt: now,
-              updatedAt: now,
-            })),
-          ),
-        )
-        .returning({ id: alimentacionRegistros.id });
+      const recordsToCreate = command.deliveryDates.flatMap((deliveryDate) =>
+        command.registros.map((registro) => ({
+          tenantId: command.tenantId,
+          adultoMayorId: registro.adultoMayorId,
+          deliveryDate,
+          organizer: command.organizer,
+          refrigerio1: registro.refrigerio1,
+          almuerzo: registro.almuerzo,
+          refrigerio2: registro.refrigerio2,
+          auxilioTransporte: registro.auxilioTransporte,
+          createdByUserId: command.actorUserId,
+          updatedByUserId: command.actorUserId,
+          createdAt: now,
+          updatedAt: now,
+        })),
+      );
+      let createdCount = 0;
+
+      for (
+        let startIndex = 0;
+        startIndex < recordsToCreate.length;
+        startIndex += CREATE_MANY_INSERT_BATCH_SIZE
+      ) {
+        const createdRows = await tx
+          .insert(alimentacionRegistros)
+          .values(recordsToCreate.slice(startIndex, startIndex + CREATE_MANY_INSERT_BATCH_SIZE))
+          .returning({ id: alimentacionRegistros.id });
+
+        createdCount += createdRows.length;
+      }
 
       await tx.insert(auditLogs).values({
         actorUserId: command.actorUserId,
         action: "alimentacion.created",
         targetTenantId: command.tenantId,
-        summary: `Registros de alimentacion creados: ${createdRows.length}`,
+        summary: `Registros de alimentacion creados: ${createdCount}`,
         metadata: {
           deliveryDates: command.deliveryDates,
           organizer: command.organizer,
           adultoMayorCount: command.registros.length,
-          createdCount: createdRows.length,
+          createdCount,
         },
       });
 
-      return createdRows.length;
+      return createdCount;
     });
   }
 

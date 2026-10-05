@@ -27,6 +27,29 @@ describe("DrizzleAlimentacionRepository", () => {
     assert.equal(state.auditInsert?.metadata.record.importedFormato, null);
   });
 
+  it("splits large creations into inserts of at most 1,000 records", async () => {
+    const { repository, state } = createRepositoryStub([]);
+
+    const createdCount = await repository.createMany({
+      tenantId,
+      actorUserId: "9f75c51f-74ab-40b7-84ef-9e4a93d14af1",
+      deliveryDates: ["2026-04-24"],
+      organizer: "director",
+      registros: Array.from({ length: 1_001 }, (_, index) => ({
+        adultoMayorId: "adulto-mayor-" + index,
+        refrigerio1: "entregado",
+        almuerzo: "entregado",
+        refrigerio2: "entregado",
+        auxilioTransporte: "entregado",
+      })),
+    });
+
+    assert.equal(createdCount, 1_001);
+    assert.equal(state.transactionCalls, 1);
+    assert.deepEqual(state.recordInsertBatchSizes, [1_000, 1]);
+    assert.equal(state.auditInsert?.metadata.createdCount, 1_001);
+  });
+
   it("returns null when the scoped record does not exist", async () => {
     const { repository, state } = createRepositoryStub([]);
 
@@ -48,6 +71,7 @@ function createRepositoryStub(rows: Array<ReturnType<typeof createRecordRow>>) {
     transactionCalls: 0,
     auditInsert: null as any,
     deleteCalls: 0,
+    recordInsertBatchSizes: [] as number[],
   };
 
   const queryChain = {
@@ -71,7 +95,17 @@ function createRepositoryStub(rows: Array<ReturnType<typeof createRecordRow>>) {
     },
     insert() {
       return {
-        async values(value: Record<string, unknown>) {
+        values(value: Record<string, unknown> | Array<Record<string, unknown>>) {
+          if (Array.isArray(value)) {
+            state.recordInsertBatchSizes.push(value.length);
+
+            return {
+              async returning() {
+                return value.map((_, index) => ({ id: String(index) }));
+              },
+            };
+          }
+
           state.auditInsert = value;
         },
       };

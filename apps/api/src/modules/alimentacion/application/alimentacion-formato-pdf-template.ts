@@ -147,7 +147,7 @@ export function buildFormatoEntregaPdfHtml({
             font-weight: 500;
           }
           .products-table .day-label {
-            width: calc((100% - 140px) / 12);
+            width: calc((100% - 140px) / 15);
             font-size: 10px;
             line-height: 1.05;
           }
