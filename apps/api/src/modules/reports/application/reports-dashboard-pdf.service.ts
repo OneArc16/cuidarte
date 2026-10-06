@@ -7,6 +7,7 @@ import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { chromium } from "playwright";
 
 import playwrightEnv from "../../../common/playwright-env";
+import { getPdfLetterheadDataUrl } from "../../../common/pdf-letterhead";
 import { ReportsDashboardService } from "./reports-dashboard.service";
 
 export type ReportsDashboardPdfFile = {
@@ -28,7 +29,9 @@ export class ReportsDashboardPdfService {
 
     try {
       const page = await browser.newPage();
-      await page.setContent(buildPdfHtml(dashboard), { waitUntil: "load" });
+      await page.setContent(buildPdfHtml(dashboard, await getPdfLetterheadDataUrl()), {
+        waitUntil: "load",
+      });
       const buffer = await page.pdf({
         format: "A4",
         landscape: true,
@@ -53,7 +56,7 @@ export class ReportsDashboardPdfService {
   }
 }
 
-function buildPdfHtml(dashboard: ReportsDashboardResponse): string {
+function buildPdfHtml(dashboard: ReportsDashboardResponse, membreteDataUrl: string | null): string {
   const monthlySeries = buildMonthlySeries(dashboard.dailySeries);
   const scope = dashboard.scope.isConsolidated
     ? "Todos los centros activos"
@@ -74,6 +77,9 @@ function buildPdfHtml(dashboard: ReportsDashboardResponse): string {
   return `<!doctype html><html><head><meta charset="utf-8"><style>
     @page { size: A4 landscape; margin: 14mm 12mm; }
     * { box-sizing: border-box; } body { margin: 0; color: #123b31; font: 11px Arial, sans-serif; }
+    .pdf-letterhead { position: fixed; top: -14mm; left: -12mm; z-index: 0; width: 297mm; height: 210mm; opacity: 0.3; pointer-events: none; }
+    .pdf-letterhead img { display: block; width: 100%; height: 100%; object-fit: contain; }
+    .report-content { position: relative; z-index: 1; }
     h1 { margin: 0 0 6px; font-size: 25px; } h2 { margin: 20px 0 9px; font-size: 16px; }
     .meta { color: #657a72; margin-bottom: 18px; } .metrics { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
     .metric { border: 1px solid #dce9e2; border-radius: 6px; padding: 10px; background: #f7fbf9; }
@@ -85,6 +91,8 @@ function buildPdfHtml(dashboard: ReportsDashboardResponse): string {
     .chart-svg { display: block; width: 100%; height: auto; } .empty-chart { color: #657a72; padding: 28px 0; text-align: center; }
     .footer { margin-top: 12px; color: #657a72; font-size: 9px; }
   </style></head><body>
+    ${renderLetterhead(membreteDataUrl)}
+    <main class="report-content">
     <h1>Reporte ejecutivo de estadísticas</h1><div class="meta">${escapeHtml(scope)} · ${dashboard.range.from} a ${dashboard.range.to}</div>
     <div class="metrics">${cards}</div>
     <section class="charts">
@@ -93,7 +101,16 @@ function buildPdfHtml(dashboard: ReportsDashboardResponse): string {
       <article class="chart-panel chart-panel--wide"><h3>Entregas mensuales por tipo de apoyo</h3>${buildDeliveryChart(monthlySeries)}</article>
     </section>
     <div class="footer">Generado por CuidarTe</div>
+    </main>
   </body></html>`;
+}
+
+function renderLetterhead(membreteDataUrl: string | null): string {
+  if (membreteDataUrl === null) {
+    return "";
+  }
+
+  return `<div class="pdf-letterhead" aria-hidden="true"><img src="${escapeHtml(membreteDataUrl)}" alt="" /></div>`;
 }
 
 type MonthlyChartPoint = {

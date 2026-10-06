@@ -14,6 +14,7 @@ const ACTIVITY_DESCRIPTION_VALUE = "Entrega de alimentos";
 type BuildFormatoEntregaPdfHtmlParams = {
   data: AlimentacionFormatoEntregaExportData;
   institutionalLogoDataUrl: string | null;
+  membreteDataUrl?: string | null;
   tenantLogoDataUrl: string;
   directorSignatureDataUrl: string | null;
 };
@@ -30,6 +31,7 @@ export function buildFormatoEntregaPdfFilename(
 export function buildFormatoEntregaPdfHtml({
   data,
   institutionalLogoDataUrl,
+  membreteDataUrl = null,
   tenantLogoDataUrl,
   directorSignatureDataUrl,
 }: BuildFormatoEntregaPdfHtmlParams): string {
@@ -54,7 +56,7 @@ export function buildFormatoEntregaPdfHtml({
         <style>
           * { box-sizing: border-box; }
           @page {
-            size: A4 portrait;
+            size: Letter;
             margin: 9mm 8mm;
           }
           body {
@@ -67,6 +69,23 @@ export function buildFormatoEntregaPdfHtml({
           .page {
             display: grid;
             gap: 7mm;
+            position: relative;
+            z-index: 1;
+          }
+          .pdf-letterhead {
+            position: fixed;
+            top: -9mm;
+            left: -8mm;
+            z-index: 0;
+            width: 215.9mm;
+            height: 279.4mm;
+            opacity: 0.3;
+            pointer-events: none;
+          }
+          .pdf-letterhead img {
+            display: block;
+            width: 100%;
+            height: 100%;
           }
           .page + .page {
             break-before: page;
@@ -206,9 +225,18 @@ export function buildFormatoEntregaPdfHtml({
         </style>
       </head>
       <body>
+        ${renderLetterhead(membreteDataUrl)}
         ${stubSections}
       </body>
     </html>`;
+}
+
+function renderLetterhead(membreteDataUrl: string | null): string {
+  if (membreteDataUrl === null) {
+    return "";
+  }
+
+  return `<div class="pdf-letterhead" aria-hidden="true"><img src="${escapeHtml(membreteDataUrl)}" alt="" /></div>`;
 }
 
 function buildPageHtml({

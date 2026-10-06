@@ -13,6 +13,7 @@ describe("actividad-grupal-acta-pdf-template", () => {
     const htmlWithoutPhotos = buildActividadGrupalActaPdfHtml({
       detail: createDetail(),
       logoDataUrl: null,
+      membreteDataUrl: "data:image/png;base64,bWVtYnJldGU=",
       photoAssets: [],
     });
     const htmlWithPhotos = buildActividadGrupalActaPdfHtml({
@@ -33,6 +34,8 @@ describe("actividad-grupal-acta-pdf-template", () => {
     });
 
     assert.doesNotMatch(htmlWithoutPhotos, /EVIDENCIA FOTOGRAFICA/);
+    assert.match(htmlWithoutPhotos, /class="pdf-letterhead"/);
+    assert.match(htmlWithoutPhotos, /data:image\/png;base64,bWVtYnJldGU=/);
     assert.doesNotMatch(
       htmlWithoutPhotos,
       /<section class="acta-document__section acta-document__section--photo-evidence">/,

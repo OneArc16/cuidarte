@@ -49,6 +49,7 @@ describe("alimentacion-formato-pdf-template", () => {
         ],
       },
       institutionalLogoDataUrl: null,
+      membreteDataUrl: "data:image/png;base64,bWVtYnJldGU=",
       tenantLogoDataUrl: "data:image/png;base64,bG9nbw==",
       directorSignatureDataUrl: "data:image/png;base64,ZmlybWE=",
     });
@@ -72,6 +73,9 @@ describe("alimentacion-formato-pdf-template", () => {
     assert.match(html, /alt="Logo de Centro de Vida Demo"/);
     assert.match(html, /stub-logo--institutional/);
     assert.match(html, /stub-logo--tenant/);
+    assert.match(html, /@page\s*{\s*size: Letter;/);
+    assert.match(html, /class="pdf-letterhead"/);
+    assert.match(html, /data:image\/png;base64,bWVtYnJldGU=/);
   });
 
   it("uses the lower stub for visits 16 to 30 without changing the visual day labels", () => {

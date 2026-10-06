@@ -24,6 +24,7 @@ import {
 import { AlimentacionService } from "./alimentacion.service";
 import { type AlimentacionFormatoEntregaExportData } from "./alimentacion-formato-export.types";
 import playwrightEnv from "../../../common/playwright-env";
+import { getPdfLetterheadDataUrl } from "../../../common/pdf-letterhead";
 
 export type ExportedAlimentacionFormatoEntregaPdf = {
   buffer: Buffer;
@@ -43,6 +44,7 @@ type CurrentFormatoDependencies = {
 const INSTITUTIONAL_LOGO_RELATIVE_PATH = path.join("public", "logos", "gobernacion-magdalena.png");
 const DATED_VISIT_LIST_FORMAT_ROLLOUT_AT = new Date("2026-09-01T18:27:35.000Z");
 const FIFTEEN_DAY_BLOCK_FORMAT_ROLLOUT_AT = new Date("2026-10-05T15:56:20.000Z");
+const MEMBRETE_FORMAT_ROLLOUT_AT = new Date("2026-10-06T00:00:00.000Z");
 
 let cachedInstitutionalLogoDataUrl: string | null | undefined;
 
@@ -103,15 +105,18 @@ export class AlimentacionFormatoExportService {
     const { directorSignature, tenantLogoVersion } =
       currentDependenciesForReuse ??
       (await this.resolveCurrentFormatoDependencies(exportData.tenantId));
-    const [institutionalLogoDataUrl, directorSignatureDataUrl, tenantLogoFile] = await Promise.all([
-      this.getInstitutionalLogoDataUrl(),
-      this.getDirectorSignatureDataUrl(directorSignature.signature),
-      this.tenantBrandingService.readLogoVersionFile(tenantLogoVersion),
-    ]);
+    const [institutionalLogoDataUrl, membreteDataUrl, directorSignatureDataUrl, tenantLogoFile] =
+      await Promise.all([
+        this.getInstitutionalLogoDataUrl(),
+        getPdfLetterheadDataUrl(),
+        this.getDirectorSignatureDataUrl(directorSignature.signature),
+        this.tenantBrandingService.readLogoVersionFile(tenantLogoVersion),
+      ]);
     const tenantLogoDataUrl = `data:${tenantLogoFile.contentType};base64,${tenantLogoFile.buffer.toString("base64")}`;
     const pdfBuffer = await this.renderPdf(
       exportData,
       institutionalLogoDataUrl,
+      membreteDataUrl,
       tenantLogoDataUrl,
       directorSignatureDataUrl,
     );
@@ -174,6 +179,7 @@ export class AlimentacionFormatoExportService {
   private async renderPdf(
     data: AlimentacionFormatoEntregaExportData,
     institutionalLogoDataUrl: string | null,
+    membreteDataUrl: string | null,
     tenantLogoDataUrl: string,
     directorSignatureDataUrl: string | null,
   ): Promise<Buffer> {
@@ -189,6 +195,7 @@ export class AlimentacionFormatoExportService {
         buildFormatoEntregaPdfHtml({
           data,
           institutionalLogoDataUrl,
+          membreteDataUrl,
           tenantLogoDataUrl,
           directorSignatureDataUrl,
         }),
@@ -199,8 +206,7 @@ export class AlimentacionFormatoExportService {
 
       return Buffer.from(
         await page.pdf({
-          width: "216mm",
-          height: "279mm",
+          format: "Letter",
           printBackground: true,
           preferCSSPageSize: true,
           margin: {
@@ -289,6 +295,10 @@ export class AlimentacionFormatoExportService {
     }
 
     if (existingEmission.issuedAt < FIFTEEN_DAY_BLOCK_FORMAT_ROLLOUT_AT) {
+      return false;
+    }
+
+    if (existingEmission.issuedAt < MEMBRETE_FORMAT_ROLLOUT_AT) {
       return false;
     }
 
