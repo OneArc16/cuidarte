@@ -511,6 +511,31 @@
   gap: 16px;
 }
 
+.home-dashboard-section--auditor {
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgb(8 80 65 / 12%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 68%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 82%);
+}
+
+.home-dashboard-section--auditor .home-dashboard-section__header {
+  align-items: start;
+}
+
+.home-dashboard-section--auditor .home-dashboard-section__header h2 {
+  color: var(--color-deep);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.home-dashboard-section--auditor .eyebrow {
+  color: var(--color-care);
+  font-size: 0.68rem;
+}
+
 .home-direct-access {
   display: grid;
   gap: clamp(14px, 1.8vw, 20px);
@@ -563,6 +588,11 @@
 
 .home-indicators-grid {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.home-dashboard-section--auditor .home-indicators-grid {
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 10px;
 }
 
 .home-shortcut-card,
@@ -779,6 +809,43 @@
   line-height: 1;
 }
 
+.home-dashboard-section--auditor .home-indicator-card {
+  min-height: 94px;
+  gap: 6px;
+  padding: 11px;
+  border-color: rgb(8 80 65 / 12%);
+  border-radius: 8px;
+  background: rgb(249 253 251 / 88%);
+  box-shadow: none;
+}
+
+.home-dashboard-section--auditor .home-indicator-card:hover {
+  box-shadow: 0 10px 24px rgb(8 80 65 / 8%);
+}
+
+.home-dashboard-section--auditor .home-indicator-card__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+}
+
+.home-dashboard-section--auditor .home-indicator-card__icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.home-dashboard-section--auditor .home-indicator-card__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.15;
+  text-transform: none;
+}
+
+.home-dashboard-section--auditor .home-indicator-card strong {
+  font-size: 1.2rem;
+}
+
 .home-indicator-card {
   min-height: 128px;
   gap: 10px;
@@ -820,6 +887,48 @@
 .home-indicator-card[data-tone="ink"] .home-indicator-card__icon {
   background: rgb(23 53 47 / 8%);
   color: var(--color-ink);
+}
+
+/* Panel de auditoría: métricas livianas y escaneables, como el resumen del período. */
+.home-dashboard-section--auditor .home-indicator-card {
+  min-height: 94px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+  gap: 5px;
+  padding: 11px;
+  border-color: #dbe9e5;
+  border-radius: 8px;
+  background: #fbfdfc;
+  box-shadow: none;
+}
+
+.home-dashboard-section--auditor .home-indicator-card__icon {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+}
+
+.home-dashboard-section--auditor .home-indicator-card__label {
+  grid-column: 1;
+  grid-row: 2;
+  color: #3a6259;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.15;
+  text-transform: none;
+}
+
+.home-dashboard-section--auditor .home-indicator-card strong {
+  grid-column: 1;
+  grid-row: 3;
+  align-self: end;
+  color: #075541;
+  font-size: 1.18rem;
+  font-weight: 900;
 }
 
 .home-dashboard-feedback {

@@ -71,4 +71,11 @@ export const homeDashboardFixture = {
       total: 56,
     },
   ],
+  foodSummary: {
+    deliveredTotal: 120,
+    refrigerio1Total: 32,
+    almuerzoTotal: 48,
+    refrigerio2Total: 24,
+    auxilioTransporteTotal: 16,
+  },
 } as const;

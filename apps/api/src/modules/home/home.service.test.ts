@@ -49,6 +49,10 @@ describe("HomeService", () => {
       summarizeAlimentacion: async () => ({
         recordsTotal: 140,
         deliveredRationsTotal: 123200,
+        refrigerio1Total: 48,
+        almuerzoTotal: 56,
+        refrigerio2Total: 24,
+        auxilioTransporteTotal: 12,
       }),
       countEmpleados: async () => 42,
       countCompletedImports: async () => 12,
@@ -79,6 +83,13 @@ describe("HomeService", () => {
       { id: "actividad_campo", total: 112 },
       { id: "actividades_recreacion", total: 56 },
     ]);
+    assert.deepEqual(result.foodSummary, {
+      deliveredTotal: 123200,
+      refrigerio1Total: 48,
+      almuerzoTotal: 56,
+      refrigerio2Total: 24,
+      auxilioTransporteTotal: 12,
+    });
   });
 
   it("does not rely on undefined where clauses for super admin dashboard queries", async () => {
@@ -140,6 +151,10 @@ describe("HomeService", () => {
       summarizeAlimentacion: async () => ({
         recordsTotal: 0,
         deliveredRationsTotal: 0,
+        refrigerio1Total: 0,
+        almuerzoTotal: 0,
+        refrigerio2Total: 0,
+        auxilioTransporteTotal: 0,
       }),
       countEmpleados: async () => 0,
       countCompletedImports: async () => 0,

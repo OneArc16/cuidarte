@@ -28,7 +28,6 @@ describe("App home dashboard", () => {
 
   it.each([
     ["Admin", authUserFixture],
-    ["Auditor", auditorUserFixture],
     ["Director", directorUserFixture],
     ["SuperAdmin", superAdminUserFixture],
   ] as const)("shows the dashboard for %s users", async (_label, userFixture) => {
@@ -100,6 +99,46 @@ describe("App home dashboard", () => {
           "Vista consolidada con las cantidades que mas se consultan en el arranque del dia.",
         ),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows auditor activities without the system modules section", async () => {
+    server.use(mockAuthMe(auditorUserFixture));
+
+    renderAppAtPath("/home");
+
+    expect(await screen.findByRole("heading", { name: auditorUserFixture.fullName })).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.queryByRole("region", { name: "Módulos del sistema" })).not.toBeInTheDocument();
+
+      const activitiesRegion = screen.getByRole("region", { name: "Estadísticas del período" });
+
+      expect(
+        within(activitiesRegion).getByRole("button", { name: "Total entregado" }),
+      ).toHaveTextContent("120");
+      expect(
+        within(activitiesRegion).getByRole("button", { name: "Refrigerio 1" }),
+      ).toHaveTextContent("32");
+      expect(
+        within(activitiesRegion).getByRole("button", { name: "Almuerzos entregados" }),
+      ).toHaveTextContent("48");
+      expect(
+        within(activitiesRegion).getByRole("button", { name: "Refrigerio 2" }),
+      ).toHaveTextContent("24");
+      expect(
+        within(activitiesRegion).getByRole("button", { name: "Auxilios de transporte" }),
+      ).toHaveTextContent("16");
+      expect(
+        within(activitiesRegion).queryByRole("button", { name: "Atenciones de enfermería" }),
+      ).not.toBeInTheDocument();
+      expect(
+        within(activitiesRegion).queryByRole("button", { name: "Atenciones del médico" }),
+      ).not.toBeInTheDocument();
+      expect(
+        within(activitiesRegion).queryByRole("button", { name: "Raciones entregadas" }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByText("Resumen operativo")).toBeInTheDocument();
     });
   });
 

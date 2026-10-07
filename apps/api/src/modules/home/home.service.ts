@@ -46,6 +46,10 @@ type ActivitySummary = {
 type AlimentacionSummary = {
   recordsTotal: number;
   deliveredRationsTotal: number;
+  refrigerio1Total: number;
+  almuerzoTotal: number;
+  refrigerio2Total: number;
+  auxilioTransporteTotal: number;
 };
 
 @Injectable()
@@ -152,6 +156,16 @@ export class HomeService {
       shortcuts: this.buildShortcuts(shortcutTotals),
       indicators: this.buildIndicators(indicatorTotals),
       activityIndicators: actividadesSummary?.activityIndicators ?? [],
+      foodSummary:
+        alimentacionSummary === null
+          ? null
+          : {
+              deliveredTotal: alimentacionSummary.deliveredRationsTotal,
+              refrigerio1Total: alimentacionSummary.refrigerio1Total,
+              almuerzoTotal: alimentacionSummary.almuerzoTotal,
+              refrigerio2Total: alimentacionSummary.refrigerio2Total,
+              auxilioTransporteTotal: alimentacionSummary.auxilioTransporteTotal,
+            },
     });
   }
 
@@ -283,6 +297,10 @@ export class HomeService {
     const query = this.database.db
       .select({
         recordsTotal: sql<number>`count(*)::int`,
+        refrigerio1Total: sql<number>`coalesce(sum(case when ${alimentacionRegistros.refrigerio1} = 'entregado' then 1 else 0 end), 0)::int`,
+        almuerzoTotal: sql<number>`coalesce(sum(case when ${alimentacionRegistros.almuerzo} = 'entregado' then 1 else 0 end), 0)::int`,
+        refrigerio2Total: sql<number>`coalesce(sum(case when ${alimentacionRegistros.refrigerio2} = 'entregado' then 1 else 0 end), 0)::int`,
+        auxilioTransporteTotal: sql<number>`coalesce(sum(case when ${alimentacionRegistros.auxilioTransporte} = 'entregado' then 1 else 0 end), 0)::int`,
         deliveredRationsTotal: sql<number>`coalesce(sum(
           (case when ${alimentacionRegistros.refrigerio1} = 'entregado' then 1 else 0 end) +
           (case when ${alimentacionRegistros.almuerzo} = 'entregado' then 1 else 0 end) +
@@ -297,6 +315,10 @@ export class HomeService {
     return {
       recordsTotal: row?.recordsTotal ?? 0,
       deliveredRationsTotal: row?.deliveredRationsTotal ?? 0,
+      refrigerio1Total: row?.refrigerio1Total ?? 0,
+      almuerzoTotal: row?.almuerzoTotal ?? 0,
+      refrigerio2Total: row?.refrigerio2Total ?? 0,
+      auxilioTransporteTotal: row?.auxilioTransporteTotal ?? 0,
     };
   }
 
