@@ -74,11 +74,8 @@ export function buildFormatoEntregaPdfHtml({
           }
           .pdf-letterhead {
             position: fixed;
-            top: -9mm;
-            left: -8mm;
+            inset: -8mm -7mm;
             z-index: 0;
-            width: 215.9mm;
-            height: 279.4mm;
             opacity: 0.3;
             pointer-events: none;
           }
@@ -86,6 +83,7 @@ export function buildFormatoEntregaPdfHtml({
             display: block;
             width: 100%;
             height: 100%;
+            object-fit: contain;
           }
           .page + .page {
             break-before: page;
