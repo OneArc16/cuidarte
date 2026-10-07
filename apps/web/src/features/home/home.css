@@ -960,22 +960,83 @@
 }
 .home-auditor-charts__grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(220px, 0.72fr) minmax(0, 1.48fr);
   gap: 12px;
 }
 .home-auditor-chart {
   min-width: 0;
   padding: 14px;
   border: 1px solid #dbe9e5;
-  border-radius: 8px;
+  border-radius: 12px;
   background: #fbfdfc;
 }
 .home-auditor-chart h3 {
   font-size: 0.82rem;
 }
+.home-auditor-chart--monthly {
+  grid-column: span 1;
+}
+.home-auditor-chart__legend {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: -4px;
+  color: #4a3860;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.home-auditor-chart__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.home-auditor-chart__legend i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+.home-auditor-chart .recharts-bar-rectangle :is(path, rect) {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  transition:
+    transform 160ms ease-out,
+    filter 160ms ease-out;
+}
+.home-auditor-chart .recharts-pie-sector {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    transform 160ms ease-out,
+    filter 160ms ease-out;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .home-auditor-chart :is(.recharts-bar-rectangle, .recharts-pie-sector) {
+    cursor: pointer;
+  }
+
+  .home-auditor-chart .recharts-bar-rectangle:hover :is(path, rect) {
+    transform: translateY(-4px) scaleY(1.035);
+    filter: drop-shadow(0 5px 5px rgb(100 22 184 / 24%));
+  }
+
+  .home-auditor-chart .recharts-pie-sector:hover {
+    transform: scale(1.055);
+    filter: drop-shadow(0 4px 4px rgb(100 22 184 / 20%));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-auditor-chart .recharts-bar-rectangle :is(path, rect),
+  .home-auditor-chart .recharts-pie-sector {
+    transition: none;
+  }
+}
 @media (max-width: 800px) {
   .home-auditor-charts__grid {
     grid-template-columns: 1fr;
+  }
+  .home-auditor-chart--monthly {
+    grid-column: auto;
   }
 }
 
@@ -1025,7 +1086,7 @@
 
 .home-shell--auditor .home-dashboard-section--auditor .eyebrow,
 .home-shell--auditor .home-auditor-charts .eyebrow {
-  color: var(--auditor-purple);
+  color: var(--color-care);
 }
 
 .home-shell--auditor .home-dashboard-section--auditor .home-indicator-card,

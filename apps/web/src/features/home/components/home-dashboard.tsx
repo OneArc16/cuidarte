@@ -15,11 +15,11 @@ import { saveActividadesGrupalesFilters } from "@/features/actividades-grupales/
 import { HomeDashboardIndicatorCard } from "./home-dashboard-indicator-card";
 import { HomeAuditorCharts } from "./home-auditor-charts";
 import { HomeDashboardShortcutCard } from "./home-dashboard-shortcut-card";
+import { AnimatedDashboardMetric } from "./animated-dashboard-metric";
 import {
   HOME_DASHBOARD_INDICATORS,
   type HomeDashboardIndicatorDefinition,
 } from "../lib/home-dashboard-definitions";
-import { formatDashboardMetricValue } from "../lib/home-formatters";
 import { canViewModule, HOME_MODULES, type ShortcutHomeModule } from "../lib/home-modules";
 import { useHomeDashboardQuery } from "../model/home-queries";
 
@@ -104,9 +104,7 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
     (module) => module.id === "registro-alimentacion",
   );
   const showAuditorAlimentacionActivity =
-    isAuditor &&
-    alimentacionModule !== undefined &&
-    auditorFoodMetrics.length > 0;
+    isAuditor && alimentacionModule !== undefined && auditorFoodMetrics.length > 0;
 
   return (
     <>
@@ -141,7 +139,9 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
         </section>
       ) : null}
 
-      {visibleIndicators.length > 0 || activityIndicators.length > 0 || showAuditorAlimentacionActivity ? (
+      {visibleIndicators.length > 0 ||
+      activityIndicators.length > 0 ||
+      showAuditorAlimentacionActivity ? (
         <section
           className={`home-dashboard-section${isAuditor ? " home-dashboard-section--auditor" : ""}`}
           aria-labelledby="home-indicators-title"
@@ -149,7 +149,7 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
           <div className="home-dashboard-section__header">
             <div>
               <span id={isAuditor ? "home-indicators-title" : undefined} className="eyebrow">
-                {isAuditor ? "Resumen operativo" : "Indicadores"}
+                {isAuditor ? "Actividades Realizadas" : "Indicadores"}
               </span>
               {!isAuditor ? <h2 id="home-indicators-title">Resumen operativo</h2> : null}
             </div>
@@ -196,7 +196,9 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
                         <Icon />
                       </span>
                       <span className="home-indicator-card__label">{metric.label}</span>
-                      <strong>{formatDashboardMetricValue(metric.total)}</strong>
+                      <strong>
+                        <AnimatedDashboardMetric value={metric.total} />
+                      </strong>
                     </button>
                   );
                 })
@@ -227,7 +229,9 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
                 <span className="home-indicator-card__icon" aria-hidden="true">
                   <CalendarPlus />
                 </span>
-                <strong>{indicator.total}</strong>
+                <strong>
+                  <AnimatedDashboardMetric value={indicator.total} />
+                </strong>
               </button>
             ))}
           </div>
@@ -239,7 +243,9 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
           No fue posible actualizar los indicadores ahora. Los accesos siguen disponibles.
         </p>
       ) : null}
-      {isAuditor && dashboardQuery.data?.analytics !== null && dashboardQuery.data?.analytics !== undefined ? (
+      {isAuditor &&
+      dashboardQuery.data?.analytics !== null &&
+      dashboardQuery.data?.analytics !== undefined ? (
         <HomeAuditorCharts analytics={dashboardQuery.data.analytics} />
       ) : null}
     </>

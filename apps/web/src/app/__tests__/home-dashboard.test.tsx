@@ -99,7 +99,7 @@ describe("App home dashboard", () => {
           "Vista consolidada con las cantidades que mas se consultan en el arranque del dia.",
         ),
       ).not.toBeInTheDocument();
-    });
+    }, { timeout: 2_500 });
   });
 
   it("shows auditor activities without the system modules section", async () => {
@@ -112,7 +112,7 @@ describe("App home dashboard", () => {
     await waitFor(() => {
       expect(screen.queryByRole("region", { name: "Módulos del sistema" })).not.toBeInTheDocument();
 
-      const activitiesRegion = screen.getByRole("region", { name: "Resumen operativo" });
+      const activitiesRegion = screen.getByRole("region", { name: "Actividades Realizadas" });
 
       expect(
         within(activitiesRegion).getByRole("button", { name: "Total entregado" }),
@@ -138,8 +138,8 @@ describe("App home dashboard", () => {
       expect(
         within(activitiesRegion).queryByRole("button", { name: "Raciones entregadas" }),
       ).not.toBeInTheDocument();
-      expect(screen.getByText("Resumen operativo")).toBeInTheDocument();
-    });
+      expect(screen.getByText("Actividades Realizadas")).toBeInTheDocument();
+    }, { timeout: 2_500 });
   });
 
   it("uses the auditor permissions to build the module navigation", async () => {

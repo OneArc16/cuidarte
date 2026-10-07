@@ -1,5 +1,5 @@
 import { type ShortcutHomeModule } from "../lib/home-modules";
-import { formatDashboardMetricValue } from "../lib/home-formatters";
+import { AnimatedDashboardMetric } from "./animated-dashboard-metric";
 
 type HomeDashboardShortcutCardProps = {
   module: ShortcutHomeModule;
@@ -28,7 +28,9 @@ export function HomeDashboardShortcutCard({
           <Icon />
         </span>
       </span>
-      <span className="home-shortcut-card__total">{formatDashboardMetricValue(total)}</span>
+      <span className="home-shortcut-card__total">
+        <AnimatedDashboardMetric value={total} />
+      </span>
     </button>
   );
 }
