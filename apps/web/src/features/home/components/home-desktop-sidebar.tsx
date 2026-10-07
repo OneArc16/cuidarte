@@ -24,7 +24,7 @@ export function HomeDesktopSidebar({
 }: HomeDesktopSidebarProps) {
   const [shouldCollapseAfterAction, setShouldCollapseAfterAction] = useState(false);
   const visibleModules = HOME_MODULES.filter(
-    (module) => isNavigationModule(module) && canViewModule(module, user.role),
+    (module) => isNavigationModule(module) && canViewModule(module, user),
   );
 
   return (

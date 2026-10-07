@@ -4,7 +4,7 @@ import { ForbiddenException, BadRequestException } from "@nestjs/common";
 export function assertCanUseReports(actor: AuthUser): void {
   if (
     actor.permissions === undefined
-      ? actor.role === "super_admin" || actor.role === "admin" || actor.role === "director"
+      ? actor.role === "super_admin" || actor.role === "admin" || actor.role === "auditor" || actor.role === "director"
       : hasUserPermission(actor, "reportes.view")
   ) {
     return;

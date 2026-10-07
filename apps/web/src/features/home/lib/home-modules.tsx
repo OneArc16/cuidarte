@@ -1,8 +1,10 @@
 import {
   alimentacionAccessRoleValues,
   atencionEnfermeriaModuleRoleValues,
+  hasUserPermission,
   type AuthUser,
   type HomeDashboardShortcutModuleId,
+  type UserPermission,
 } from "@cuidarte/contracts";
 import {
   BriefcaseBusiness,
@@ -42,6 +44,7 @@ export type HomeModule = {
   icon: LucideIcon;
   path: string;
   roles?: readonly AuthUser["role"][];
+  permission?: UserPermission;
   showInNavigation?: boolean;
   summaryLabel?: string;
   directAccessDescription?: string;
@@ -67,6 +70,7 @@ export const HOME_MODULES = [
     path: ADULTOS_MAYORES_PATH,
     summaryLabel: "Adultos registrados",
     directAccessDescription: "Gestion y seguimiento",
+    permission: "adultos_mayores.view",
   },
   {
     id: "importacion-adultos-mayores",
@@ -74,6 +78,7 @@ export const HOME_MODULES = [
     icon: Upload,
     path: ADULTOS_MAYORES_IMPORT_PATH,
     roles: ["super_admin", "admin", "director"],
+    permission: "adultos_mayores.import",
     showInNavigation: false,
     summaryLabel: "Importaciones completadas",
     directAccessDescription: "Carga masiva",
@@ -85,6 +90,7 @@ export const HOME_MODULES = [
     path: CREACION_ACTIVIDADES_PATH,
     summaryLabel: "Sesiones registradas",
     directAccessDescription: "Planeacion y actas",
+    permission: "actividades_grupales.view",
   },
   {
     id: "atenciones-enfermeria",
@@ -94,6 +100,7 @@ export const HOME_MODULES = [
     roles: atencionEnfermeriaModuleRoleValues,
     summaryLabel: "Atenciones de enfermería",
     directAccessDescription: "Signos vitales, glucometría y notas",
+    permission: "atenciones_enfermeria.view",
   },
   {
     id: "registro-alimentacion",
@@ -103,6 +110,7 @@ export const HOME_MODULES = [
     roles: alimentacionAccessRoleValues,
     summaryLabel: "Registros cargados",
     directAccessDescription: "Registro diario",
+    permission: "alimentacion.view",
   },
   {
     id: "gestion-empleados",
@@ -112,13 +120,15 @@ export const HOME_MODULES = [
     roles: ["super_admin", "admin", "auditor", "director"],
     summaryLabel: "Usuarios activos",
     directAccessDescription: "Equipo y perfiles",
+    permission: "empleados.view",
   },
   {
     id: "reportes",
     label: "Reportes",
     icon: BarChart3,
     path: REPORTS_PATH,
-    roles: ["super_admin", "admin", "director"],
+    roles: ["super_admin", "admin", "auditor", "director"],
+    permission: "reportes.view",
     summaryLabel: "Estadísticas y exportaciones",
     directAccessDescription: "Indicadores por periodo",
   },
@@ -128,6 +138,7 @@ export const HOME_MODULES = [
     icon: Settings,
     path: AJUSTES_PATH,
     roles: ["super_admin", "admin"],
+    permission: "ajustes.actividades.manage",
   },
   {
     id: "backoffice",
@@ -142,8 +153,12 @@ export const HOME_MODULES = [
 
 const MOBILE_PRIMARY_MODULE_IDS = ["inicio", "adultos-mayores", "sesiones-grupales"] as const;
 
-export function canViewModule(module: HomeModule, role: AuthUser["role"]): boolean {
-  return module.roles === undefined || module.roles.includes(role);
+export function canViewModule(module: HomeModule, user: AuthUser): boolean {
+  if (user.permissions !== undefined && module.permission !== undefined) {
+    return hasUserPermission(user, module.permission);
+  }
+
+  return module.roles === undefined || module.roles.includes(user.role);
 }
 
 export function isNavigationModule(module: HomeModule): boolean {

@@ -941,6 +941,138 @@
   font-weight: 800;
 }
 
+.home-auditor-charts {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #dbe9e5;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 68%);
+}
+.home-auditor-charts h2,
+.home-auditor-chart h3 {
+  margin: 0;
+  color: var(--color-deep);
+}
+.home-auditor-charts h2 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.home-auditor-charts__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.home-auditor-chart {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #dbe9e5;
+  border-radius: 8px;
+  background: #fbfdfc;
+}
+.home-auditor-chart h3 {
+  font-size: 0.82rem;
+}
+@media (max-width: 800px) {
+  .home-auditor-charts__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Paleta del perfil Auditor: morado dominante con acentos del sistema visual de referencia. */
+.home-shell--auditor {
+  --auditor-purple: #6416b8;
+  --auditor-purple-deep: #461078;
+  --auditor-purple-soft: #f1e8fb;
+  --auditor-yellow: #f5bd22;
+  --auditor-magenta: #ed1450;
+  --auditor-blue: #087aa4;
+  --auditor-teal: #0ca6b7;
+  --auditor-green: #64b44e;
+}
+
+.home-shell--auditor .home-workspace {
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 84% 8%, rgb(100 22 184 / 10%), transparent 30%),
+    radial-gradient(circle at 58% 92%, rgb(12 166 183 / 9%), transparent 34%),
+    linear-gradient(135deg, #fbf9fd, #f6fbfa 58%, #fffdf5);
+}
+
+.home-shell--auditor .home-dashboard-section--auditor,
+.home-shell--auditor .home-auditor-charts {
+  position: relative;
+  overflow: hidden;
+  border-color: rgb(100 22 184 / 18%);
+  background: rgb(255 255 255 / 82%);
+  box-shadow: 0 16px 44px rgb(70 16 120 / 7%);
+}
+
+.home-shell--auditor .home-dashboard-section--auditor::before,
+.home-shell--auditor .home-auditor-charts::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--auditor-purple) 0 42%,
+    var(--auditor-yellow) 42% 57%,
+    var(--auditor-green) 57% 76%,
+    var(--auditor-teal) 76% 100%
+  );
+  content: "";
+}
+
+.home-shell--auditor .home-dashboard-section--auditor .eyebrow,
+.home-shell--auditor .home-auditor-charts .eyebrow {
+  color: var(--auditor-purple);
+}
+
+.home-shell--auditor .home-dashboard-section--auditor .home-indicator-card,
+.home-shell--auditor .home-auditor-chart {
+  border-color: rgb(100 22 184 / 14%);
+  background: linear-gradient(180deg, #fff, #fcf9ff);
+}
+
+.home-shell--auditor .home-dashboard-section--auditor .home-indicator-card:hover {
+  border-color: rgb(100 22 184 / 32%);
+  box-shadow: 0 10px 26px rgb(100 22 184 / 12%);
+}
+
+.home-shell--auditor .home-dashboard-section--auditor .home-indicator-card strong,
+.home-shell--auditor .home-auditor-chart h3 {
+  color: var(--auditor-purple-deep);
+}
+
+.home-shell--auditor .home-indicator-card[data-tone="ink"] .home-indicator-card__icon {
+  background: rgb(100 22 184 / 12%);
+  color: var(--auditor-purple);
+}
+
+.home-shell--auditor .home-indicator-card[data-tone="emerald"] .home-indicator-card__icon {
+  background: rgb(100 180 78 / 14%);
+  color: #3d9138;
+}
+
+.home-shell--auditor .home-indicator-card[data-tone="sky"] .home-indicator-card__icon {
+  background: rgb(12 166 183 / 13%);
+  color: var(--auditor-teal);
+}
+
+.home-shell--auditor .home-indicator-card[data-tone="gold"] .home-indicator-card__icon {
+  background: rgb(245 189 34 / 18%);
+  color: #b87800;
+}
+
+.home-shell--auditor .home-indicator-card[data-tone="coral"] .home-indicator-card__icon {
+  background: rgb(237 20 80 / 10%);
+  color: var(--auditor-magenta);
+}
+
+.home-shell--auditor .home-auditor-chart {
+  box-shadow: inset 0 1px 0 #fff;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

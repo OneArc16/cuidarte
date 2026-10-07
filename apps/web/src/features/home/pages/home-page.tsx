@@ -1,6 +1,7 @@
 import { type AuthUser } from "@cuidarte/contracts";
 
 import { type GoBack, type Navigate } from "@/app/hooks/use-app-navigation";
+import { HOME_PATH } from "@/app/routes/paths";
 import { AdultosMayoresPage } from "@/features/adultos-mayores/pages/adultos-mayores-page";
 import { isAdultosMayoresPath } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
 import { AlimentacionPage } from "@/features/alimentacion/pages/alimentacion-page";
@@ -58,7 +59,9 @@ export function HomePage({ goBack, navigate, onLogoutSuccess, path, user }: Home
                   : "inicio";
 
   return (
-    <main className={`home-shell${isReportsPath(path) ? " home-shell--reports" : ""}`}>
+    <main
+      className={`home-shell${isReportsPath(path) ? " home-shell--reports" : ""}${user.role === "auditor" && path === HOME_PATH ? " home-shell--auditor" : ""}`}
+    >
       {isMobileViewport ? null : (
         <HomeDesktopSidebar
           activeModuleId={activeModuleId}

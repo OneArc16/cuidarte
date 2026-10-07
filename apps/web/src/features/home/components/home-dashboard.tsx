@@ -13,6 +13,7 @@ import { CREACION_ACTIVIDADES_PATH } from "@/features/actividades-grupales/lib/a
 import { saveActividadesGrupalesFilters } from "@/features/actividades-grupales/lib/actividades-grupales-filter-state";
 
 import { HomeDashboardIndicatorCard } from "./home-dashboard-indicator-card";
+import { HomeAuditorCharts } from "./home-auditor-charts";
 import { HomeDashboardShortcutCard } from "./home-dashboard-shortcut-card";
 import {
   HOME_DASHBOARD_INDICATORS,
@@ -47,7 +48,7 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
   const shortcutTotals = buildShortcutTotals(dashboardQuery.data);
   const indicatorTotals = buildIndicatorTotals(dashboardQuery.data);
   const visibleShortcutModules = HOME_SHORTCUT_MODULES.filter((module) =>
-    canViewModule(module, user.role),
+    canViewModule(module, user),
   );
   const visibleIndicators = HOME_DASHBOARD_INDICATORS.filter(
     (indicator) =>
@@ -106,7 +107,6 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
     isAuditor &&
     alimentacionModule !== undefined &&
     auditorFoodMetrics.length > 0;
-  const summaryTitle = isAuditor ? "Estadísticas del período" : "Resumen operativo";
 
   return (
     <>
@@ -148,8 +148,10 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
         >
           <div className="home-dashboard-section__header">
             <div>
-              <span className="eyebrow">{isAuditor ? "Resumen operativo" : "Indicadores"}</span>
-              <h2 id="home-indicators-title">{summaryTitle}</h2>
+              <span id={isAuditor ? "home-indicators-title" : undefined} className="eyebrow">
+                {isAuditor ? "Resumen operativo" : "Indicadores"}
+              </span>
+              {!isAuditor ? <h2 id="home-indicators-title">Resumen operativo</h2> : null}
             </div>
           </div>
 
@@ -236,6 +238,9 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
         <p className="home-dashboard-feedback" role="status">
           No fue posible actualizar los indicadores ahora. Los accesos siguen disponibles.
         </p>
+      ) : null}
+      {isAuditor && dashboardQuery.data?.analytics !== null && dashboardQuery.data?.analytics !== undefined ? (
+        <HomeAuditorCharts analytics={dashboardQuery.data.analytics} />
       ) : null}
     </>
   );

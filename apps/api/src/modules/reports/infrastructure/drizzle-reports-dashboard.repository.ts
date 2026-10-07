@@ -7,6 +7,7 @@ import {
   actividadGrupalTipos,
   actividadesGrupales,
   alimentacionRegistros,
+  adultosMayores,
   atencionesEnfermeria,
   atencionesIndividuales,
   tenants,
@@ -127,9 +128,11 @@ export class DrizzleReportsDashboardRepository implements ReportsDashboardReposi
         lunchesDelivered: sql<number>`count(*) filter (where ${alimentacionRegistros.almuerzo} = 'entregado')::int`,
       })
       .from(alimentacionRegistros)
+      .innerJoin(adultosMayores, eq(adultosMayores.id, alimentacionRegistros.adultoMayorId))
       .where(
         and(
           ...tenantCondition(alimentacionRegistros.tenantId, query.scope),
+          isNull(adultosMayores.deletedAt),
           gte(alimentacionRegistros.deliveryDate, query.from),
           lte(alimentacionRegistros.deliveryDate, query.to),
         ),

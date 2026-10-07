@@ -33,6 +33,7 @@ export function defaultEmpleadoPermissions(role: UserRole): UserPermission[] {
       "alimentacion.view",
       "atenciones_individuales.view",
       "atenciones_enfermeria.view",
+      "reportes.view",
     ],
     director: [
       "dashboard.view",

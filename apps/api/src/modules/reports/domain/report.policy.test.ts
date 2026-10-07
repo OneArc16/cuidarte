@@ -20,17 +20,14 @@ const tenantUser: AuthUser = {
 };
 
 describe("report.policy", () => {
-  it("allows super_admin, admin and director", () => {
+  it("allows super_admin, admin, auditor and director", () => {
     assert.doesNotThrow(() => assertCanUseReports({ ...tenantUser, role: "super_admin" }));
     assert.doesNotThrow(() => assertCanUseReports({ ...tenantUser, role: "admin" }));
+    assert.doesNotThrow(() => assertCanUseReports({ ...tenantUser, role: "auditor" }));
     assert.doesNotThrow(() => assertCanUseReports({ ...tenantUser, role: "director" }));
   });
 
-  it("rejects auditor and operational roles", () => {
-    assert.throws(
-      () => assertCanUseReports({ ...tenantUser, role: "auditor" }),
-      ForbiddenException,
-    );
+  it("rejects operational roles", () => {
     assert.throws(
       () => assertCanUseReports({ ...tenantUser, role: "nutricionista" }),
       ForbiddenException,

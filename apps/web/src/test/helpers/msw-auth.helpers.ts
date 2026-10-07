@@ -9,6 +9,7 @@ export type AuthSessionUser = Readonly<{
   fullName: string;
   role: string;
   passwordSetByAdmin?: boolean;
+  permissions?: readonly string[];
 }>;
 
 export function mockAuthMe(user: AuthSessionUser) {

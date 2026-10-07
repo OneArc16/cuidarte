@@ -11,7 +11,7 @@ import {
   homeDashboardShortcutModuleIdValues,
 } from "@cuidarte/contracts";
 import { ForbiddenException, Injectable } from "@nestjs/common";
-import { and, eq, isNull, sql, type SQL } from "drizzle-orm";
+import { and, eq, gte, isNull, sql, type SQL } from "drizzle-orm";
 import { type AnyPgColumn } from "drizzle-orm/pg-core";
 
 import { DatabaseService } from "../../database/database.service";
@@ -51,6 +51,8 @@ type AlimentacionSummary = {
   refrigerio2Total: number;
   auxilioTransporteTotal: number;
 };
+
+type DashboardAnalytics = NonNullable<HomeDashboardResponse["analytics"]>;
 
 @Injectable()
 export class HomeService {
@@ -152,6 +154,11 @@ export class HomeService {
       shortcutTotals["importacion-adultos-mayores"] = importsTotal;
     }
 
+    const analytics =
+      actor.role === "auditor"
+        ? await this.summarizeDashboardAnalytics(adultosScope, alimentacionScope, actividadesSummary)
+        : null;
+
     return homeDashboardResponseSchema.parse({
       shortcuts: this.buildShortcuts(shortcutTotals),
       indicators: this.buildIndicators(indicatorTotals),
@@ -166,7 +173,67 @@ export class HomeService {
               refrigerio2Total: alimentacionSummary.refrigerio2Total,
               auxilioTransporteTotal: alimentacionSummary.auxilioTransporteTotal,
             },
+      analytics,
     });
+  }
+
+  private async summarizeDashboardAnalytics(
+    adultosScope: TenantScope | null,
+    alimentacionScope: TenantScope | null,
+    actividadesSummary: ActivitySummary | null,
+  ): Promise<DashboardAnalytics | null> {
+    if (adultosScope === null && alimentacionScope === null && actividadesSummary === null) {
+      return null;
+    }
+
+    const [sexDistribution, monthlyDeliveries] = await Promise.all([
+      adultosScope === null ? Promise.resolve({ male: 0, female: 0 }) : this.countSexDistribution(adultosScope),
+      alimentacionScope === null ? Promise.resolve(buildMonthlyDeliverySeries([])) : this.countMonthlyDeliveries(alimentacionScope),
+    ]);
+
+    return {
+      sexDistribution,
+      activitiesByType: (actividadesSummary?.activityIndicators ?? [])
+        .filter((indicator) => indicator.total > 0)
+        .map((indicator) => ({ label: indicator.label, total: indicator.total })),
+      monthlyDeliveries,
+    };
+  }
+
+  private async countSexDistribution(scope: TenantScope): Promise<DashboardAnalytics["sexDistribution"]> {
+    const scopeCondition = this.buildScopeCondition(scope, adultosMayores.tenantId);
+    const where = scopeCondition === undefined ? isNull(adultosMayores.deletedAt) : and(scopeCondition, isNull(adultosMayores.deletedAt));
+    const rows = await this.database.db
+      .select({ sex: adultosMayores.sex, total: sql<number>`count(*)::int` })
+      .from(adultosMayores)
+      .where(where)
+      .groupBy(adultosMayores.sex);
+    return {
+      male: rows.find((row) => row.sex === "male")?.total ?? 0,
+      female: rows.find((row) => row.sex === "female")?.total ?? 0,
+    };
+  }
+
+  private async countMonthlyDeliveries(scope: TenantScope): Promise<DashboardAnalytics["monthlyDeliveries"]> {
+    const months = buildRollingMonths();
+    const scopeCondition = this.buildScopeCondition(scope, alimentacionRegistros.tenantId);
+    const where = and(
+      scopeCondition ?? sql`true`,
+      isNull(adultosMayores.deletedAt),
+      gte(alimentacionRegistros.deliveryDate, `${months[0]!.month}-01`),
+    );
+    const monthExpression = sql<string>`to_char(${alimentacionRegistros.deliveryDate}, 'YYYY-MM')`;
+    const rows = await this.database.db
+      .select({
+        month: monthExpression,
+        rationsDelivered: sql<number>`coalesce(sum((case when ${alimentacionRegistros.refrigerio1} = 'entregado' then 1 else 0 end) + (case when ${alimentacionRegistros.almuerzo} = 'entregado' then 1 else 0 end) + (case when ${alimentacionRegistros.refrigerio2} = 'entregado' then 1 else 0 end)), 0)::int`,
+        transportAllowancesDelivered: sql<number>`coalesce(sum(case when ${alimentacionRegistros.auxilioTransporte} = 'entregado' then 1 else 0 end), 0)::int`,
+      })
+      .from(alimentacionRegistros)
+      .innerJoin(adultosMayores, eq(adultosMayores.id, alimentacionRegistros.adultoMayorId))
+      .where(where)
+      .groupBy(monthExpression);
+    return buildMonthlyDeliverySeries(rows);
   }
 
   private async countAdultosMayores(scope: TenantScope): Promise<number> {
@@ -414,4 +481,33 @@ export class HomeService {
 
     return indicators;
   }
+}
+
+function buildRollingMonths(referenceDate = new Date()): Array<{ month: string }> {
+  const months: Array<{ month: string }> = [];
+  const cursor = new Date(Date.UTC(referenceDate.getUTCFullYear(), referenceDate.getUTCMonth(), 1));
+  cursor.setUTCMonth(cursor.getUTCMonth() - 11);
+
+  for (let index = 0; index < 12; index += 1) {
+    months.push({
+      month: `${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, "0")}`,
+    });
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
+  }
+
+  return months;
+}
+
+function buildMonthlyDeliverySeries(
+  rows: Array<{ month: string; rationsDelivered: number; transportAllowancesDelivered: number }>,
+): DashboardAnalytics["monthlyDeliveries"] {
+  const byMonth = new Map(rows.map((row) => [row.month, row]));
+  return buildRollingMonths().map(({ month }) => {
+    const row = byMonth.get(month);
+    return {
+      month,
+      rationsDelivered: row?.rationsDelivered ?? 0,
+      transportAllowancesDelivered: row?.transportAllowancesDelivered ?? 0,
+    };
+  });
 }

@@ -29,7 +29,7 @@ export function HomeMobileNavigation({
 }: HomeMobileNavigationProps) {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const visibleModules = HOME_MODULES.filter(
-    (module) => isNavigationModule(module) && canViewModule(module, user.role),
+    (module) => isNavigationModule(module) && canViewModule(module, user),
   );
   const primaryModules = visibleModules.filter((module) => isMobilePrimaryModule(module));
   const secondaryModules = visibleModules.filter((module) => !isMobilePrimaryModule(module));

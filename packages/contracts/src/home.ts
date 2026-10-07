@@ -60,11 +60,24 @@ export const homeDashboardFoodSummarySchema = z.object({
   auxilioTransporteTotal: z.number().int().min(0),
 });
 
+export const homeDashboardAnalyticsSchema = z.object({
+  sexDistribution: z.object({ male: z.number().int().min(0), female: z.number().int().min(0) }),
+  activitiesByType: z.array(z.object({ label: z.string().min(1).max(120), total: z.number().int().min(0) })),
+  monthlyDeliveries: z.array(
+    z.object({
+      month: z.string().regex(/^\d{4}-\d{2}$/),
+      rationsDelivered: z.number().int().min(0),
+      transportAllowancesDelivered: z.number().int().min(0),
+    }),
+  ),
+});
+
 export const homeDashboardResponseSchema = z.object({
   shortcuts: z.array(homeDashboardShortcutSchema),
   indicators: z.array(homeDashboardIndicatorSchema),
   activityIndicators: z.array(homeDashboardActivityIndicatorSchema).default([]),
   foodSummary: homeDashboardFoodSummarySchema.nullable().default(null),
+  analytics: homeDashboardAnalyticsSchema.nullable().default(null),
 });
 
 export type HomeDashboardShortcutModuleId = z.infer<typeof homeDashboardShortcutModuleIdSchema>;
@@ -73,4 +86,5 @@ export type HomeDashboardShortcut = z.infer<typeof homeDashboardShortcutSchema>;
 export type HomeDashboardIndicator = z.infer<typeof homeDashboardIndicatorSchema>;
 export type HomeDashboardActivityIndicator = z.infer<typeof homeDashboardActivityIndicatorSchema>;
 export type HomeDashboardFoodSummary = z.infer<typeof homeDashboardFoodSummarySchema>;
+export type HomeDashboardAnalytics = z.infer<typeof homeDashboardAnalyticsSchema>;
 export type HomeDashboardResponse = z.infer<typeof homeDashboardResponseSchema>;

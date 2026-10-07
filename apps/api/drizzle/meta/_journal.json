@@ -421,6 +421,13 @@
       "when": 1790368740444,
       "tag": "0059_noisy_tarantula",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1791400000000,
+      "tag": "0060_auditor_reports_view",
+      "breakpoints": true
     }
   ]
 }

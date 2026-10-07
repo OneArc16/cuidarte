@@ -112,7 +112,7 @@ describe("App home dashboard", () => {
     await waitFor(() => {
       expect(screen.queryByRole("region", { name: "Módulos del sistema" })).not.toBeInTheDocument();
 
-      const activitiesRegion = screen.getByRole("region", { name: "Estadísticas del período" });
+      const activitiesRegion = screen.getByRole("region", { name: "Resumen operativo" });
 
       expect(
         within(activitiesRegion).getByRole("button", { name: "Total entregado" }),
@@ -140,6 +140,24 @@ describe("App home dashboard", () => {
       ).not.toBeInTheDocument();
       expect(screen.getByText("Resumen operativo")).toBeInTheDocument();
     });
+  });
+
+  it("uses the auditor permissions to build the module navigation", async () => {
+    server.use(
+      mockAuthMe({
+        ...auditorUserFixture,
+        permissions: ["dashboard.view", "reportes.view"],
+      }),
+    );
+
+    renderAppAtPath("/home");
+
+    const navigation = await screen.findByRole("navigation", { name: "Modulos principales" });
+
+    expect(within(navigation).getByRole("button", { name: "Reportes" })).toBeInTheDocument();
+    expect(
+      within(navigation).queryByRole("button", { name: "Gestión de empleados" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows direct access shortcuts for professional roles without requesting the dashboard", async () => {
