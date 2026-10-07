@@ -53,7 +53,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantId,
             adultoMayorId,
             deliveryMonth: "2026-07",
-            issuedAt: new Date("2026-10-06T00:00:00.000Z"),
+            issuedAt: new Date("2026-10-07T16:36:00.000Z"),
             pdfRelativePath: `${tenantId}/historic.pdf`,
             filename: "historic.pdf",
             signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -101,6 +101,74 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
     assert.equal(exportWasPrepared, true);
   });
 
+  it("reissues emissions created before the letterhead reached production", async () => {
+    for (const issuedAt of [
+      new Date("2026-10-06T00:00:00.000Z"),
+      new Date("2026-10-07T16:35:59.999Z"),
+    ]) {
+      let savedPdfCount = 0;
+      let createdEmissionCount = 0;
+      const service = new AlimentacionFormatoExportService(
+        {
+          ...alimentacionServiceForNewEmission(),
+          async findLatestFormatoEntregaEmission() {
+            return {
+              tenantId,
+              adultoMayorId,
+              deliveryMonth: "2026-07",
+              issuedAt,
+              pdfRelativePath: `${tenantId}/historic.pdf`,
+              filename: "historic.pdf",
+              signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
+              signatureVersionIdSnapshot: "7cf28395-e93e-420f-b7e0-92314361a02b",
+              tenantLogoVersionIdSnapshot: logoVersionId,
+              sourceRecordCount: 0,
+              sourceDateFrom: null,
+              sourceDateTo: null,
+            };
+          },
+          async createFormatoEntregaEmission() {
+            createdEmissionCount += 1;
+          },
+        } as never,
+        directorSignatureService() as never,
+        {
+          async resolveActiveLogo() {
+            return {
+              id: logoVersionId,
+              tenantId,
+              relativePath: `${tenantId}/branding/logos/version.png`,
+            };
+          },
+          async readLogoVersionFile() {
+            return { buffer: Buffer.from("tenant-logo"), contentType: "image/png" };
+          },
+        } as never,
+        {
+          async saveFile(_scope: unknown, file: { filename: string }) {
+            savedPdfCount += 1;
+
+            return { filename: file.filename, relativePath: `${tenantId}/reissued.pdf` };
+          },
+        } as never,
+      );
+      Object.assign(service, {
+        async renderPdf() {
+          return Buffer.from("reissued-pdf");
+        },
+        async getInstitutionalLogoDataUrl() {
+          return null;
+        },
+      });
+
+      const result = await service.exportPdf(adultoMayorId, { deliveryMonth: "2026-07" }, actor);
+
+      assert.deepEqual(result.buffer, Buffer.from("reissued-pdf"));
+      assert.equal(savedPdfCount, 1);
+      assert.equal(createdEmissionCount, 1);
+    }
+  });
+
   it("does not reuse an emission when the active signature file is missing", async () => {
     let storedEmissionWasRead = false;
     const service = new AlimentacionFormatoExportService(
@@ -133,7 +201,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantId,
             adultoMayorId,
             deliveryMonth: "2026-07",
-            issuedAt: new Date("2026-10-06T00:00:00.000Z"),
+            issuedAt: new Date("2026-10-07T16:36:00.000Z"),
             pdfRelativePath: `${tenantId}/historic.pdf`,
             filename: "historic.pdf",
             signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
