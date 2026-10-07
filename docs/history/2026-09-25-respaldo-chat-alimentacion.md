@@ -3,7 +3,7 @@
 Fecha: 2026-09-25
 Repositorio: `OneArc16/cuidarte`
 Rama: `feat/actas-alimentacion-home-incremental`
-Último commit publicado: `5c48fdd feat(reportes): respetar filtros y mostrar progreso de exportaciones`
+Último commit publicado: `fceba01 fix(alimentacion): admitir separadores en PDFs importados`
 Remoto: `origin/feat/actas-alimentacion-home-incremental`
 
 ## Propósito
@@ -34,7 +34,8 @@ Archivos principales:
 ## Importación masiva de formatos PDF
 
 - Permite importar en modo **Un mes** o **Todos los meses**.
-- El nombre esperado es `identificacion-AAAA-MM.pdf`.
+- Se aceptan los formatos `identificacion-AAAA-MM.pdf`, `identificacion_AAAA_MM.pdf` y sus combinaciones de guiones y guiones bajos.
+- La API y la validación previa del modal normalizan el período como `AAAA-MM` antes de validar el lote.
 - En modo de un mes, el archivo debe coincidir con el mes seleccionado.
 - Los PDF se dividen automáticamente en bloques de 100 y se validan secuencialmente.
 - 400 PDF se procesan como 4 bloques de 100.
@@ -103,6 +104,7 @@ Archivos principales:
 - `2d9742a fix(api): permite validar bloques de hasta 100 pdf`
 - `c8d51ea fix(adultos): informa cuando el duplicado esta en papelera`
 - `5c48fdd feat(reportes): respetar filtros y mostrar progreso de exportaciones`
+- `fceba01 fix(alimentacion): admitir separadores en PDFs importados`
 
 Todos los commits anteriores fueron enviados al remoto.
 
@@ -116,6 +118,9 @@ Todos los commits anteriores fueron enviados al remoto.
 - Typecheck completo: 4 paquetes correctos.
 - Test aislado del modal: 3/3 correctos.
 - Test aislado del servicio de reportes: 7/7 correctos.
+- Prueba del analizador de importación de alimentación: 4/4 correcta; cubre guiones, guiones bajos y formatos combinados.
+- `pnpm install --frozen-lockfile` completó correctamente y `react-day-picker` ya se resuelve desde la aplicación web.
+- Se actualizaron en `pnpm-lock.yaml` los hashes verificados de `date-fns@4.4.0` y `date-fns-jalali@4.1.0-0`, republicados con la misma versión.
 - La suite completa conserva fallos no relacionados en fixtures de controller, tenant branding y pruebas de UI con handlers MSW ausentes.
 
 La ejecución completa de pruebas de API contiene algunos fallos preexistentes o no relacionados en pruebas de controller y tenant branding; el typecheck, build y la prueba específica del cambio de papelera pasan.
@@ -130,7 +135,7 @@ git log -1 --oneline
 git branch -vv
 ```
 
-La rama debe estar sincronizada con `origin/feat/actas-alimentacion-home-incremental` en `5c48fdd`.
+La rama debe estar sincronizada con `origin/feat/actas-alimentacion-home-incremental` en `fceba01`.
 
 No agregar estos directorios temporales:
 
