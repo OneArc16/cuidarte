@@ -7,8 +7,6 @@ import {
   Cell,
   LabelList,
   Legend,
-  Line,
-  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -35,6 +33,14 @@ type MonthlyAttention = {
   medicalAttendances: number;
 };
 
+type MonthlyDeliveryBreakdown = {
+  month: string;
+  label: string;
+  snacksDelivered: number;
+  lunchesDelivered: number;
+  transportAllowancesDelivered: number;
+};
+
 type SexData = { label: string; total: number; color: string };
 
 const tooltipStyle = {
@@ -59,10 +65,7 @@ export function ReportDashboardCharts({ data }: ReportDashboardChartsProps) {
     .map((activity) => ({ label: activity.activityTypeName, total: activity.count }));
   const monthlyData = buildMonthlyDeliveries(data.dailySeries);
   const monthlyAttentionData = buildMonthlyAttendances(data.dailySeries);
-  const dailyData = data.dailySeries.map((point) => ({
-    ...point,
-    label: formatChartDate(point.date),
-  }));
+  const monthlyDeliveryBreakdownData = buildMonthlyDeliveryBreakdown(data.dailySeries);
 
   return (
     <section className="reports-charts" aria-labelledby="reports-charts-title">
@@ -76,34 +79,51 @@ export function ReportDashboardCharts({ data }: ReportDashboardChartsProps) {
         <ChartPanel
           title="Atenciones por mes"
           description="Comparación mensual de enfermería y medicina."
+          className="reports-chart-panel--bar-hover"
         >
           <ResponsiveContainer width="100%" height={260}>
-            <LineChart
+            <BarChart
               data={monthlyAttentionData}
               margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
+              barGap={6}
             >
-              <CartesianGrid stroke="#e6eee9" strokeDasharray="3 3" />
-              <XAxis dataKey="label" tick={{ fill: "#657a72", fontSize: 11 }} />
-              <YAxis allowDecimals={false} tick={{ fill: "#657a72", fontSize: 11 }} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Legend />
-              <Line
-                type="monotone"
+              <CartesianGrid stroke={chartGridColor} vertical={false} />
+              <XAxis
+                dataKey="label"
+                tick={chartTickStyle}
+                tickLine={false}
+                axisLine={{ stroke: chartGridColor }}
+              />
+              <YAxis
+                allowDecimals={false}
+                tick={chartTickStyle}
+                tickLine={false}
+                axisLine={false}
+                width={28}
+              />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgb(22 131 98 / 7%)" }} />
+              <Legend
+                align="left"
+                verticalAlign="top"
+                iconType="square"
+                iconSize={10}
+                wrapperStyle={{ paddingLeft: 4, paddingBottom: 8, fontSize: 12 }}
+              />
+              <Bar
                 dataKey="nursingAttendances"
                 name="Enfermería"
-                stroke="#168362"
-                strokeWidth={2.5}
-                dot={{ r: 3 }}
+                fill="#168362"
+                maxBarSize={32}
+                radius={[4, 4, 0, 0]}
               />
-              <Line
-                type="monotone"
+              <Bar
                 dataKey="medicalAttendances"
                 name="Medicina"
-                stroke="#2b6b99"
-                strokeWidth={2.5}
-                dot={{ r: 3 }}
+                fill="#2b6b99"
+                maxBarSize={32}
+                radius={[4, 4, 0, 0]}
               />
-            </LineChart>
+            </BarChart>
           </ResponsiveContainer>
           <AccessibleTable
             caption="Atenciones por mes"
@@ -167,42 +187,66 @@ export function ReportDashboardCharts({ data }: ReportDashboardChartsProps) {
         ) : null}
 
         <ChartPanel
-          title="Entregas por día"
+          title="Entregas por mes"
           description="Transporte, refrigerios y almuerzos entregados."
-          className="reports-chart-panel--deliveries"
+          className="reports-chart-panel--deliveries reports-chart-panel--bar-hover"
         >
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={dailyData} margin={{ top: 8, right: 12, left: 0, bottom: 4 }}>
-              <CartesianGrid stroke="#e6eee9" strokeDasharray="3 3" />
-              <XAxis dataKey="label" tick={{ fill: "#657a72", fontSize: 11 }} />
-              <YAxis allowDecimals={false} tick={{ fill: "#657a72", fontSize: 11 }} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Legend />
+            <BarChart
+              data={monthlyDeliveryBreakdownData}
+              margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
+              barGap={6}
+            >
+              <CartesianGrid stroke={chartGridColor} vertical={false} />
+              <XAxis
+                dataKey="label"
+                tick={chartTickStyle}
+                tickLine={false}
+                axisLine={{ stroke: chartGridColor }}
+              />
+              <YAxis
+                allowDecimals={false}
+                tick={chartTickStyle}
+                tickLine={false}
+                axisLine={false}
+                width={40}
+              />
+              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgb(22 131 98 / 7%)" }} />
+              <Legend
+                align="left"
+                verticalAlign="top"
+                iconType="square"
+                iconSize={10}
+                wrapperStyle={{ paddingLeft: 4, paddingBottom: 8, fontSize: 12 }}
+              />
               <Bar
                 dataKey="transportAllowancesDelivered"
                 name="Transporte"
                 fill="#a24b48"
+                maxBarSize={32}
                 radius={[4, 4, 0, 0]}
               />
               <Bar
                 dataKey="snacksDelivered"
                 name="Refrigerios"
                 fill="#70549a"
+                maxBarSize={32}
                 radius={[4, 4, 0, 0]}
               />
               <Bar
                 dataKey="lunchesDelivered"
                 name="Almuerzos"
                 fill="#4d7b38"
+                maxBarSize={32}
                 radius={[4, 4, 0, 0]}
               />
             </BarChart>
           </ResponsiveContainer>
           <AccessibleTable
-            caption="Entregas por día"
-            headers={["Fecha", "Transporte", "Refrigerios", "Almuerzos"]}
-            rows={dailyData.map((point) => [
-              point.date,
+            caption="Entregas por mes"
+            headers={["Mes", "Transporte", "Refrigerios", "Almuerzos"]}
+            rows={monthlyDeliveryBreakdownData.map((point) => [
+              point.month,
               point.transportAllowancesDelivered,
               point.snacksDelivered,
               point.lunchesDelivered,
@@ -510,6 +554,31 @@ function buildMonthlyAttendances(
   }));
 }
 
+function buildMonthlyDeliveryBreakdown(
+  dailySeries: ReportsDashboardResponse["dailySeries"],
+): MonthlyDeliveryBreakdown[] {
+  const byMonth = new Map<string, Omit<MonthlyDeliveryBreakdown, "month" | "label">>();
+
+  for (const point of dailySeries) {
+    const month = point.date.slice(0, 7);
+    const existing = byMonth.get(month) ?? {
+      snacksDelivered: 0,
+      lunchesDelivered: 0,
+      transportAllowancesDelivered: 0,
+    };
+    existing.snacksDelivered += point.snacksDelivered;
+    existing.lunchesDelivered += point.lunchesDelivered;
+    existing.transportAllowancesDelivered += point.transportAllowancesDelivered;
+    byMonth.set(month, existing);
+  }
+
+  return [...byMonth.entries()].map(([month, delivery]) => ({
+    month,
+    label: monthFormatter.format(new Date(`${month}-01T00:00:00Z`)),
+    ...delivery,
+  }));
+}
+
 function wrapLabel(value: string, maxLength: number): string[] {
   const words = value.split(" ");
   const lines: string[] = [];
@@ -545,12 +614,4 @@ function formatNonZeroCompactValue(value: unknown): string {
   const numericValue = typeof value === "number" || typeof value === "string" ? Number(value) : 0;
 
   return numericValue > 0 ? formatCompactValue(numericValue) : "";
-}
-
-function formatChartDate(value: string): string {
-  return new Intl.DateTimeFormat("es-CO", {
-    day: "2-digit",
-    month: "short",
-    timeZone: "UTC",
-  }).format(new Date(`${value}T00:00:00Z`));
 }

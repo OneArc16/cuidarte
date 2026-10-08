@@ -678,7 +678,9 @@
   border-radius: 2px;
 }
 
-.reports-analytics-chart .recharts-bar-rectangle :is(path, rect) {
+:is(.reports-analytics-chart, .reports-chart-panel--bar-hover)
+  .recharts-bar-rectangle
+  :is(path, rect) {
   transform-box: fill-box;
   transform-origin: center bottom;
   transition:
@@ -695,11 +697,14 @@
 }
 
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  .reports-analytics-chart :is(.recharts-bar-rectangle, .recharts-pie-sector) {
+  :is(.reports-analytics-chart, .reports-chart-panel--bar-hover) .recharts-bar-rectangle,
+  .reports-analytics-chart .recharts-pie-sector {
     cursor: pointer;
   }
 
-  .reports-analytics-chart .recharts-bar-rectangle:hover :is(path, rect) {
+  :is(.reports-analytics-chart, .reports-chart-panel--bar-hover)
+    .recharts-bar-rectangle:hover
+    :is(path, rect) {
     transform: translateY(-4px) scaleY(1.035);
     filter: drop-shadow(0 5px 5px rgb(8 80 65 / 20%));
   }
@@ -711,7 +716,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .reports-analytics-chart .recharts-bar-rectangle :is(path, rect),
+  :is(.reports-analytics-chart, .reports-chart-panel--bar-hover)
+    .recharts-bar-rectangle
+    :is(path, rect),
   .reports-analytics-chart .recharts-pie-sector {
     transition: none;
   }
