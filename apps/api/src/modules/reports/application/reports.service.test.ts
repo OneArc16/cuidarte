@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { type AuthUser, type ReportStatus } from "@cuidarte/contracts";
+import { ForbiddenException } from "@nestjs/common";
 
 import { type ReportArchiveWriter } from "../domain/report-archive-writer";
 import { type ReportFilesStorage, type StoredReportFile } from "../domain/report-files.storage";
@@ -117,6 +118,23 @@ describe("ReportsService job recovery", () => {
 
     assert.equal(response.id, duplicate.id);
     assert.deepEqual(harness.queue.enqueuedReportIds, []);
+  });
+
+  it("rejects ZIP generation for a report viewer without download permission", async () => {
+    const harness = createHarness({ documents: ["uno.pdf"] });
+
+    await assert.rejects(
+      () =>
+        harness.service.createReport(
+          {
+            type: "FORMATOS_ENTREGA_ALIMENTACION",
+            period: "2026-08",
+            tenantId: actor.tenantId,
+          },
+          { ...actor, role: "auditor", permissions: ["reportes.view"] },
+        ),
+      ForbiddenException,
+    );
   });
 });
 

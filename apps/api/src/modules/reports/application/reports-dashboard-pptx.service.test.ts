@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { type ReportsDashboardResponse } from "@cuidarte/contracts";
+import { type AuthUser, type ReportsDashboardResponse } from "@cuidarte/contracts";
 import JSZip from "jszip";
 
 import { buildMonthlySeries, ReportsDashboardPptxService } from "./reports-dashboard-pptx.service";
@@ -12,7 +12,7 @@ describe("ReportsDashboardPptxService", () => {
       getDashboard: async () => dashboard,
     } as never);
 
-    const file = await service.exportPptx({ from: "2026-09-01", to: "2026-09-02" }, {} as never);
+    const file = await service.exportPptx({ from: "2026-09-01", to: "2026-09-02" }, actor);
 
     assert.equal(
       file.contentType,
@@ -43,6 +43,15 @@ describe("ReportsDashboardPptxService", () => {
     ]);
   });
 });
+
+const actor: AuthUser = {
+  id: "11111111-1111-4111-8111-111111111111",
+  tenantId: null,
+  email: "superadmin@cuidarte.test",
+  fullName: "Super Admin CuidarTe",
+  role: "super_admin",
+  passwordSetByAdmin: false,
+};
 
 const dashboard: ReportsDashboardResponse = {
   range: { from: "2026-09-01", to: "2026-09-02" },

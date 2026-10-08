@@ -30,7 +30,7 @@ const PERMISSION_COLUMNS = [
   { key: "delete", label: "ELIMINAR" },
   { key: "correct", label: "CORREGIR" },
   { key: "import", label: "IMPORTAR" },
-  { key: "export", label: "EXPORTAR" },
+  { key: "export", label: "DESCARGAR" },
   { key: "manage", label: "GESTIONAR" },
 ] as const;
 

@@ -21,6 +21,7 @@ import { AlimentacionTable } from "../components/alimentacion-table";
 import { AlimentacionToolbar } from "../components/alimentacion-toolbar";
 import { ReportExportButton } from "@/features/reports/components/report-export-button";
 import { ReportHistoryButton } from "@/features/reports/components/report-history-button";
+import { canExportReports } from "@/features/reports/lib/reports-permissions";
 import {
   REGISTRO_ALIMENTACION_NEW_PATH,
   buildAlimentacionEditPath,
@@ -89,6 +90,7 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
   const canManageRecords = canManageAlimentacion(user);
   const canImportRecords = canImportAlimentacion(user);
   const canViewDeliveredDays = canViewAlimentacionDeliveryDays(user);
+  const canExportReportsZip = canExportReports(user);
   const effectiveDeliveryMonth = deliveryMonth.trim() === "" ? null : deliveryMonth;
   const reportPeriod = effectiveDeliveryMonth ?? "ALL";
   const reportTenantId = showTenantFilter
@@ -301,13 +303,16 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
               <Files aria-hidden="true" />
               <span className="visually-hidden">Importar formatos masivos</span>
             </button>
-            <ReportExportButton
-              className="alimentacion-zip-action"
-              period={reportPeriod}
-              tenantId={reportTenantId}
-              type="FORMATOS_ENTREGA_ALIMENTACION"
-            />
+            {canExportReportsZip ? (
+              <ReportExportButton
+                className="alimentacion-zip-action"
+                period={reportPeriod}
+                tenantId={reportTenantId}
+                type="FORMATOS_ENTREGA_ALIMENTACION"
+              />
+            ) : null}
             <ReportHistoryButton
+              canDownload={canExportReportsZip}
               period={reportPeriod}
               tenantId={reportTenantId}
               type="FORMATOS_ENTREGA_ALIMENTACION"

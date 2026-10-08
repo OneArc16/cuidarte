@@ -7,6 +7,7 @@ import { useReportsDashboardQuery } from "../model/reports-queries";
 import { ReportDashboard } from "../components/report-dashboard";
 import { ReportDateRangePicker } from "../components/report-date-range-picker";
 import { loadReportsDateRange, saveReportsDateRange } from "../lib/reports-date-range-state";
+import { canExportReports } from "../lib/reports-permissions";
 import { useReportDownloads } from "../model/report-downloads-context";
 import "../reports.css";
 
@@ -21,6 +22,7 @@ export function ReportsPage({ user }: ReportsPageProps) {
   const [exportingFormat, setExportingFormat] = useState<"pdf" | "pptx" | "xlsx" | null>(null);
   const dashboardQuery = useReportsDashboardQuery(dateRange);
   const { startAnalyticsExport } = useReportDownloads();
+  const canExport = canExportReports(user);
 
   const handleDateRangeApply = (nextDateRange: { from: string; to: string }) => {
     setDateRange(nextDateRange);
@@ -53,47 +55,53 @@ export function ReportsPage({ user }: ReportsPageProps) {
             to={dateRange.to}
             onApply={handleDateRangeApply}
           />
-          <button
-            className="reports-export-button reports-export-button--excel"
-            type="button"
-            aria-label="Exportar a Excel"
-            data-tooltip={exportingFormat === "xlsx" ? "Generando Excel" : "Exportar a Excel"}
-            disabled={exportingFormat !== null || dashboardQuery.isLoading}
-            onClick={() => void handleExport("xlsx")}
-          >
-            <FileSpreadsheet aria-hidden="true" />
-            <span className="visually-hidden">
-              {exportingFormat === "xlsx" ? "Generando Excel" : "Exportar a Excel"}
-            </span>
-          </button>
-          <button
-            className="reports-export-button reports-export-button--pdf"
-            type="button"
-            aria-label="Exportar a PDF"
-            data-tooltip={exportingFormat === "pdf" ? "Generando PDF" : "Exportar a PDF"}
-            disabled={exportingFormat !== null || dashboardQuery.isLoading}
-            onClick={() => void handleExport("pdf")}
-          >
-            <FileText aria-hidden="true" />
-            <span className="visually-hidden">
-              {exportingFormat === "pdf" ? "Generando PDF" : "Exportar a PDF"}
-            </span>
-          </button>
-          <button
-            className="reports-export-button reports-export-button--pptx"
-            type="button"
-            aria-label="Exportar a PowerPoint"
-            data-tooltip={
-              exportingFormat === "pptx" ? "Generando PowerPoint" : "Exportar a PowerPoint"
-            }
-            disabled={exportingFormat !== null || dashboardQuery.isLoading}
-            onClick={() => void handleExport("pptx")}
-          >
-            <Presentation aria-hidden="true" />
-            <span className="visually-hidden">
-              {exportingFormat === "pptx" ? "Generando PowerPoint" : "Exportar a PowerPoint"}
-            </span>
-          </button>
+          {canExport ? (
+            <button
+              className="reports-export-button reports-export-button--excel"
+              type="button"
+              aria-label="Exportar a Excel"
+              data-tooltip={exportingFormat === "xlsx" ? "Generando Excel" : "Exportar a Excel"}
+              disabled={exportingFormat !== null || dashboardQuery.isLoading}
+              onClick={() => void handleExport("xlsx")}
+            >
+              <FileSpreadsheet aria-hidden="true" />
+              <span className="visually-hidden">
+                {exportingFormat === "xlsx" ? "Generando Excel" : "Exportar a Excel"}
+              </span>
+            </button>
+          ) : null}
+          {canExport ? (
+            <button
+              className="reports-export-button reports-export-button--pdf"
+              type="button"
+              aria-label="Exportar a PDF"
+              data-tooltip={exportingFormat === "pdf" ? "Generando PDF" : "Exportar a PDF"}
+              disabled={exportingFormat !== null || dashboardQuery.isLoading}
+              onClick={() => void handleExport("pdf")}
+            >
+              <FileText aria-hidden="true" />
+              <span className="visually-hidden">
+                {exportingFormat === "pdf" ? "Generando PDF" : "Exportar a PDF"}
+              </span>
+            </button>
+          ) : null}
+          {canExport ? (
+            <button
+              className="reports-export-button reports-export-button--pptx"
+              type="button"
+              aria-label="Exportar a PowerPoint"
+              data-tooltip={
+                exportingFormat === "pptx" ? "Generando PowerPoint" : "Exportar a PowerPoint"
+              }
+              disabled={exportingFormat !== null || dashboardQuery.isLoading}
+              onClick={() => void handleExport("pptx")}
+            >
+              <Presentation aria-hidden="true" />
+              <span className="visually-hidden">
+                {exportingFormat === "pptx" ? "Generando PowerPoint" : "Exportar a PowerPoint"}
+              </span>
+            </button>
+          ) : null}
         </div>
       </header>
 

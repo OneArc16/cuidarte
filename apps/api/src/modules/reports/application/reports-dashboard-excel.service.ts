@@ -8,6 +8,7 @@ import ExcelJS from "exceljs";
 import JSZip from "jszip";
 
 import { ReportsDashboardService } from "./reports-dashboard.service";
+import { assertCanExportReports } from "../domain/report.policy";
 
 export type ReportsDashboardExcelFile = {
   buffer: Buffer;
@@ -45,6 +46,7 @@ export class ReportsDashboardExcelService {
     query: ReportsDashboardQuery,
     actor: AuthUser,
   ): Promise<ReportsDashboardExcelFile> {
+    assertCanExportReports(actor);
     const dashboard = await this.dashboardService.getDashboard(query, actor);
     const workbook = new ExcelJS.Workbook();
 

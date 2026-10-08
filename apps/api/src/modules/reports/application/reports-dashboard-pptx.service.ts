@@ -11,6 +11,7 @@ import PptxGenJS from "pptxgenjs";
 
 import { TenantBrandingService } from "../../tenant-branding/application/tenant-branding.service";
 import { ReportsDashboardService } from "./reports-dashboard.service";
+import { assertCanExportReports } from "../domain/report.policy";
 
 export type ReportsDashboardPptxFile = {
   buffer: Buffer;
@@ -36,6 +37,7 @@ export class ReportsDashboardPptxService {
     query: ReportsDashboardQuery,
     actor: AuthUser,
   ): Promise<ReportsDashboardPptxFile> {
+    assertCanExportReports(actor);
     const dashboard = await this.dashboardService.getDashboard(query, actor);
     const branding = await resolvePptxBranding(dashboard, this.tenantBrandingService);
     const presentation = new PptxGenJS();

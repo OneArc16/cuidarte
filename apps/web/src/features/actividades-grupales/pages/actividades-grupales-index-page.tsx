@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { ReportExportButton } from "@/features/reports/components/report-export-button";
 import { ReportHistoryButton } from "@/features/reports/components/report-history-button";
+import { canExportReports } from "@/features/reports/lib/reports-permissions";
 import { getCurrentMonthInputValue } from "@/features/alimentacion/lib/alimentacion-formatters";
 
 import { ActividadGrupalDeleteDialog } from "../components/actividad-grupal-delete-dialog";
@@ -77,6 +78,7 @@ export function ActividadesGrupalesIndexPage({
       : selectedTenantId
     : user.tenantId;
   const canViewTrash = canViewActividadesGrupalesTrash(user);
+  const canExport = canExportReports(user);
   const tenantOptionsQuery = useActividadGrupalTenantOptionsQuery(showTenantFilter);
   const activityTypesQuery = useActividadGrupalTiposQuery(
     { tenantId: reportTenantId, includeInactive: true },
@@ -141,18 +143,21 @@ export function ActividadesGrupalesIndexPage({
         activityMonth={activityMonth}
         exportButton={
           <div className="module-report-actions">
-            <ReportExportButton
-              className="actividades-zip-action"
-              period={reportPeriod}
-              tenantId={reportTenantId}
-              type="ACTAS_SESIONES_GRUPALES"
-              filters={{
-                search: search.trim() || null,
-                activityTypeId: activityTypeId === "" ? null : activityTypeId,
-                organizer: selectedOrganizer === "" ? null : selectedOrganizer,
-              }}
-            />
+            {canExport ? (
+              <ReportExportButton
+                className="actividades-zip-action"
+                period={reportPeriod}
+                tenantId={reportTenantId}
+                type="ACTAS_SESIONES_GRUPALES"
+                filters={{
+                  search: search.trim() || null,
+                  activityTypeId: activityTypeId === "" ? null : activityTypeId,
+                  organizer: selectedOrganizer === "" ? null : selectedOrganizer,
+                }}
+              />
+            ) : null}
             <ReportHistoryButton
+              canDownload={canExport}
               period={reportPeriod}
               tenantId={reportTenantId}
               type="ACTAS_SESIONES_GRUPALES"

@@ -61,6 +61,18 @@ export const userPermissionCatalog = [
     description: "Consultar el tablero principal.",
   },
   {
+    key: "reportes.view",
+    group: "Reportes",
+    label: "Ver reportes",
+    description: "Consultar reportes.",
+  },
+  {
+    key: "reportes.export",
+    group: "Reportes",
+    label: "Descargar reportes",
+    description: "Generar y descargar reportes.",
+  },
+  {
     key: "empleados.view",
     group: "Empleados",
     label: "Ver empleados",
@@ -227,18 +239,6 @@ export const userPermissionCatalog = [
     group: "Enfermería",
     label: "Gestionar papelera",
     description: "Enviar y restaurar atenciones de enfermería.",
-  },
-  {
-    key: "reportes.view",
-    group: "Reportes",
-    label: "Ver reportes",
-    description: "Consultar reportes.",
-  },
-  {
-    key: "reportes.export",
-    group: "Reportes",
-    label: "Exportar reportes",
-    description: "Descargar reportes.",
   },
   {
     key: "ajustes.actividades.manage",

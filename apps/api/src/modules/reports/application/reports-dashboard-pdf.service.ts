@@ -9,6 +9,7 @@ import { chromium } from "playwright";
 import playwrightEnv from "../../../common/playwright-env";
 import { getPdfLetterheadDataUrl } from "../../../common/pdf-letterhead";
 import { ReportsDashboardService } from "./reports-dashboard.service";
+import { assertCanExportReports } from "../domain/report.policy";
 
 export type ReportsDashboardPdfFile = {
   buffer: Buffer;
@@ -21,6 +22,7 @@ export class ReportsDashboardPdfService {
   constructor(private readonly dashboardService: ReportsDashboardService) {}
 
   async exportPdf(query: ReportsDashboardQuery, actor: AuthUser): Promise<ReportsDashboardPdfFile> {
+    assertCanExportReports(actor);
     const dashboard = await this.dashboardService.getDashboard(query, actor);
     const browser = await chromium.launch({
       headless: true,

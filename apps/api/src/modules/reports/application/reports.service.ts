@@ -26,6 +26,7 @@ import { REPORT_FILES_STORAGE, type ReportFilesStorage } from "../domain/report-
 import { buildReportZipFilename, deduplicateFilename } from "../domain/report-filenames";
 import {
   assertCanAccessReportJob,
+  assertCanExportReports,
   assertCanUseReports,
   canCancelReportStatus,
   resolveReportTenantId,
@@ -84,6 +85,7 @@ export class ReportsService implements OnModuleInit {
   }
 
   async createReport(command: CreateReportRequest, actor: AuthUser): Promise<ReportJob> {
+    assertCanExportReports(actor);
     const scope = await this.resolveScope(actor, command.tenantId);
     const source = this.resolveSource(command.type);
     const activityFilters =
@@ -194,6 +196,7 @@ export class ReportsService implements OnModuleInit {
     filename: string;
     sizeBytes: number;
   }> {
+    assertCanExportReports(actor);
     const report = await this.findPermittedReport(reportId, actor);
 
     if (report.status !== "ready" || report.storageKey === null || report.expiresAt === null) {
