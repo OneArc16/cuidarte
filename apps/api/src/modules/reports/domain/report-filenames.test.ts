@@ -22,7 +22,7 @@ describe("report-filenames", () => {
         names: "María Elena",
         period: "2026-08",
       }),
-      "FORMATO_ENTREGA_10_20_30_GOMEZ_PEREZ_MARIA_ELENA_2026_08.pdf",
+      "10_20_30_GOMEZ_PEREZ_MARIA_ELENA_FORMATO_ENTREGA_2026_08.pdf",
     );
   });
 
@@ -35,7 +35,7 @@ describe("report-filenames", () => {
         period: "2026-08",
         importedVersion: 2,
       }),
-      "FORMATO_ENTREGA_1020304050_GOMEZ_MARIA_2026_08_IMPORTADO_V2.pdf",
+      "1020304050_GOMEZ_MARIA_FORMATO_ENTREGA_2026_08_IMPORTADO_V2.pdf",
     );
   });
 

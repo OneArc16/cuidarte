@@ -439,9 +439,20 @@ export function buildActividadGrupalActaPhotoEvidencePdfHtml(
 }
 
 export function buildActividadGrupalActaPdfFilename(
-  detail: Pick<ActividadGrupalDiligenciamientoDetail, "actaNumber">,
+  detail: Pick<
+    ActividadGrupalDiligenciamientoDetail,
+    "actaNumber" | "activityName" | "activityTypeCatalog" | "activityDate"
+  >,
 ): string {
-  return `acta-sesion-grupal-${formatActaNumber(detail.actaNumber)}.pdf`;
+  return (
+    [
+      formatFilenameSegment(detail.actaNumber),
+      formatFilenameSegment(detail.activityName),
+      "ACTA",
+      formatFilenameSegment(detail.activityTypeCatalog.name),
+      detail.activityDate.replaceAll("-", "_"),
+    ].join("_") + ".pdf"
+  );
 }
 
 function renderLetterhead(membreteDataUrl: string | null): string {
@@ -571,14 +582,14 @@ function formatActaDate(date: string): string {
   return `${day}/${month}/${year}`;
 }
 
-function formatActaNumber(value: string): string {
-  const normalizedValue = value.trim();
-
-  if (/^\d+$/.test(normalizedValue)) {
-    return normalizedValue.padStart(4, "0");
-  }
-
-  return normalizedValue.replace(/\s+/g, "-").replace(/[^A-Za-z0-9_-]/g, "-");
+function formatFilenameSegment(value: string): string {
+  return value
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleUpperCase("es-CO")
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
 function formatActaTime(time: string): string {

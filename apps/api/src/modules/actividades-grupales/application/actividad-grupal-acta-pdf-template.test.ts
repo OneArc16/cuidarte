@@ -66,10 +66,21 @@ describe("actividad-grupal-acta-pdf-template", () => {
     );
   });
 
-  it("builds a sanitized filename", () => {
+  it("builds the standardized filename for the acta export", () => {
     assert.equal(
-      buildActividadGrupalActaPdfFilename(createDetail({ actaNumber: "10 20/30" })),
-      "acta-sesion-grupal-10-20-30.pdf",
+      buildActividadGrupalActaPdfFilename(
+        createDetail({
+          actaNumber: "SALU_001",
+          activityName: "Sensibilización",
+          activityTypeCatalog: {
+            id: "55555555-5555-4555-8555-555555555555",
+            name: "Salud preventiva",
+            isActive: true,
+          },
+          activityDate: "2026-07-15",
+        }),
+      ),
+      "SALU_001_SENSIBILIZACION_ACTA_SALUD_PREVENTIVA_2026_07_15.pdf",
     );
   });
 

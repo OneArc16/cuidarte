@@ -21,11 +21,26 @@ type BuildFormatoEntregaPdfHtmlParams = {
 
 export function buildFormatoEntregaPdfFilename(
   documentNumber: string,
+  surnames: string,
+  names: string,
   deliveryMonth: string,
 ): string {
-  const sanitizedDocument = documentNumber.replace(/[^a-zA-Z0-9._-]/g, "-");
+  return [documentNumber, surnames, names, "FORMATO_ENTREGA", deliveryMonth]
+    .map(formatFilenamePart)
+    .join("_")
+    .concat(".pdf");
+}
 
-  return `formato-entrega-${sanitizedDocument}-${deliveryMonth}.pdf`;
+function formatFilenamePart(value: string): string {
+  const formatted = String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  return formatted === "" ? "SIN_DATO" : formatted;
 }
 
 export function buildFormatoEntregaPdfHtml({

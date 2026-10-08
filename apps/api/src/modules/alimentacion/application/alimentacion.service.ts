@@ -318,6 +318,8 @@ export class AlimentacionService {
       tenantDepartment: firstRecord?.tenantDepartment ?? adultoMayor.tenantDepartment,
       adultoMayorId: adultoMayor.id,
       documentNumber: adultoMayor.documentNumber,
+      names: adultoMayor.names,
+      surnames: adultoMayor.surnames,
       fullName: adultoMayor.fullName,
       deliveryMonth: query.deliveryMonth,
       records: records.map((record) => ({

@@ -26,10 +26,10 @@ export function buildAlimentacionReportPdfFilename(input: {
 
   return limitPdfFilename(
     [
-      "FORMATO_ENTREGA",
       normalizeReportFilenamePart(input.documentNumber),
       normalizeReportFilenamePart(input.surnames),
       normalizeReportFilenamePart(input.names),
+      "FORMATO_ENTREGA",
       normalizeReportFilenamePart(input.period === "ALL" ? "TODOS" : input.period),
     ].join("_") + suffix,
   );

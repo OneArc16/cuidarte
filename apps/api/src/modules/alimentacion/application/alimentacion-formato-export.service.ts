@@ -69,6 +69,12 @@ export class AlimentacionFormatoExportService {
       query,
       actor,
     );
+    const filename = buildFormatoEntregaPdfFilename(
+      exportData.documentNumber,
+      exportData.surnames,
+      exportData.names,
+      exportData.deliveryMonth,
+    );
     const existingEmission = await this.alimentacionService.findLatestFormatoEntregaEmission(
       adultoMayorId,
       query,
@@ -99,7 +105,7 @@ export class AlimentacionFormatoExportService {
           actor,
         );
 
-        return storedFile;
+        return { ...storedFile, filename };
       }
     }
     const { directorSignature, tenantLogoVersion } =
@@ -119,10 +125,6 @@ export class AlimentacionFormatoExportService {
       membreteDataUrl,
       tenantLogoDataUrl,
       directorSignatureDataUrl,
-    );
-    const filename = buildFormatoEntregaPdfFilename(
-      exportData.documentNumber,
-      exportData.deliveryMonth,
     );
     const storedFile = await this.formatoFilesStorage.saveFile(
       {

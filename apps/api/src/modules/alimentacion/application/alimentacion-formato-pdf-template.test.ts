@@ -7,6 +7,13 @@ import {
 } from "./alimentacion-formato-pdf-template";
 
 describe("alimentacion-formato-pdf-template", () => {
+  it("builds the delivery format filename with the adult's document and name", () => {
+    assert.equal(
+      buildFormatoEntregaPdfFilename("930824", "Castillo Díaz", "Joaquín", "2026-07"),
+      "930824_CASTILLO_DIAZ_JOAQUIN_FORMATO_ENTREGA_2026_07.pdf",
+    );
+  });
+
   it("renders two visual stubs and fills visit marks sequentially", () => {
     const html = buildFormatoEntregaPdfHtml({
       data: {
@@ -16,6 +23,8 @@ describe("alimentacion-formato-pdf-template", () => {
         tenantDepartment: "Magdalena",
         adultoMayorId: "0b17e370-8f81-48c0-b707-c7046f497855",
         documentNumber: "1020304050",
+        names: "Rosa Elena",
+        surnames: "Martinez Rojas",
         fullName: "Rosa Elena Martinez Rojas",
         deliveryMonth: "2026-04",
         records: [
@@ -87,6 +96,8 @@ describe("alimentacion-formato-pdf-template", () => {
         tenantDepartment: "Magdalena",
         adultoMayorId: "0b17e370-8f81-48c0-b707-c7046f497855",
         documentNumber: "1020304050",
+        names: "Rosa Elena",
+        surnames: "Martinez Rojas",
         fullName: "Rosa Elena Martinez Rojas",
         deliveryMonth: "2026-04",
         records: Array.from({ length: 16 }, (_, index) => ({
@@ -120,6 +131,8 @@ describe("alimentacion-formato-pdf-template", () => {
         tenantDepartment: null,
         adultoMayorId: "0b17e370-8f81-48c0-b707-c7046f497855",
         documentNumber: "1020304050",
+        names: "Rosa Elena",
+        surnames: "Martinez Rojas",
         fullName: "Rosa Elena Martinez Rojas",
         deliveryMonth: "2026-02",
         records: [],
@@ -142,6 +155,8 @@ describe("alimentacion-formato-pdf-template", () => {
         tenantDepartment: "Magdalena",
         adultoMayorId: "0b17e370-8f81-48c0-b707-c7046f497855",
         documentNumber: "1020304050",
+        names: "Rosa Elena",
+        surnames: "Martinez Rojas",
         fullName: "Rosa Elena Martinez Rojas",
         deliveryMonth: "2026-04",
         records: [],
@@ -155,10 +170,10 @@ describe("alimentacion-formato-pdf-template", () => {
     assert.match(html, /signature-cell__image-wrap/);
   });
 
-  it("builds a sanitized filename", () => {
+  it("normalizes spaces and punctuation in filename values", () => {
     assert.equal(
-      buildFormatoEntregaPdfFilename("10 20/30", "2026-04"),
-      "formato-entrega-10-20-30-2026-04.pdf",
+      buildFormatoEntregaPdfFilename("10 20/30", "Gómez Pérez", "María Elena", "2026-04"),
+      "10_20_30_GOMEZ_PEREZ_MARIA_ELENA_FORMATO_ENTREGA_2026_04.pdf",
     );
   });
 });

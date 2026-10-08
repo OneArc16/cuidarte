@@ -1238,6 +1238,8 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       tenantCity: row.tenantCity,
       tenantDepartment: row.tenantDepartment,
       documentNumber: row.documentNumber,
+      names: row.names,
+      surnames: row.surnames,
       fullName: `${row.names} ${row.surnames}`.trim(),
       alreadyRegistered: row.alreadyRegistered ?? false,
       registeredDeliveryDates: row.registeredDeliveryDates ?? [],

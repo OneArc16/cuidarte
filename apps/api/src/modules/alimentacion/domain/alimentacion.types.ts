@@ -90,6 +90,8 @@ export type AlimentacionAdultoOptionRecord = {
   tenantCity: string | null;
   tenantDepartment: string | null;
   documentNumber: string;
+  names: string;
+  surnames: string;
   fullName: string;
   alreadyRegistered?: boolean;
   registeredDeliveryDates?: string[];

@@ -86,6 +86,8 @@ const adultoMayorRecord: AlimentacionAdultoOptionRecord = {
   tenantCity: "El Banco",
   tenantDepartment: "Magdalena",
   documentNumber: "1020304050",
+  names: "Rosa Elena",
+  surnames: "Martinez Rojas",
   fullName: "Rosa Elena Martinez Rojas",
 };
 

@@ -6,7 +6,7 @@ import {
   ACTIVIDADES_GRUPALES_REPOSITORY,
   type ActividadesGrupalesRepository,
 } from "../../actividades-grupales/domain/actividades-grupales.repository";
-import { buildActaReportPdfFilename, deduplicateFilename } from "../domain/report-filenames";
+import { deduplicateFilename } from "../domain/report-filenames";
 import {
   type ReportAvailability,
   type ReportDocument,
@@ -48,15 +48,8 @@ export class ActividadesGrupalesReportSource implements ReportSource {
     const usedFilenames = new Set<string>();
 
     for (const candidate of candidates) {
-      const filename = deduplicateFilename(
-        buildActaReportPdfFilename({
-          activityDate: candidate.activityDate,
-          actaNumber: candidate.actaNumber,
-          descriptor: candidate.activityName,
-        }),
-        usedFilenames,
-      );
       const file = await this.actaExportService.exportPdf(candidate.id, actor);
+      const filename = deduplicateFilename(file.filename, usedFilenames);
 
       yield {
         filename,

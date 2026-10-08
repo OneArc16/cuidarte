@@ -33,6 +33,8 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantDepartment: "Cundinamarca",
             adultoMayorId,
             documentNumber: "1020304050",
+            names: "Rosa",
+            surnames: "Martinez",
             fullName: "Rosa Martinez",
             deliveryMonth: "2026-07",
             records: [
@@ -97,6 +99,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
     const result = await service.exportPdf(adultoMayorId, { deliveryMonth: "2026-07" }, actor);
 
     assert.deepEqual(result.buffer, Buffer.from("historic-pdf"));
+    assert.equal(result.filename, "1020304050_MARTINEZ_ROSA_FORMATO_ENTREGA_2026_07.pdf");
     assert.equal(renderWasCalled, false);
     assert.equal(exportWasPrepared, true);
   });
@@ -181,6 +184,8 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantDepartment: "Cundinamarca",
             adultoMayorId,
             documentNumber: "1020304050",
+            names: "Rosa",
+            surnames: "Martinez",
             fullName: "Rosa Martinez",
             deliveryMonth: "2026-07",
             records: [
@@ -408,6 +413,8 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantDepartment: "Cundinamarca",
             adultoMayorId,
             documentNumber: "1020304050",
+            names: "Rosa",
+            surnames: "Martinez",
             fullName: "Rosa Martinez",
             deliveryMonth: "2026-07",
             records: [
@@ -490,6 +497,8 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantDepartment: "Cundinamarca",
             adultoMayorId,
             documentNumber: "1020304050",
+            names: "Rosa",
+            surnames: "Martinez",
             fullName: "Rosa Martinez",
             deliveryMonth: "2026-07",
             records: [
@@ -651,6 +660,8 @@ function alimentacionServiceForNewEmission() {
         tenantDepartment: "Cundinamarca",
         adultoMayorId,
         documentNumber: "1020304050",
+        names: "Rosa",
+        surnames: "Martinez",
         fullName: "Rosa Martinez",
         deliveryMonth: "2026-07",
         records: [],
