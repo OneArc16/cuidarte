@@ -18,6 +18,14 @@ export function canOpenAlimentacion(user: Pick<AuthUser, "role" | "permissions">
     : hasUserPermission(user, "alimentacion.view");
 }
 
+export function canViewAlimentacionDeliveryDays(
+  user: Pick<AuthUser, "role" | "permissions">,
+): boolean {
+  return user.permissions === undefined
+    ? user.role === "super_admin" || user.role === "admin" || user.role === "director"
+    : hasUserPermission(user, "alimentacion.view_delivery_days");
+}
+
 export function canManageAlimentacion(user: Pick<AuthUser, "role" | "permissions">): boolean {
   return user.permissions === undefined
     ? ALIMENTACION_EDITOR_ROLES.has(user.role)

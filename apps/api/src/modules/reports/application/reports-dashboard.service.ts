@@ -71,6 +71,7 @@ export class ReportsDashboardService {
       },
       dailySeries,
       activitiesByType,
+      sexDistribution: aggregate.sexDistribution,
     };
   }
 }

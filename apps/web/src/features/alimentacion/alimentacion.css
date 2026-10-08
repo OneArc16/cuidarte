@@ -230,6 +230,10 @@
   width: 11%;
 }
 
+.alimentacion-table .alimentacion-col-dias-entregados {
+  width: 9%;
+}
+
 .alimentacion-table--without-tenant .alimentacion-col-organizador {
   width: 13%;
 }
@@ -288,6 +292,10 @@
   font-size: 0.68rem;
   font-weight: 850;
   text-transform: uppercase;
+}
+
+.alimentacion-table .alimentacion-cell-dias-entregados {
+  text-align: center;
 }
 
 .alimentacion-table tbody tr:last-child td,

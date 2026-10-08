@@ -6,7 +6,7 @@ import {
   type AuthUser,
   homeDashboardShortcutModuleIdValues,
 } from "@cuidarte/contracts";
-import { BusFront, CalendarPlus, Coffee, Utensils } from "lucide-react";
+import { BusFront, CalendarPlus, Utensils } from "lucide-react";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { CREACION_ACTIVIDADES_PATH } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
@@ -77,27 +77,6 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
             icon: BusFront,
             tone: "coral",
             total: auditorFoodSummary.auxilioTransporteTotal,
-          },
-          {
-            id: "refrigerio-1",
-            label: "Refrigerio 1",
-            icon: Coffee,
-            tone: "gold",
-            total: auditorFoodSummary.refrigerio1Total,
-          },
-          {
-            id: "refrigerio-2",
-            label: "Refrigerio 2",
-            icon: Coffee,
-            tone: "emerald",
-            total: auditorFoodSummary.refrigerio2Total,
-          },
-          {
-            id: "almuerzo",
-            label: "Almuerzos entregados",
-            icon: Utensils,
-            tone: "emerald",
-            total: auditorFoodSummary.almuerzoTotal,
           },
         ];
   const alimentacionModule = HOME_SHORTCUT_MODULES.find(

@@ -32,6 +32,7 @@ export const userPermissionValues = [
   "adultos_mayores.delete",
   "adultos_mayores.import",
   "alimentacion.view",
+  "alimentacion.view_delivery_days",
   "alimentacion.create",
   "alimentacion.create_multiple_dates",
   "alimentacion.edit",
@@ -142,6 +143,12 @@ export const userPermissionCatalog = [
     group: "Alimentación",
     label: "Ver alimentación",
     description: "Consultar registros de alimentación.",
+  },
+  {
+    key: "alimentacion.view_delivery_days",
+    group: "Alimentación",
+    label: "Ver días entregados",
+    description: "Consultar el total de días con entrega por adulto mayor.",
   },
   {
     key: "alimentacion.create",

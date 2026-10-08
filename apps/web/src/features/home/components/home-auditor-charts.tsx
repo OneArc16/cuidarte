@@ -14,6 +14,7 @@ import {
 } from "recharts";
 
 type Props = { analytics: HomeDashboardAnalytics };
+type SexData = { label: string; total: number; color: string };
 
 const tooltipStyle = {
   border: "1px solid #d8c8ee",
@@ -21,19 +22,25 @@ const tooltipStyle = {
   background: "#fff",
   color: "#321457",
 };
-const monthFormatter = new Intl.DateTimeFormat("es-CO", { month: "short" });
+const monthFormatter = new Intl.DateTimeFormat("es-CO", { month: "short", timeZone: "UTC" });
 const chartGridColor = "#eee8f5";
 const chartTickStyle = { fill: "#705c84", fontSize: 10 };
+const wholeNumberFormatter = new Intl.NumberFormat("es-CO");
 
 export function HomeAuditorCharts({ analytics }: Props) {
   const sexData = [
     { label: "Hombres", total: analytics.sexDistribution.male, color: "#0ca6b7" },
     { label: "Mujeres", total: analytics.sexDistribution.female, color: "#6416b8" },
   ];
+  const totalPeople = sexData.reduce((total, item) => total + item.total, 0);
   const monthlyData = analytics.monthlyDeliveries.map((point) => ({
     ...point,
     label: monthFormatter.format(new Date(`${point.month}-01T00:00:00Z`)),
   }));
+  const monthlyRationsData = monthlyData.filter((point) => point.rationsDelivered > 0);
+  const monthlyTransportData = monthlyData.filter(
+    (point) => point.transportAllowancesDelivered > 0,
+  );
 
   return (
     <section className="home-auditor-charts" aria-labelledby="auditor-charts-title">
@@ -58,7 +65,7 @@ export function HomeAuditorCharts({ analytics }: Props) {
                   <Cell key={item.label} fill={item.color} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={tooltipStyle} />
+              <Tooltip content={<SexTooltip totalPeople={totalPeople} />} cursor={false} />
             </PieChart>
           </ResponsiveContainer>
           <SexLegend data={sexData} />
@@ -71,7 +78,7 @@ export function HomeAuditorCharts({ analytics }: Props) {
                 margin={{ top: 22, right: 6, left: -22, bottom: 30 }}
               >
                 <defs>
-                  <linearGradient id="auditor-activity-gradient" x1="0" y1="0" x2="1" y2="0">
+                  <linearGradient id="auditor-activity-gradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#f5bd22" />
                     <stop offset="48%" stopColor="#86bf3f" />
                     <stop offset="100%" stopColor="#0ca6b7" />
@@ -113,9 +120,9 @@ export function HomeAuditorCharts({ analytics }: Props) {
             </ResponsiveContainer>
           </Chart>
         ) : null}
-        <Chart title="Raciones entregadas por mes" variant="monthly">
+        <Chart title="Almuerzos y refrigerios entregados mes" variant="monthly">
           <ResponsiveContainer width="100%" height={205}>
-            <BarChart data={monthlyData} margin={{ top: 22, right: 2, left: 4, bottom: 0 }}>
+            <BarChart data={monthlyRationsData} margin={{ top: 22, right: 2, left: 4, bottom: 0 }}>
               <CartesianGrid stroke={chartGridColor} vertical={false} />
               <XAxis
                 dataKey="label"
@@ -152,7 +159,10 @@ export function HomeAuditorCharts({ analytics }: Props) {
         </Chart>
         <Chart title="Auxilios de transporte por mes" variant="monthly">
           <ResponsiveContainer width="100%" height={205}>
-            <BarChart data={monthlyData} margin={{ top: 22, right: 2, left: 4, bottom: 0 }}>
+            <BarChart
+              data={monthlyTransportData}
+              margin={{ top: 22, right: 2, left: 4, bottom: 0 }}
+            >
               <CartesianGrid stroke={chartGridColor} vertical={false} />
               <XAxis
                 dataKey="label"
@@ -209,21 +219,40 @@ function Chart({
   );
 }
 
-function SexLegend({ data }: { data: Array<{ label: string; total: number; color: string }> }) {
-  const total = data.reduce((sum, item) => sum + item.total, 0);
-
+function SexLegend({ data }: { data: SexData[] }) {
   return (
     <div className="home-auditor-chart__legend" aria-label="Distribución por sexo">
       {data.map((item) => {
-        const percentage = total === 0 ? 0 : Math.round((item.total / total) * 100);
-
         return (
           <span key={item.label}>
             <i style={{ background: item.color }} aria-hidden="true" />
-            {item.label} {percentage}%
+            {item.label} {wholeNumberFormatter.format(item.total)}
           </span>
         );
       })}
+    </div>
+  );
+}
+
+function SexTooltip({
+  active,
+  payload,
+  totalPeople,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload?: SexData }>;
+  totalPeople: number;
+}) {
+  const item = payload?.[0]?.payload;
+  if (!active || item === undefined) return null;
+
+  const percentage = totalPeople === 0 ? 0 : Math.round((item.total / totalPeople) * 100);
+
+  return (
+    <div style={{ ...tooltipStyle, padding: "8px 10px", fontSize: "0.78rem" }}>
+      <strong>{item.label}</strong>
+      <br />
+      {wholeNumberFormatter.format(item.total)} personas · {percentage}%
     </div>
   );
 }

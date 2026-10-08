@@ -25,7 +25,11 @@ import {
   REGISTRO_ALIMENTACION_NEW_PATH,
   buildAlimentacionEditPath,
 } from "../lib/alimentacion-paths";
-import { canImportAlimentacion, canManageAlimentacion } from "../lib/alimentacion-permissions";
+import {
+  canImportAlimentacion,
+  canManageAlimentacion,
+  canViewAlimentacionDeliveryDays,
+} from "../lib/alimentacion-permissions";
 import {
   getCurrentMonthInputValue,
   resolveAlimentacionApiError,
@@ -84,6 +88,7 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
   const tenantOptionsQuery = useAlimentacionTenantOptionsQuery(showTenantFilter);
   const canManageRecords = canManageAlimentacion(user);
   const canImportRecords = canImportAlimentacion(user);
+  const canViewDeliveredDays = canViewAlimentacionDeliveryDays(user);
   const effectiveDeliveryMonth = deliveryMonth.trim() === "" ? null : deliveryMonth;
   const reportPeriod = effectiveDeliveryMonth ?? "ALL";
   const reportTenantId = showTenantFilter
@@ -350,6 +355,7 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
         }
         isLoading={registrosQuery.isLoading}
         records={registrosQuery.data?.registros ?? []}
+        showDeliveredDays={canViewDeliveredDays}
         showTenantColumn={showTenantFilter}
         onExportFormato={handleExportFormato}
         onDelete={handleRequestDelete}

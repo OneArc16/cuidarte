@@ -148,6 +148,11 @@ export const reportsDashboardActivityTypeSchema = z.object({
   count: z.number().int().min(0),
 });
 
+export const reportsDashboardSexDistributionSchema = z.object({
+  male: z.number().int().min(0),
+  female: z.number().int().min(0),
+});
+
 export const reportsDashboardResponseSchema = z.object({
   range: z.object({ from: reportDashboardDateSchema, to: reportDashboardDateSchema }),
   scope: z.object({
@@ -160,6 +165,7 @@ export const reportsDashboardResponseSchema = z.object({
   summary: reportsDashboardSummarySchema,
   dailySeries: z.array(reportsDashboardDailyPointSchema),
   activitiesByType: z.array(reportsDashboardActivityTypeSchema),
+  sexDistribution: reportsDashboardSexDistributionSchema,
 });
 
 export const reportAnalyticsExportFormatValues = ["xlsx", "pdf", "pptx"] as const;
@@ -223,6 +229,7 @@ export type ReportsDashboardQuery = z.infer<typeof reportsDashboardQuerySchema>;
 export type ReportsDashboardSummary = z.infer<typeof reportsDashboardSummarySchema>;
 export type ReportsDashboardDailyPoint = z.infer<typeof reportsDashboardDailyPointSchema>;
 export type ReportsDashboardActivityType = z.infer<typeof reportsDashboardActivityTypeSchema>;
+export type ReportsDashboardSexDistribution = z.infer<typeof reportsDashboardSexDistributionSchema>;
 export type ReportsDashboardResponse = z.infer<typeof reportsDashboardResponseSchema>;
 export type ReportAnalyticsExportFormat = z.infer<typeof reportAnalyticsExportFormatSchema>;
 export type ReportAnalyticsExportStatus = z.infer<typeof reportAnalyticsExportStatusSchema>;

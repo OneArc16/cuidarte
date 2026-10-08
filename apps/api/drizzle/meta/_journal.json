@@ -428,6 +428,13 @@
       "when": 1791400000000,
       "tag": "0060_auditor_reports_view",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1791418000000,
+      "tag": "0061_alimentacion_delivery_days_permission",
+      "breakpoints": true
     }
   ]
 }

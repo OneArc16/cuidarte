@@ -54,15 +54,14 @@ export const homeDashboardActivityIndicatorSchema = z.object({
 
 export const homeDashboardFoodSummarySchema = z.object({
   deliveredTotal: z.number().int().min(0),
-  refrigerio1Total: z.number().int().min(0),
-  almuerzoTotal: z.number().int().min(0),
-  refrigerio2Total: z.number().int().min(0),
   auxilioTransporteTotal: z.number().int().min(0),
 });
 
 export const homeDashboardAnalyticsSchema = z.object({
   sexDistribution: z.object({ male: z.number().int().min(0), female: z.number().int().min(0) }),
-  activitiesByType: z.array(z.object({ label: z.string().min(1).max(120), total: z.number().int().min(0) })),
+  activitiesByType: z.array(
+    z.object({ label: z.string().min(1).max(120), total: z.number().int().min(0) }),
+  ),
   monthlyDeliveries: z.array(
     z.object({
       month: z.string().regex(/^\d{4}-\d{2}$/),

@@ -72,15 +72,19 @@ export const homeDashboardFixture = {
     },
   ],
   foodSummary: {
-    deliveredTotal: 120,
-    refrigerio1Total: 32,
-    almuerzoTotal: 48,
-    refrigerio2Total: 24,
+    deliveredTotal: 104,
     auxilioTransporteTotal: 16,
   },
   analytics: {
     sexDistribution: { female: 260, male: 208 },
-    activitiesByType: [{ label: "Fisioterapia", total: 56 }, { label: "Nutrición", total: 42 }],
-    monthlyDeliveries: Array.from({ length: 12 }, (_, index) => ({ month: `2026-${String(index + 1).padStart(2, "0")}`, rationsDelivered: index + 4, transportAllowancesDelivered: index })),
+    activitiesByType: [
+      { label: "Fisioterapia", total: 56 },
+      { label: "Nutrición", total: 42 },
+    ],
+    monthlyDeliveries: Array.from({ length: 12 }, (_, index) => ({
+      month: `2026-${String(index + 1).padStart(2, "0")}`,
+      rationsDelivered: index + 4,
+      transportAllowancesDelivered: index,
+    })),
   },
 } as const;

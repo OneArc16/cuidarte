@@ -100,4 +100,5 @@ const dashboard: ReportsDashboardResponse = {
     },
   ],
   activitiesByType: [],
+  sexDistribution: { male: 0, female: 0 },
 };

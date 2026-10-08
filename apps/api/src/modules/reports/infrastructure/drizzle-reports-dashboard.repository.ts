@@ -28,15 +28,23 @@ export class DrizzleReportsDashboardRepository implements ReportsDashboardReposi
   async aggregate(
     query: ReportsDashboardQuery & { scope: ReportsDashboardScope },
   ): Promise<ReportsDashboardAggregate> {
-    const [nursingRows, medicalRows, activityRows, foodRows, activityTypeRows, tenantRow] =
-      await Promise.all([
-        this.aggregateNursing(query),
-        this.aggregateMedical(query),
-        this.aggregateActivities(query),
-        this.aggregateFood(query),
-        this.aggregateActivitiesByType(query),
-        this.findTenant(query.scope),
-      ]);
+    const [
+      nursingRows,
+      medicalRows,
+      activityRows,
+      foodRows,
+      activityTypeRows,
+      sexDistribution,
+      tenantRow,
+    ] = await Promise.all([
+      this.aggregateNursing(query),
+      this.aggregateMedical(query),
+      this.aggregateActivities(query),
+      this.aggregateFood(query),
+      this.aggregateActivitiesByType(query),
+      this.aggregateSexDistribution(query),
+      this.findTenant(query.scope),
+    ]);
 
     const dailySeries = mergeDailyAggregates(nursingRows, medicalRows, activityRows, foodRows);
 
@@ -46,6 +54,7 @@ export class DrizzleReportsDashboardRepository implements ReportsDashboardReposi
       department: tenantRow?.department ?? null,
       dailySeries,
       activitiesByType: activityTypeRows,
+      sexDistribution,
       snackOneDelivered: foodRows.reduce((total, row) => total + row.snackOneDelivered, 0),
       snackTwoDelivered: foodRows.reduce((total, row) => total + row.snackTwoDelivered, 0),
     };
@@ -176,6 +185,26 @@ export class DrizzleReportsDashboardRepository implements ReportsDashboardReposi
       )
       .groupBy(actividadGrupalTipos.id, actividadGrupalTipos.name)
       .orderBy(asc(actividadGrupalTipos.name));
+  }
+
+  private async aggregateSexDistribution(
+    query: ReportsDashboardQuery & { scope: ReportsDashboardScope },
+  ): Promise<{ male: number; female: number }> {
+    const rows = await this.database.db
+      .select({ sex: adultosMayores.sex, total: sql<number>`count(*)::int` })
+      .from(adultosMayores)
+      .where(
+        and(
+          ...tenantCondition(adultosMayores.tenantId, query.scope),
+          isNull(adultosMayores.deletedAt),
+        ),
+      )
+      .groupBy(adultosMayores.sex);
+
+    return {
+      male: rows.find((row) => row.sex === "male")?.total ?? 0,
+      female: rows.find((row) => row.sex === "female")?.total ?? 0,
+    };
   }
 
   private async findTenant(scope: ReportsDashboardScope) {

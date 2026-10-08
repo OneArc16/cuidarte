@@ -23,6 +23,7 @@ type AjustesPermissionsDialogProps = {
 
 const PERMISSION_COLUMNS = [
   { key: "view", label: "VER" },
+  { key: "view_delivery_days", label: "DÍAS ENTREGADOS" },
   { key: "create", label: "CREAR" },
   { key: "create_multiple_dates", label: "VARIOS DÍAS" },
   { key: "edit", label: "EDITAR" },
@@ -32,6 +33,8 @@ const PERMISSION_COLUMNS = [
   { key: "export", label: "EXPORTAR" },
   { key: "manage", label: "GESTIONAR" },
 ] as const;
+
+const MATRIX_GRID_TEMPLATE_COLUMNS = `minmax(220px, 1fr) repeat(${PERMISSION_COLUMNS.length}, minmax(60px, 78px))`;
 
 const MODULE_DESCRIPTIONS: Record<string, string> = {
   Inicio: "Tablero principal",
@@ -250,7 +253,10 @@ export function AjustesPermissionsDialog({ onClose }: AjustesPermissionsDialogPr
                 {permissionsQuery.data !== undefined ? (
                   <div className="ajustes-permissions-dialog__matrix-scroll">
                     <div className="ajustes-permissions-dialog__matrix">
-                      <div className="ajustes-permissions-dialog__matrix-row ajustes-permissions-dialog__matrix-row--heading">
+                      <div
+                        className="ajustes-permissions-dialog__matrix-row ajustes-permissions-dialog__matrix-row--heading"
+                        style={{ gridTemplateColumns: MATRIX_GRID_TEMPLATE_COLUMNS }}
+                      >
                         <span>Módulo</span>
                         {PERMISSION_COLUMNS.map((column) => (
                           <span key={column.key}>{column.label}</span>
@@ -344,7 +350,10 @@ function PermissionRow({
   onToggle: (permission: UserPermission) => void;
 }) {
   return (
-    <div className="ajustes-permissions-dialog__matrix-row">
+    <div
+      className="ajustes-permissions-dialog__matrix-row"
+      style={{ gridTemplateColumns: MATRIX_GRID_TEMPLATE_COLUMNS }}
+    >
       <div className="ajustes-permissions-dialog__module-copy">
         <strong>{group}</strong>
         <small>{MODULE_DESCRIPTIONS[group] ?? "Permisos del módulo"}</small>

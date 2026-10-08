@@ -29,6 +29,7 @@ export type ReportsDashboardAggregate = {
   department?: string | null;
   dailySeries: ReportsDashboardDailyAggregate[];
   activitiesByType: ReportsDashboardActivityTypeAggregate[];
+  sexDistribution: { male: number; female: number };
   snackOneDelivered: number;
   snackTwoDelivered: number;
 };

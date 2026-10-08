@@ -11,6 +11,8 @@ import {
 import { type ReactNode } from "react";
 import { type ReportsDashboardResponse } from "@cuidarte/contracts";
 
+import { AnimatedNumber } from "@/components/animated-number";
+
 import { ReportDashboardCharts } from "./report-dashboard-charts";
 
 type ReportDashboardProps = {
@@ -66,7 +68,12 @@ export function ReportDashboard({ data, isLoading, isError }: ReportDashboardPro
                     </span>
                     <div>
                       <span>{metric.label}</span>
-                      <strong>{data.summary[metric.key]}</strong>
+                      <strong>
+                        <AnimatedNumber
+                          value={data.summary[metric.key]}
+                          animationKey={`${data.range.from}-${data.range.to}`}
+                        />
+                      </strong>
                     </div>
                   </article>
                 );

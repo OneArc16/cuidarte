@@ -37,69 +37,72 @@ describe("App home dashboard", () => {
 
     expect(await screen.findByRole("heading", { name: userFixture.fullName })).toBeInTheDocument();
 
-    await waitFor(() => {
-      const shortcutsRegion = screen.getByRole("region", { name: "Módulos del sistema" });
+    await waitFor(
+      () => {
+        const shortcutsRegion = screen.getByRole("region", { name: "Módulos del sistema" });
 
-      expect(
-        within(shortcutsRegion).getByRole("button", { name: "Adultos mayores" }),
-      ).toHaveTextContent("468");
-      expect(
-        within(shortcutsRegion).getByRole("button", { name: "Sesiones grupales" }),
-      ).toHaveTextContent("469");
-      expect(
-        within(shortcutsRegion).getByRole("button", { name: "Registro de alimentación" }),
-      ).toHaveTextContent("140");
-      expect(
-        within(shortcutsRegion).getByRole("button", { name: "Gestión de empleados" }),
-      ).toHaveTextContent("42");
-      if (userFixture.role === "super_admin") {
         expect(
-          within(shortcutsRegion).getByRole("button", { name: "BackOffice" }),
-        ).toHaveTextContent("12");
-      } else {
+          within(shortcutsRegion).getByRole("button", { name: "Adultos mayores" }),
+        ).toHaveTextContent("468");
         expect(
-          within(shortcutsRegion).queryByRole("button", { name: "BackOffice" }),
+          within(shortcutsRegion).getByRole("button", { name: "Sesiones grupales" }),
+        ).toHaveTextContent("469");
+        expect(
+          within(shortcutsRegion).getByRole("button", { name: "Registro de alimentación" }),
+        ).toHaveTextContent("140");
+        expect(
+          within(shortcutsRegion).getByRole("button", { name: "Gestión de empleados" }),
+        ).toHaveTextContent("42");
+        if (userFixture.role === "super_admin") {
+          expect(
+            within(shortcutsRegion).getByRole("button", { name: "BackOffice" }),
+          ).toHaveTextContent("12");
+        } else {
+          expect(
+            within(shortcutsRegion).queryByRole("button", { name: "BackOffice" }),
+          ).not.toBeInTheDocument();
+        }
+        expect(container.querySelector(".home-heading")).not.toBeInTheDocument();
+        expect(container.querySelector(".home-shortcut-card__description")).not.toBeInTheDocument();
+        expect(container.querySelectorAll(".home-dashboard-section__header p")).toHaveLength(0);
+        expect(
+          screen.queryByText("Base principal del centro y acceso a historia de seguimiento."),
         ).not.toBeInTheDocument();
-      }
-      expect(container.querySelector(".home-heading")).not.toBeInTheDocument();
-      expect(container.querySelector(".home-shortcut-card__description")).not.toBeInTheDocument();
-      expect(container.querySelectorAll(".home-dashboard-section__header p")).toHaveLength(0);
-      expect(
-        screen.queryByText("Base principal del centro y acceso a historia de seguimiento."),
-      ).not.toBeInTheDocument();
-      expect(
-        screen.queryByText(
-          "Accesos directos con el volumen actual de cada modulo dentro del alcance de tu sesion.",
-        ),
-      ).not.toBeInTheDocument();
+        expect(
+          screen.queryByText(
+            "Accesos directos con el volumen actual de cada modulo dentro del alcance de tu sesion.",
+          ),
+        ).not.toBeInTheDocument();
 
-      const indicatorsRegion = screen.getByRole("region", { name: "Resumen operativo" });
+        const indicatorsRegion = screen.getByRole("region", { name: "Resumen operativo" });
 
-      expect(
-        within(indicatorsRegion).getByRole("button", { name: "Adultos registrados" }),
-      ).toHaveTextContent(String(homeDashboardFixture.indicators[0].total));
-      expect(
-        within(indicatorsRegion).getByRole("button", { name: "Atenciones de enfermería" }),
-      ).toHaveTextContent("84");
-      expect(
-        within(indicatorsRegion).getByRole("button", { name: "Atenciones del médico" }),
-      ).toHaveTextContent("31");
-      expect(
-        within(indicatorsRegion).getByRole("button", { name: "Raciones entregadas" }),
-      ).toHaveTextContent("123.200");
-      expect(
-        within(indicatorsRegion).getByRole("button", { name: "Fisioterapia" }),
-      ).toHaveTextContent("56");
-      expect(container.querySelector(".home-indicator-card small")).not.toBeInTheDocument();
-      expect(
-        screen.queryByText("Personas activas en seguimiento dentro del alcance actual."),
-      ).not.toBeInTheDocument();
-      expect(
-        screen.queryByText(
-          "Vista consolidada con las cantidades que mas se consultan en el arranque del dia.",
-        ),
-      ).not.toBeInTheDocument();
-    }, { timeout: 2_500 });
+        expect(
+          within(indicatorsRegion).getByRole("button", { name: "Adultos registrados" }),
+        ).toHaveTextContent(String(homeDashboardFixture.indicators[0].total));
+        expect(
+          within(indicatorsRegion).getByRole("button", { name: "Atenciones de enfermería" }),
+        ).toHaveTextContent("84");
+        expect(
+          within(indicatorsRegion).getByRole("button", { name: "Atenciones del médico" }),
+        ).toHaveTextContent("31");
+        expect(
+          within(indicatorsRegion).getByRole("button", { name: "Raciones entregadas" }),
+        ).toHaveTextContent("123.200");
+        expect(
+          within(indicatorsRegion).getByRole("button", { name: "Fisioterapia" }),
+        ).toHaveTextContent("56");
+        expect(container.querySelector(".home-indicator-card small")).not.toBeInTheDocument();
+        expect(
+          screen.queryByText("Personas activas en seguimiento dentro del alcance actual."),
+        ).not.toBeInTheDocument();
+        expect(
+          screen.queryByText(
+            "Vista consolidada con las cantidades que mas se consultan en el arranque del dia.",
+          ),
+        ).not.toBeInTheDocument();
+      },
+      { timeout: 2_500 },
+    );
   });
 
   it("shows auditor activities without the system modules section", async () => {
@@ -107,39 +110,46 @@ describe("App home dashboard", () => {
 
     renderAppAtPath("/home");
 
-    expect(await screen.findByRole("heading", { name: auditorUserFixture.fullName })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: auditorUserFixture.fullName }),
+    ).toBeInTheDocument();
 
-    await waitFor(() => {
-      expect(screen.queryByRole("region", { name: "Módulos del sistema" })).not.toBeInTheDocument();
+    await waitFor(
+      () => {
+        expect(
+          screen.queryByRole("region", { name: "Módulos del sistema" }),
+        ).not.toBeInTheDocument();
 
-      const activitiesRegion = screen.getByRole("region", { name: "Actividades Realizadas" });
+        const activitiesRegion = screen.getByRole("region", { name: "Actividades Realizadas" });
 
-      expect(
-        within(activitiesRegion).getByRole("button", { name: "Total entregado" }),
-      ).toHaveTextContent("120");
-      expect(
-        within(activitiesRegion).getByRole("button", { name: "Refrigerio 1" }),
-      ).toHaveTextContent("32");
-      expect(
-        within(activitiesRegion).getByRole("button", { name: "Almuerzos entregados" }),
-      ).toHaveTextContent("48");
-      expect(
-        within(activitiesRegion).getByRole("button", { name: "Refrigerio 2" }),
-      ).toHaveTextContent("24");
-      expect(
-        within(activitiesRegion).getByRole("button", { name: "Auxilios de transporte" }),
-      ).toHaveTextContent("16");
-      expect(
-        within(activitiesRegion).queryByRole("button", { name: "Atenciones de enfermería" }),
-      ).not.toBeInTheDocument();
-      expect(
-        within(activitiesRegion).queryByRole("button", { name: "Atenciones del médico" }),
-      ).not.toBeInTheDocument();
-      expect(
-        within(activitiesRegion).queryByRole("button", { name: "Raciones entregadas" }),
-      ).not.toBeInTheDocument();
-      expect(screen.getByText("Actividades Realizadas")).toBeInTheDocument();
-    }, { timeout: 2_500 });
+        expect(
+          within(activitiesRegion).getByRole("button", { name: "Total entregado" }),
+        ).toHaveTextContent("104");
+        expect(
+          within(activitiesRegion).getByRole("button", { name: "Auxilios de transporte" }),
+        ).toHaveTextContent("16");
+        expect(
+          within(activitiesRegion).queryByRole("button", { name: "Refrigerio 1" }),
+        ).not.toBeInTheDocument();
+        expect(
+          within(activitiesRegion).queryByRole("button", { name: "Almuerzos entregados" }),
+        ).not.toBeInTheDocument();
+        expect(
+          within(activitiesRegion).queryByRole("button", { name: "Refrigerio 2" }),
+        ).not.toBeInTheDocument();
+        expect(
+          within(activitiesRegion).queryByRole("button", { name: "Atenciones de enfermería" }),
+        ).not.toBeInTheDocument();
+        expect(
+          within(activitiesRegion).queryByRole("button", { name: "Atenciones del médico" }),
+        ).not.toBeInTheDocument();
+        expect(
+          within(activitiesRegion).queryByRole("button", { name: "Raciones entregadas" }),
+        ).not.toBeInTheDocument();
+        expect(screen.getByText("Actividades Realizadas")).toBeInTheDocument();
+      },
+      { timeout: 2_500 },
+    );
   });
 
   it("uses the auditor permissions to build the module navigation", async () => {
@@ -190,8 +200,12 @@ describe("App home dashboard", () => {
     expect(
       within(workspace).queryByRole("button", { name: "Gestión de empleados" }),
     ).not.toBeInTheDocument();
-    expect(within(workspace).queryByRole("region", { name: "Módulos del sistema" })).not.toBeInTheDocument();
-    expect(within(workspace).queryByRole("region", { name: "Resumen operativo" })).not.toBeInTheDocument();
+    expect(
+      within(workspace).queryByRole("region", { name: "Módulos del sistema" }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(workspace).queryByRole("region", { name: "Resumen operativo" }),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Modulos principales" })).toBeInTheDocument();
     expect(workspace.querySelector(".home-access-shortcut-card")).toBeInTheDocument();
     expect(workspace.querySelector(".home-shortcut-card__total")).not.toBeInTheDocument();

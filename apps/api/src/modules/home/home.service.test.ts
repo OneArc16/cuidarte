@@ -49,9 +49,6 @@ describe("HomeService", () => {
       summarizeAlimentacion: async () => ({
         recordsTotal: 140,
         deliveredRationsTotal: 123200,
-        refrigerio1Total: 48,
-        almuerzoTotal: 56,
-        refrigerio2Total: 24,
         auxilioTransporteTotal: 12,
       }),
       countEmpleados: async () => 42,
@@ -85,9 +82,6 @@ describe("HomeService", () => {
     ]);
     assert.deepEqual(result.foodSummary, {
       deliveredTotal: 123200,
-      refrigerio1Total: 48,
-      almuerzoTotal: 56,
-      refrigerio2Total: 24,
       auxilioTransporteTotal: 12,
     });
   });
@@ -151,9 +145,6 @@ describe("HomeService", () => {
       summarizeAlimentacion: async () => ({
         recordsTotal: 0,
         deliveredRationsTotal: 0,
-        refrigerio1Total: 0,
-        almuerzoTotal: 0,
-        refrigerio2Total: 0,
         auxilioTransporteTotal: 0,
       }),
       countEmpleados: async () => 0,
@@ -239,7 +230,7 @@ function stubService(
     countCompletedImports?: (scope: unknown) => Promise<number>;
     countActiveTenants?: () => Promise<number>;
   },
-  ) {
+) {
   Object.assign(service as unknown as Record<string, unknown>, stubs);
 }
 

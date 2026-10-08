@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { canManageAlimentacion, canOpenAlimentacion } from "./alimentacion-permissions";
+import { type AuthUser } from "@cuidarte/contracts";
+
+import {
+  canManageAlimentacion,
+  canOpenAlimentacion,
+  canViewAlimentacionDeliveryDays,
+} from "./alimentacion-permissions";
 
 const tenantId = "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054";
 
@@ -61,5 +67,18 @@ describe("alimentacion permissions", () => {
     expect(canManageAlimentacion(auditorUser)).toBe(false);
     expect(canManageAlimentacion(directorUser)).toBe(true);
     expect(canManageAlimentacion(medicoUser)).toBe(false);
+  });
+
+  it("shows delivered days by default to directors, admins, and super admins", () => {
+    expect(canViewAlimentacionDeliveryDays(superAdminUser)).toBe(true);
+    expect(canViewAlimentacionDeliveryDays(adminUser)).toBe(true);
+    expect(canViewAlimentacionDeliveryDays(directorUser)).toBe(true);
+    expect(canViewAlimentacionDeliveryDays(auditorUser)).toBe(false);
+    expect(
+      canViewAlimentacionDeliveryDays({
+        ...medicoUser,
+        permissions: ["alimentacion.view_delivery_days"],
+      } as AuthUser),
+    ).toBe(true);
   });
 });

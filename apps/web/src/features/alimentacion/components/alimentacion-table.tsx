@@ -21,6 +21,7 @@ type AlimentacionTableProps = {
   canManageAlimentacion: boolean;
   isLoading: boolean;
   records: AlimentacionListItem[];
+  showDeliveredDays: boolean;
   showTenantColumn: boolean;
   onOpenEdit: (recordId: string) => void;
   onExportFormato: (params: {
@@ -75,6 +76,7 @@ export function AlimentacionTable({
   importingAdultoMayorId,
   downloadingImportedVersionId,
   records,
+  showDeliveredDays,
   showTenantColumn,
 }: AlimentacionTableProps) {
   const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set());
@@ -151,7 +153,7 @@ export function AlimentacionTable({
     );
   }
 
-  const columnCount = showTenantColumn ? 10 : 9;
+  const columnCount = 9 + Number(showTenantColumn) + Number(showDeliveredDays);
 
   return (
     <div className="alimentacion-table-wrap">
@@ -162,6 +164,7 @@ export function AlimentacionTable({
           <col className="alimentacion-col-documento" />
           <col className="alimentacion-col-nombre" />
           <col className="alimentacion-col-fecha" />
+          {showDeliveredDays ? <col className="alimentacion-col-dias-entregados" /> : null}
           <col className="alimentacion-col-organizador" />
           <col className="alimentacion-col-estado" />
           <col className="alimentacion-col-estado" />
@@ -175,6 +178,11 @@ export function AlimentacionTable({
             <th scope="col">Cédula</th>
             <th scope="col">Nombre</th>
             <th scope="col">Fecha</th>
+            {showDeliveredDays ? (
+              <th className="alimentacion-cell-dias-entregados" scope="col">
+                Días entregados
+              </th>
+            ) : null}
             <th scope="col">Organizador</th>
             <th scope="col">Refrigerio 1</th>
             <th scope="col">Almuerzo</th>
@@ -243,6 +251,11 @@ export function AlimentacionTable({
                       )}
                     </td>
                     <td>{group.deliveryMonth}</td>
+                    {showDeliveredDays ? (
+                      <td className="alimentacion-cell-dias-entregados">
+                        <strong>{countDeliveredDays(group.records)}</strong>
+                      </td>
+                    ) : null}
                     <td>{formatAlimentacionOrganizer(latestRecord.organizer)}</td>
                     <td>{formatAlimentacionStatus(latestRecord.refrigerio1)}</td>
                     <td>{formatAlimentacionStatus(latestRecord.almuerzo)}</td>
@@ -261,7 +274,9 @@ export function AlimentacionTable({
                                   ? `Exportando formato de ${group.fullName}`
                                   : `Exportar formato de ${group.fullName}`
                               }
-                              data-tooltip={isExporting ? "Exportando formato..." : "Exportar formato"}
+                              data-tooltip={
+                                isExporting ? "Exportando formato..." : "Exportar formato"
+                              }
                               disabled={isExporting}
                               onClick={() =>
                                 onExportFormato({
@@ -391,6 +406,14 @@ export function AlimentacionTable({
                               <strong>{record.fullName}</strong>
                             </td>
                             <td>{record.deliveryDate}</td>
+                            {showDeliveredDays ? (
+                              <td
+                                aria-label="Detalle por día"
+                                className="alimentacion-cell-dias-entregados"
+                              >
+                                —
+                              </td>
+                            ) : null}
                             <td>{formatAlimentacionOrganizer(record.organizer)}</td>
                             <td>{formatAlimentacionStatus(record.refrigerio1)}</td>
                             <td>{formatAlimentacionStatus(record.almuerzo)}</td>
@@ -437,4 +460,12 @@ export function AlimentacionTable({
 
 function getRecordDeliveryMonth(record: AlimentacionListItem): string {
   return record.deliveryDate.slice(0, 7);
+}
+
+function countDeliveredDays(records: AlimentacionListItem[]): number {
+  return records.filter((record) =>
+    [record.refrigerio1, record.almuerzo, record.refrigerio2, record.auxilioTransporte].some(
+      (status) => status === "entregado",
+    ),
+  ).length;
 }

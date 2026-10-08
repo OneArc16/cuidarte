@@ -48,6 +48,7 @@ export function defaultEmpleadoPermissions(role: UserRole): UserPermission[] {
       "adultos_mayores.edit",
       "adultos_mayores.import",
       "alimentacion.view",
+      "alimentacion.view_delivery_days",
       "alimentacion.create",
       "alimentacion.edit",
       "alimentacion.delete",

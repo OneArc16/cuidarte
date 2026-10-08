@@ -46,9 +46,6 @@ type ActivitySummary = {
 type AlimentacionSummary = {
   recordsTotal: number;
   deliveredRationsTotal: number;
-  refrigerio1Total: number;
-  almuerzoTotal: number;
-  refrigerio2Total: number;
   auxilioTransporteTotal: number;
 };
 
@@ -156,7 +153,11 @@ export class HomeService {
 
     const analytics =
       actor.role === "auditor"
-        ? await this.summarizeDashboardAnalytics(adultosScope, alimentacionScope, actividadesSummary)
+        ? await this.summarizeDashboardAnalytics(
+            adultosScope,
+            alimentacionScope,
+            actividadesSummary,
+          )
         : null;
 
     return homeDashboardResponseSchema.parse({
@@ -168,9 +169,6 @@ export class HomeService {
           ? null
           : {
               deliveredTotal: alimentacionSummary.deliveredRationsTotal,
-              refrigerio1Total: alimentacionSummary.refrigerio1Total,
-              almuerzoTotal: alimentacionSummary.almuerzoTotal,
-              refrigerio2Total: alimentacionSummary.refrigerio2Total,
               auxilioTransporteTotal: alimentacionSummary.auxilioTransporteTotal,
             },
       analytics,
@@ -187,8 +185,12 @@ export class HomeService {
     }
 
     const [sexDistribution, monthlyDeliveries] = await Promise.all([
-      adultosScope === null ? Promise.resolve({ male: 0, female: 0 }) : this.countSexDistribution(adultosScope),
-      alimentacionScope === null ? Promise.resolve(buildMonthlyDeliverySeries([])) : this.countMonthlyDeliveries(alimentacionScope),
+      adultosScope === null
+        ? Promise.resolve({ male: 0, female: 0 })
+        : this.countSexDistribution(adultosScope),
+      alimentacionScope === null
+        ? Promise.resolve(buildMonthlyDeliverySeries([]))
+        : this.countMonthlyDeliveries(alimentacionScope),
     ]);
 
     return {
@@ -200,9 +202,14 @@ export class HomeService {
     };
   }
 
-  private async countSexDistribution(scope: TenantScope): Promise<DashboardAnalytics["sexDistribution"]> {
+  private async countSexDistribution(
+    scope: TenantScope,
+  ): Promise<DashboardAnalytics["sexDistribution"]> {
     const scopeCondition = this.buildScopeCondition(scope, adultosMayores.tenantId);
-    const where = scopeCondition === undefined ? isNull(adultosMayores.deletedAt) : and(scopeCondition, isNull(adultosMayores.deletedAt));
+    const where =
+      scopeCondition === undefined
+        ? isNull(adultosMayores.deletedAt)
+        : and(scopeCondition, isNull(adultosMayores.deletedAt));
     const rows = await this.database.db
       .select({ sex: adultosMayores.sex, total: sql<number>`count(*)::int` })
       .from(adultosMayores)
@@ -214,7 +221,9 @@ export class HomeService {
     };
   }
 
-  private async countMonthlyDeliveries(scope: TenantScope): Promise<DashboardAnalytics["monthlyDeliveries"]> {
+  private async countMonthlyDeliveries(
+    scope: TenantScope,
+  ): Promise<DashboardAnalytics["monthlyDeliveries"]> {
     const months = buildRollingMonths();
     const scopeCondition = this.buildScopeCondition(scope, alimentacionRegistros.tenantId);
     const where = and(
@@ -364,15 +373,11 @@ export class HomeService {
     const query = this.database.db
       .select({
         recordsTotal: sql<number>`count(*)::int`,
-        refrigerio1Total: sql<number>`coalesce(sum(case when ${alimentacionRegistros.refrigerio1} = 'entregado' then 1 else 0 end), 0)::int`,
-        almuerzoTotal: sql<number>`coalesce(sum(case when ${alimentacionRegistros.almuerzo} = 'entregado' then 1 else 0 end), 0)::int`,
-        refrigerio2Total: sql<number>`coalesce(sum(case when ${alimentacionRegistros.refrigerio2} = 'entregado' then 1 else 0 end), 0)::int`,
         auxilioTransporteTotal: sql<number>`coalesce(sum(case when ${alimentacionRegistros.auxilioTransporte} = 'entregado' then 1 else 0 end), 0)::int`,
         deliveredRationsTotal: sql<number>`coalesce(sum(
           (case when ${alimentacionRegistros.refrigerio1} = 'entregado' then 1 else 0 end) +
           (case when ${alimentacionRegistros.almuerzo} = 'entregado' then 1 else 0 end) +
-          (case when ${alimentacionRegistros.refrigerio2} = 'entregado' then 1 else 0 end) +
-          (case when ${alimentacionRegistros.auxilioTransporte} = 'entregado' then 1 else 0 end)
+          (case when ${alimentacionRegistros.refrigerio2} = 'entregado' then 1 else 0 end)
         ), 0)::int`,
       })
       .from(alimentacionRegistros)
@@ -382,9 +387,6 @@ export class HomeService {
     return {
       recordsTotal: row?.recordsTotal ?? 0,
       deliveredRationsTotal: row?.deliveredRationsTotal ?? 0,
-      refrigerio1Total: row?.refrigerio1Total ?? 0,
-      almuerzoTotal: row?.almuerzoTotal ?? 0,
-      refrigerio2Total: row?.refrigerio2Total ?? 0,
       auxilioTransporteTotal: row?.auxilioTransporteTotal ?? 0,
     };
   }
@@ -502,7 +504,14 @@ function buildMonthlyDeliverySeries(
   rows: Array<{ month: string; rationsDelivered: number; transportAllowancesDelivered: number }>,
 ): DashboardAnalytics["monthlyDeliveries"] {
   const byMonth = new Map(rows.map((row) => [row.month, row]));
-  return buildRollingMonths().map(({ month }) => {
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const latestMonthWithData = rows.reduce(
+    (latestMonth, row) => (row.month > latestMonth ? row.month : latestMonth),
+    currentMonth,
+  );
+  const referenceDate = new Date(`${latestMonthWithData}-01T00:00:00Z`);
+
+  return buildRollingMonths(referenceDate).map(({ month }) => {
     const row = byMonth.get(month);
     return {
       month,
