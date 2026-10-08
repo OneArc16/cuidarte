@@ -1,5 +1,6 @@
 import {
   type AdultoMayorBloodType,
+  type AdultoMayorAttentionFilter,
   type AdultoMayorDocumentType,
   type AdultoMayorHealthRegime,
   type AdultoMayorSex,
@@ -18,6 +19,7 @@ export type AdultosMayoresScope =
 
 export type FindAdultosMayoresQuery = {
   search: string | null;
+  attentionType?: AdultoMayorAttentionFilter;
   scope: AdultosMayoresScope;
 };
 

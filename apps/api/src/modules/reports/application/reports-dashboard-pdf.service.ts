@@ -33,8 +33,8 @@ export class ReportsDashboardPdfService {
         waitUntil: "load",
       });
       const buffer = await page.pdf({
-        format: "A4",
-        landscape: true,
+        format: "Letter",
+        landscape: false,
         printBackground: true,
         margin: { top: "14mm", right: "12mm", bottom: "14mm", left: "12mm" },
       });
@@ -56,7 +56,10 @@ export class ReportsDashboardPdfService {
   }
 }
 
-function buildPdfHtml(dashboard: ReportsDashboardResponse, membreteDataUrl: string | null): string {
+export function buildPdfHtml(
+  dashboard: ReportsDashboardResponse,
+  membreteDataUrl: string | null,
+): string {
   const monthlySeries = buildMonthlySeries(dashboard.dailySeries);
   const scope = dashboard.scope.isConsolidated
     ? "Todos los centros activos"
@@ -75,32 +78,32 @@ function buildPdfHtml(dashboard: ReportsDashboardResponse, membreteDataUrl: stri
     )
     .join("");
   return `<!doctype html><html><head><meta charset="utf-8"><style>
-    @page { size: A4 landscape; margin: 14mm 12mm; }
-    * { box-sizing: border-box; } body { margin: 0; color: #123b31; font: 11px Arial, sans-serif; }
-    .pdf-letterhead { position: fixed; top: -14mm; left: -12mm; z-index: 0; width: 297mm; height: 210mm; opacity: 0.3; pointer-events: none; }
-    .pdf-letterhead img { display: block; width: 100%; height: 100%; object-fit: contain; }
+    @page { size: Letter portrait; margin: 14mm 12mm; }
+    * { box-sizing: border-box; } body { margin: 0; color: #123b31; font: 10.5px Arial, sans-serif; }
+    .pdf-letterhead { position: fixed; top: -14mm; left: -12mm; z-index: 0; width: 215.9mm; height: 279.4mm; opacity: 0.3; pointer-events: none; }
+    .pdf-letterhead img { display: block; width: 100%; height: 100%; object-fit: fill; transform: scale(0.94); transform-origin: center; }
     .report-content { position: relative; z-index: 1; }
-    h1 { margin: 0 0 6px; font-size: 25px; } h2 { margin: 20px 0 9px; font-size: 16px; }
-    .meta { color: #657a72; margin-bottom: 18px; } .metrics { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-    .metric { border: 1px solid #dce9e2; border-radius: 6px; padding: 10px; background: #f7fbf9; }
-    .metric span { display: block; color: #657a72; font-size: 10px; margin-bottom: 7px; } .metric strong { font-size: 21px; }
-    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+    h1 { margin: 0 0 6px; font-size: 23px; } h2 { margin: 18px 0 8px; font-size: 15px; }
+    .meta { color: #657a72; margin-bottom: 14px; } .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .metric { min-height: 62px; border: 1px solid #dce9e2; border-radius: 6px; padding: 9px; background: #f7fbf9; }
+    .metric span { display: block; color: #657a72; font-size: 9px; margin-bottom: 6px; } .metric strong { font-size: 19px; }
+    .charts { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 14px; }
     .chart-panel { border: 1px solid #dce9e2; border-radius: 7px; padding: 10px 12px 8px; background: #fff; break-inside: avoid; }
-    .chart-panel--wide { grid-column: 1 / -1; }
     .chart-panel h3 { margin: 0 0 3px; font-size: 13px; } .chart-panel p { margin: 0 0 5px; color: #657a72; font-size: 9px; }
     .chart-svg { display: block; width: 100%; height: auto; } .empty-chart { color: #657a72; padding: 28px 0; text-align: center; }
-    .footer { margin-top: 12px; color: #657a72; font-size: 9px; }
   </style></head><body>
     ${renderLetterhead(membreteDataUrl)}
     <main class="report-content">
     <h1>Reporte ejecutivo de estadísticas</h1><div class="meta">${escapeHtml(scope)} · ${dashboard.range.from} a ${dashboard.range.to}</div>
     <div class="metrics">${cards}</div>
     <section class="charts">
+      <article class="chart-panel"><h3>Personas por sexo</h3><p>Distribución de personas registradas.</p>${buildSexChart(dashboard)}</article>
       <article class="chart-panel"><h3>Atenciones por mes</h3><p>Comparación mensual de enfermería y medicina.</p>${buildAttendanceChart(monthlySeries)}</article>
       <article class="chart-panel"><h3>Actividades por tipo</h3><p>Sesiones grupales registradas en el periodo.</p>${buildActivityChart(dashboard)}</article>
-      <article class="chart-panel chart-panel--wide"><h3>Entregas mensuales por tipo de apoyo</h3>${buildDeliveryChart(monthlySeries)}</article>
+      <article class="chart-panel"><h3>Entregas por mes</h3><p>Transporte, refrigerios y almuerzos entregados.</p>${buildDeliveryChart(monthlySeries)}</article>
+      <article class="chart-panel"><h3>Almuerzos y refrigerios entregados por mes</h3>${buildMonthlyMetricChart(monthlySeries, "Raciones", "#70549a", (point) => point.snacksDelivered + point.lunchesDelivered)}</article>
+      <article class="chart-panel"><h3>Auxilios de transporte por mes</h3>${buildMonthlyMetricChart(monthlySeries, "Auxilios", "#a24b48", (point) => point.transportAllowancesDelivered)}</article>
     </section>
-    <div class="footer">Generado por CuidarTe</div>
     </main>
   </body></html>`;
 }
@@ -169,18 +172,7 @@ function buildAttendanceChart(points: MonthlyChartPoint[]): string {
     1,
     ...points.map((point) => Math.max(point.nursingAttendances, point.medicalAttendances)),
   );
-  const x = (index: number) =>
-    left + (points.length === 1 ? plotWidth / 2 : (index * plotWidth) / (points.length - 1));
   const y = (value: number) => top + plotHeight - (value / maxValue) * plotHeight;
-  const line = (key: "nursingAttendances" | "medicalAttendances", color: string) =>
-    `<polyline fill="none" stroke="${color}" stroke-width="3" points="${points.map((point, index) => `${x(index)},${y(point[key])}`).join(" ")}"/>`;
-  const dots = (key: "nursingAttendances" | "medicalAttendances", color: string) =>
-    points
-      .map(
-        (point, index) =>
-          `<circle cx="${x(index)}" cy="${y(point[key])}" r="3.5" fill="${color}"/>`,
-      )
-      .join("");
   const grid = [0, 0.5, 1]
     .map((ratio) => {
       const value = Math.round(maxValue * ratio);
@@ -188,39 +180,61 @@ function buildAttendanceChart(points: MonthlyChartPoint[]): string {
       return `<line x1="${left}" y1="${lineY}" x2="${width - right}" y2="${lineY}" stroke="#e6eee9" stroke-dasharray="3 3"/><text x="${left - 8}" y="${lineY + 3}" text-anchor="end" fill="#657a72" font-size="10">${value}</text>`;
     })
     .join("");
-  const labels = points
-    .map(
-      (point, index) =>
-        `<text x="${x(index)}" y="${height - 13}" text-anchor="middle" fill="#657a72" font-size="9">${escapeHtml(formatChartMonth(point.month))}</text>`,
-    )
+  const groupWidth = plotWidth / points.length;
+  const barWidth = Math.max(5, Math.min(24, groupWidth * 0.28));
+  const bars = points
+    .map((point, index) => {
+      const center = left + index * groupWidth + groupWidth / 2;
+      const nursingHeight = (point.nursingAttendances / maxValue) * plotHeight;
+      const medicalHeight = (point.medicalAttendances / maxValue) * plotHeight;
+      return `<rect x="${center - barWidth - 3}" y="${y(point.nursingAttendances)}" width="${barWidth}" height="${nursingHeight}" rx="3" fill="#168362"/><rect x="${center + 3}" y="${y(point.medicalAttendances)}" width="${barWidth}" height="${medicalHeight}" rx="3" fill="#2b6b99"/><text x="${center}" y="${height - 13}" text-anchor="middle" fill="#657a72" font-size="9">${escapeHtml(formatChartMonth(point.month))}</text>`;
+    })
     .join("");
 
-  return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Atenciones por mes"><g>${grid}</g>${line("nursingAttendances", "#168362")}${dots("nursingAttendances", "#168362")}${line("medicalAttendances", "#2b6b99")}${dots("medicalAttendances", "#2b6b99")}${labels}<g><circle cx="${left}" cy="${height - 2}" r="4" fill="#168362"/><text x="${left + 9}" y="${height + 1}" fill="#123b31" font-size="10">Enfermería</text><circle cx="${left + 110}" cy="${height - 2}" r="4" fill="#2b6b99"/><text x="${left + 119}" y="${height + 1}" fill="#123b31" font-size="10">Medicina</text></g></svg>`;
+  return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Atenciones por mes"><g>${grid}</g>${bars}<g><rect x="${left}" y="${height - 7}" width="8" height="8" rx="1" fill="#168362"/><text x="${left + 13}" y="${height + 1}" fill="#123b31" font-size="10">Enfermería</text><rect x="${left + 108}" y="${height - 7}" width="8" height="8" rx="1" fill="#2b6b99"/><text x="${left + 121}" y="${height + 1}" fill="#123b31" font-size="10">Medicina</text></g></svg>`;
 }
 
 function buildActivityChart(dashboard: ReportsDashboardResponse): string {
-  const activities = dashboard.activitiesByType;
+  const activities = dashboard.activitiesByType.filter((activity) => activity.count > 0);
   if (activities.length === 0) {
     return '<div class="empty-chart">Sin actividades en el periodo.</div>';
   }
 
   const width = 680;
-  const rowHeight = 30;
-  const height = Math.max(170, activities.length * rowHeight + 28);
-  const left = 190;
-  const right = 38;
-  const top = 10;
+  const height = 250;
+  const left = 40;
+  const right = 18;
+  const top = 16;
+  const bottom = 54;
   const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
   const maxValue = Math.max(1, ...activities.map((activity) => activity.count));
-  const rows = activities
+  const y = (value: number) => top + plotHeight - (value / maxValue) * plotHeight;
+  const grid = [0, 0.5, 1]
+    .map((ratio) => {
+      const value = Math.round(maxValue * ratio);
+      const lineY = y(value);
+      return `<line x1="${left}" y1="${lineY}" x2="${width - right}" y2="${lineY}" stroke="#e6eee9"/><text x="${left - 8}" y="${lineY + 3}" text-anchor="end" fill="#657a72" font-size="10">${value}</text>`;
+    })
+    .join("");
+  const groupWidth = plotWidth / activities.length;
+  const barWidth = Math.max(8, Math.min(46, groupWidth * 0.56));
+  const bars = activities
     .map((activity, index) => {
-      const y = top + index * rowHeight;
-      const barWidth = (activity.count / maxValue) * plotWidth;
-      return `<text x="${left - 8}" y="${y + 16}" text-anchor="end" fill="#657a72" font-size="10">${escapeHtml(activity.activityTypeName)}</text><rect x="${left}" y="${y + 5}" width="${plotWidth}" height="16" rx="3" fill="#e6eee9"/><rect x="${left}" y="${y + 5}" width="${barWidth}" height="16" rx="3" fill="#b47a25"/><text x="${Math.min(width - 4, left + barWidth + 8)}" y="${y + 17}" fill="#123b31" font-size="10">${activity.count}</text>`;
+      const center = left + index * groupWidth + groupWidth / 2;
+      const barHeight = (activity.count / maxValue) * plotHeight;
+      const label = wrapChartLabel(activity.activityTypeName, 13);
+      const labelLines = label
+        .map(
+          (line, lineIndex) =>
+            `<text x="${center}" y="${height - 31 + lineIndex * 10}" text-anchor="middle" fill="#657a72" font-size="9">${escapeHtml(line)}</text>`,
+        )
+        .join("");
+      return `<rect x="${center - barWidth / 2}" y="${y(activity.count)}" width="${barWidth}" height="${barHeight}" rx="3" fill="#b47a25"/><text x="${center}" y="${Math.max(top + 10, y(activity.count) - 5)}" text-anchor="middle" fill="#845116" font-size="10" font-weight="700">${activity.count}</text>${labelLines}`;
     })
     .join("");
 
-  return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Actividades por tipo">${rows}</svg>`;
+  return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Actividades por tipo"><g>${grid}</g>${bars}</svg>`;
 }
 
 function buildDeliveryChart(points: MonthlyChartPoint[]): string {
@@ -228,8 +242,8 @@ function buildDeliveryChart(points: MonthlyChartPoint[]): string {
     return '<div class="empty-chart">Sin entregas en el periodo.</div>';
   }
 
-  const width = 1380;
-  const height = 260;
+  const width = 680;
+  const height = 230;
   const left = 44;
   const right = 18;
   const top = 18;
@@ -274,6 +288,115 @@ function buildDeliveryChart(points: MonthlyChartPoint[]): string {
     .join("");
 
   return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Entregas mensuales por tipo de apoyo: transporte, refrigerios y almuerzos"><g>${grid}</g>${bars}<g><circle cx="${left}" cy="${height - 2}" r="4" fill="#a24b48"/><text x="${left + 9}" y="${height + 1}" fill="#123b31" font-size="10">Transporte</text><circle cx="${left + 105}" cy="${height - 2}" r="4" fill="#70549a"/><text x="${left + 114}" y="${height + 1}" fill="#123b31" font-size="10">Refrigerios</text><circle cx="${left + 210}" cy="${height - 2}" r="4" fill="#4d7b38"/><text x="${left + 219}" y="${height + 1}" fill="#123b31" font-size="10">Almuerzos</text></g></svg>`;
+}
+
+function buildSexChart(dashboard: ReportsDashboardResponse): string {
+  const sexData = [
+    { label: "Hombres", total: dashboard.sexDistribution.male, color: "#2b6b99" },
+    { label: "Mujeres", total: dashboard.sexDistribution.female, color: "#168362" },
+    { label: "Otro", total: dashboard.sexDistribution.other, color: "#70549a" },
+  ].filter((item) => item.total > 0);
+  const total = sexData.reduce((sum, item) => sum + item.total, 0);
+
+  if (total === 0) {
+    return '<div class="empty-chart">Sin personas registradas en el periodo.</div>';
+  }
+
+  const width = 680;
+  const height = 190;
+  const centerX = width / 2;
+  const centerY = 82;
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+  const slices = sexData
+    .map((item) => {
+      const length = (item.total / total) * circumference;
+      const slice = `<circle cx="${centerX}" cy="${centerY}" r="${radius}" fill="none" stroke="${item.color}" stroke-width="27" stroke-linecap="butt" stroke-dasharray="${length} ${circumference - length}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${centerX} ${centerY})"/>`;
+      offset += length + 6;
+      return slice;
+    })
+    .join("");
+  const legendLabels = sexData.map(
+    (item) => `${item.label} ${item.total} · ${Math.round((item.total / total) * 100)}%`,
+  );
+  const legendWidths = legendLabels.map((label) => 18 + label.length * 5.6);
+  let legendX = centerX - legendWidths.reduce((sum, item) => sum + item, 0) / 2;
+  const legend = sexData
+    .map((item, index) => {
+      const label = legendLabels[index]!;
+      const itemWidth = legendWidths[index]!;
+      const markup = `<rect x="${legendX}" y="${height - 27}" width="8" height="8" rx="1" fill="${item.color}"/><text x="${legendX + 13}" y="${height - 20}" fill="#123b31" font-size="10">${label}</text>`;
+      legendX += itemWidth;
+      return markup;
+    })
+    .join("");
+
+  return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Personas por sexo"><circle cx="${centerX}" cy="${centerY}" r="${radius}" fill="none" stroke="#edf2ef" stroke-width="27"/>${slices}<text x="${centerX}" y="${centerY - 2}" text-anchor="middle" fill="#123b31" font-size="20" font-weight="700">${total}</text><text x="${centerX}" y="${centerY + 14}" text-anchor="middle" fill="#657a72" font-size="9">Personas</text>${legend}</svg>`;
+}
+
+function buildMonthlyMetricChart(
+  points: MonthlyChartPoint[],
+  label: string,
+  color: string,
+  getValue: (point: MonthlyChartPoint) => number,
+): string {
+  if (points.length === 0) {
+    return '<div class="empty-chart">Sin datos en el periodo.</div>';
+  }
+
+  const width = 680;
+  const height = 220;
+  const left = 44;
+  const right = 18;
+  const top = 16;
+  const bottom = 40;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const maxValue = Math.max(1, ...points.map(getValue));
+  const y = (value: number) => top + plotHeight - (value / maxValue) * plotHeight;
+  const grid = [0, 0.5, 1]
+    .map((ratio) => {
+      const value = Math.round(maxValue * ratio);
+      const lineY = y(value);
+      return `<line x1="${left}" y1="${lineY}" x2="${width - right}" y2="${lineY}" stroke="#e6eee9"/><text x="${left - 8}" y="${lineY + 3}" text-anchor="end" fill="#657a72" font-size="10">${value}</text>`;
+    })
+    .join("");
+  const groupWidth = plotWidth / points.length;
+  const barWidth = Math.max(8, Math.min(36, groupWidth * 0.56));
+  const bars = points
+    .map((point, index) => {
+      const value = getValue(point);
+      const center = left + index * groupWidth + groupWidth / 2;
+      const barHeight = (value / maxValue) * plotHeight;
+      return `<rect x="${center - barWidth / 2}" y="${y(value)}" width="${barWidth}" height="${barHeight}" rx="3" fill="${color}"/><text x="${center}" y="${Math.max(top + 10, y(value) - 5)}" text-anchor="middle" fill="${color}" font-size="10" font-weight="700">${value > 0 ? value : ""}</text><text x="${center}" y="${height - 14}" text-anchor="middle" fill="#657a72" font-size="9">${escapeHtml(formatChartMonth(point.month))}</text>`;
+    })
+    .join("");
+
+  return `<svg class="chart-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeHtml(label)} por mes"><g>${grid}</g>${bars}</svg>`;
+}
+
+function wrapChartLabel(value: string, maxLength: number): string[] {
+  const words = value.split(" ");
+  const lines: string[] = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    const candidate = currentLine === "" ? word : `${currentLine} ${word}`;
+    if (candidate.length <= maxLength || currentLine === "") {
+      currentLine = candidate;
+      continue;
+    }
+
+    lines.push(currentLine);
+    currentLine = word;
+  }
+
+  if (currentLine !== "") {
+    lines.push(currentLine);
+  }
+
+  return lines.slice(0, 2);
 }
 
 function formatChartMonth(value: string): string {

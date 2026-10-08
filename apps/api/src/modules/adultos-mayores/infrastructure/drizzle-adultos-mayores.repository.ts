@@ -4,13 +4,28 @@ import {
   adultoMayorHealthRegimeSchema,
   adultoMayorZoneSchema,
 } from "@cuidarte/contracts";
-import { and, asc, desc, eq, ilike, isNotNull, isNull, lt, ne, or, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  ilike,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
 import {
   adultoMayorDocuments,
   adultoMayorStatusHistory,
   adultosMayores,
+  atencionesEnfermeria,
+  atencionesIndividuales,
   auditLogs,
   epsCatalog,
   tenants,
@@ -510,6 +525,18 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
 
   private buildWhere(query: FindAdultosMayoresQuery): SQL | undefined {
     const conditions = this.buildScopeConditions(query.scope);
+
+    if (query.attentionType === "medical") {
+      conditions.push(
+        sql`exists (select 1 from ${atencionesIndividuales} where ${atencionesIndividuales.adultoMayorId} = ${adultosMayores.id})`,
+      );
+    }
+
+    if (query.attentionType === "nursing") {
+      conditions.push(
+        sql`exists (select 1 from ${atencionesEnfermeria} where ${atencionesEnfermeria.adultoMayorId} = ${adultosMayores.id} and ${atencionesEnfermeria.deletedAt} is null)`,
+      );
+    }
 
     if (query.search !== null) {
       const searchPattern = `%${escapeLikePattern(query.search)}%`;

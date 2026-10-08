@@ -90,5 +90,5 @@ const dashboard: ReportsDashboardResponse = {
       count: 1,
     },
   ],
-  sexDistribution: { male: 0, female: 0 },
+  sexDistribution: { male: 0, female: 0, other: 0 },
 };

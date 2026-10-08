@@ -77,6 +77,7 @@ export class AdultosMayoresService {
     const records = await this.adultosMayoresRepository.findMany({
       search: query.search,
       scope,
+      ...(query.attentionType === undefined ? {} : { attentionType: query.attentionType }),
     });
 
     return records.map((record) => this.toListItem(record));

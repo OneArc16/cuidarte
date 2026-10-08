@@ -167,6 +167,19 @@ describe("AdultosMayoresService", () => {
     });
   });
 
+  it("forwards the attention type filter within the actor scope", async () => {
+    const repository = createRepository();
+    const service = createService(repository);
+
+    await service.listAdultosMayores({ search: null, attentionType: "nursing" }, tenantAdminUser);
+
+    assert.deepEqual(repository.queries[0], {
+      search: null,
+      attentionType: "nursing",
+      scope: { type: "tenant", tenantId },
+    });
+  });
+
   it("allows SuperAdmin users to list all tenants", async () => {
     const repository = createRepository();
     const service = createService(repository);

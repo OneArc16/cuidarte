@@ -8,7 +8,7 @@
 
 .adultos-toolbar {
   display: grid;
-  grid-template-columns: minmax(240px, 460px) max-content;
+  grid-template-columns: minmax(240px, 460px) minmax(210px, 260px) max-content;
   gap: 12px;
   align-items: end;
 }
@@ -22,6 +22,35 @@
   color: var(--color-deep);
   font-size: 0.76rem;
   font-weight: 850;
+}
+
+.adultos-attention-filter {
+  display: grid;
+  gap: 5px;
+}
+
+.adultos-attention-filter span {
+  color: var(--color-deep);
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.adultos-attention-filter select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 32px 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 0 10px 24px rgb(8 80 65 / 5%);
+  color: var(--color-deep);
+  font-size: 0.88rem;
+  outline: 0;
+}
+
+.adultos-attention-filter select:focus-visible {
+  border-color: var(--color-care);
+  box-shadow: 0 0 0 3px rgb(29 158 117 / 15%);
 }
 
 .adultos-search__control {

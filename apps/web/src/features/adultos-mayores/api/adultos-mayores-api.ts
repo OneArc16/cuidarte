@@ -1,5 +1,6 @@
 import {
   type AdultoMayorDetailResponse,
+  type AdultoMayorAttentionFilter,
   type AdultoMayorListResponse,
   type AdultoMayorTenantOptionsResponse,
   type AdultoMayorTrashListResponse,
@@ -23,12 +24,13 @@ import { fetchJson } from "@/shared/api/fetch-json";
 
 type ListAdultosMayoresParams = {
   search: string;
+  attentionType?: AdultoMayorAttentionFilter;
 };
 
 export function listAdultosMayores(
   params: ListAdultosMayoresParams,
 ): Promise<AdultoMayorListResponse> {
-  return fetchJson(buildAdultosMayoresUrl(params.search), adultoMayorListResponseSchema);
+  return fetchJson(buildAdultosMayoresUrl(params), adultoMayorListResponseSchema);
 }
 
 export function listAdultoMayorTenantOptions(): Promise<AdultoMayorTenantOptionsResponse> {
@@ -38,13 +40,10 @@ export function listAdultoMayorTenantOptions(): Promise<AdultoMayorTenantOptions
   );
 }
 
-export function listAdultosMayoresTrash(
-  params: ListAdultosMayoresParams,
-): Promise<AdultoMayorTrashListResponse> {
-  return fetchJson(
-    buildAdultosMayoresUrl(params.search, "/trash"),
-    adultoMayorTrashListResponseSchema,
-  );
+export function listAdultosMayoresTrash(params: {
+  search: string;
+}): Promise<AdultoMayorTrashListResponse> {
+  return fetchJson(buildAdultosMayoresUrl(params, "/trash"), adultoMayorTrashListResponseSchema);
 }
 
 export function sendAdultoMayorToTrash(
@@ -138,19 +137,26 @@ export function getAdultoMayorDocumentUrl(adultoMayorId: string): string {
   return `${getApiBaseUrl()}/adultos-mayores/${adultoMayorId}/document`;
 }
 
-export function exportAdultosMayoresExcel(search: string): Promise<Blob> {
-  return fetchBlob(buildAdultosMayoresUrl(search, "/export/excel"));
+export function exportAdultosMayoresExcel(params: ListAdultosMayoresParams): Promise<Blob> {
+  return fetchBlob(buildAdultosMayoresUrl(params, "/export/excel"));
 }
 
-export function exportAdultosMayoresPdf(search: string): Promise<Blob> {
-  return fetchBlob(buildAdultosMayoresUrl(search, "/export/pdf"));
+export function exportAdultosMayoresPdf(params: ListAdultosMayoresParams): Promise<Blob> {
+  return fetchBlob(buildAdultosMayoresUrl(params, "/export/pdf"));
 }
 
-function buildAdultosMayoresUrl(search: string, suffix = ""): string {
+function buildAdultosMayoresUrl(
+  params: { search: string; attentionType?: AdultoMayorAttentionFilter },
+  suffix = "",
+): string {
   const searchParams = new URLSearchParams();
 
-  if (search.trim() !== "") {
-    searchParams.set("search", search.trim());
+  if (params.search.trim() !== "") {
+    searchParams.set("search", params.search.trim());
+  }
+
+  if (params.attentionType !== undefined && params.attentionType !== "all") {
+    searchParams.set("attentionType", params.attentionType);
   }
 
   const queryString = searchParams.toString();

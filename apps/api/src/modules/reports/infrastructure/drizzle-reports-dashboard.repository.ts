@@ -189,7 +189,7 @@ export class DrizzleReportsDashboardRepository implements ReportsDashboardReposi
 
   private async aggregateSexDistribution(
     query: ReportsDashboardQuery & { scope: ReportsDashboardScope },
-  ): Promise<{ male: number; female: number }> {
+  ): Promise<{ male: number; female: number; other: number }> {
     const rows = await this.database.db
       .select({ sex: adultosMayores.sex, total: sql<number>`count(*)::int` })
       .from(adultosMayores)
@@ -204,6 +204,7 @@ export class DrizzleReportsDashboardRepository implements ReportsDashboardReposi
     return {
       male: rows.find((row) => row.sex === "male")?.total ?? 0,
       female: rows.find((row) => row.sex === "female")?.total ?? 0,
+      other: rows.find((row) => row.sex === "other")?.total ?? 0,
     };
   }
 

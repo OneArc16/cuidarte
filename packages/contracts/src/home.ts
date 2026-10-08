@@ -58,7 +58,11 @@ export const homeDashboardFoodSummarySchema = z.object({
 });
 
 export const homeDashboardAnalyticsSchema = z.object({
-  sexDistribution: z.object({ male: z.number().int().min(0), female: z.number().int().min(0) }),
+  sexDistribution: z.object({
+    male: z.number().int().min(0),
+    female: z.number().int().min(0),
+    other: z.number().int().min(0),
+  }),
   activitiesByType: z.array(
     z.object({ label: z.string().min(1).max(120), total: z.number().int().min(0) }),
   ),

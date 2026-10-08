@@ -1,11 +1,14 @@
+import { type AdultoMayorAttentionFilter } from "@cuidarte/contracts";
 import { FileSpreadsheet, FileText, Printer, Search, Trash2, Upload } from "lucide-react";
 
 type AdultosMayoresToolbarProps = {
   canImportAdultosMayores: boolean;
   canManageTrash: boolean;
   search: string;
+  attentionType: AdultoMayorAttentionFilter;
   isExporting: boolean;
   onSearchChange: (search: string) => void;
+  onAttentionTypeChange: (attentionType: AdultoMayorAttentionFilter) => void;
   onImportAdultosMayores: () => void;
   onExportExcel: () => void;
   onExportPdf: () => void;
@@ -23,7 +26,9 @@ export function AdultosMayoresToolbar({
   onOpenTrash,
   onImportAdultosMayores,
   onSearchChange,
+  onAttentionTypeChange,
   search,
+  attentionType,
 }: AdultosMayoresToolbarProps) {
   return (
     <section className="adultos-toolbar" aria-label="Herramientas del listado">
@@ -37,6 +42,20 @@ export function AdultosMayoresToolbar({
             onChange={(event) => onSearchChange(event.target.value)}
           />
         </div>
+      </label>
+
+      <label className="adultos-attention-filter">
+        <span>Atenciones registradas</span>
+        <select
+          value={attentionType}
+          onChange={(event) =>
+            onAttentionTypeChange(event.target.value as AdultoMayorAttentionFilter)
+          }
+        >
+          <option value="all">Todas las personas</option>
+          <option value="medical">Con atención médica</option>
+          <option value="nursing">Con atención de enfermería</option>
+        </select>
       </label>
 
       <div className="adultos-export-actions" aria-label="Exportaciones">

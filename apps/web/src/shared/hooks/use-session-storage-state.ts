@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 
-export function useSessionStorageState(key: string, initialValue = "") {
+export function useSessionStorageState<Value extends string = string>(
+  key: string,
+  initialValue: Value = "" as Value,
+) {
   const [value, setValue] = useState(() => {
     const storedValue = window.sessionStorage.getItem(key);
-    return storedValue ?? initialValue;
+    return (storedValue ?? initialValue) as Value;
   });
 
   useEffect(() => {

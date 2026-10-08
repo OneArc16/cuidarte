@@ -31,7 +31,8 @@ export function HomeAuditorCharts({ analytics }: Props) {
   const sexData = [
     { label: "Hombres", total: analytics.sexDistribution.male, color: "#0ca6b7" },
     { label: "Mujeres", total: analytics.sexDistribution.female, color: "#6416b8" },
-  ];
+    { label: "Otro", total: analytics.sexDistribution.other, color: "#f5bd22" },
+  ].filter((item) => item.total > 0);
   const totalPeople = sexData.reduce((total, item) => total + item.total, 0);
   const monthlyData = analytics.monthlyDeliveries.map((point) => ({
     ...point,

@@ -186,7 +186,7 @@ export class HomeService {
 
     const [sexDistribution, monthlyDeliveries] = await Promise.all([
       adultosScope === null
-        ? Promise.resolve({ male: 0, female: 0 })
+        ? Promise.resolve({ male: 0, female: 0, other: 0 })
         : this.countSexDistribution(adultosScope),
       alimentacionScope === null
         ? Promise.resolve(buildMonthlyDeliverySeries([]))
@@ -218,6 +218,7 @@ export class HomeService {
     return {
       male: rows.find((row) => row.sex === "male")?.total ?? 0,
       female: rows.find((row) => row.sex === "female")?.total ?? 0,
+      other: rows.find((row) => row.sex === "other")?.total ?? 0,
     };
   }
 

@@ -58,7 +58,8 @@ export function ReportDashboardCharts({ data }: ReportDashboardChartsProps) {
   const sexData = [
     { label: "Hombres", total: data.sexDistribution.male, color: "#2b6b99" },
     { label: "Mujeres", total: data.sexDistribution.female, color: "#168362" },
-  ];
+    { label: "Otro", total: data.sexDistribution.other, color: "#70549a" },
+  ].filter((item) => item.total > 0);
   const totalPeople = sexData.reduce((total, item) => total + item.total, 0);
   const activityData = data.activitiesByType
     .filter((activity) => activity.count > 0)

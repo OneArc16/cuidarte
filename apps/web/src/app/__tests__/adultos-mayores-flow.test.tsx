@@ -89,6 +89,28 @@ describe("App adultos mayores flow", () => {
     );
   });
 
+  it("filters adults by registered attention type", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/adultos-mayores", ({ request }) => {
+        const attentionType = new URL(request.url).searchParams.get("attentionType");
+
+        return HttpResponse.json({
+          adultosMayores: attentionType === "medical" ? [adultoMayorFixture] : [],
+        });
+      }),
+    );
+    server.use(mockAuthMe(authUserFixture));
+    const user = userEvent.setup();
+    renderAppAtPath("/adultos-mayores");
+
+    const filter = await screen.findByLabelText("Atenciones registradas");
+    await user.selectOptions(filter, "medical");
+
+    await waitFor(() => {
+      expect(screen.getByText(adultoMayorFixture.names)).toBeInTheDocument();
+    });
+  });
+
   it("creates an adulto mayor from the tabbed form", async () => {
     server.use(mockAuthMe(authUserFixture));
     let createPayload: AdultoMayorMutationPayload | null = null;

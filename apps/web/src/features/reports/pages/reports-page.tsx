@@ -1,17 +1,12 @@
 import { type AuthUser } from "@cuidarte/contracts";
-import {
-  FileSpreadsheet,
-  FileText,
-  Presentation,
-} from "lucide-react";
+import { FileSpreadsheet, FileText, Presentation } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import {
-  useReportsDashboardQuery,
-} from "../model/reports-queries";
+import { useReportsDashboardQuery } from "../model/reports-queries";
 import { ReportDashboard } from "../components/report-dashboard";
 import { ReportDateRangePicker } from "../components/report-date-range-picker";
+import { loadReportsDateRange, saveReportsDateRange } from "../lib/reports-date-range-state";
 import { useReportDownloads } from "../model/report-downloads-context";
 import "../reports.css";
 
@@ -19,11 +14,18 @@ type ReportsPageProps = {
   user: AuthUser;
 };
 
-export function ReportsPage({ user: _user }: ReportsPageProps) {
-  const [dateRange, setDateRange] = useState(getInitialDateRange);
+export function ReportsPage({ user }: ReportsPageProps) {
+  const [dateRange, setDateRange] = useState(() =>
+    loadReportsDateRange(user.id, getInitialDateRange()),
+  );
   const [exportingFormat, setExportingFormat] = useState<"pdf" | "pptx" | "xlsx" | null>(null);
   const dashboardQuery = useReportsDashboardQuery(dateRange);
   const { startAnalyticsExport } = useReportDownloads();
+
+  const handleDateRangeApply = (nextDateRange: { from: string; to: string }) => {
+    setDateRange(nextDateRange);
+    saveReportsDateRange(user.id, nextDateRange);
+  };
 
   const handleExport = async (format: "pdf" | "pptx" | "xlsx") => {
     setExportingFormat(format);
@@ -36,7 +38,9 @@ export function ReportsPage({ user: _user }: ReportsPageProps) {
           ? error.message
           : `No fue posible generar el ${format.toUpperCase()}.`,
       );
-    } finally { setExportingFormat(null); }
+    } finally {
+      setExportingFormat(null);
+    }
   };
 
   return (
@@ -44,18 +48,51 @@ export function ReportsPage({ user: _user }: ReportsPageProps) {
       <header className="reports-page-header">
         <p className="eyebrow">Centro de actividad</p>
         <div className="reports-header-actions">
-          <ReportDateRangePicker from={dateRange.from} to={dateRange.to} onApply={setDateRange} />
-          <button className="reports-export-button reports-export-button--excel" type="button" aria-label="Exportar a Excel" data-tooltip={exportingFormat === "xlsx" ? "Generando Excel" : "Exportar a Excel"} disabled={exportingFormat !== null || dashboardQuery.isLoading} onClick={() => void handleExport("xlsx")}>
+          <ReportDateRangePicker
+            from={dateRange.from}
+            to={dateRange.to}
+            onApply={handleDateRangeApply}
+          />
+          <button
+            className="reports-export-button reports-export-button--excel"
+            type="button"
+            aria-label="Exportar a Excel"
+            data-tooltip={exportingFormat === "xlsx" ? "Generando Excel" : "Exportar a Excel"}
+            disabled={exportingFormat !== null || dashboardQuery.isLoading}
+            onClick={() => void handleExport("xlsx")}
+          >
             <FileSpreadsheet aria-hidden="true" />
-            <span className="visually-hidden">{exportingFormat === "xlsx" ? "Generando Excel" : "Exportar a Excel"}</span>
+            <span className="visually-hidden">
+              {exportingFormat === "xlsx" ? "Generando Excel" : "Exportar a Excel"}
+            </span>
           </button>
-          <button className="reports-export-button reports-export-button--pdf" type="button" aria-label="Exportar a PDF" data-tooltip={exportingFormat === "pdf" ? "Generando PDF" : "Exportar a PDF"} disabled={exportingFormat !== null || dashboardQuery.isLoading} onClick={() => void handleExport("pdf")}>
+          <button
+            className="reports-export-button reports-export-button--pdf"
+            type="button"
+            aria-label="Exportar a PDF"
+            data-tooltip={exportingFormat === "pdf" ? "Generando PDF" : "Exportar a PDF"}
+            disabled={exportingFormat !== null || dashboardQuery.isLoading}
+            onClick={() => void handleExport("pdf")}
+          >
             <FileText aria-hidden="true" />
-            <span className="visually-hidden">{exportingFormat === "pdf" ? "Generando PDF" : "Exportar a PDF"}</span>
+            <span className="visually-hidden">
+              {exportingFormat === "pdf" ? "Generando PDF" : "Exportar a PDF"}
+            </span>
           </button>
-          <button className="reports-export-button reports-export-button--pptx" type="button" aria-label="Exportar a PowerPoint" data-tooltip={exportingFormat === "pptx" ? "Generando PowerPoint" : "Exportar a PowerPoint"} disabled={exportingFormat !== null || dashboardQuery.isLoading} onClick={() => void handleExport("pptx")}>
+          <button
+            className="reports-export-button reports-export-button--pptx"
+            type="button"
+            aria-label="Exportar a PowerPoint"
+            data-tooltip={
+              exportingFormat === "pptx" ? "Generando PowerPoint" : "Exportar a PowerPoint"
+            }
+            disabled={exportingFormat !== null || dashboardQuery.isLoading}
+            onClick={() => void handleExport("pptx")}
+          >
             <Presentation aria-hidden="true" />
-            <span className="visually-hidden">{exportingFormat === "pptx" ? "Generando PowerPoint" : "Exportar a PowerPoint"}</span>
+            <span className="visually-hidden">
+              {exportingFormat === "pptx" ? "Generando PowerPoint" : "Exportar a PowerPoint"}
+            </span>
           </button>
         </div>
       </header>
@@ -65,7 +102,6 @@ export function ReportsPage({ user: _user }: ReportsPageProps) {
         isLoading={dashboardQuery.isLoading}
         isError={dashboardQuery.isError}
       />
-
     </section>
   );
 }

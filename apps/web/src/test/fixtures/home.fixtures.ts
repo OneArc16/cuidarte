@@ -76,7 +76,7 @@ export const homeDashboardFixture = {
     auxilioTransporteTotal: 16,
   },
   analytics: {
-    sexDistribution: { female: 260, male: 208 },
+    sexDistribution: { female: 260, male: 208, other: 0 },
     activitiesByType: [
       { label: "Fisioterapia", total: 56 },
       { label: "Nutrición", total: 42 },

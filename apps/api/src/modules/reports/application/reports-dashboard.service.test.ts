@@ -65,7 +65,7 @@ describe("ReportsDashboardService", () => {
           count: 3,
         },
       ],
-      sexDistribution: { male: 4, female: 6 },
+      sexDistribution: { male: 4, female: 6, other: 2 },
       snackOneDelivered: 2,
       snackTwoDelivered: 3,
     });
@@ -93,7 +93,7 @@ describe("ReportsDashboardService", () => {
       snacksDelivered: 5,
       lunchesDelivered: 6,
     });
-    assert.deepEqual(response.sexDistribution, { male: 4, female: 6 });
+    assert.deepEqual(response.sexDistribution, { male: 4, female: 6, other: 2 });
   });
 
   it("uses consolidated scope for super admins", async () => {
@@ -170,7 +170,7 @@ const emptyAggregate: ReportsDashboardAggregate = {
   tenantName: null,
   dailySeries: [],
   activitiesByType: [],
-  sexDistribution: { male: 0, female: 0 },
+  sexDistribution: { male: 0, female: 0, other: 0 },
   snackOneDelivered: 0,
   snackTwoDelivered: 0,
 };

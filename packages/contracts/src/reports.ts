@@ -151,6 +151,7 @@ export const reportsDashboardActivityTypeSchema = z.object({
 export const reportsDashboardSexDistributionSchema = z.object({
   male: z.number().int().min(0),
   female: z.number().int().min(0),
+  other: z.number().int().min(0),
 });
 
 export const reportsDashboardResponseSchema = z.object({
