@@ -26,7 +26,11 @@ const CREATE_ROLES: ReadonlySet<AuthUser["role"]> = new Set(["enfermeria"]);
 const TRASH_ROLES: ReadonlySet<AuthUser["role"]> = new Set(["super_admin", "admin", "director"]);
 
 export function resolveAtencionEnfermeriaScope(user: AuthUser): AtencionEnfermeriaScope | null {
-  if (user.permissions !== undefined && !hasUserPermission(user, "atenciones_enfermeria.view")) {
+  if (
+    user.permissions !== undefined &&
+    !hasUserPermission(user, "atenciones_enfermeria.view") &&
+    !hasUserPermission(user, "atenciones_enfermeria.nursing_history")
+  ) {
     return null;
   }
 
@@ -57,6 +61,14 @@ export function canReadAtencionEnfermeriaModule(
     : hasUserPermission(user, "atenciones_enfermeria.view");
 }
 
+export function canReadAtencionEnfermeriaHistory(
+  user: Pick<AuthUser, "role" | "permissions">,
+): boolean {
+  return user.permissions === undefined
+    ? VIEW_ROLES.has(user.role)
+    : hasUserPermission(user, "atenciones_enfermeria.nursing_history");
+}
+
 export function canCreateAtencionEnfermeria(user: Pick<AuthUser, "role" | "permissions">): boolean {
   return user.permissions === undefined
     ? CREATE_ROLES.has(user.role)
@@ -77,7 +89,9 @@ export function resolveAtencionEnfermeriaAccess(
 ): AtencionEnfermeriaHistoryAccess | null {
   if (
     user.role === "super_admin" &&
-    (user.permissions === undefined || hasUserPermission(user, "atenciones_enfermeria.view"))
+    (user.permissions === undefined ||
+      hasUserPermission(user, "atenciones_enfermeria.view") ||
+      hasUserPermission(user, "atenciones_enfermeria.nursing_history"))
   ) {
     return "view";
   }
@@ -99,7 +113,8 @@ export function resolveAtencionEnfermeriaAccess(
     ? VIEW_ROLES.has(user.role)
       ? "view"
       : null
-    : hasUserPermission(user, "atenciones_enfermeria.view")
+    : hasUserPermission(user, "atenciones_enfermeria.view") ||
+        hasUserPermission(user, "atenciones_enfermeria.nursing_history")
       ? "view"
       : null;
 }

@@ -62,7 +62,10 @@ import {
   getAtencionesEnfermeriaHistoryAdultoIdFromPath,
   isAtencionesEnfermeriaPath,
 } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-paths";
-import { canReadAtencionesEnfermeria } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-permissions";
+import {
+  canReadAtencionesEnfermeria,
+  canReadHistoriaEnfermeria,
+} from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-permissions";
 import { isReportsPath } from "@/features/reports/lib/reports-paths";
 import { canOpenReports } from "@/features/reports/lib/reports-permissions";
 
@@ -136,9 +139,17 @@ export function App() {
       }
     }
 
-    if (isAtencionesEnfermeriaPath(path) && !canReadAtencionesEnfermeria(user)) {
-      navigate(HOME_PATH, { replace: true });
-      return;
+    if (isAtencionesEnfermeriaPath(path)) {
+      const nursingHistoryAdultoMayorId = getAtencionesEnfermeriaHistoryAdultoIdFromPath(path);
+      const canAccessPath =
+        nursingHistoryAdultoMayorId === null
+          ? canReadAtencionesEnfermeria(user)
+          : canReadHistoriaEnfermeria(user);
+
+      if (!canAccessPath) {
+        navigate(HOME_PATH, { replace: true });
+        return;
+      }
     }
 
     if (isReportsPath(path) && !canOpenReports(user)) {

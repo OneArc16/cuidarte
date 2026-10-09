@@ -23,6 +23,8 @@ type AjustesPermissionsDialogProps = {
 
 const PERMISSION_COLUMNS = [
   { key: "view", label: "VER" },
+  { key: "medical_history", label: "HISTORIAL MÉDICO" },
+  { key: "nursing_history", label: "HISTORIAL ENFERMERÍA" },
   { key: "view_delivery_days", label: "DÍAS ENTREGADOS" },
   { key: "create", label: "CREAR" },
   { key: "create_multiple_dates", label: "VARIOS DÍAS" },
@@ -35,7 +37,22 @@ const PERMISSION_COLUMNS = [
   { key: "manage", label: "GESTIONAR" },
 ] as const;
 
-const MATRIX_GRID_TEMPLATE_COLUMNS = `minmax(220px, 1fr) repeat(${PERMISSION_COLUMNS.length}, minmax(60px, 78px))`;
+const MATRIX_GRID_TEMPLATE_COLUMNS = [
+  "minmax(250px, 1fr)",
+  "minmax(82px, 96px)",
+  "minmax(132px, 148px)",
+  "minmax(132px, 148px)",
+  "minmax(100px, 116px)",
+  "minmax(76px, 88px)",
+  "minmax(92px, 108px)",
+  "minmax(76px, 88px)",
+  "minmax(76px, 88px)",
+  "minmax(80px, 92px)",
+  "minmax(80px, 92px)",
+  "minmax(100px, 116px)",
+  "minmax(96px, 108px)",
+  "minmax(90px, 104px)",
+].join(" ");
 
 const MODULE_DESCRIPTIONS: Record<string, string> = {
   Inicio: "Tablero principal",

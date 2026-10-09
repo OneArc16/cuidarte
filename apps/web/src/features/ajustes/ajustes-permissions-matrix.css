@@ -187,7 +187,8 @@
   min-width: 0;
   min-height: 0;
   max-height: 100%;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: #c4d3cc transparent;
@@ -204,7 +205,7 @@
 }
 
 .ajustes-permissions-dialog__matrix {
-  min-width: 0;
+  width: max(100%, 1520px);
 }
 
 .ajustes-permissions-dialog__matrix-row {
@@ -231,6 +232,10 @@
 
 .ajustes-permissions-dialog__matrix-row--heading span:first-child {
   text-align: left;
+}
+
+.ajustes-permissions-dialog__matrix-row--heading span:not(:first-child) {
+  padding-inline: 5px;
 }
 
 .ajustes-permissions-dialog__module-copy {

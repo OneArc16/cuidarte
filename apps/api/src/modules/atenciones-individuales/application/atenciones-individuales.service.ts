@@ -23,11 +23,14 @@ import { randomUUID } from "node:crypto";
 import { calculateAgeFromBirthDate } from "../../adultos-mayores/application/age";
 import {
   canAccessAtencionIndividualHistory,
+  canAccessAtencionIndividualAnyHistory,
+  canAccessAtencionIndividualMedicalHistory,
   canCreateAtencionIndividual,
   canEditOwnedAtencionIndividual,
   canEditAtencionIndividual,
   canViewAtencionIndividual,
   resolveAtencionIndividualHistoryAccess,
+  resolveAtencionIndividualHistoryScope,
   resolveAtencionIndividualScope,
 } from "../domain/atencion-individual.policy";
 import {
@@ -122,8 +125,8 @@ export class AtencionesIndividualesService {
     adultoMayorId: string,
     actor: AuthUser,
   ): Promise<AtencionIndividualHistoryResponse> {
-    this.ensureCanAccessHistory(actor);
-    const scope = this.resolveScopeOrThrow(actor);
+    this.ensureCanAccessMedicalHistory(actor);
+    const scope = this.resolveHistoryScopeOrThrow(actor);
     const adultoMayor = await this.atencionesRepository.findAdultoMayorById({
       adultoMayorId,
       scope,
@@ -315,10 +318,10 @@ export class AtencionesIndividualesService {
     id: string,
     actor: AuthUser,
   ): Promise<AtencionIndividualRecord> {
-    this.ensureCanAccessHistory(actor);
+    this.ensureCanAccessAnyHistory(actor);
     const record = await this.atencionesRepository.findById({
       id,
-      scope: this.resolveScopeOrThrow(actor),
+      scope: this.resolveHistoryScopeOrThrow(actor),
     });
 
     if (record === null) {
@@ -356,6 +359,28 @@ export class AtencionesIndividualesService {
         "No tienes permisos para consultar la historia clinica de este adulto mayor.",
       );
     }
+  }
+
+  private ensureCanAccessMedicalHistory(actor: AuthUser) {
+    if (!canAccessAtencionIndividualMedicalHistory(actor)) {
+      throw new ForbiddenException("No tienes permisos para consultar la historia médica.");
+    }
+  }
+
+  private ensureCanAccessAnyHistory(actor: AuthUser) {
+    if (!canAccessAtencionIndividualAnyHistory(actor)) {
+      throw new ForbiddenException("No tienes permisos para consultar la historia clinica.");
+    }
+  }
+
+  private resolveHistoryScopeOrThrow(actor: AuthUser): AtencionIndividualScope {
+    const scope = resolveAtencionIndividualHistoryScope(actor);
+
+    if (scope === null) {
+      throw new ForbiddenException("No tienes un centro asociado para consultar atenciones.");
+    }
+
+    return scope;
   }
 
   private async ensureConsecutiveIsUnique(command: {

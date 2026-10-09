@@ -41,9 +41,11 @@ export const userPermissionValues = [
   "alimentacion.bulk_import",
   "alimentacion.export",
   "atenciones_individuales.view",
+  "atenciones_individuales.medical_history",
   "atenciones_individuales.create",
   "atenciones_individuales.edit",
   "atenciones_enfermeria.view",
+  "atenciones_enfermeria.nursing_history",
   "atenciones_enfermeria.create",
   "atenciones_enfermeria.edit",
   "atenciones_enfermeria.delete",
@@ -212,6 +214,12 @@ export const userPermissionCatalog = [
     description: "Consultar la historia clínica según alcance.",
   },
   {
+    key: "atenciones_individuales.medical_history",
+    group: "Atenciones individuales",
+    label: "Ver historia médica",
+    description: "Consultar las atenciones registradas por medicina.",
+  },
+  {
     key: "atenciones_individuales.create",
     group: "Atenciones individuales",
     label: "Crear atenciones",
@@ -228,6 +236,12 @@ export const userPermissionCatalog = [
     group: "Enfermería",
     label: "Ver enfermería",
     description: "Consultar atenciones de enfermería.",
+  },
+  {
+    key: "atenciones_enfermeria.nursing_history",
+    group: "Enfermería",
+    label: "Ver historial de enfermería",
+    description: "Consultar el historial de atenciones de enfermería.",
   },
   {
     key: "atenciones_enfermeria.create",

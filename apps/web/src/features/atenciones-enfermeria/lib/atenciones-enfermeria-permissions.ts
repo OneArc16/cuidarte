@@ -31,6 +31,12 @@ export function canReadAtencionesEnfermeria(user: Pick<AuthUser, "role" | "permi
     : hasUserPermission(user, "atenciones_enfermeria.view");
 }
 
+export function canReadHistoriaEnfermeria(user: Pick<AuthUser, "role" | "permissions">): boolean {
+  return user.permissions === undefined
+    ? ATENCIONES_ENFERMERIA_CROSS_READ_ROLES.has(user.role)
+    : hasUserPermission(user, "atenciones_enfermeria.nursing_history");
+}
+
 export function canCreateAtencionesEnfermeria(
   user: Pick<AuthUser, "role" | "permissions">,
 ): boolean {

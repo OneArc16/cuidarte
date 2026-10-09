@@ -36,6 +36,20 @@ export function resolveAtencionIndividualScope(user: AuthUser): AtencionIndividu
   return { type: "tenant", tenantId: user.tenantId };
 }
 
+export function resolveAtencionIndividualHistoryScope(
+  user: AuthUser,
+): AtencionIndividualScope | null {
+  if (!canAccessAtencionIndividualAnyHistory(user)) {
+    return null;
+  }
+
+  if (user.role === "super_admin") {
+    return { type: "all" };
+  }
+
+  return user.tenantId === null ? null : { type: "tenant", tenantId: user.tenantId };
+}
+
 export function canEditAtencionIndividual(user: AuthUser): boolean {
   return user.permissions === undefined
     ? user.role !== "enfermeria" && CLINICAL_EDITOR_ROLES.has(user.role)
@@ -54,6 +68,22 @@ export function canAccessAtencionIndividualHistory(
   return user.permissions === undefined
     ? CLINICAL_EDITOR_ROLES.has(user.role) || CLINICAL_READER_ROLES.has(user.role)
     : hasUserPermission(user, "atenciones_individuales.view");
+}
+
+export function canAccessAtencionIndividualMedicalHistory(
+  user: Pick<AuthUser, "role" | "permissions">,
+): boolean {
+  return user.permissions === undefined
+    ? canAccessAtencionIndividualHistory(user)
+    : hasUserPermission(user, "atenciones_individuales.medical_history");
+}
+
+export function canAccessAtencionIndividualAnyHistory(
+  user: Pick<AuthUser, "role" | "permissions">,
+): boolean {
+  return (
+    canAccessAtencionIndividualHistory(user) || canAccessAtencionIndividualMedicalHistory(user)
+  );
 }
 
 export function resolveAtencionIndividualHistoryAccess(
@@ -77,6 +107,14 @@ export function resolveAtencionIndividualHistoryAccess(
   }
 
   if (user.permissions !== undefined && hasUserPermission(user, "atenciones_individuales.view")) {
+    return "view";
+  }
+
+  if (
+    user.permissions !== undefined &&
+    hasUserPermission(user, "atenciones_individuales.medical_history") &&
+    atencion.createdByUserRole === "medico"
+  ) {
     return "view";
   }
 

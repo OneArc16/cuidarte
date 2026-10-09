@@ -14,6 +14,7 @@ type AdultosMayoresTableProps = {
   canCreateAtencionIndividual: boolean;
   canManageAdultosMayores: boolean;
   canOpenHistoriaClinica: boolean;
+  canOpenHistoriaMedica: boolean;
   canOpenHistoriaEnfermeria: boolean;
   canManageTrash: boolean;
   hideAtencionIndividualAction: boolean;
@@ -35,6 +36,7 @@ export function AdultosMayoresTable({
   canCreateAtencionIndividual,
   canManageAdultosMayores,
   canOpenHistoriaClinica,
+  canOpenHistoriaMedica,
   canOpenHistoriaEnfermeria,
   canManageTrash,
   hideAtencionIndividualAction,
@@ -161,7 +163,11 @@ export function AdultosMayoresTable({
                       data-tooltip={
                         attentionType === "medical" ? "Historia médica" : "Historia clinica"
                       }
-                      disabled={!canOpenHistoriaClinica}
+                      disabled={
+                        attentionType === "medical"
+                          ? !canOpenHistoriaMedica
+                          : !canOpenHistoriaClinica
+                      }
                       onClick={() =>
                         attentionType === "medical"
                           ? onOpenHistoriaMedica(adultoMayor.id)

@@ -18,9 +18,10 @@ import { buildAlimentacionCreateFromAdultoPath } from "@/features/alimentacion/l
 import {
   canCreateAtencionIndividual,
   canOpenHistoriaClinica,
+  canOpenHistoriaMedica,
 } from "@/features/atenciones-individuales/lib/historia-clinica-permissions";
 import { buildAtencionesEnfermeriaHistoryPath } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-paths";
-import { canReadAtencionesEnfermeria } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-permissions";
+import { canReadHistoriaEnfermeria } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-permissions";
 import {
   canManageAdultosMayores,
   canManageAdultosMayoresTrash,
@@ -69,7 +70,8 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
   const canCreateClinicalAttention = canCreateAtencionIndividual(user);
   const hideAtencionIndividualAction = user.role === "enfermeria";
   const canOpenClinicalHistory = canOpenHistoriaClinica(user);
-  const canOpenNursingHistory = canReadAtencionesEnfermeria(user);
+  const canOpenMedicalHistory = canOpenHistoriaMedica(user);
+  const canOpenNursingHistory = canReadHistoriaEnfermeria(user);
   const canCreateFeedingRecord = canManageAlimentacion(user);
   const canImportRecords = canImportAdultosMayores(user);
   const canManageTrash = canManageAdultosMayoresTrash(user);
@@ -148,6 +150,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
         canManageAdultosMayores={canManageRecords}
         canManageTrash={canManageTrash}
         canOpenHistoriaClinica={canOpenClinicalHistory}
+        canOpenHistoriaMedica={canOpenMedicalHistory}
         canOpenHistoriaEnfermeria={canOpenNursingHistory}
         hideAtencionIndividualAction={hideAtencionIndividualAction}
         onOpenAlimentacion={(adultoMayorId) =>

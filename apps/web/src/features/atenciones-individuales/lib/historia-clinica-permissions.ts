@@ -26,6 +26,12 @@ export function canOpenHistoriaClinica(user: Pick<AuthUser, "role" | "permission
     : hasUserPermission(user, "atenciones_individuales.view");
 }
 
+export function canOpenHistoriaMedica(user: Pick<AuthUser, "role" | "permissions">): boolean {
+  return user.permissions === undefined
+    ? canOpenHistoriaClinica(user)
+    : hasUserPermission(user, "atenciones_individuales.medical_history");
+}
+
 export function canCreateAtencionIndividual(user: Pick<AuthUser, "role" | "permissions">): boolean {
   return user.permissions === undefined
     ? user.role !== "enfermeria" && CLINICAL_HISTORY_EDITOR_ROLES.has(user.role)
