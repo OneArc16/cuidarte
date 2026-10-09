@@ -11,27 +11,38 @@ import {
   buildAtencionIndividualDetailPath,
 } from "../lib/atenciones-individuales-paths";
 import { canCreateAtencionIndividual } from "../lib/historia-clinica-permissions";
-import { useHistoriaClinicaQuery } from "../model/atenciones-individuales-queries";
+import {
+  useHistoriaClinicaQuery,
+  useMedicalHistoriaClinicaQuery,
+} from "../model/atenciones-individuales-queries";
 
 type AtencionIndividualHistoryPageProps = {
   adultoMayorId: string;
+  historyType?: "clinical" | "medical";
   navigate: Navigate;
   user: AuthUser;
 };
 
 export function AtencionIndividualHistoryPage({
   adultoMayorId,
+  historyType = "clinical",
   navigate,
   user,
 }: AtencionIndividualHistoryPageProps) {
-  const historyQuery = useHistoriaClinicaQuery(adultoMayorId);
+  const clinicalHistoryQuery = useHistoriaClinicaQuery(adultoMayorId, historyType === "clinical");
+  const medicalHistoryQuery = useMedicalHistoriaClinicaQuery(
+    adultoMayorId,
+    historyType === "medical",
+  );
+  const historyQuery = historyType === "medical" ? medicalHistoryQuery : clinicalHistoryQuery;
   const canCreate = canCreateAtencionIndividual(user);
+  const historyLabel = historyType === "medical" ? "Historia médica" : "Historia clinica";
 
   if (historyQuery.isLoading) {
     return (
       <section className="adultos-empty" aria-busy="true">
-        <p className="eyebrow">Historia clinica</p>
-        <h2>Cargando historia clinica...</h2>
+        <p className="eyebrow">{historyLabel}</p>
+        <h2>Cargando {historyLabel.toLowerCase()}...</h2>
       </section>
     );
   }
@@ -39,8 +50,8 @@ export function AtencionIndividualHistoryPage({
   if (historyQuery.isError || historyQuery.data === undefined) {
     return (
       <section className="adultos-empty" aria-labelledby="historia-clinica-error-title">
-        <p className="eyebrow">Historia clinica</p>
-        <h2 id="historia-clinica-error-title">No fue posible cargar la historia clinica</h2>
+        <p className="eyebrow">{historyLabel}</p>
+        <h2 id="historia-clinica-error-title">No fue posible cargar la historia</h2>
         <p>{resolveAtencionIndividualApiError(historyQuery.error)}</p>
         <button
           className="outline-action"
@@ -59,7 +70,7 @@ export function AtencionIndividualHistoryPage({
   return (
     <section className="adultos-form-stack" aria-labelledby="historia-clinica-title">
       <h1 className="visually-hidden" id="historia-clinica-title">
-        Historia clinica del adulto mayor
+        {historyLabel} del adulto mayor
       </h1>
 
       <div className="adultos-form-nav">
@@ -71,7 +82,7 @@ export function AtencionIndividualHistoryPage({
           <ChevronLeft aria-hidden="true" />
           <span>Volver</span>
         </button>
-        <span className="adultos-form-nav__context">Historia clinica</span>
+        <span className="adultos-form-nav__context">{historyLabel}</span>
       </div>
 
       <section className="atencion-patient-summary" aria-label="Resumen del adulto mayor">
@@ -102,7 +113,7 @@ export function AtencionIndividualHistoryPage({
       <div className="atencion-history-header">
         <div>
           <span className="eyebrow">Atenciones registradas</span>
-          <h2>Seguimiento clinico</h2>
+          <h2>{historyType === "medical" ? "Seguimiento médico" : "Seguimiento clinico"}</h2>
           <p>
             {canCreate
               ? "Aqui puedes revisar tus atenciones y retomar su edicion sin duplicar formularios."

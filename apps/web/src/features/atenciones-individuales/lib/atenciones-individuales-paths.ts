@@ -6,6 +6,10 @@ export function buildHistoriaClinicaPath(adultoMayorId: string): string {
   return `/adultos-mayores/${adultoMayorId}/historia-clinica`;
 }
 
+export function buildHistoriaMedicaPath(adultoMayorId: string): string {
+  return `/adultos-mayores/${adultoMayorId}/historia-medica`;
+}
+
 export function buildAtencionIndividualDetailPath(
   adultoMayorId: string,
   atencionId: string,
@@ -15,6 +19,7 @@ export function buildAtencionIndividualDetailPath(
 
 const ATENCION_CREATE_PATH_PATTERN = /^\/adultos-mayores\/([^/]+)\/atenciones\/new$/;
 const HISTORIA_CLINICA_PATH_PATTERN = /^\/adultos-mayores\/([^/]+)\/historia-clinica$/;
+const HISTORIA_MEDICA_PATH_PATTERN = /^\/adultos-mayores\/([^/]+)\/historia-medica$/;
 const ATENCION_DETAIL_PATH_PATTERN = /^\/adultos-mayores\/([^/]+)\/atenciones\/([^/]+)$/;
 
 export function getAtencionIndividualCreateAdultoIdFromPath(path: string): string | null {
@@ -25,6 +30,12 @@ export function getAtencionIndividualCreateAdultoIdFromPath(path: string): strin
 
 export function getHistoriaClinicaAdultoIdFromPath(path: string): string | null {
   const match = HISTORIA_CLINICA_PATH_PATTERN.exec(path);
+
+  return match?.[1] ?? null;
+}
+
+export function getHistoriaMedicaAdultoIdFromPath(path: string): string | null {
+  const match = HISTORIA_MEDICA_PATH_PATTERN.exec(path);
 
   return match?.[1] ?? null;
 }

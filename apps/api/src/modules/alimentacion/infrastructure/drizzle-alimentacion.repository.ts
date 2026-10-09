@@ -229,7 +229,10 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         documentNumber: adultosMayores.documentNumber,
         names: adultosMayores.names,
         surnames: adultosMayores.surnames,
-        alreadyRegistered: sql<boolean>`count(${alimentacionRegistros.id}) > 0`,
+        // `alreadyRegistered` means that every requested day is occupied.  A person with a
+        // record on only one of several selected days must remain selectable so the form can
+        // explain the partial conflict instead of silently leaving them out of "Agregar todos".
+        alreadyRegistered: sql<boolean>`count(${alimentacionRegistros.id}) >= ${query.deliveryDates.length}`,
         registeredDeliveryDates: sql<
           string[]
         >`coalesce(json_agg(distinct ${alimentacionRegistros.deliveryDate}::text) filter (where ${alimentacionRegistros.deliveryDate} is not null), '[]'::json)`,
@@ -712,22 +715,20 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
   async createMany(command: CreateAlimentacionBatchRecordCommand): Promise<number> {
     return await this.database.db.transaction(async (tx) => {
       const now = new Date();
-      const recordsToCreate = command.deliveryDates.flatMap((deliveryDate) =>
-        command.registros.map((registro) => ({
-          tenantId: command.tenantId,
-          adultoMayorId: registro.adultoMayorId,
-          deliveryDate,
-          organizer: command.organizer,
-          refrigerio1: registro.refrigerio1,
-          almuerzo: registro.almuerzo,
-          refrigerio2: registro.refrigerio2,
-          auxilioTransporte: registro.auxilioTransporte,
-          createdByUserId: command.actorUserId,
-          updatedByUserId: command.actorUserId,
-          createdAt: now,
-          updatedAt: now,
-        })),
-      );
+      const recordsToCreate = command.registros.map((registro) => ({
+        tenantId: command.tenantId,
+        adultoMayorId: registro.adultoMayorId,
+        deliveryDate: registro.deliveryDate,
+        organizer: command.organizer,
+        refrigerio1: registro.refrigerio1,
+        almuerzo: registro.almuerzo,
+        refrigerio2: registro.refrigerio2,
+        auxilioTransporte: registro.auxilioTransporte,
+        createdByUserId: command.actorUserId,
+        updatedByUserId: command.actorUserId,
+        createdAt: now,
+        updatedAt: now,
+      }));
       let createdCount = 0;
 
       for (
@@ -751,7 +752,8 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         metadata: {
           deliveryDates: command.deliveryDates,
           organizer: command.organizer,
-          adultoMayorCount: command.registros.length,
+          adultoMayorCount: new Set(command.registros.map((registro) => registro.adultoMayorId))
+            .size,
           createdCount,
         },
       });

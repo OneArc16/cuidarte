@@ -125,6 +125,10 @@ export function AlimentacionBatchForm({
       ),
     );
   }, [deferredSelectedAdultoSearch, selectedRows]);
+  const projectedRecordCount = selectedRows.reduce(
+    (total, row) => total + getMissingDeliveryDateCount(row.adultoMayor, deliveryDates),
+    0,
+  );
 
   useEffect(() => {
     setValue("tenantId", selectedTenantId, { shouldDirty: false });
@@ -159,10 +163,9 @@ export function AlimentacionBatchForm({
   }
 
   function addAdultoMayor(adultoMayor: AlimentacionAdultoOption) {
-    if (adultoMayor.alreadyRegistered) {
-      const registeredDates = adultoMayor.registeredDeliveryDates ?? [];
+    if (isRegisteredForEverySelectedDate(adultoMayor, deliveryDates)) {
       toast.warning(
-        `${adultoMayor.fullName} ya tiene alimentos registrados para ${registeredDates.length === 1 ? "el día seleccionado" : `${registeredDates.length} días seleccionados`}.`,
+        `${adultoMayor.fullName} ya tiene alimentos registrados para todos los días seleccionados.`,
       );
       return;
     }
@@ -173,6 +176,13 @@ export function AlimentacionBatchForm({
     ]);
     setSelectedRowsError(null);
     setAdultoSearch("");
+
+    const registeredDates = getRegisteredDeliveryDates(adultoMayor);
+    if (registeredDates.length > 0) {
+      toast.warning(
+        `${adultoMayor.fullName} ya tiene alimentos registrados para ${registeredDates.join(", ")}. Solo se crearán los días que faltan.`,
+      );
+    }
   }
 
   async function addAllAdultosMayores() {
@@ -196,14 +206,21 @@ export function AlimentacionBatchForm({
     }
 
     const adultosMayores = result.data?.adultosMayores ?? [];
-    const alreadyRegisteredCount = adultosMayores.filter(
-      (adultoMayor) => adultoMayor.alreadyRegistered,
+    const alreadyRegisteredCount = adultosMayores.filter((adultoMayor) =>
+      isRegisteredForEverySelectedDate(adultoMayor, deliveryDates),
     ).length;
+    const partiallyRegisteredCount = adultosMayores.filter((adultoMayor) => {
+      const registeredDates = getRegisteredDeliveryDates(adultoMayor);
+
+      return (
+        registeredDates.length > 0 && !isRegisteredForEverySelectedDate(adultoMayor, deliveryDates)
+      );
+    }).length;
 
     setSelectedRows((currentRows) => {
       const selectedIds = new Set(currentRows.map((row) => row.adultoMayor.id));
       const newRows = adultosMayores
-        .filter((adultoMayor) => !adultoMayor.alreadyRegistered)
+        .filter((adultoMayor) => !isRegisteredForEverySelectedDate(adultoMayor, deliveryDates))
         .filter((adultoMayor) => !selectedIds.has(adultoMayor.id))
         .map((adultoMayor) => createDefaultAlimentacionBatchRow(adultoMayor));
 
@@ -219,7 +236,13 @@ export function AlimentacionBatchForm({
 
     if (alreadyRegisteredCount > 0) {
       toast.warning(
-        `${alreadyRegisteredCount} adulto${alreadyRegisteredCount === 1 ? "" : "s"} mayor${alreadyRegisteredCount === 1 ? "" : "es"} ya tiene${alreadyRegisteredCount === 1 ? "" : "n"} alimentos registrados para uno o más días y fue${alreadyRegisteredCount === 1 ? "" : "ron"} omitido${alreadyRegisteredCount === 1 ? "" : "s"}.`,
+        `${alreadyRegisteredCount} adulto${alreadyRegisteredCount === 1 ? "" : "s"} mayor${alreadyRegisteredCount === 1 ? "" : "es"} ya tiene${alreadyRegisteredCount === 1 ? "" : "n"} alimentos registrados para todos los días seleccionados y fue${alreadyRegisteredCount === 1 ? "" : "ron"} omitido${alreadyRegisteredCount === 1 ? "" : "s"}.`,
+      );
+    }
+
+    if (partiallyRegisteredCount > 0) {
+      toast.warning(
+        `${partiallyRegisteredCount} adulto${partiallyRegisteredCount === 1 ? "" : "s"} mayor${partiallyRegisteredCount === 1 ? "" : "es"} fue${partiallyRegisteredCount === 1 ? "" : "ron"} agregado${partiallyRegisteredCount === 1 ? "" : "s"} con fechas ya registradas. Solo se crearán los días que faltan.`,
       );
     }
   }
@@ -299,7 +322,6 @@ export function AlimentacionBatchForm({
             return;
           }
 
-          const projectedRecordCount = selectedRows.length * values.deliveryDates.length;
           if (projectedRecordCount > ALIMENTACION_MAX_BATCH_RECORDS) {
             setSelectedRowsError(
               "El lote supera el maximo de 10.000 entregas. Reduce los adultos o los dias seleccionados.",
@@ -321,8 +343,8 @@ export function AlimentacionBatchForm({
       <section className="alimentacion-form-shell">
         <aside className="alimentacion-form-summary">
           <div className="alimentacion-form-summary__metric">
-            <span className="eyebrow">Entregas proyectadas</span>
-            <strong>{selectedRows.length * deliveryDates.length}</strong>
+            <span className="eyebrow">Entregas por crear</span>
+            <strong>{projectedRecordCount}</strong>
             <small>
               Para {deliveryDates.length} {deliveryDates.length === 1 ? "día" : "días"}
             </small>
@@ -683,9 +705,7 @@ export function AlimentacionBatchForm({
           aria-label="Guardar alimentación"
           disabled={isPending}
         >
-          {isPending
-            ? "Guardando..."
-            : `Guardar ${selectedRows.length * deliveryDates.length} entregas`}
+          {isPending ? "Guardando..." : `Guardar ${projectedRecordCount} entregas`}
         </button>
       </div>
 
@@ -709,9 +729,7 @@ export function AlimentacionBatchForm({
               aria-label="Guardar alimentación"
               disabled={isPending}
             >
-              {isPending
-                ? "Guardando..."
-                : `Guardar ${selectedRows.length * deliveryDates.length} entregas`}
+              {isPending ? "Guardando..." : `Guardar ${projectedRecordCount} entregas`}
             </button>
           </div>
         </div>
@@ -726,4 +744,30 @@ function normalizeSearchValue(value: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+}
+
+function getRegisteredDeliveryDates(adultoMayor: AlimentacionAdultoOption): string[] {
+  return [...new Set(adultoMayor.registeredDeliveryDates ?? [])].sort();
+}
+
+function isRegisteredForEverySelectedDate(
+  adultoMayor: AlimentacionAdultoOption,
+  deliveryDates: string[],
+): boolean {
+  if (deliveryDates.length === 0) {
+    return false;
+  }
+
+  const registeredDates = new Set(getRegisteredDeliveryDates(adultoMayor));
+
+  return deliveryDates.every((deliveryDate) => registeredDates.has(deliveryDate));
+}
+
+function getMissingDeliveryDateCount(
+  adultoMayor: AlimentacionAdultoOption,
+  deliveryDates: string[],
+): number {
+  const registeredDates = new Set(getRegisteredDeliveryDates(adultoMayor));
+
+  return deliveryDates.filter((deliveryDate) => !registeredDates.has(deliveryDate)).length;
 }

@@ -493,6 +493,51 @@ describe("App alimentacion flow", () => {
     });
   });
 
+  it("adds adults with a registration on only some selected days when adding all", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-04-14T12:00:00.000Z"));
+    const partiallyRegisteredAdulto = {
+      ...alimentacionSecondAdultoOptionFixture,
+      alreadyRegistered: true,
+      registeredDeliveryDates: ["2026-04-14"],
+    };
+    let queriedDeliveryDates: string[] = [];
+    server.use(
+      mockAuthMe({
+        ...authUserFixture,
+        permissions: [
+          "alimentacion.view",
+          "alimentacion.create",
+          "alimentacion.create_multiple_dates",
+        ],
+      }),
+      http.get(
+        "http://localhost:3001/api/registro-alimentacion/adultos-mayores-options",
+        ({ request }) => {
+          queriedDeliveryDates = new URL(request.url).searchParams.getAll("deliveryDates");
+
+          return HttpResponse.json({ adultosMayores: [partiallyRegisteredAdulto] });
+        },
+      ),
+    );
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderAppAtPath("/registro-alimentacion/new");
+
+    await user.click(await screen.findByRole("button", { name: /Días de entrega:/i }));
+    await user.click(screen.getByRole("button", { name: "Limpiar" }));
+    expect(screen.getByText("Selecciona uno o varios días")).toBeInTheDocument();
+    await user.click(screen.getByText("14", { selector: "button" }));
+    await user.click(screen.getByText("15", { selector: "button" }));
+    await user.click(screen.getByText("16", { selector: "button" }));
+    await user.click(screen.getByRole("button", { name: "Listo" }));
+    await user.click(await screen.findByRole("button", { name: "Agregar todos" }));
+
+    expect(queriedDeliveryDates).toEqual(["2026-04-14", "2026-04-15", "2026-04-16"]);
+    expect(
+      await screen.findByLabelText(/Refrigerio 1 de Daniel Andres Castano Navarro/i),
+    ).toBeInTheDocument();
+  });
+
   it("marks and clears all item statuses with row actions", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-04-24T12:00:00.000Z"));

@@ -301,6 +301,7 @@ export type CreateAlimentacionBatchRecordCommand = {
   organizer: AlimentacionOrganizer;
   registros: Array<{
     adultoMayorId: string;
+    deliveryDate: string;
     refrigerio1: AlimentacionStatus;
     almuerzo: AlimentacionStatus;
     refrigerio2: AlimentacionStatus;

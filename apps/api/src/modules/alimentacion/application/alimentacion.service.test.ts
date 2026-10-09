@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { type AuthUser } from "@cuidarte/contracts";
+import { createAlimentacionBatchRequestSchema, type AuthUser } from "@cuidarte/contracts";
 import {
   BadRequestException,
   ConflictException,
@@ -318,7 +318,38 @@ describe("AlimentacionService", () => {
     );
   });
 
-  it("rejects batch creation when a record already exists for the same date", async () => {
+  it("creates only the missing dates when a batch has existing records", async () => {
+    const repository = createRepository({
+      existingByAdultosAndDates: [alimentacionRecord],
+    });
+    const service = new AlimentacionService(repository);
+
+    const result = await service.createBatch(
+      {
+        tenantId: null,
+        deliveryDates: ["2026-04-24", "2026-04-27"],
+        organizer: "nutricionista",
+        registros: [
+          {
+            adultoMayorId,
+            refrigerio1: "entregado",
+            almuerzo: "entregado",
+            refrigerio2: "entregado",
+            auxilioTransporte: "entregado",
+          },
+        ],
+      },
+      adminUser,
+    );
+
+    assert.equal(result.createdCount, 1);
+    assert.deepEqual(
+      repository.createdCommands[0]?.registros.map((registro) => registro.deliveryDate),
+      ["2026-04-27"],
+    );
+  });
+
+  it("rejects batch creation when every selected date already has a record", async () => {
     const repository = createRepository({
       existingByAdultosAndDates: [alimentacionRecord],
     });
@@ -345,6 +376,64 @@ describe("AlimentacionService", () => {
         ),
       { constructor: ConflictException },
     );
+  });
+
+  it("enforces the batch limit after excluding existing records", async () => {
+    const registros = Array.from({ length: 323 }, (_, index) => ({
+      adultoMayorId: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+      refrigerio1: "entregado" as const,
+      almuerzo: "entregado" as const,
+      refrigerio2: "entregado" as const,
+      auxilioTransporte: "entregado" as const,
+    }));
+    const repository = createRepository({
+      adultosMayoresByIds: registros.map((registro) => ({
+        ...adultoMayorRecord,
+        id: registro.adultoMayorId,
+      })),
+    });
+    const service = new AlimentacionService(repository);
+
+    await assert.rejects(
+      () =>
+        service.createBatch(
+          {
+            tenantId: null,
+            deliveryDates: Array.from(
+              { length: 31 },
+              (_, index) => `2026-01-${String(index + 1).padStart(2, "0")}`,
+            ),
+            organizer: "nutricionista",
+            registros,
+          },
+          adminUser,
+        ),
+      { constructor: BadRequestException },
+    );
+
+    assert.equal(repository.createdCommands.length, 0);
+  });
+
+  it("allows the client to submit a batch whose actual count depends on existing records", () => {
+    const registros = Array.from({ length: 323 }, (_, index) => ({
+      adultoMayorId: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+      refrigerio1: "entregado" as const,
+      almuerzo: "entregado" as const,
+      refrigerio2: "entregado" as const,
+      auxilioTransporte: "entregado" as const,
+    }));
+
+    const result = createAlimentacionBatchRequestSchema.safeParse({
+      tenantId: null,
+      deliveryDates: Array.from(
+        { length: 31 },
+        (_, index) => `2026-01-${String(index + 1).padStart(2, "0")}`,
+      ),
+      organizer: "nutricionista",
+      registros,
+    });
+
+    assert.equal(result.success, true);
   });
 
   it("returns the existing record id when preloading an adult for the selected date", async () => {
@@ -659,6 +748,7 @@ function createRepository(
     existingByAdultoAndDate?: AlimentacionRecord | null;
     records?: AlimentacionRecord[];
     adultoMayorById?: AlimentacionAdultoOptionRecord | null;
+    adultosMayoresByIds?: AlimentacionAdultoOptionRecord[];
     formatoEntregaRecords?: AlimentacionRecord[];
     deletedRecord?: AlimentacionRecord | null;
   } = {},
@@ -679,6 +769,7 @@ function createRepository(
     organizer: AlimentacionRecord["organizer"];
     registros: Array<{
       adultoMayorId: string;
+      deliveryDate: string;
       refrigerio1: AlimentacionRecord["refrigerio1"];
       almuerzo: AlimentacionRecord["almuerzo"];
       refrigerio2: AlimentacionRecord["refrigerio2"];
@@ -703,6 +794,7 @@ function createRepository(
     organizer: AlimentacionRecord["organizer"];
     registros: Array<{
       adultoMayorId: string;
+      deliveryDate: string;
       refrigerio1: AlimentacionRecord["refrigerio1"];
       almuerzo: AlimentacionRecord["almuerzo"];
       refrigerio2: AlimentacionRecord["refrigerio2"];
@@ -750,6 +842,10 @@ function createRepository(
         : [];
     },
     async findAdultosMayoresByIds(requestTenantId, adultoMayorIds) {
+      if (overrides.adultosMayoresByIds !== undefined) {
+        return requestTenantId === tenantId ? overrides.adultosMayoresByIds : [];
+      }
+
       return adultoMayorIds.includes(adultoMayorId) && requestTenantId === tenantId
         ? [adultoMayorRecord]
         : [];
@@ -817,7 +913,7 @@ function createRepository(
     },
     async createMany(command) {
       createdCommands.push(command);
-      return command.registros.length * command.deliveryDates.length;
+      return command.registros.length;
     },
     async update(command) {
       return {

@@ -37,6 +37,7 @@ describe("DrizzleAlimentacionRepository", () => {
       organizer: "director",
       registros: Array.from({ length: 1_001 }, (_, index) => ({
         adultoMayorId: "adulto-mayor-" + index,
+        deliveryDate: "2026-04-24",
         refrigerio1: "entregado",
         almuerzo: "entregado",
         refrigerio2: "entregado",

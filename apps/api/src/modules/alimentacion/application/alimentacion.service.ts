@@ -10,6 +10,7 @@ import {
   type AuthUser,
   type CreateAlimentacionBatchRequest,
   type UpdateAlimentacionRequest,
+  ALIMENTACION_MAX_BATCH_RECORDS,
   alimentacionAdultoOptionSchema,
   alimentacionDetailSchema,
   alimentacionListItemSchema,
@@ -171,10 +172,23 @@ export class AlimentacionService {
       deliveryDates,
       adultoMayorIds,
     });
+    const existingRecordKeys = new Set(
+      existingRecords.map((record) => `${record.adultoMayorId}:${record.deliveryDate}`),
+    );
+    const registrosToCreate = command.registros.flatMap((registro) =>
+      deliveryDates
+        .filter(
+          (deliveryDate) => !existingRecordKeys.has(`${registro.adultoMayorId}:${deliveryDate}`),
+        )
+        .map((deliveryDate) => ({
+          ...registro,
+          deliveryDate,
+        })),
+    );
 
-    if (existingRecords.length > 0) {
+    if (registrosToCreate.length === 0) {
       throw new ConflictException({
-        message: "Ya existen registros de alimentacion para algunas fechas seleccionadas.",
+        message: "Ya existen registros de alimentacion para todos los dias seleccionados.",
         conflicts: existingRecords.map((record) => ({
           adultoMayorId: record.adultoMayorId,
           fullName: record.fullName,
@@ -183,13 +197,17 @@ export class AlimentacionService {
       });
     }
 
+    if (registrosToCreate.length > ALIMENTACION_MAX_BATCH_RECORDS) {
+      throw new BadRequestException("El lote supera el máximo de entregas permitidas.");
+    }
+
     try {
       const createdCount = await this.alimentacionRepository.createMany({
         tenantId,
         actorUserId: actor.id,
         deliveryDates,
         organizer: command.organizer,
-        registros: command.registros,
+        registros: registrosToCreate,
       });
 
       return {

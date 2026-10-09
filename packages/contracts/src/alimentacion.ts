@@ -267,16 +267,7 @@ export const createAlimentacionBatchRequestSchema = z.object({
         message: "No repitas adultos mayores en el mismo registro.",
       },
     ),
-})
-  .superRefine((request, context) => {
-    if (request.deliveryDates.length * request.registros.length > ALIMENTACION_MAX_BATCH_RECORDS) {
-      context.addIssue({
-        code: "custom",
-        path: ["deliveryDates"],
-        message: "El lote supera el máximo de entregas permitidas.",
-      });
-    }
-  });
+});
 
 export const updateAlimentacionRequestSchema = z.object({
   deliveryDate: alimentacionDateSchema,

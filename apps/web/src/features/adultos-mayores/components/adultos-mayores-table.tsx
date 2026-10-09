@@ -1,4 +1,4 @@
-import { type AdultoMayorListItem } from "@cuidarte/contracts";
+import { type AdultoMayorAttentionFilter, type AdultoMayorListItem } from "@cuidarte/contracts";
 import { ClipboardPlus, HeartPulse, Pencil, Trash2, Utensils } from "lucide-react";
 
 import {
@@ -9,10 +9,12 @@ import {
 
 type AdultosMayoresTableProps = {
   adultosMayores: AdultoMayorListItem[];
+  attentionType: AdultoMayorAttentionFilter;
   canManageAlimentacion: boolean;
   canCreateAtencionIndividual: boolean;
   canManageAdultosMayores: boolean;
   canOpenHistoriaClinica: boolean;
+  canOpenHistoriaEnfermeria: boolean;
   canManageTrash: boolean;
   hideAtencionIndividualAction: boolean;
   isLoading: boolean;
@@ -20,22 +22,28 @@ type AdultosMayoresTableProps = {
   onOpenAlimentacion: (adultoMayorId: string) => void;
   onOpenAtencionIndividual: (adultoMayorId: string) => void;
   onOpenHistoriaClinica: (adultoMayorId: string) => void;
+  onOpenHistoriaEnfermeria: (adultoMayorId: string) => void;
+  onOpenHistoriaMedica: (adultoMayorId: string) => void;
   onEdit: (adultoMayorId: string) => void;
   onSendToTrash: (adultoMayor: AdultoMayorListItem) => void;
 };
 
 export function AdultosMayoresTable({
   adultosMayores,
+  attentionType,
   canManageAlimentacion,
   canCreateAtencionIndividual,
   canManageAdultosMayores,
   canOpenHistoriaClinica,
+  canOpenHistoriaEnfermeria,
   canManageTrash,
   hideAtencionIndividualAction,
   isLoading,
   onOpenAlimentacion,
   onOpenAtencionIndividual,
   onOpenHistoriaClinica,
+  onOpenHistoriaEnfermeria,
+  onOpenHistoriaMedica,
   onEdit,
   onSendToTrash,
   showTenantColumn,
@@ -134,16 +142,35 @@ export function AdultosMayoresTable({
                       <Trash2 aria-hidden="true" />
                     </button>
                   ) : null}
-                  <button
-                    className="adultos-row-action adultos-row-action--historia"
-                    type="button"
-                    aria-label={`Historia clinica de ${adultoMayor.names} ${adultoMayor.surnames}`}
-                    data-tooltip="Historia clinica"
-                    disabled={!canOpenHistoriaClinica}
-                    onClick={() => onOpenHistoriaClinica(adultoMayor.id)}
-                  >
-                    <ClipboardPlus aria-hidden="true" />
-                  </button>
+                  {attentionType === "nursing" ? (
+                    <button
+                      className="adultos-row-action adultos-row-action--historia"
+                      type="button"
+                      aria-label={`Historia de enfermería de ${adultoMayor.names} ${adultoMayor.surnames}`}
+                      data-tooltip="Historia de enfermería"
+                      disabled={!canOpenHistoriaEnfermeria}
+                      onClick={() => onOpenHistoriaEnfermeria(adultoMayor.id)}
+                    >
+                      <ClipboardPlus aria-hidden="true" />
+                    </button>
+                  ) : (
+                    <button
+                      className="adultos-row-action adultos-row-action--historia"
+                      type="button"
+                      aria-label={`${attentionType === "medical" ? "Historia médica" : "Historia clinica"} de ${adultoMayor.names} ${adultoMayor.surnames}`}
+                      data-tooltip={
+                        attentionType === "medical" ? "Historia médica" : "Historia clinica"
+                      }
+                      disabled={!canOpenHistoriaClinica}
+                      onClick={() =>
+                        attentionType === "medical"
+                          ? onOpenHistoriaMedica(adultoMayor.id)
+                          : onOpenHistoriaClinica(adultoMayor.id)
+                      }
+                    >
+                      <ClipboardPlus aria-hidden="true" />
+                    </button>
+                  )}
                 </div>
               </td>
             </tr>

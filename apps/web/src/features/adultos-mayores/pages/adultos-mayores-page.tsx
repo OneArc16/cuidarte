@@ -19,6 +19,7 @@ import {
   getAtencionIndividualCreateAdultoIdFromPath,
   getAtencionIndividualDetailIdsFromPath,
   getHistoriaClinicaAdultoIdFromPath,
+  getHistoriaMedicaAdultoIdFromPath,
 } from "@/features/atenciones-individuales/lib/atenciones-individuales-paths";
 import { AdultoMayorCreatePage } from "./adulto-mayor-create-page";
 import { AdultoMayorEditPage } from "./adulto-mayor-edit-page";
@@ -88,14 +89,24 @@ export function AdultosMayoresPage({ navigate, path, user }: AdultosMayoresPageP
     );
   }
 
+  const historiaMedicaAdultoMayorId = getHistoriaMedicaAdultoIdFromPath(path);
+
+  if (historiaMedicaAdultoMayorId !== null) {
+    return (
+      <AtencionIndividualHistoryPage
+        adultoMayorId={historiaMedicaAdultoMayorId}
+        historyType="medical"
+        navigate={navigate}
+        user={user}
+      />
+    );
+  }
+
   const atencionDetailIds = getAtencionIndividualDetailIdsFromPath(path);
 
   if (atencionDetailIds !== null) {
     return (
-      <AtencionIndividualDetailPage
-        atencionId={atencionDetailIds.atencionId}
-        navigate={navigate}
-      />
+      <AtencionIndividualDetailPage atencionId={atencionDetailIds.atencionId} navigate={navigate} />
     );
   }
 

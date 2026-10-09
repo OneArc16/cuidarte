@@ -90,9 +90,10 @@ describe("App adultos mayores flow", () => {
   });
 
   it("filters adults by registered attention type", async () => {
+    let attentionType: string | null = null;
     server.use(
       http.get("http://localhost:3001/api/adultos-mayores", ({ request }) => {
-        const attentionType = new URL(request.url).searchParams.get("attentionType");
+        attentionType = new URL(request.url).searchParams.get("attentionType");
 
         return HttpResponse.json({
           adultosMayores: attentionType === "medical" ? [adultoMayorFixture] : [],
@@ -109,6 +110,48 @@ describe("App adultos mayores flow", () => {
     await waitFor(() => {
       expect(screen.getByText(adultoMayorFixture.names)).toBeInTheDocument();
     });
+    expect(attentionType).toBe("medical");
+    await user.click(
+      screen.getByRole("button", {
+        name: `Historia médica de ${adultoMayorFixture.names} ${adultoMayorFixture.surnames}`,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        `/adultos-mayores/${adultoMayorFixture.id}/historia-medica`,
+      );
+    });
+    expect(await screen.findByText("Seguimiento médico")).toBeInTheDocument();
+  });
+
+  it("opens nursing history from the nursing attention filter", async () => {
+    server.use(
+      http.get("http://localhost:3001/api/adultos-mayores", ({ request }) => {
+        const attentionType = new URL(request.url).searchParams.get("attentionType");
+
+        return HttpResponse.json({
+          adultosMayores: attentionType === "nursing" ? [adultoMayorFixture] : [],
+        });
+      }),
+    );
+    server.use(mockAuthMe(authUserFixture));
+    const user = userEvent.setup();
+    renderAppAtPath("/adultos-mayores");
+
+    await user.selectOptions(await screen.findByLabelText("Atenciones registradas"), "nursing");
+    await user.click(
+      await screen.findByRole("button", {
+        name: `Historia de enfermería de ${adultoMayorFixture.names} ${adultoMayorFixture.surnames}`,
+      }),
+    );
+
+    await waitFor(() => {
+      expect(window.location.pathname).toBe(
+        `/atenciones-enfermeria/adultos-mayores/${adultoMayorFixture.id}/history`,
+      );
+    });
+    expect(await screen.findByText("Historia compartida")).toBeInTheDocument();
   });
 
   it("creates an adulto mayor from the tabbed form", async () => {

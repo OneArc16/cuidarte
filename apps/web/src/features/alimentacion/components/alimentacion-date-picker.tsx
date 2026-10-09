@@ -197,9 +197,19 @@ export function AlimentacionDatePicker({
                     ? "Selecciona uno o varios días"
                     : `${selectedDates.length} ${selectedDates.length === 1 ? "día" : "días"} seleccionados`}
                 </span>
-                <button type="button" onClick={() => setIsCalendarOpen(false)}>
-                  Listo
-                </button>
+                <div className="alimentacion-date-picker__calendar-actions">
+                  <button
+                    className="alimentacion-date-picker__clear"
+                    type="button"
+                    disabled={selectedDates.length === 0}
+                    onClick={() => onChange([])}
+                  >
+                    Limpiar
+                  </button>
+                  <button type="button" onClick={() => setIsCalendarOpen(false)}>
+                    Listo
+                  </button>
+                </div>
               </div>
             </div>
           ) : null}

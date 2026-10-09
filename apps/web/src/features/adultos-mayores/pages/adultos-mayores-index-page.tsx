@@ -8,14 +8,19 @@ import { useState } from "react";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { useSessionStorageState } from "@/shared/hooks/use-session-storage-state";
-import { buildAtencionIndividualCreatePath } from "@/features/atenciones-individuales/lib/atenciones-individuales-paths";
-import { buildHistoriaClinicaPath } from "@/features/atenciones-individuales/lib/atenciones-individuales-paths";
+import {
+  buildAtencionIndividualCreatePath,
+  buildHistoriaClinicaPath,
+  buildHistoriaMedicaPath,
+} from "@/features/atenciones-individuales/lib/atenciones-individuales-paths";
 import { canManageAlimentacion } from "@/features/alimentacion/lib/alimentacion-permissions";
 import { buildAlimentacionCreateFromAdultoPath } from "@/features/alimentacion/lib/alimentacion-paths";
 import {
   canCreateAtencionIndividual,
   canOpenHistoriaClinica,
 } from "@/features/atenciones-individuales/lib/historia-clinica-permissions";
+import { buildAtencionesEnfermeriaHistoryPath } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-paths";
+import { canReadAtencionesEnfermeria } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-permissions";
 import {
   canManageAdultosMayores,
   canManageAdultosMayoresTrash,
@@ -64,6 +69,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
   const canCreateClinicalAttention = canCreateAtencionIndividual(user);
   const hideAtencionIndividualAction = user.role === "enfermeria";
   const canOpenClinicalHistory = canOpenHistoriaClinica(user);
+  const canOpenNursingHistory = canReadAtencionesEnfermeria(user);
   const canCreateFeedingRecord = canManageAlimentacion(user);
   const canImportRecords = canImportAdultosMayores(user);
   const canManageTrash = canManageAdultosMayoresTrash(user);
@@ -134,6 +140,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
 
       <AdultosMayoresTable
         adultosMayores={adultosMayores}
+        attentionType={attentionType}
         canManageAlimentacion={canCreateFeedingRecord}
         isLoading={adultosMayoresQuery.isLoading}
         showTenantColumn={showTenantColumn}
@@ -141,6 +148,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
         canManageAdultosMayores={canManageRecords}
         canManageTrash={canManageTrash}
         canOpenHistoriaClinica={canOpenClinicalHistory}
+        canOpenHistoriaEnfermeria={canOpenNursingHistory}
         hideAtencionIndividualAction={hideAtencionIndividualAction}
         onOpenAlimentacion={(adultoMayorId) =>
           navigate(buildAlimentacionCreateFromAdultoPath(adultoMayorId))
@@ -149,6 +157,10 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
           navigate(buildAtencionIndividualCreatePath(adultoMayorId))
         }
         onOpenHistoriaClinica={(adultoMayorId) => navigate(buildHistoriaClinicaPath(adultoMayorId))}
+        onOpenHistoriaEnfermeria={(adultoMayorId) =>
+          navigate(buildAtencionesEnfermeriaHistoryPath(adultoMayorId))
+        }
+        onOpenHistoriaMedica={(adultoMayorId) => navigate(buildHistoriaMedicaPath(adultoMayorId))}
         onEdit={(adultoMayorId) => navigate(buildAdultoMayorEditPath(adultoMayorId))}
         onSendToTrash={(adultoMayor) => {
           sendToTrashMutation.reset();

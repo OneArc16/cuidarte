@@ -2641,10 +2641,32 @@
   font-weight: 700;
 }
 
+.alimentacion-date-picker__calendar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.alimentacion-date-picker__calendar-footer .alimentacion-date-picker__clear {
+  border: 1px solid #c8ddd4;
+  background: #fff;
+  color: #376258;
+}
+
+.alimentacion-date-picker__calendar-footer .alimentacion-date-picker__clear:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .alimentacion-date-picker__calendar-footer button:hover,
 .alimentacion-date-picker__calendar-footer button:focus-visible {
   background: #d9efe5;
   outline: none;
+}
+
+.alimentacion-date-picker__calendar-footer .alimentacion-date-picker__clear:hover:not(:disabled),
+.alimentacion-date-picker__calendar-footer .alimentacion-date-picker__clear:focus-visible {
+  background: #f2f7f4;
 }
 
 .alimentacion-date-picker .rdp-root {
