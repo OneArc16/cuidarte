@@ -42,11 +42,7 @@ export function AtencionIndividualCreatePage({
         <p className="eyebrow">Atencion individual</p>
         <h2 id="atencion-lookup-error-title">No fue posible iniciar la atencion</h2>
         <p>{resolveAtencionIndividualApiError(lookupQuery.error)}</p>
-        <button
-          className="outline-action"
-          type="button"
-          onClick={() => navigate(historyPath)}
-        >
+        <button className="outline-action" type="button" onClick={() => navigate(historyPath)}>
           <ChevronLeft aria-hidden="true" />
           <span>Volver</span>
         </button>
@@ -75,6 +71,7 @@ export function AtencionIndividualCreatePage({
       <AtencionIndividualForm
         mode="create"
         adultoMayor={lookupQuery.data.adultoMayor}
+        antecedentesVigentes={lookupQuery.data.antecedentesVigentes}
         suggestedConsecutive={lookupQuery.data.suggestedConsecutive}
         isPending={createMutation.isPending}
         error={
@@ -83,7 +80,9 @@ export function AtencionIndividualCreatePage({
             : resolveAtencionIndividualApiError(createMutation.error)
         }
         onCancel={() => navigate(historyPath)}
-        onOpenNursingAttention={(atencionId) => navigate(buildAtencionEnfermeriaDetailPath(atencionId))}
+        onOpenNursingAttention={(atencionId) =>
+          navigate(buildAtencionEnfermeriaDetailPath(atencionId))
+        }
         onSubmit={async (values) => {
           const detail = await createMutation.mutateAsync(values);
 

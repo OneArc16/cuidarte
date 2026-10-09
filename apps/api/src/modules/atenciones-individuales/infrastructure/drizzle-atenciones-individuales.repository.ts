@@ -50,6 +50,8 @@ type AtencionIndividualRow = Omit<
   adultoSex: string;
   adultoEps: string | null;
   adultoHealthRegime: string | null;
+  adultoAntecedentesPersonalesVigentes: string | null;
+  adultoAntecedentesFamiliaresVigentes: string | null;
   createdByUserRole: AtencionIndividualHistoryItemRecord["createdByUserRole"];
 };
 
@@ -64,6 +66,8 @@ type AtencionIndividualAdultoRow = {
   sex: string;
   eps: string | null;
   healthRegime: string | null;
+  antecedentesPersonalesVigentes: string | null;
+  antecedentesFamiliaresVigentes: string | null;
 };
 
 type AtencionIndividualHistoryRow = {
@@ -255,6 +259,20 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
           })),
         );
       }
+
+      await tx
+        .update(adultosMayores)
+        .set({
+          antecedentesPersonalesVigentes: command.antecedentesPersonales,
+          antecedentesFamiliaresVigentes: command.antecedentesFamiliares,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(adultosMayores.id, command.adultoMayorId),
+            eq(adultosMayores.tenantId, command.tenantId),
+          ),
+        );
 
       await tx.insert(auditLogs).values({
         actorUserId: command.actorUserId,
@@ -474,6 +492,8 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
       sex: adultosMayores.sex,
       eps: sql<string | null>`coalesce(${epsCatalog.name}, ${adultosMayores.eps})`,
       healthRegime: adultosMayores.healthRegime,
+      antecedentesPersonalesVigentes: adultosMayores.antecedentesPersonalesVigentes,
+      antecedentesFamiliaresVigentes: adultosMayores.antecedentesFamiliaresVigentes,
     };
   }
 
@@ -521,6 +541,8 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
       adultoSex: adultosMayores.sex,
       adultoEps: sql<string | null>`coalesce(${epsCatalog.name}, ${adultosMayores.eps})`,
       adultoHealthRegime: adultosMayores.healthRegime,
+      adultoAntecedentesPersonalesVigentes: adultosMayores.antecedentesPersonalesVigentes,
+      adultoAntecedentesFamiliaresVigentes: adultosMayores.antecedentesFamiliaresVigentes,
     };
   }
 
@@ -612,6 +634,8 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
       sex: row.sex,
       eps: row.eps,
       healthRegime: row.healthRegime,
+      antecedentesPersonalesVigentes: row.antecedentesPersonalesVigentes,
+      antecedentesFamiliaresVigentes: row.antecedentesFamiliaresVigentes,
     };
   }
 
@@ -637,6 +661,8 @@ export class DrizzleAtencionesIndividualesRepository implements AtencionesIndivi
         sex: row.adultoSex,
         eps: row.adultoEps,
         healthRegime: row.adultoHealthRegime,
+        antecedentesPersonalesVigentes: row.adultoAntecedentesPersonalesVigentes,
+        antecedentesFamiliaresVigentes: row.adultoAntecedentesFamiliaresVigentes,
       },
       supportFiles,
       createdByUserRole: row.createdByUserRole,

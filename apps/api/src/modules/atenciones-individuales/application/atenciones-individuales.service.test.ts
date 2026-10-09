@@ -97,6 +97,8 @@ const adultoRecord: AtencionIndividualAdultoRecord = {
   sex: "female",
   eps: "Salud Demo",
   healthRegime: "subsidized",
+  antecedentesPersonalesVigentes: "Hipertension arterial",
+  antecedentesFamiliaresVigentes: "Diabetes mellitus",
 };
 
 const atencionRecord: AtencionIndividualRecord = {
@@ -202,6 +204,10 @@ describe("AtencionesIndividualesService", () => {
 
     assert.equal(result.adultoMayor.id, adultoMayorId);
     assert.equal(result.adultoMayor.age, 78);
+    assert.deepEqual(result.antecedentesVigentes, {
+      personales: "Hipertension arterial",
+      familiares: "Diabetes mellitus",
+    });
     assert.equal(result.suggestedConsecutive, 2);
     assert.deepEqual(repository.adultoQueries[0], {
       adultoMayorId,
@@ -542,7 +548,9 @@ function createRepository(
       let filteredRecords = records;
 
       if (query.createdByUserId !== undefined) {
-        filteredRecords = filteredRecords.filter((record) => record.createdByUserId === query.createdByUserId);
+        filteredRecords = filteredRecords.filter(
+          (record) => record.createdByUserId === query.createdByUserId,
+        );
       }
 
       if (query.createdByUserRole !== undefined) {

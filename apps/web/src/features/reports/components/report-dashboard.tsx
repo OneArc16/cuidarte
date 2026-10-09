@@ -19,6 +19,7 @@ type ReportDashboardProps = {
   data: ReportsDashboardResponse | undefined;
   isLoading: boolean;
   isError: boolean;
+  showMonthlyAttentionChart: boolean;
 };
 
 const METRICS = [
@@ -37,7 +38,12 @@ const METRICS = [
   { key: "lunchesDelivered", label: "Almuerzos entregados", icon: Utensils, tone: "green" },
 ] as const;
 
-export function ReportDashboard({ data, isLoading, isError }: ReportDashboardProps) {
+export function ReportDashboard({
+  data,
+  isLoading,
+  isError,
+  showMonthlyAttentionChart,
+}: ReportDashboardProps) {
   return (
     <>
       <section className="reports-dashboard" aria-labelledby="reports-dashboard-title">
@@ -81,7 +87,12 @@ export function ReportDashboard({ data, isLoading, isError }: ReportDashboardPro
             </div>
           </>
         ) : null}
-        {data && !isLoading && !isError ? <ReportDashboardCharts data={data} /> : null}
+        {data && !isLoading && !isError ? (
+          <ReportDashboardCharts
+            data={data}
+            showMonthlyAttentionChart={showMonthlyAttentionChart}
+          />
+        ) : null}
       </section>
     </>
   );

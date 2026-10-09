@@ -17,6 +17,7 @@ import {
 
 type ReportDashboardChartsProps = {
   data: ReportsDashboardResponse;
+  showMonthlyAttentionChart: boolean;
 };
 
 type MonthlyDelivery = {
@@ -54,7 +55,10 @@ const chartGridColor = "#e6eee9";
 const chartTickStyle = { fill: "#657a72", fontSize: 10 };
 const wholeNumberFormatter = new Intl.NumberFormat("es-CO");
 
-export function ReportDashboardCharts({ data }: ReportDashboardChartsProps) {
+export function ReportDashboardCharts({
+  data,
+  showMonthlyAttentionChart,
+}: ReportDashboardChartsProps) {
   const sexData = [
     { label: "Hombres", total: data.sexDistribution.male, color: "#2b6b99" },
     { label: "Mujeres", total: data.sexDistribution.female, color: "#168362" },
@@ -77,65 +81,67 @@ export function ReportDashboardCharts({ data }: ReportDashboardChartsProps) {
         </div>
       </div>
       <div className="reports-chart-grid">
-        <ChartPanel
-          title="Atenciones por mes"
-          description="Comparación mensual de enfermería y medicina."
-          className="reports-chart-panel--bar-hover"
-        >
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart
-              data={monthlyAttentionData}
-              margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
-              barGap={6}
-            >
-              <CartesianGrid stroke={chartGridColor} vertical={false} />
-              <XAxis
-                dataKey="label"
-                tick={chartTickStyle}
-                tickLine={false}
-                axisLine={{ stroke: chartGridColor }}
-              />
-              <YAxis
-                allowDecimals={false}
-                tick={chartTickStyle}
-                tickLine={false}
-                axisLine={false}
-                width={28}
-              />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgb(22 131 98 / 7%)" }} />
-              <Legend
-                align="left"
-                verticalAlign="top"
-                iconType="square"
-                iconSize={10}
-                wrapperStyle={{ paddingLeft: 4, paddingBottom: 8, fontSize: 12 }}
-              />
-              <Bar
-                dataKey="nursingAttendances"
-                name="Enfermería"
-                fill="#168362"
-                maxBarSize={32}
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="medicalAttendances"
-                name="Medicina"
-                fill="#2b6b99"
-                maxBarSize={32}
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-          <AccessibleTable
-            caption="Atenciones por mes"
-            headers={["Mes", "Enfermería", "Medicina"]}
-            rows={monthlyAttentionData.map((point) => [
-              point.month,
-              point.nursingAttendances,
-              point.medicalAttendances,
-            ])}
-          />
-        </ChartPanel>
+        {showMonthlyAttentionChart ? (
+          <ChartPanel
+            title="Atenciones por mes"
+            description="Comparación mensual de enfermería y medicina."
+            className="reports-chart-panel--bar-hover"
+          >
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart
+                data={monthlyAttentionData}
+                margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
+                barGap={6}
+              >
+                <CartesianGrid stroke={chartGridColor} vertical={false} />
+                <XAxis
+                  dataKey="label"
+                  tick={chartTickStyle}
+                  tickLine={false}
+                  axisLine={{ stroke: chartGridColor }}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={chartTickStyle}
+                  tickLine={false}
+                  axisLine={false}
+                  width={28}
+                />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgb(22 131 98 / 7%)" }} />
+                <Legend
+                  align="left"
+                  verticalAlign="top"
+                  iconType="square"
+                  iconSize={10}
+                  wrapperStyle={{ paddingLeft: 4, paddingBottom: 8, fontSize: 12 }}
+                />
+                <Bar
+                  dataKey="nursingAttendances"
+                  name="Enfermería"
+                  fill="#168362"
+                  maxBarSize={32}
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar
+                  dataKey="medicalAttendances"
+                  name="Medicina"
+                  fill="#2b6b99"
+                  maxBarSize={32}
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+            <AccessibleTable
+              caption="Atenciones por mes"
+              headers={["Mes", "Enfermería", "Medicina"]}
+              rows={monthlyAttentionData.map((point) => [
+                point.month,
+                point.nursingAttendances,
+                point.medicalAttendances,
+              ])}
+            />
+          </ChartPanel>
+        ) : null}
 
         {activityData.length > 0 ? (
           <ChartPanel

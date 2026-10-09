@@ -84,6 +84,10 @@ export class AtencionesIndividualesService {
 
     return {
       adultoMayor: this.toAdultoResumen(adultoMayor),
+      antecedentesVigentes: {
+        personales: adultoMayor.antecedentesPersonalesVigentes,
+        familiares: adultoMayor.antecedentesFamiliaresVigentes,
+      },
       suggestedConsecutive,
     };
   }

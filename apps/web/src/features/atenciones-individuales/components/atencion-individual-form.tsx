@@ -118,6 +118,10 @@ type AtencionIndividualFormProps =
   | {
       mode: "create";
       adultoMayor: AtencionIndividualAdultoResumen;
+      antecedentesVigentes: {
+        personales: string | null;
+        familiares: string | null;
+      };
       suggestedConsecutive: number;
       error: string | null;
       isPending: boolean;
@@ -148,6 +152,8 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
   const tabPanelIdPrefix = useId();
   const isReadOnly = props.mode === "view";
   const adultoMayor = props.mode === "create" ? props.adultoMayor : props.detail.adultoMayor;
+  const antecedentesVigentes =
+    props.mode === "create" ? props.antecedentesVigentes : { personales: null, familiares: null };
   const detail = props.mode === "create" ? null : props.detail;
   const nursingHistoryQuery = useAtencionesEnfermeriaHistoryQuery(
     adultoMayor.id,
@@ -165,7 +171,10 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
     resolver: zodResolver(atencionIndividualFormSchema) as Resolver<AtencionIndividualFormValues>,
     defaultValues:
       props.mode === "create"
-        ? createDefaultAtencionIndividualFormValues(props.suggestedConsecutive)
+        ? createDefaultAtencionIndividualFormValues(
+            props.suggestedConsecutive,
+            antecedentesVigentes,
+          )
         : toAtencionIndividualFormValues(props.detail),
     mode: "onBlur",
   });
@@ -180,7 +189,7 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
     props.mode !== "view" && activeSection !== "soportes" && activeSection !== "enfermeria";
   const createDraftStorageKey =
     props.mode === "create" ? buildCreateDraftStorageKey(props.adultoMayor.id) : null;
-  const formError = "error" in props ? props.error ?? null : null;
+  const formError = "error" in props ? (props.error ?? null) : null;
 
   useEffect(() => {
     if (detail !== null) {
@@ -197,7 +206,7 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
 
     const savedDraft = readCreateDraft(
       createDraftStorageKey,
-      createDefaultAtencionIndividualFormValues(props.suggestedConsecutive),
+      createDefaultAtencionIndividualFormValues(props.suggestedConsecutive, antecedentesVigentes),
     );
 
     if (savedDraft === null) {
@@ -206,7 +215,7 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
 
     reset(savedDraft.values);
     setActiveSection(savedDraft.activeSection);
-  }, [createDraftStorageKey, props.mode, reset]);
+  }, [antecedentesVigentes, createDraftStorageKey, props.mode, reset]);
 
   useEffect(() => {
     if (formError === null) {
@@ -264,10 +273,7 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
 
     if (!isFinalSubmitSection) {
       const sectionFields: Array<keyof AtencionIndividualFormValues> = [...currentSection.fields];
-      const isSectionValid = await form.trigger(
-        sectionFields,
-        { shouldFocus: true },
-      );
+      const isSectionValid = await form.trigger(sectionFields, { shouldFocus: true });
 
       if (!isSectionValid) {
         return;
@@ -525,12 +531,37 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
         hidden={activeSection !== "signos"}
       >
         <div className="adulto-form-grid">
-          <NumberField label="Tension sistolica" name="tensionSistolica" form={form} readOnly={isReadOnly} />
-          <NumberField label="Tension diastolica" name="tensionDiastolica" form={form} readOnly={isReadOnly} />
-          <NumberField label="Frecuencia cardiaca" name="frecuenciaCardiaca" form={form} readOnly={isReadOnly} />
-          <NumberField label="Frecuencia respiratoria" name="frecuenciaRespiratoria" form={form} readOnly={isReadOnly} />
+          <NumberField
+            label="Tension sistolica"
+            name="tensionSistolica"
+            form={form}
+            readOnly={isReadOnly}
+          />
+          <NumberField
+            label="Tension diastolica"
+            name="tensionDiastolica"
+            form={form}
+            readOnly={isReadOnly}
+          />
+          <NumberField
+            label="Frecuencia cardiaca"
+            name="frecuenciaCardiaca"
+            form={form}
+            readOnly={isReadOnly}
+          />
+          <NumberField
+            label="Frecuencia respiratoria"
+            name="frecuenciaRespiratoria"
+            form={form}
+            readOnly={isReadOnly}
+          />
           <NumberField label="Temperatura" name="temperatura" form={form} readOnly={isReadOnly} />
-          <NumberField label="Saturacion de oxigeno" name="saturacionOxigeno" form={form} readOnly={isReadOnly} />
+          <NumberField
+            label="Saturacion de oxigeno"
+            name="saturacionOxigeno"
+            form={form}
+            readOnly={isReadOnly}
+          />
           <NumberField label="Peso kg" name="pesoKg" form={form} readOnly={isReadOnly} />
           <NumberField label="Talla cm" name="tallaCm" form={form} readOnly={isReadOnly} />
           <NumberField label="IMC" name="imc" form={form} readOnly />
@@ -680,7 +711,9 @@ export function AtencionIndividualForm(props: AtencionIndividualFormProps) {
                 />
                 <AtencionFieldGroup
                   label="Descripcion"
-                  error={getArrayFieldError(form.formState.errors.diagnosticos?.[index]?.descripcion)}
+                  error={getArrayFieldError(
+                    form.formState.errors.diagnosticos?.[index]?.descripcion,
+                  )}
                 >
                   <input
                     type="text"
@@ -864,15 +897,19 @@ function SupportFilesList({
             : null;
 
         return (
-          <article className="atencion-support-row" key={`${item.type}-${fileName}-${index}`} role="listitem">
+          <article
+            className="atencion-support-row"
+            key={`${item.type}-${fileName}-${index}`}
+            role="listitem"
+          >
             <div className="atencion-support-row__icon">
               <FileText aria-hidden="true" />
             </div>
             <div className="atencion-support-row__content">
               <strong>{fileName}</strong>
               <small>
-                {item.type === "stored" ? "Guardado" : "Pendiente"} - {formatSupportMimeType(mimeType)} -{" "}
-                {formatSupportFileSize(sizeBytes)}
+                {item.type === "stored" ? "Guardado" : "Pendiente"} -{" "}
+                {formatSupportMimeType(mimeType)} - {formatSupportFileSize(sizeBytes)}
               </small>
             </div>
             <div className="atencion-support-row__actions">

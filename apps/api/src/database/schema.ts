@@ -503,6 +503,8 @@ export const adultosMayores = pgTable(
     healthRegime: varchar("health_regime", { length: 120 }),
     epsId: uuid("eps_id").references(() => epsCatalog.id, { onDelete: "restrict" }),
     eps: varchar("eps", { length: 160 }),
+    antecedentesPersonalesVigentes: text("antecedentes_personales_vigentes"),
+    antecedentesFamiliaresVigentes: text("antecedentes_familiares_vigentes"),
     livesWithSomeone: boolean("lives_with_someone").notNull().default(false),
     companion: varchar("companion", { length: 160 }),
     economicIncome: integer("economic_income"),

@@ -109,6 +109,7 @@ export function ReportsPage({ user }: ReportsPageProps) {
         data={dashboardQuery.data}
         isLoading={dashboardQuery.isLoading}
         isError={dashboardQuery.isError}
+        showMonthlyAttentionChart={user.role !== "auditor"}
       />
     </section>
   );
