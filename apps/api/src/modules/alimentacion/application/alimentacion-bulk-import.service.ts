@@ -21,7 +21,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 
-import { canImportAlimentacion, resolveAlimentacionScope } from "../domain/alimentacion.policy";
+import { canBulkImportAlimentacion, resolveAlimentacionScope } from "../domain/alimentacion.policy";
 import {
   ALIMENTACION_FORMATO_FILES_STORAGE,
   type AlimentacionFormatoFilesStorage,
@@ -352,8 +352,10 @@ export class AlimentacionBulkImportService {
   }
 
   private ensureCanImport(actor: Pick<AuthUser, "role" | "permissions">) {
-    if (!canImportAlimentacion(actor)) {
-      throw new ForbiddenException("No tienes permisos para importar formatos de alimentacion.");
+    if (!canBulkImportAlimentacion(actor)) {
+      throw new ForbiddenException(
+        "No tienes permisos para importar formatos masivos de alimentacion.",
+      );
     }
   }
 

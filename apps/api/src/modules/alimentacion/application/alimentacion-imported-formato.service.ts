@@ -16,6 +16,7 @@ import {
 
 import {
   canAccessAlimentacion,
+  canExportAlimentacion,
   canImportAlimentacion,
   resolveAlimentacionScope,
 } from "../domain/alimentacion.policy";
@@ -116,7 +117,7 @@ export class AlimentacionImportedFormatoService {
   }
 
   async downloadVersion(adultoMayorId: string, versionId: string, actor: AuthUser) {
-    this.ensureCanAccess(actor);
+    this.ensureCanExport(actor);
     const adultoMayor = await this.getAccessibleAdultoMayorOrThrow(adultoMayorId, actor);
     const version = await this.alimentacionRepository.findImportedFormatoVersionById({
       id: versionId,
@@ -180,15 +181,21 @@ export class AlimentacionImportedFormatoService {
     return adultoMayor;
   }
 
-  private ensureCanAccess(actor: Pick<AuthUser, "role">) {
+  private ensureCanAccess(actor: Pick<AuthUser, "role" | "permissions">) {
     if (!canAccessAlimentacion(actor)) {
       throw new ForbiddenException("No tienes permisos para consultar alimentacion.");
     }
   }
 
-  private ensureCanManage(actor: Pick<AuthUser, "role">) {
+  private ensureCanManage(actor: Pick<AuthUser, "role" | "permissions">) {
     if (!canImportAlimentacion(actor)) {
       throw new ForbiddenException("No tienes permisos para importar formatos de alimentacion.");
+    }
+  }
+
+  private ensureCanExport(actor: Pick<AuthUser, "role" | "permissions">) {
+    if (!canExportAlimentacion(actor)) {
+      throw new ForbiddenException("No tienes permisos para descargar formatos de alimentacion.");
     }
   }
 

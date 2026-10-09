@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { ConflictException } from "@nestjs/common";
+import { ConflictException, ForbiddenException } from "@nestjs/common";
 
 import { AlimentacionFormatoExportService } from "./alimentacion-formato-export.service";
 
@@ -18,6 +18,34 @@ const actor = {
 };
 
 describe("AlimentacionFormatoExportService tenant logo integration", () => {
+  it("does not prepare a format when the actor lacks download permission", async () => {
+    let exportWasPrepared = false;
+    const service = new AlimentacionFormatoExportService(
+      {
+        async prepareFormatoEntregaExport() {
+          exportWasPrepared = true;
+        },
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await assert.rejects(
+      () =>
+        service.exportPdf(
+          adultoMayorId,
+          { deliveryMonth: "2026-07" },
+          {
+            ...actor,
+            permissions: ["alimentacion.view"],
+          },
+        ),
+      ForbiddenException,
+    );
+    assert.equal(exportWasPrepared, false);
+  });
+
   it("serves historical emissions when records and snapshot assets still match", async () => {
     let renderWasCalled = false;
     let exportWasPrepared = false;

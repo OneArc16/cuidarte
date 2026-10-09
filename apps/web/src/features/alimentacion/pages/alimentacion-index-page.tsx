@@ -27,6 +27,8 @@ import {
   buildAlimentacionEditPath,
 } from "../lib/alimentacion-paths";
 import {
+  canBulkImportAlimentacion,
+  canExportAlimentacion,
   canImportAlimentacion,
   canManageAlimentacion,
   canViewAlimentacionDeliveryDays,
@@ -89,6 +91,8 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
   const tenantOptionsQuery = useAlimentacionTenantOptionsQuery(showTenantFilter);
   const canManageRecords = canManageAlimentacion(user);
   const canImportRecords = canImportAlimentacion(user);
+  const canBulkImportRecords = canBulkImportAlimentacion(user);
+  const canExportFormatos = canExportAlimentacion(user);
   const canViewDeliveredDays = canViewAlimentacionDeliveryDays(user);
   const canExportReportsZip = canExportReports(user);
   const effectiveDeliveryMonth = deliveryMonth.trim() === "" ? null : deliveryMonth;
@@ -286,23 +290,24 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
         tenantOptions={tenantOptionsQuery.data?.tenants ?? []}
         exportButton={
           <div className="module-report-actions">
-            <button
-              className="alimentacion-bulk-import-action"
-              type="button"
-              aria-label="Importar formatos masivos"
-              data-tooltip="Importar formatos masivos"
-              disabled={!canImportRecords}
-              onClick={() => {
-                if (showTenantFilter && selectedTenantId === "") {
-                  toast.warning("Selecciona un centro antes de importar formatos masivos.");
-                  return;
-                }
-                setBulkImportOpen(true);
-              }}
-            >
-              <Files aria-hidden="true" />
-              <span className="visually-hidden">Importar formatos masivos</span>
-            </button>
+            {canBulkImportRecords ? (
+              <button
+                className="alimentacion-bulk-import-action"
+                type="button"
+                aria-label="Importar formatos masivos"
+                data-tooltip="Importar formatos masivos"
+                onClick={() => {
+                  if (showTenantFilter && selectedTenantId === "") {
+                    toast.warning("Selecciona un centro antes de importar formatos masivos.");
+                    return;
+                  }
+                  setBulkImportOpen(true);
+                }}
+              >
+                <Files aria-hidden="true" />
+                <span className="visually-hidden">Importar formatos masivos</span>
+              </button>
+            ) : null}
             {canExportReportsZip ? (
               <ReportExportButton
                 className="alimentacion-zip-action"
@@ -353,6 +358,8 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
 
       <AlimentacionTable
         canManageAlimentacion={canManageRecords}
+        canExportFormato={canExportFormatos}
+        canImportFormato={canImportRecords}
         downloadingImportedVersionId={downloadingImportedVersionId}
         exportingAdultoMayorId={exportingAdultoMayorId}
         importingAdultoMayorId={

@@ -53,6 +53,7 @@ export function defaultEmpleadoPermissions(role: UserRole): UserPermission[] {
       "alimentacion.edit",
       "alimentacion.delete",
       "alimentacion.import",
+      "alimentacion.bulk_import",
       "alimentacion.export",
       "atenciones_individuales.view",
       "atenciones_individuales.create",

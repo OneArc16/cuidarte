@@ -19,6 +19,8 @@ import {
 
 type AlimentacionTableProps = {
   canManageAlimentacion: boolean;
+  canExportFormato: boolean;
+  canImportFormato: boolean;
   isLoading: boolean;
   records: AlimentacionListItem[];
   showDeliveredDays: boolean;
@@ -65,6 +67,8 @@ type AlimentacionGroupedRecord = {
 
 export function AlimentacionTable({
   canManageAlimentacion,
+  canExportFormato,
+  canImportFormato,
   isLoading,
   onOpenEdit,
   onExportFormato,
@@ -264,105 +268,114 @@ export function AlimentacionTable({
                     {showTenantColumn ? <td>{group.tenantName}</td> : null}
                     <td>
                       <div className="alimentacion-table-row-actions">
-                        {canManageAlimentacion ? (
+                        {canManageAlimentacion || canExportFormato || canImportFormato ? (
                           <>
-                            <button
-                              className="alimentacion-row-action alimentacion-row-action--export"
-                              type="button"
-                              aria-label={
-                                isExporting
-                                  ? `Exportando formato de ${group.fullName}`
-                                  : `Exportar formato de ${group.fullName}`
-                              }
-                              data-tooltip={
-                                isExporting ? "Exportando formato..." : "Exportar formato"
-                              }
-                              disabled={isExporting}
-                              onClick={() =>
-                                onExportFormato({
-                                  adultoMayorId: group.adultoMayorId,
-                                  deliveryMonth: group.deliveryMonth,
-                                  documentNumber: group.documentNumber,
-                                  fullName: group.fullName,
-                                })
-                              }
-                            >
-                              {isExporting ? (
-                                <LoaderCircle aria-hidden="true" className="alimentacion-spin" />
-                              ) : (
-                                <Download aria-hidden="true" />
-                              )}
-                            </button>
-                            <button
-                              className="alimentacion-row-action alimentacion-row-action--import"
-                              type="button"
-                              aria-label={
-                                isImporting
-                                  ? `Importando formato diligenciado de ${group.fullName}`
-                                  : `Importar formato diligenciado de ${group.fullName}`
-                              }
-                              data-tooltip={
-                                isImporting
-                                  ? "Importando formato..."
-                                  : "Importar formato diligenciado"
-                              }
-                              disabled={isImporting}
-                              onClick={() =>
-                                onImportFormato({
-                                  adultoMayorId: group.adultoMayorId,
-                                  deliveryMonth: group.deliveryMonth,
-                                  documentNumber: group.documentNumber,
-                                  fullName: group.fullName,
-                                  hasImportedFormato: importedFormato !== null,
-                                })
-                              }
-                            >
-                              {isImporting ? (
-                                <LoaderCircle aria-hidden="true" className="alimentacion-spin" />
-                              ) : (
-                                <Upload aria-hidden="true" />
-                              )}
-                            </button>
-                            {importedFormato !== null ? (
+                            {canExportFormato ? (
+                              <button
+                                className="alimentacion-row-action alimentacion-row-action--export"
+                                type="button"
+                                aria-label={
+                                  isExporting
+                                    ? `Exportando formato de ${group.fullName}`
+                                    : `Exportar formato de ${group.fullName}`
+                                }
+                                data-tooltip={
+                                  isExporting ? "Exportando formato..." : "Exportar formato"
+                                }
+                                disabled={isExporting}
+                                onClick={() =>
+                                  onExportFormato({
+                                    adultoMayorId: group.adultoMayorId,
+                                    deliveryMonth: group.deliveryMonth,
+                                    documentNumber: group.documentNumber,
+                                    fullName: group.fullName,
+                                  })
+                                }
+                              >
+                                {isExporting ? (
+                                  <LoaderCircle aria-hidden="true" className="alimentacion-spin" />
+                                ) : (
+                                  <Download aria-hidden="true" />
+                                )}
+                              </button>
+                            ) : null}
+                            {canImportFormato ? (
+                              <button
+                                className="alimentacion-row-action alimentacion-row-action--import"
+                                type="button"
+                                aria-label={
+                                  isImporting
+                                    ? `Importando formato diligenciado de ${group.fullName}`
+                                    : `Importar formato diligenciado de ${group.fullName}`
+                                }
+                                data-tooltip={
+                                  isImporting
+                                    ? "Importando formato..."
+                                    : "Importar formato diligenciado"
+                                }
+                                disabled={isImporting}
+                                onClick={() =>
+                                  onImportFormato({
+                                    adultoMayorId: group.adultoMayorId,
+                                    deliveryMonth: group.deliveryMonth,
+                                    documentNumber: group.documentNumber,
+                                    fullName: group.fullName,
+                                    hasImportedFormato: importedFormato !== null,
+                                  })
+                                }
+                              >
+                                {isImporting ? (
+                                  <LoaderCircle aria-hidden="true" className="alimentacion-spin" />
+                                ) : (
+                                  <Upload aria-hidden="true" />
+                                )}
+                              </button>
+                            ) : null}
+                            {importedFormato !== null &&
+                            (canExportFormato || canManageAlimentacion) ? (
                               <>
-                                <button
-                                  className="alimentacion-row-action alimentacion-row-action--imported"
-                                  type="button"
-                                  aria-label={`Descargar PDF importado v${importedFormato.version} de ${group.fullName}`}
-                                  data-tooltip={`Descargar PDF importado v${importedFormato.version}`}
-                                  disabled={downloadingImportedVersionId === importedFormato.id}
-                                  onClick={() =>
-                                    onDownloadImportedFormato({
-                                      adultoMayorId: group.adultoMayorId,
-                                      versionId: importedFormato.id,
-                                      originalName: importedFormato.originalName,
-                                    })
-                                  }
-                                >
-                                  {downloadingImportedVersionId === importedFormato.id ? (
-                                    <LoaderCircle
-                                      aria-hidden="true"
-                                      className="alimentacion-spin"
-                                    />
-                                  ) : (
-                                    <FileDown aria-hidden="true" />
-                                  )}
-                                </button>
-                                <button
-                                  className="alimentacion-row-action alimentacion-row-action--imported"
-                                  type="button"
-                                  aria-label={`Ver versiones de PDF importado de ${group.fullName}`}
-                                  data-tooltip={`PDF importado v${importedFormato.version}: ver historial`}
-                                  onClick={() =>
-                                    onOpenImportedFormatoHistory({
-                                      adultoMayorId: group.adultoMayorId,
-                                      deliveryMonth: group.deliveryMonth,
-                                      fullName: group.fullName,
-                                    })
-                                  }
-                                >
-                                  <History aria-hidden="true" />
-                                </button>
+                                {canExportFormato ? (
+                                  <button
+                                    className="alimentacion-row-action alimentacion-row-action--imported"
+                                    type="button"
+                                    aria-label={`Descargar PDF importado v${importedFormato.version} de ${group.fullName}`}
+                                    data-tooltip={`Descargar PDF importado v${importedFormato.version}`}
+                                    disabled={downloadingImportedVersionId === importedFormato.id}
+                                    onClick={() =>
+                                      onDownloadImportedFormato({
+                                        adultoMayorId: group.adultoMayorId,
+                                        versionId: importedFormato.id,
+                                        originalName: importedFormato.originalName,
+                                      })
+                                    }
+                                  >
+                                    {downloadingImportedVersionId === importedFormato.id ? (
+                                      <LoaderCircle
+                                        aria-hidden="true"
+                                        className="alimentacion-spin"
+                                      />
+                                    ) : (
+                                      <FileDown aria-hidden="true" />
+                                    )}
+                                  </button>
+                                ) : null}
+                                {canManageAlimentacion ? (
+                                  <button
+                                    className="alimentacion-row-action alimentacion-row-action--imported"
+                                    type="button"
+                                    aria-label={`Ver versiones de PDF importado de ${group.fullName}`}
+                                    data-tooltip={`PDF importado v${importedFormato.version}: ver historial`}
+                                    onClick={() =>
+                                      onOpenImportedFormatoHistory({
+                                        adultoMayorId: group.adultoMayorId,
+                                        deliveryMonth: group.deliveryMonth,
+                                        fullName: group.fullName,
+                                      })
+                                    }
+                                  >
+                                    <History aria-hidden="true" />
+                                  </button>
+                                ) : null}
                               </>
                             ) : null}
                           </>

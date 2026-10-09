@@ -38,6 +38,7 @@ export const userPermissionValues = [
   "alimentacion.edit",
   "alimentacion.delete",
   "alimentacion.import",
+  "alimentacion.bulk_import",
   "alimentacion.export",
   "atenciones_individuales.view",
   "atenciones_individuales.create",
@@ -189,14 +190,20 @@ export const userPermissionCatalog = [
   {
     key: "alimentacion.import",
     group: "Alimentación",
-    label: "Importar formatos",
-    description: "Cargar formatos de alimentación.",
+    label: "Importar formato individual",
+    description: "Cargar un formato de alimentación diligenciado.",
+  },
+  {
+    key: "alimentacion.bulk_import",
+    group: "Alimentación",
+    label: "Importar formatos masivos",
+    description: "Cargar varios formatos de alimentación en un solo lote.",
   },
   {
     key: "alimentacion.export",
     group: "Alimentación",
     label: "Exportar alimentación",
-    description: "Descargar formatos y reportes de alimentación.",
+    description: "Descargar formatos de alimentación.",
   },
   {
     key: "atenciones_individuales.view",

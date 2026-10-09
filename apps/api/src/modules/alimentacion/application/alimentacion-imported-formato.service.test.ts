@@ -102,6 +102,19 @@ describe("AlimentacionImportedFormatoService", () => {
     );
   });
 
+  it("does not allow downloading an imported version without download permission", async () => {
+    const service = new AlimentacionImportedFormatoService({} as never, {} as never);
+
+    await assert.rejects(
+      () =>
+        service.downloadVersion(adultoMayorId, importedVersionId, {
+          ...actor,
+          permissions: ["alimentacion.view"],
+        }),
+      ForbiddenException,
+    );
+  });
+
   it("downloads a version within the actor tenant and records the audit", async () => {
     let auditedVersionId: string | null = null;
     const service = new AlimentacionImportedFormatoService(

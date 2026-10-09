@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import { type AuthUser } from "@cuidarte/contracts";
 
 import {
+  canBulkImportAlimentacion,
+  canExportAlimentacion,
+  canImportAlimentacion,
   canManageAlimentacion,
   canOpenAlimentacion,
   canViewAlimentacionDeliveryDays,
@@ -80,5 +83,35 @@ describe("alimentacion permissions", () => {
         permissions: ["alimentacion.view_delivery_days"],
       } as AuthUser),
     ).toBe(true);
+  });
+
+  it("separates individual and bulk format imports", () => {
+    expect(canImportAlimentacion(directorUser)).toBe(true);
+    expect(canBulkImportAlimentacion(directorUser)).toBe(true);
+
+    const userWithIndividualImport = {
+      ...medicoUser,
+      permissions: ["alimentacion.import"],
+    } as AuthUser;
+    const userWithBulkImport = {
+      ...medicoUser,
+      permissions: ["alimentacion.bulk_import"],
+    } as AuthUser;
+
+    expect(canImportAlimentacion(userWithIndividualImport)).toBe(true);
+    expect(canBulkImportAlimentacion(userWithIndividualImport)).toBe(false);
+    expect(canImportAlimentacion(userWithBulkImport)).toBe(false);
+    expect(canBulkImportAlimentacion(userWithBulkImport)).toBe(true);
+  });
+
+  it("allows downloading formats without granting import or edit permissions", () => {
+    const userWithDownload = {
+      ...medicoUser,
+      permissions: ["alimentacion.view", "alimentacion.export"],
+    } as AuthUser;
+
+    expect(canExportAlimentacion(userWithDownload)).toBe(true);
+    expect(canImportAlimentacion(userWithDownload)).toBe(false);
+    expect(canManageAlimentacion(userWithDownload)).toBe(false);
   });
 });

@@ -5,6 +5,7 @@ import { type AlimentacionFormatoEntregaExportQuery, type AuthUser } from "@cuid
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -17,6 +18,7 @@ import {
   ALIMENTACION_FORMATO_FILES_STORAGE,
   type AlimentacionFormatoFilesStorage,
 } from "../domain/alimentacion-formato-files.storage";
+import { canExportAlimentacion } from "../domain/alimentacion.policy";
 import {
   buildFormatoEntregaPdfFilename,
   buildFormatoEntregaPdfHtml,
@@ -63,6 +65,7 @@ export class AlimentacionFormatoExportService {
     query: AlimentacionFormatoEntregaExportQuery,
     actor: AuthUser,
   ): Promise<ExportedAlimentacionFormatoEntregaPdf> {
+    this.ensureCanExport(actor);
     const generatedAt = new Date();
     const exportData = await this.alimentacionService.prepareFormatoEntregaExport(
       adultoMayorId,
@@ -176,6 +179,12 @@ export class AlimentacionFormatoExportService {
       contentType: "application/pdf",
       filename,
     };
+  }
+
+  private ensureCanExport(actor: Pick<AuthUser, "role" | "permissions">) {
+    if (!canExportAlimentacion(actor)) {
+      throw new ForbiddenException("No tienes permisos para descargar formatos de alimentacion.");
+    }
   }
 
   private async renderPdf(

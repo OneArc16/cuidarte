@@ -36,7 +36,19 @@ export function canManageAlimentacion(user: Pick<AuthUser, "role" | "permissions
 export function canImportAlimentacion(user: Pick<AuthUser, "role" | "permissions">): boolean {
   return user.permissions === undefined
     ? ALIMENTACION_EDITOR_ROLES.has(user.role)
-    : hasUserPermission(user, "alimentacion.import") || canManageAlimentacion(user);
+    : hasUserPermission(user, "alimentacion.import");
+}
+
+export function canBulkImportAlimentacion(user: Pick<AuthUser, "role" | "permissions">): boolean {
+  return user.permissions === undefined
+    ? ALIMENTACION_EDITOR_ROLES.has(user.role)
+    : hasUserPermission(user, "alimentacion.bulk_import");
+}
+
+export function canExportAlimentacion(user: Pick<AuthUser, "role" | "permissions">): boolean {
+  return user.permissions === undefined
+    ? ALIMENTACION_EDITOR_ROLES.has(user.role)
+    : hasUserPermission(user, "alimentacion.export");
 }
 
 export function canCreateMultipleDateAlimentacion(
