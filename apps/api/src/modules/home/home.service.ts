@@ -44,7 +44,6 @@ type ActivitySummary = {
 };
 
 type AlimentacionSummary = {
-  recordsTotal: number;
   deliveredRationsTotal: number;
   auxilioTransporteTotal: number;
 };
@@ -135,8 +134,8 @@ export class HomeService {
     }
 
     if (alimentacionSummary !== null) {
-      shortcutTotals["registro-alimentacion"] = alimentacionSummary.recordsTotal;
-      indicatorTotals.raciones_entregadas = alimentacionSummary.deliveredRationsTotal;
+      shortcutTotals["registro-alimentacion"] = alimentacionSummary.deliveredRationsTotal;
+      indicatorTotals.raciones_entregadas = alimentacionSummary.auxilioTransporteTotal;
     }
 
     if (empleadosTotal !== null) {
@@ -373,7 +372,6 @@ export class HomeService {
         : and(scopeCondition, isNull(adultosMayores.deletedAt));
     const query = this.database.db
       .select({
-        recordsTotal: sql<number>`count(*)::int`,
         auxilioTransporteTotal: sql<number>`coalesce(sum(case when ${alimentacionRegistros.auxilioTransporte} = 'entregado' then 1 else 0 end), 0)::int`,
         deliveredRationsTotal: sql<number>`coalesce(sum(
           (case when ${alimentacionRegistros.refrigerio1} = 'entregado' then 1 else 0 end) +
@@ -386,7 +384,6 @@ export class HomeService {
     const [row] = await query.where(activeCondition);
 
     return {
-      recordsTotal: row?.recordsTotal ?? 0,
       deliveredRationsTotal: row?.deliveredRationsTotal ?? 0,
       auxilioTransporteTotal: row?.auxilioTransporteTotal ?? 0,
     };

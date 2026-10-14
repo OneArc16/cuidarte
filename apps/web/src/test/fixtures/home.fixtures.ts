@@ -10,7 +10,7 @@ export const homeDashboardFixture = {
     },
     {
       moduleId: "registro-alimentacion",
-      total: 140,
+      total: 123200,
     },
     {
       moduleId: "gestion-empleados",
@@ -44,7 +44,7 @@ export const homeDashboardFixture = {
     },
     {
       id: "raciones_entregadas",
-      total: 123200,
+      total: 16,
     },
     {
       id: "encuentro_intergeneracional",

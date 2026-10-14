@@ -86,8 +86,10 @@ describe("App home dashboard", () => {
           within(indicatorsRegion).getByRole("button", { name: "Atenciones del médico" }),
         ).toHaveTextContent("31");
         expect(
-          within(indicatorsRegion).getByRole("button", { name: "Raciones entregadas" }),
-        ).toHaveTextContent("123.200");
+          within(indicatorsRegion).getByRole("button", {
+            name: "Auxilios de transporte entregados",
+          }),
+        ).toHaveTextContent("16");
         expect(
           within(indicatorsRegion).getByRole("button", { name: "Fisioterapia" }),
         ).toHaveTextContent("56");
@@ -144,7 +146,9 @@ describe("App home dashboard", () => {
           within(activitiesRegion).queryByRole("button", { name: "Atenciones del médico" }),
         ).not.toBeInTheDocument();
         expect(
-          within(activitiesRegion).queryByRole("button", { name: "Raciones entregadas" }),
+          within(activitiesRegion).queryByRole("button", {
+            name: "Auxilios de transporte entregados",
+          }),
         ).not.toBeInTheDocument();
         expect(screen.getByText("Actividades Realizadas")).toBeInTheDocument();
       },

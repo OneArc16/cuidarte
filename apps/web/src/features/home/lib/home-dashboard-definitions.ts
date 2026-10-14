@@ -5,6 +5,7 @@ import { type HomeModuleId } from "./home-modules";
 import {
   Activity,
   Apple,
+  BusFront,
   CalendarDays,
   HeartPulse,
   MapPinned,
@@ -15,7 +16,6 @@ import {
   type LucideIcon,
   UserRound,
   UsersRound,
-  UtensilsCrossed,
 } from "lucide-react";
 
 type HomeDashboardIndicatorTargetModuleId = Exclude<HomeModuleId, "inicio">;
@@ -66,8 +66,8 @@ export const HOME_DASHBOARD_INDICATORS = [
   },
   {
     id: "raciones_entregadas",
-    label: "Raciones entregadas",
-    icon: UtensilsCrossed,
+    label: "Auxilios de transporte entregados",
+    icon: BusFront,
     tone: "coral",
     targetModuleId: "registro-alimentacion",
   },

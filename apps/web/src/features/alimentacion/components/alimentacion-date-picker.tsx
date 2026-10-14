@@ -12,6 +12,7 @@ type AlimentacionDatePickerProps = {
 };
 
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+const MAX_DELIVERY_DATES = 31;
 const SHORT_MONTHS = [
   "ene",
   "feb",
@@ -139,12 +140,23 @@ export function AlimentacionDatePicker({
   value,
 }: AlimentacionDatePickerProps) {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [hasReachedDateLimit, setHasReachedDateLimit] = useState(false);
   const selectedDates = useMemo(
     () => value.map(parseIsoDate).filter((date): date is Date => date !== null),
     [value],
   );
 
-  function selectMultipleDates(dates: Date[] | undefined) {
+  function selectMultipleDates(
+    dates: Date[] | undefined,
+    _triggerDate: Date,
+    modifiers: { selected?: boolean },
+  ) {
+    if (selectedDates.length >= MAX_DELIVERY_DATES && !modifiers.selected) {
+      setHasReachedDateLimit(true);
+      return;
+    }
+
+    setHasReachedDateLimit(false);
     onChange((dates ?? []).map(formatIsoDate).sort());
   }
 
@@ -185,7 +197,7 @@ export function AlimentacionDatePicker({
                 mode="multiple"
                 selected={selectedDates}
                 onSelect={selectMultipleDates}
-                max={31}
+                max={MAX_DELIVERY_DATES}
                 showOutsideDays
                 fixedWeeks
                 formatters={CALENDAR_FORMATTERS}
@@ -202,7 +214,10 @@ export function AlimentacionDatePicker({
                     className="alimentacion-date-picker__clear"
                     type="button"
                     disabled={selectedDates.length === 0}
-                    onClick={() => onChange([])}
+                    onClick={() => {
+                      setHasReachedDateLimit(false);
+                      onChange([]);
+                    }}
                   >
                     Limpiar
                   </button>
@@ -211,6 +226,11 @@ export function AlimentacionDatePicker({
                   </button>
                 </div>
               </div>
+              {hasReachedDateLimit ? (
+                <p className="alimentacion-date-picker__limit-warning" role="alert">
+                  Puedes seleccionar máximo {MAX_DELIVERY_DATES} días.
+                </p>
+              ) : null}
             </div>
           ) : null}
         </div>
