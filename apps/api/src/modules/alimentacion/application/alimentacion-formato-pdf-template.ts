@@ -71,8 +71,8 @@ export function buildFormatoEntregaPdfHtml({
         <style>
           * { box-sizing: border-box; }
           @page {
-            size: Letter;
-            margin: 9mm 8mm;
+            size: 215.9mm 279.4mm;
+            margin: 0;
           }
           body {
             margin: 0;
@@ -83,15 +83,26 @@ export function buildFormatoEntregaPdfHtml({
           }
           .page {
             display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            align-content: start;
+            align-items: start;
             gap: 7mm;
             position: relative;
             z-index: 1;
+            width: 215.9mm;
+            min-height: 279.4mm;
+            padding: 45mm 8mm 32mm;
+            box-decoration-break: clone;
+            -webkit-box-decoration-break: clone;
           }
           .pdf-letterhead {
             position: fixed;
-            inset: -8mm -7mm;
+            top: 0;
+            left: 0;
             z-index: 0;
-            opacity: 0.3;
+            width: 215.9mm;
+            height: 279.4mm;
+            opacity: 0.45;
             pointer-events: none;
           }
           .pdf-letterhead img {
@@ -99,6 +110,7 @@ export function buildFormatoEntregaPdfHtml({
             width: 100%;
             height: 100%;
             object-fit: contain;
+            object-position: center;
           }
           .page + .page {
             break-before: page;
@@ -106,6 +118,9 @@ export function buildFormatoEntregaPdfHtml({
           }
           .stub {
             border: 1px solid #111;
+            break-inside: avoid;
+            page-break-inside: avoid;
+            zoom: 0.6666667;
           }
           .stub-header {
             display: grid;

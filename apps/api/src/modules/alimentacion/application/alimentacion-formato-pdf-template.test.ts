@@ -82,9 +82,14 @@ describe("alimentacion-formato-pdf-template", () => {
     assert.match(html, /alt="Logo de Centro de Vida Demo"/);
     assert.match(html, /stub-logo--institutional/);
     assert.match(html, /stub-logo--tenant/);
-    assert.match(html, /@page\s*{\s*size: Letter;/);
+    assert.match(html, /@page\s*{\s*size: 215\.9mm 279\.4mm;\s*margin: 0;/);
     assert.match(html, /class="pdf-letterhead"/);
     assert.match(html, /data:image\/png;base64,bWVtYnJldGU=/);
+    assert.match(html, /top: 0;/);
+    assert.match(html, /left: 0;/);
+    assert.match(html, /opacity: 0\.45;/);
+    assert.match(html, /\.page\s*{[\s\S]*padding: 45mm 8mm 32mm;/);
+    assert.match(html, /break-inside: avoid;/);
   });
 
   it("uses the lower stub for visits 16 to 30 without changing the visual day labels", () => {
