@@ -944,6 +944,7 @@ function createRepository(
         adultoMayorId: command.adultoMayorId,
         deliveryMonth: command.deliveryMonth,
         version: 1,
+        templateVersion: command.templateVersion,
         signerEmployeeIdSnapshot: command.signerEmployeeIdSnapshot,
         signerNameSnapshot: command.signerNameSnapshot,
         signerRoleSnapshot: command.signerRoleSnapshot,

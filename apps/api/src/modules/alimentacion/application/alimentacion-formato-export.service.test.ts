@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import { ConflictException, ForbiddenException } from "@nestjs/common";
 
 import { AlimentacionFormatoExportService } from "./alimentacion-formato-export.service";
+import { ALIMENTACION_FORMAT_TEMPLATE_VERSION } from "./alimentacion-formato-template-version";
 
 const tenantId = "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054";
 const adultoMayorId = "0b17e370-8f81-48c0-b707-c7046f497855";
@@ -84,6 +85,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             adultoMayorId,
             deliveryMonth: "2026-07",
             issuedAt: new Date("2026-10-07T16:36:00.000Z"),
+            templateVersion: ALIMENTACION_FORMAT_TEMPLATE_VERSION,
             pdfRelativePath: `${tenantId}/historic.pdf`,
             filename: "historic.pdf",
             signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -132,11 +134,8 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
     assert.equal(exportWasPrepared, true);
   });
 
-  it("reissues emissions created before the letterhead reached production", async () => {
-    for (const issuedAt of [
-      new Date("2026-10-06T00:00:00.000Z"),
-      new Date("2026-10-07T16:35:59.999Z"),
-    ]) {
+  it("reissues legacy emissions without a verifiable template version", async () => {
+    for (const templateVersion of [null, "v2-without-membrete"]) {
       let savedPdfCount = 0;
       let createdEmissionCount = 0;
       const service = new AlimentacionFormatoExportService(
@@ -147,7 +146,8 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
               tenantId,
               adultoMayorId,
               deliveryMonth: "2026-07",
-              issuedAt,
+              issuedAt: new Date("2026-10-07T16:35:59.999Z"),
+              templateVersion,
               pdfRelativePath: `${tenantId}/historic.pdf`,
               filename: "historic.pdf",
               signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -235,6 +235,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             adultoMayorId,
             deliveryMonth: "2026-07",
             issuedAt: new Date("2026-10-07T16:36:00.000Z"),
+            templateVersion: ALIMENTACION_FORMAT_TEMPLATE_VERSION,
             pdfRelativePath: `${tenantId}/historic.pdf`,
             filename: "historic.pdf",
             signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -354,6 +355,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
     await service.exportPdf(adultoMayorId, { deliveryMonth: "2026-07" }, actor);
 
     assert.equal(createdEmissions[0]?.tenantLogoVersionIdSnapshot, logoVersionId);
+    assert.equal(createdEmissions[0]?.templateVersion, ALIMENTACION_FORMAT_TEMPLATE_VERSION);
     assert.equal(
       createdEmissions[0]?.signerEmployeeIdSnapshot,
       "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -362,7 +364,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
     assert.equal(resolvedSignerRequested, true);
   });
 
-  it("reissues emissions created before the 15-day block format rollout", async () => {
+  it("reissues when the stored template version is outdated", async () => {
     let savedPdfCount = 0;
     let createdEmissionCount = 0;
     let logoWasResolved = false;
@@ -375,6 +377,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             adultoMayorId,
             deliveryMonth: "2026-07",
             issuedAt: new Date("2026-10-05T15:56:19.999Z"),
+            templateVersion: "v2-without-membrete",
             pdfRelativePath: `${tenantId}/historic.pdf`,
             filename: "historic.pdf",
             signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -464,6 +467,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             adultoMayorId,
             deliveryMonth: "2026-07",
             issuedAt: new Date("2026-10-05T15:56:20.000Z"),
+            templateVersion: ALIMENTACION_FORMAT_TEMPLATE_VERSION,
             pdfRelativePath: `${tenantId}/historic.pdf`,
             filename: "historic.pdf",
             signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -548,6 +552,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             adultoMayorId,
             deliveryMonth: "2026-07",
             issuedAt: new Date("2026-10-06T00:00:00.000Z"),
+            templateVersion: ALIMENTACION_FORMAT_TEMPLATE_VERSION,
             pdfRelativePath: `${tenantId}/historic.pdf`,
             filename: "historic.pdf",
             signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -669,6 +674,51 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
         name: "ConflictException",
         message: /firma activa no esta disponible/i,
       },
+    );
+    assert.equal(renderWasCalled, false);
+    assert.equal(storedPdfCount, 0);
+  });
+
+  it("does not render or store a new PDF when the mandatory letterhead is unavailable", async () => {
+    let renderWasCalled = false;
+    let storedPdfCount = 0;
+    const service = new AlimentacionFormatoExportService(
+      alimentacionServiceForNewEmission() as never,
+      directorSignatureService() as never,
+      {
+        async resolveActiveLogo() {
+          return {
+            id: logoVersionId,
+            tenantId,
+            relativePath: `${tenantId}/branding/logos/version.png`,
+          };
+        },
+        async readLogoVersionFile() {
+          return { buffer: Buffer.from("tenant-logo"), contentType: "image/png" };
+        },
+      } as never,
+      {
+        async saveFile() {
+          storedPdfCount += 1;
+        },
+      } as never,
+    );
+    Object.assign(service, {
+      async getRequiredMembreteDataUrl() {
+        throw new Error("membrete unavailable");
+      },
+      async renderPdf() {
+        renderWasCalled = true;
+        return Buffer.from("new-pdf");
+      },
+      async getInstitutionalLogoDataUrl() {
+        return null;
+      },
+    });
+
+    await assert.rejects(
+      () => service.exportPdf(adultoMayorId, { deliveryMonth: "2026-07" }, actor),
+      /membrete unavailable/,
     );
     assert.equal(renderWasCalled, false);
     assert.equal(storedPdfCount, 0);

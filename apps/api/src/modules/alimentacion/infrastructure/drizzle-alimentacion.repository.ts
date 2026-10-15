@@ -118,6 +118,7 @@ type AlimentacionFormatoEmissionRow = {
   adultoMayorId: string;
   deliveryMonth: string;
   version: number;
+  templateVersion: string | null;
   signerEmployeeIdSnapshot: string;
   signerNameSnapshot: string;
   signerRoleSnapshot: string;
@@ -427,6 +428,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         adultoMayorId: alimentacionFormatoEmissions.adultoMayorId,
         deliveryMonth: alimentacionFormatoEmissions.deliveryMonth,
         version: alimentacionFormatoEmissions.version,
+        templateVersion: alimentacionFormatoEmissions.templateVersion,
         signerEmployeeIdSnapshot: alimentacionFormatoEmissions.signerEmployeeIdSnapshot,
         signerNameSnapshot: alimentacionFormatoEmissions.signerNameSnapshot,
         signerRoleSnapshot: alimentacionFormatoEmissions.signerRoleSnapshot,
@@ -922,6 +924,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
           adultoMayorId: command.adultoMayorId,
           deliveryMonth: command.deliveryMonth,
           version: nextVersion,
+          templateVersion: command.templateVersion,
           signerEmployeeIdSnapshot: command.signerEmployeeIdSnapshot,
           signerNameSnapshot: command.signerNameSnapshot,
           signerRoleSnapshot: command.signerRoleSnapshot,
@@ -957,6 +960,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
           adultoMayorId: command.adultoMayorId,
           deliveryMonth: command.deliveryMonth,
           version: created.version,
+          templateVersion: command.templateVersion,
           signerEmployeeIdSnapshot: command.signerEmployeeIdSnapshot,
           signatureVersionIdSnapshot: command.signatureVersionIdSnapshot,
           tenantLogoVersionIdSnapshot: command.tenantLogoVersionIdSnapshot,
@@ -1469,6 +1473,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         adultoMayorId: alimentacionFormatoEmissions.adultoMayorId,
         deliveryMonth: alimentacionFormatoEmissions.deliveryMonth,
         version: alimentacionFormatoEmissions.version,
+        templateVersion: alimentacionFormatoEmissions.templateVersion,
         signerEmployeeIdSnapshot: alimentacionFormatoEmissions.signerEmployeeIdSnapshot,
         signerNameSnapshot: alimentacionFormatoEmissions.signerNameSnapshot,
         signerRoleSnapshot: alimentacionFormatoEmissions.signerRoleSnapshot,
@@ -1498,6 +1503,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       adultoMayorId: row.adultoMayorId,
       deliveryMonth: row.deliveryMonth,
       version: row.version,
+      templateVersion: row.templateVersion,
       signerEmployeeIdSnapshot: row.signerEmployeeIdSnapshot,
       signerNameSnapshot: row.signerNameSnapshot,
       signerRoleSnapshot:

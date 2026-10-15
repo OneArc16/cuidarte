@@ -80,11 +80,11 @@ export function buildPdfHtml(
     )
     .join("");
   return `<!doctype html><html><head><meta charset="utf-8"><style>
-    @page { size: Letter portrait; margin: 14mm 12mm; }
+    @page { size: 215.9mm 279.4mm; margin: 0; }
     * { box-sizing: border-box; } body { margin: 0; color: #123b31; font: 10.5px Arial, sans-serif; }
-    .pdf-letterhead { position: fixed; top: -14mm; left: -12mm; z-index: 0; width: 215.9mm; height: 279.4mm; opacity: 0.3; pointer-events: none; }
-    .pdf-letterhead img { display: block; width: 100%; height: 100%; object-fit: fill; transform: scale(0.94); transform-origin: center; }
-    .report-content { position: relative; z-index: 1; padding: 22mm 0 22mm; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+    .pdf-letterhead { position: fixed; top: 0; left: 0; z-index: 0; width: 215.9mm; height: 279.4mm; opacity: 0.45; pointer-events: none; }
+    .pdf-letterhead img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; }
+    .report-content { position: relative; z-index: 1; width: 215.9mm; min-height: 279.4mm; padding: 45mm 24mm 32mm; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
     h1 { margin: 0 0 6px; font-size: 23px; } h2 { margin: 18px 0 8px; font-size: 15px; }
     .meta { color: #657a72; margin-bottom: 14px; } .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
     .metric { min-height: 62px; border: 1px solid #dce9e2; border-radius: 6px; padding: 9px; background: #f7fbf9; }

@@ -222,6 +222,7 @@ export type AlimentacionFormatoEmissionRecord = {
   adultoMayorId: string;
   deliveryMonth: string;
   version: number;
+  templateVersion: string | null;
   signerEmployeeIdSnapshot: string;
   signerNameSnapshot: string;
   signerRoleSnapshot: UserRole;
@@ -267,6 +268,7 @@ export type CreateAlimentacionFormatoEmissionCommand = {
   tenantId: string;
   adultoMayorId: string;
   deliveryMonth: string;
+  templateVersion: string;
   signerEmployeeIdSnapshot: string;
   signerNameSnapshot: string;
   signerRoleSnapshot: UserRole;

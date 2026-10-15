@@ -1,0 +1,1 @@
+ALTER TABLE "alimentacion_formato_emissions" ADD COLUMN "template_version" varchar(80);

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { DrizzleAlimentacionRepository } from "./drizzle-alimentacion.repository";
+import { ALIMENTACION_FORMAT_TEMPLATE_VERSION } from "../application/alimentacion-formato-template-version";
 
 const tenantId = "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054";
 const adultoMayorId = "0b17e370-8f81-48c0-b707-c7046f497855";
@@ -64,6 +65,33 @@ describe("DrizzleAlimentacionRepository", () => {
     assert.equal(state.transactionCalls, 1);
     assert.equal(state.deleteCalls, 0);
     assert.equal(state.auditInsert, null);
+  });
+
+  it("persists the template version and records it in the emission audit", async () => {
+    const { repository, state } = createEmissionRepositoryStub();
+
+    const emission = await repository.createFormatoEntregaEmission({
+      tenantId,
+      adultoMayorId,
+      deliveryMonth: "2026-10",
+      templateVersion: ALIMENTACION_FORMAT_TEMPLATE_VERSION,
+      signerEmployeeIdSnapshot: "9f75c51f-74ab-40b7-84ef-9e4a93d14af1",
+      signerNameSnapshot: "Directora Demo",
+      signerRoleSnapshot: "director",
+      signatureVersionIdSnapshot: "9f75c51f-74ab-40b7-84ef-9e4a93d14af1",
+      tenantLogoVersionIdSnapshot: "9f75c51f-74ab-40b7-84ef-9e4a93d14af1",
+      filename: "formato.pdf",
+      pdfRelativePath: `${tenantId}/formato.pdf`,
+      sourceRecordCount: 1,
+      sourceDateFrom: "2026-10-01",
+      sourceDateTo: "2026-10-01",
+      issuedByUserId: "9f75c51f-74ab-40b7-84ef-9e4a93d14af1",
+      issuedAt: new Date("2026-10-14T12:00:00.000Z"),
+    });
+
+    assert.equal(emission.templateVersion, ALIMENTACION_FORMAT_TEMPLATE_VERSION);
+    assert.equal(state.emissionInsert?.templateVersion, ALIMENTACION_FORMAT_TEMPLATE_VERSION);
+    assert.equal(state.auditInsert?.metadata.templateVersion, ALIMENTACION_FORMAT_TEMPLATE_VERSION);
   });
 });
 
@@ -151,4 +179,91 @@ function createRecordRow() {
     createdAt: new Date("2026-04-24T12:00:00.000Z"),
     updatedAt: new Date("2026-04-24T12:00:00.000Z"),
   };
+}
+
+function createEmissionRepositoryStub() {
+  const emissionId = "f3d6a5f9-9f08-4efb-9e0e-b01528cfcaca";
+  const state = {
+    emissionInsert: null as Record<string, unknown> | null,
+    auditInsert: null as Record<string, any> | null,
+  };
+  const storedEmission = {
+    id: emissionId,
+    tenantId,
+    adultoMayorId,
+    deliveryMonth: "2026-10",
+    version: 1,
+    templateVersion: ALIMENTACION_FORMAT_TEMPLATE_VERSION,
+    signerEmployeeIdSnapshot: "9f75c51f-74ab-40b7-84ef-9e4a93d14af1",
+    signerNameSnapshot: "Directora Demo",
+    signerRoleSnapshot: "director",
+    signatureVersionIdSnapshot: "9f75c51f-74ab-40b7-84ef-9e4a93d14af1",
+    tenantLogoVersionIdSnapshot: "9f75c51f-74ab-40b7-84ef-9e4a93d14af1",
+    filename: "formato.pdf",
+    pdfRelativePath: `${tenantId}/formato.pdf`,
+    sourceRecordCount: 1,
+    sourceDateFrom: "2026-10-01",
+    sourceDateTo: "2026-10-01",
+    issuedByUserId: "9f75c51f-74ab-40b7-84ef-9e4a93d14af1",
+    issuedAt: new Date("2026-10-14T12:00:00.000Z"),
+  };
+  const latestVersionQuery = {
+    from() {
+      return latestVersionQuery;
+    },
+    where() {
+      return latestVersionQuery;
+    },
+    orderBy() {
+      return latestVersionQuery;
+    },
+    async limit() {
+      return [];
+    },
+  };
+  const storedEmissionQuery = {
+    from() {
+      return storedEmissionQuery;
+    },
+    where() {
+      return storedEmissionQuery;
+    },
+    async limit() {
+      return [storedEmission];
+    },
+  };
+  const tx = {
+    select() {
+      return latestVersionQuery;
+    },
+    insert() {
+      return {
+        values(value: Record<string, unknown>) {
+          if ("templateVersion" in value) {
+            state.emissionInsert = value;
+            return {
+              async returning() {
+                return [{ id: emissionId, version: 1 }];
+              },
+            };
+          }
+
+          state.auditInsert = value;
+          return undefined;
+        },
+      };
+    },
+  };
+  const repository = new DrizzleAlimentacionRepository({
+    db: {
+      async transaction<T>(callback: (transaction: typeof tx) => Promise<T>) {
+        return await callback(tx);
+      },
+      select() {
+        return storedEmissionQuery;
+      },
+    },
+  } as never);
+
+  return { repository, state };
 }

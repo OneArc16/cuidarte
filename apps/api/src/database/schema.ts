@@ -1021,6 +1021,7 @@ export const alimentacionFormatoEmissions = pgTable(
       .references(() => adultosMayores.id, { onDelete: "restrict" }),
     deliveryMonth: varchar("delivery_month", { length: 7 }).notNull(),
     version: integer("version").notNull(),
+    templateVersion: varchar("template_version", { length: 80 }),
     signerEmployeeIdSnapshot: uuid("signer_employee_id_snapshot")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
