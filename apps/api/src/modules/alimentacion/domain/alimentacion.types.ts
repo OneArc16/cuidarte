@@ -1,5 +1,8 @@
 import {
   type AdultoMayorStatus,
+  type AlimentacionBulkImportItemStatus,
+  type AlimentacionBulkImportMode,
+  type AlimentacionBulkImportReasonCode,
   type AlimentacionOrganizer,
   type AlimentacionStatus,
   type UserRole,
@@ -28,7 +31,7 @@ export type FindAlimentacionRecordByIdQuery = {
 
 export type SearchAlimentacionAdultosMayoresOptionsQuery = {
   tenantId: string;
-  deliveryDate: string;
+  deliveryDates: string[];
   search: string | null;
   limit: "suggestions" | "all";
 };
@@ -62,9 +65,9 @@ export type FindAlimentacionImportedFormatoVersionByIdQuery = {
   adultoMayorId: string;
 };
 
-export type FindAlimentacionExistingRecordsByAdultosAndDateQuery = {
+export type FindAlimentacionExistingRecordsByAdultosAndDatesQuery = {
   tenantId: string;
-  deliveryDate: string;
+  deliveryDates: string[];
   adultoMayorIds: string[];
 };
 
@@ -87,8 +90,11 @@ export type AlimentacionAdultoOptionRecord = {
   tenantCity: string | null;
   tenantDepartment: string | null;
   documentNumber: string;
+  names: string;
+  surnames: string;
   fullName: string;
   alreadyRegistered?: boolean;
+  registeredDeliveryDates?: string[];
   status?: AdultoMayorStatus;
   deathDate?: string | null;
 };
@@ -128,6 +134,64 @@ export type AlimentacionImportedFormatoVersionRecord = {
   importedAt: Date;
 };
 
+export type AlimentacionBulkImportBatchRecord = {
+  id: string;
+  tenantId: string;
+  mode: AlimentacionBulkImportMode;
+  deliveryMonth: string | null;
+  status: string;
+  createdByUserId: string;
+  expiresAt: Date;
+};
+
+export type AlimentacionBulkImportItemRecord = {
+  id: string;
+  batchId: string;
+  tenantId: string;
+  originalName: string;
+  documentNumber: string | null;
+  deliveryMonth: string | null;
+  adultoMayorId: string | null;
+  adultoMayorFullName: string | null;
+  sha256: string;
+  sizeBytes: number;
+  stagedRelativePath: string;
+  status: AlimentacionBulkImportItemStatus;
+  reasonCode: AlimentacionBulkImportReasonCode | null;
+  reasonMessage: string | null;
+  existingVersion: number | null;
+  importedVersionId: string | null;
+  importedVersion: number | null;
+};
+
+export type CreateAlimentacionBulkImportBatchCommand = {
+  id: string;
+  tenantId: string;
+  mode: AlimentacionBulkImportMode;
+  deliveryMonth: string | null;
+  createdByUserId: string;
+  expiresAt: Date;
+};
+
+export type CreateAlimentacionBulkImportItemCommand = {
+  id: string;
+  batchId: string;
+  tenantId: string;
+  originalName: string;
+  documentNumber: string | null;
+  normalizedDocumentNumber: string | null;
+  deliveryMonth: string | null;
+  adultoMayorId: string | null;
+  adultoMayorFullName: string | null;
+  sha256: string;
+  sizeBytes: number;
+  stagedRelativePath: string;
+  status: AlimentacionBulkImportItemStatus;
+  reasonCode: AlimentacionBulkImportReasonCode | null;
+  reasonMessage: string | null;
+  existingVersion: number | null;
+};
+
 export type BufferedAlimentacionFormatoPdfUpload = {
   originalName: string;
   mimeType: string;
@@ -158,6 +222,7 @@ export type AlimentacionFormatoEmissionRecord = {
   adultoMayorId: string;
   deliveryMonth: string;
   version: number;
+  templateVersion: string | null;
   signerEmployeeIdSnapshot: string;
   signerNameSnapshot: string;
   signerRoleSnapshot: UserRole;
@@ -203,6 +268,7 @@ export type CreateAlimentacionFormatoEmissionCommand = {
   tenantId: string;
   adultoMayorId: string;
   deliveryMonth: string;
+  templateVersion: string;
   signerEmployeeIdSnapshot: string;
   signerNameSnapshot: string;
   signerRoleSnapshot: UserRole;
@@ -233,10 +299,11 @@ export type CreateAlimentacionImportedFormatoVersionCommand = {
 export type CreateAlimentacionBatchRecordCommand = {
   tenantId: string;
   actorUserId: string;
-  deliveryDate: string;
+  deliveryDates: string[];
   organizer: AlimentacionOrganizer;
   registros: Array<{
     adultoMayorId: string;
+    deliveryDate: string;
     refrigerio1: AlimentacionStatus;
     almuerzo: AlimentacionStatus;
     refrigerio2: AlimentacionStatus;

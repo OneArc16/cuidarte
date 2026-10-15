@@ -12,7 +12,7 @@ import { server } from "../../test/test-server";
 import { renderAppAtPath, resetAppTestState } from "../../test/helpers/app-test.helpers";
 import { mockAuthMe } from "../../test/helpers/msw-auth.helpers";
 
-describe("App actividades trash flow", () => {
+describe("App actividades deletion log flow", () => {
   beforeEach(() => {
     resetAppTestState();
   });
@@ -23,38 +23,35 @@ describe("App actividades trash flow", () => {
     vi.unstubAllGlobals();
   });
 
-  it("opens the trash from the activities list and shows trashed actas", async () => {
+  it("opens the deletion log from the activities list and shows deleted actas", async () => {
     server.use(mockAuthMe(authUserFixture));
 
     const user = userEvent.setup();
     renderAppAtPath("/creacion-actividades");
 
-    await user.click(await screen.findByRole("button", { name: "Ver papelera" }));
+    await user.click(await screen.findByRole("button", { name: "Ver log de eliminaciones" }));
 
     await waitFor(() => {
-      expect(window.location.pathname).toBe("/creacion-actividades/papelera");
+      expect(window.location.pathname).toBe("/creacion-actividades/log-eliminaciones");
     });
 
-    expect(await screen.findByRole("heading", { name: "Papelera de actas" })).toBeInTheDocument();
-    expect(await screen.findByText(actividadGrupalTrashFixture.activityName)).toBeInTheDocument();
     expect(
-      screen.getByRole("button", {
-        name: `Restaurar acta ${actividadGrupalTrashFixture.actaNumber}`,
-      }),
+      await screen.findByRole("heading", { name: "Log de eliminaciones" }),
     ).toBeInTheDocument();
+    expect(await screen.findByText(actividadGrupalTrashFixture.activityName)).toBeInTheDocument();
+    expect(screen.getByText("Registro duplicado")).toBeInTheDocument();
   });
 
-  it("restores an acta from the trash and refreshes the list", async () => {
-    let trashActivities = [actividadGrupalTrashFixture];
+  it("shows an empty deletion log", async () => {
     server.use(
       mockAuthMe(authUserFixture),
-      http.get("http://localhost:3001/api/actividades-grupales/papelera", ({ request }) => {
+      http.get("http://localhost:3001/api/actividades-grupales/log-eliminaciones", ({ request }) => {
         const search = new URL(request.url).searchParams.get("search")?.toLowerCase() ?? null;
         const activityType = new URL(request.url).searchParams.get("activityType");
         const organizer = new URL(request.url).searchParams.get("organizer");
 
         return HttpResponse.json({
-          actividadesGrupales: trashActivities.filter((actividad) => {
+          actividadesGrupales: [actividadGrupalTrashFixture].filter((actividad) => {
             const matchesSearch =
               search === null ||
               [
@@ -75,32 +72,18 @@ describe("App actividades trash flow", () => {
           }),
         });
       }),
-      http.post("http://localhost:3001/api/actividades-grupales/:activityId/restaurar", () => {
-        trashActivities = [];
-
-        return HttpResponse.json({ success: true });
-      }),
     );
 
-    const user = userEvent.setup();
-    renderAppAtPath("/creacion-actividades/papelera");
+    renderAppAtPath("/creacion-actividades/log-eliminaciones");
 
-    await user.click(
-      await screen.findByRole("button", {
-        name: `Restaurar acta ${actividadGrupalTrashFixture.actaNumber}`,
-      }),
-    );
-    await user.click(await screen.findByRole("button", { name: "Restaurar acta" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("No hay actas en la papelera.")).toBeInTheDocument();
-    });
+    expect(await screen.findByText(actividadGrupalTrashFixture.activityName)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Eliminar/i })).not.toBeInTheDocument();
   });
 
   it("redirects auditors away from the trash", async () => {
     server.use(mockAuthMe(auditorUserFixture));
 
-    renderAppAtPath("/creacion-actividades/papelera");
+    renderAppAtPath("/creacion-actividades/log-eliminaciones");
 
     await waitFor(() => {
       expect(window.location.pathname).toBe("/home");

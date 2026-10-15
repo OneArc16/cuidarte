@@ -1,11 +1,9 @@
 import { type AuthUser } from "@cuidarte/contracts";
 
 import { type GoBack, type Navigate } from "@/app/hooks/use-app-navigation";
+import { HOME_PATH } from "@/app/routes/paths";
 import { AdultosMayoresPage } from "@/features/adultos-mayores/pages/adultos-mayores-page";
-import {
-  isAdultosMayoresImportPath,
-  isAdultosMayoresPath,
-} from "@/features/adultos-mayores/lib/adultos-mayores-paths";
+import { isAdultosMayoresPath } from "@/features/adultos-mayores/lib/adultos-mayores-paths";
 import { AlimentacionPage } from "@/features/alimentacion/pages/alimentacion-page";
 import { isAlimentacionPath } from "@/features/alimentacion/lib/alimentacion-paths";
 import { ActividadesGrupalesPage } from "@/features/actividades-grupales/pages/actividades-grupales-page";
@@ -44,26 +42,26 @@ export function HomePage({ goBack, navigate, onLogoutSuccess, path, user }: Home
 
   const activeModuleId = isBackofficePath(path)
     ? "backoffice"
-    : isAdultosMayoresImportPath(path)
-      ? "importacion-adultos-mayores"
-      : isAdultosMayoresPath(path)
-        ? "adultos-mayores"
-        : isAlimentacionPath(path)
-          ? "registro-alimentacion"
-          : isAtencionesEnfermeriaPath(path)
-            ? "atenciones-enfermeria"
-            : isActividadesGrupalesPath(path)
-              ? "sesiones-grupales"
-              : isEmpleadosPath(path)
-                ? "gestion-empleados"
-                : isReportsPath(path)
-                  ? "reportes"
-                  : isAjustesPath(path)
-                    ? "ajustes"
-                    : "inicio";
+    : isAdultosMayoresPath(path)
+      ? "adultos-mayores"
+      : isAlimentacionPath(path)
+        ? "registro-alimentacion"
+        : isAtencionesEnfermeriaPath(path)
+          ? "atenciones-enfermeria"
+          : isActividadesGrupalesPath(path)
+            ? "sesiones-grupales"
+            : isEmpleadosPath(path)
+              ? "gestion-empleados"
+              : isReportsPath(path)
+                ? "reportes"
+                : isAjustesPath(path)
+                  ? "ajustes"
+                  : "inicio";
 
   return (
-    <main className={`home-shell${isReportsPath(path) ? " home-shell--reports" : ""}`}>
+    <main
+      className={`home-shell${isReportsPath(path) ? " home-shell--reports" : ""}${user.role === "auditor" && path === HOME_PATH ? " home-shell--auditor" : ""}`}
+    >
       {isMobileViewport ? null : (
         <HomeDesktopSidebar
           activeModuleId={activeModuleId}

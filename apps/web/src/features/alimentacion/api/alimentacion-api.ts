@@ -3,6 +3,10 @@ import {
   type AlimentacionDetail,
   type AlimentacionImportedFormatoUploadResponse,
   type AlimentacionImportedFormatoVersionsResponse,
+  type AlimentacionBulkImportConfirmRequest,
+  type AlimentacionBulkImportConfirmResponse,
+  type AlimentacionBulkImportValidateQuery,
+  type AlimentacionBulkImportValidateResponse,
   type AlimentacionListResponse,
   type AlimentacionLookupByAdultoMayorResponse,
   type AlimentacionTenantOptionsResponse,
@@ -14,6 +18,8 @@ import {
   alimentacionDetailSchema,
   alimentacionImportedFormatoUploadResponseSchema,
   alimentacionImportedFormatoVersionsResponseSchema,
+  alimentacionBulkImportConfirmResponseSchema,
+  alimentacionBulkImportValidateResponseSchema,
   alimentacionListResponseSchema,
   alimentacionLookupByAdultoMayorResponseSchema,
   alimentacionTenantOptionsResponseSchema,
@@ -33,7 +39,7 @@ type ListAlimentacionParams = {
 
 type SearchAlimentacionAdultosParams = {
   search: string;
-  deliveryDate: string;
+  deliveryDates: string[];
   limit?: "suggestions" | "all";
   tenantId: string | null;
 };
@@ -54,9 +60,11 @@ export function listAlimentacionTenantOptions(): Promise<AlimentacionTenantOptio
 export function searchAlimentacionAdultosMayoresOptions(
   params: SearchAlimentacionAdultosParams,
 ): Promise<AlimentacionAdultoOptionsResponse> {
-  const searchParams = new URLSearchParams({
-    deliveryDate: params.deliveryDate,
-  });
+  const searchParams = new URLSearchParams();
+
+  for (const deliveryDate of params.deliveryDates) {
+    searchParams.append("deliveryDates", deliveryDate);
+  }
 
   if (params.search.trim() !== "") {
     searchParams.set("search", params.search.trim());
@@ -167,6 +175,33 @@ export function importAlimentacionFormatoEntregaPdf(params: {
       method: "POST",
       body: formData,
     },
+  );
+}
+
+export function validateBulkAlimentacionFormatoEntregaPdfs(
+  query: AlimentacionBulkImportValidateQuery,
+  files: File[],
+): Promise<AlimentacionBulkImportValidateResponse> {
+  const searchParams = new URLSearchParams({ mode: query.mode });
+  if (query.deliveryMonth !== null) searchParams.set("deliveryMonth", query.deliveryMonth);
+  if (query.tenantId !== null) searchParams.set("tenantId", query.tenantId);
+  const formData = new FormData();
+  files.forEach((file) => formData.append("files", file, file.name));
+
+  return fetchJson(
+    `${getApiBaseUrl()}/registro-alimentacion/formato-entrega/imported-pdfs/batch/validate?${searchParams.toString()}`,
+    alimentacionBulkImportValidateResponseSchema,
+    { method: "POST", body: formData },
+  );
+}
+
+export function confirmBulkAlimentacionFormatoEntregaPdfs(
+  request: AlimentacionBulkImportConfirmRequest,
+): Promise<AlimentacionBulkImportConfirmResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/registro-alimentacion/formato-entrega/imported-pdfs/batch/confirm`,
+    alimentacionBulkImportConfirmResponseSchema,
+    { method: "POST", body: request },
   );
 }
 

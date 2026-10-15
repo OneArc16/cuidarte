@@ -51,6 +51,7 @@ export function ActividadGrupalCreatePage({ navigate, user }: ActividadGrupalCre
 
       <ActividadGrupalForm
         mode="create"
+        user={user}
         error={
           resolveActividadesGrupalesApiError(createMutation.error) ??
           (shouldSelectTenant

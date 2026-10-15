@@ -1,13 +1,18 @@
 import { randomBytes, createHash } from "node:crypto";
 
-import { type AuthUser, authUserSchema, type LoginRequest } from "@cuidarte/contracts";
+import {
+  type AuthUser,
+  authUserSchema,
+  type LoginRequest,
+  type UserPermission,
+} from "@cuidarte/contracts";
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { and, eq, gt, isNull } from "drizzle-orm";
 import { verify } from "argon2";
 
 import { getEnv } from "../../config/env";
 import { DatabaseService } from "../../database/database.service";
-import { tenants, userSessions, users } from "../../database/schema";
+import { tenants, userPermissions, userSessions, users } from "../../database/schema";
 
 type LoginMetadata = {
   ip: string | null;
@@ -21,6 +26,7 @@ type AuthenticatedSession = {
 };
 
 type UserRow = typeof users.$inferSelect;
+type TenantRow = typeof tenants.$inferSelect;
 
 const GENERIC_LOGIN_ERROR = "Correo o contrasena incorrectos.";
 const MAX_FAILED_LOGIN_ATTEMPTS = 5;
@@ -37,7 +43,7 @@ export class AuthService {
       throw new UnauthorizedException(GENERIC_LOGIN_ERROR);
     }
 
-    await this.ensureTenantCanLogin(user);
+    const tenant = await this.ensureTenantCanLogin(user);
 
     const passwordMatches = await verify(user.passwordHash, command.password);
 
@@ -70,10 +76,12 @@ export class AuthService {
       })
       .where(eq(users.id, user.id));
 
+    const permissions = await this.findUserPermissions(user.id);
+
     return {
       token,
       expiresAt,
-      user: this.toAuthUser(user),
+      user: this.toAuthUser(user, tenant, permissions),
     };
   }
 
@@ -107,14 +115,16 @@ export class AuthService {
       return null;
     }
 
-    await this.ensureTenantCanLogin(user);
+    const tenant = await this.ensureTenantCanLogin(user);
 
     await this.database.db
       .update(userSessions)
       .set({ lastUsedAt: now })
       .where(eq(userSessions.id, session.id));
 
-    return this.toAuthUser(user);
+    const permissions = await this.findUserPermissions(user.id);
+
+    return this.toAuthUser(user, tenant, permissions);
   }
 
   async logout(token: string | undefined): Promise<void> {
@@ -144,9 +154,9 @@ export class AuthService {
     return user ?? null;
   }
 
-  private async ensureTenantCanLogin(user: UserRow): Promise<void> {
+  private async ensureTenantCanLogin(user: UserRow): Promise<TenantRow | null> {
     if (user.tenantId === null) {
-      return;
+      return null;
     }
 
     const [tenant] = await this.database.db
@@ -158,6 +168,8 @@ export class AuthService {
     if (tenant === undefined || !tenant.isActive) {
       throw new UnauthorizedException(GENERIC_LOGIN_ERROR);
     }
+
+    return tenant;
   }
 
   private isLocked(user: UserRow): boolean {
@@ -192,14 +204,31 @@ export class AuthService {
     return createHash("sha256").update(token).digest("hex");
   }
 
-  private toAuthUser(user: UserRow): AuthUser {
+  private async findUserPermissions(userId: string): Promise<UserPermission[]> {
+    const rows = await this.database.db
+      .select({ permission: userPermissions.permission })
+      .from(userPermissions)
+      .where(eq(userPermissions.userId, userId));
+
+    return rows.map((row) => row.permission as UserPermission);
+  }
+
+  private toAuthUser(
+    user: UserRow,
+    tenant: TenantRow | null,
+    permissions: UserPermission[],
+  ): AuthUser {
     return authUserSchema.parse({
       id: user.id,
       tenantId: user.tenantId,
+      tenantMunicipality: tenant?.city ?? null,
+      tenantDepartment: tenant?.department ?? null,
       email: user.email,
       fullName: user.fullName,
       role: user.role,
       passwordSetByAdmin: user.passwordSetByAdmin,
+      permissions,
+      allowedActividadGrupalOrganizers: user.actividadGrupalAllowedOrganizers,
     });
   }
 }

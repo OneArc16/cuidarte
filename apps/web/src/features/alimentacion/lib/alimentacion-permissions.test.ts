@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { canManageAlimentacion, canOpenAlimentacion } from "./alimentacion-permissions";
+import { type AuthUser } from "@cuidarte/contracts";
+
+import {
+  canBulkImportAlimentacion,
+  canExportAlimentacion,
+  canImportAlimentacion,
+  canManageAlimentacion,
+  canOpenAlimentacion,
+  canViewAlimentacionDeliveryDays,
+} from "./alimentacion-permissions";
 
 const tenantId = "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054";
 
@@ -61,5 +70,48 @@ describe("alimentacion permissions", () => {
     expect(canManageAlimentacion(auditorUser)).toBe(false);
     expect(canManageAlimentacion(directorUser)).toBe(true);
     expect(canManageAlimentacion(medicoUser)).toBe(false);
+  });
+
+  it("shows delivered days by default to directors, admins, and super admins", () => {
+    expect(canViewAlimentacionDeliveryDays(superAdminUser)).toBe(true);
+    expect(canViewAlimentacionDeliveryDays(adminUser)).toBe(true);
+    expect(canViewAlimentacionDeliveryDays(directorUser)).toBe(true);
+    expect(canViewAlimentacionDeliveryDays(auditorUser)).toBe(false);
+    expect(
+      canViewAlimentacionDeliveryDays({
+        ...medicoUser,
+        permissions: ["alimentacion.view_delivery_days"],
+      } as AuthUser),
+    ).toBe(true);
+  });
+
+  it("separates individual and bulk format imports", () => {
+    expect(canImportAlimentacion(directorUser)).toBe(true);
+    expect(canBulkImportAlimentacion(directorUser)).toBe(true);
+
+    const userWithIndividualImport = {
+      ...medicoUser,
+      permissions: ["alimentacion.import"],
+    } as AuthUser;
+    const userWithBulkImport = {
+      ...medicoUser,
+      permissions: ["alimentacion.bulk_import"],
+    } as AuthUser;
+
+    expect(canImportAlimentacion(userWithIndividualImport)).toBe(true);
+    expect(canBulkImportAlimentacion(userWithIndividualImport)).toBe(false);
+    expect(canImportAlimentacion(userWithBulkImport)).toBe(false);
+    expect(canBulkImportAlimentacion(userWithBulkImport)).toBe(true);
+  });
+
+  it("allows downloading formats without granting import or edit permissions", () => {
+    const userWithDownload = {
+      ...medicoUser,
+      permissions: ["alimentacion.view", "alimentacion.export"],
+    } as AuthUser;
+
+    expect(canExportAlimentacion(userWithDownload)).toBe(true);
+    expect(canImportAlimentacion(userWithDownload)).toBe(false);
+    expect(canManageAlimentacion(userWithDownload)).toBe(false);
   });
 });

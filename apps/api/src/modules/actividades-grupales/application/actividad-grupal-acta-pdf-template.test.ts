@@ -13,6 +13,7 @@ describe("actividad-grupal-acta-pdf-template", () => {
     const htmlWithoutPhotos = buildActividadGrupalActaPdfHtml({
       detail: createDetail(),
       logoDataUrl: null,
+      membreteDataUrl: "data:image/png;base64,bWVtYnJldGU=",
       photoAssets: [],
     });
     const htmlWithPhotos = buildActividadGrupalActaPdfHtml({
@@ -33,6 +34,8 @@ describe("actividad-grupal-acta-pdf-template", () => {
     });
 
     assert.doesNotMatch(htmlWithoutPhotos, /EVIDENCIA FOTOGRAFICA/);
+    assert.match(htmlWithoutPhotos, /class="pdf-letterhead"/);
+    assert.match(htmlWithoutPhotos, /data:image\/png;base64,bWVtYnJldGU=/);
     assert.doesNotMatch(
       htmlWithoutPhotos,
       /<section class="acta-document__section acta-document__section--photo-evidence">/,
@@ -63,22 +66,79 @@ describe("actividad-grupal-acta-pdf-template", () => {
     );
   });
 
-  it("builds a sanitized filename", () => {
+  it("builds the standardized filename for the acta export", () => {
     assert.equal(
-      buildActividadGrupalActaPdfFilename(createDetail({ actaNumber: "10 20/30" })),
-      "acta-sesion-grupal-10-20-30.pdf",
+      buildActividadGrupalActaPdfFilename(
+        createDetail({
+          actaNumber: "SALU_001",
+          activityName: "Sensibilización",
+          activityTypeCatalog: {
+            id: "55555555-5555-4555-8555-555555555555",
+            name: "Salud preventiva",
+            isActive: true,
+          },
+          activityDate: "2026-07-15",
+        }),
+      ),
+      "SALU_001_SENSIBILIZACION_ACTA_SALUD_PREVENTIVA_2026_07_15.pdf",
     );
   });
 
-  it("uses page margins so split tables do not touch the page edge", () => {
+  it("reserves the safe content area beneath the fixed letterhead on every page", () => {
     const html = buildActividadGrupalActaPdfHtml({
       detail: createDetail(),
       logoDataUrl: null,
       photoAssets: [],
     });
 
-    assert.match(html, /@page\s*{[^}]*margin: 12mm;/);
-    assert.match(html, /padding: 0;/);
+    assert.match(html, /@page\s*{[^}]*margin: 0;/);
+    assert.match(html, /padding: 45mm 24mm 32mm;/);
+    assert.match(html, /box-decoration-break: clone;/);
+    assert.match(html, /\.acta-document tr,[\s\S]*break-inside: avoid;/);
+    assert.doesNotMatch(html, /\.acta-document__section,\s*\.acta-document__people-table/);
+    assert.match(html, /\.acta-document__section-title[\s\S]*break-after: avoid;/);
+  });
+
+  it("renders the letterhead as an unscaled full-page background", () => {
+    const html = buildActividadGrupalActaPdfHtml({
+      detail: createDetail(),
+      logoDataUrl: null,
+      membreteDataUrl: "data:image/png;base64,bWVtYnJldGU=",
+      photoAssets: [],
+    });
+
+    assert.match(html, /top: 0;/);
+    assert.match(html, /left: 0;/);
+    assert.match(html, /width: 215\.9mm;/);
+    assert.match(html, /height: 279\.4mm;/);
+    assert.match(html, /opacity: 0\.45;/);
+    assert.match(html, /object-fit: contain;/);
+    assert.doesNotMatch(html, /transform: scale/);
+  });
+
+  it("distributes metadata columns within the safe content width", () => {
+    const html = buildActividadGrupalActaPdfHtml({
+      detail: createDetail(),
+      logoDataUrl: null,
+      photoAssets: [],
+    });
+
+    assert.match(html, /\.acta-document__meta-label\s*{\s*width: 15%;/);
+    assert.match(html, /\.acta-document__meta-city\s*{\s*width: 26%;/);
+    assert.match(html, /\.acta-document__meta-time\s*{\s*width: 14\.5%;/);
+  });
+
+  it("uses accented fixed labels and contains the institutional logo", () => {
+    const html = buildActividadGrupalActaPdfHtml({
+      detail: createDetail(),
+      logoDataUrl: "data:image/png;base64,bG9nbw==",
+      photoAssets: [],
+    });
+
+    assert.match(html, /SISTEMA DE GESTIÓN DE CALIDAD/);
+    assert.match(html, /DESARROLLO DE LA REUNIÓN:/);
+    assert.match(html, /CONCLUSIÓN:/);
+    assert.match(html, /width: 100%;[\s\S]*height: 10mm;[\s\S]*object-fit: contain;/);
   });
 
   it("renders assigned professional signatures inside the signature column", () => {
@@ -176,6 +236,12 @@ function createDetail(
     previousActaNumber: null,
     activityName: "Sesion grupal de ejemplo",
     activityType: "salud_preventiva",
+    activityTypeId: "55555555-5555-4555-8555-555555555555",
+    activityTypeCatalog: {
+      id: "55555555-5555-4555-8555-555555555555",
+      name: "Salud preventiva",
+      isActive: true,
+    },
     activityDate: "2026-04-23",
     startTime: "08:00",
     endTime: "10:00",

@@ -65,6 +65,7 @@ describe("ReportsDashboardService", () => {
           count: 3,
         },
       ],
+      sexDistribution: { male: 4, female: 6, other: 2 },
       snackOneDelivered: 2,
       snackTwoDelivered: 3,
     });
@@ -92,6 +93,7 @@ describe("ReportsDashboardService", () => {
       snacksDelivered: 5,
       lunchesDelivered: 6,
     });
+    assert.deepEqual(response.sexDistribution, { male: 4, female: 6, other: 2 });
   });
 
   it("uses consolidated scope for super admins", async () => {
@@ -101,6 +103,45 @@ describe("ReportsDashboardService", () => {
 
     assert.deepEqual(repository.lastScope, { tenantId: null });
     assert.equal(response.scope.isConsolidated, true);
+  });
+
+  it("consolidates activity types with the same name for super admins", async () => {
+    const repository = new InMemoryReportsDashboardRepository({
+      ...emptyAggregate,
+      activitiesByType: [
+        {
+          activityTypeId: "44444444-4444-4444-8444-444444444444",
+          activityTypeName: "Actividad de Campo",
+          count: 1,
+        },
+        {
+          activityTypeId: "55555555-5555-4555-8555-555555555555",
+          activityTypeName: " actividad de campo ",
+          count: 2,
+        },
+        {
+          activityTypeId: "66666666-6666-4666-8666-666666666666",
+          activityTypeName: "Salud Preventiva",
+          count: 3,
+        },
+      ],
+    });
+
+    const response = await new ReportsDashboardService(repository).getDashboard(query, superAdmin);
+
+    assert.deepEqual(response.activitiesByType, [
+      {
+        activityTypeId: "44444444-4444-4444-8444-444444444444",
+        activityTypeName: "Actividad de Campo",
+        count: 3,
+      },
+      {
+        activityTypeId: "66666666-6666-4666-8666-666666666666",
+        activityTypeName: "Salud Preventiva",
+        count: 3,
+      },
+    ]);
+    assert.equal(response.summary.activities, 6);
   });
 
   it("rejects actors without report access", async () => {
@@ -129,6 +170,7 @@ const emptyAggregate: ReportsDashboardAggregate = {
   tenantName: null,
   dailySeries: [],
   activitiesByType: [],
+  sexDistribution: { male: 0, female: 0, other: 0 },
   snackOneDelivered: 0,
   snackTwoDelivered: 0,
 };

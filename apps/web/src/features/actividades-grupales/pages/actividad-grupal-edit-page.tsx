@@ -100,6 +100,7 @@ export function ActividadGrupalEditPage({
 
       <ActividadGrupalForm
         mode="edit"
+        user={user}
         error={
           resolveActividadesGrupalesApiError(updateMutation.error) ??
           resolveActividadesGrupalesApiError(formOptionsQuery.error)

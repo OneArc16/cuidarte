@@ -1,11 +1,12 @@
 import { type ActividadGrupalListItem, type AuthUser } from "@cuidarte/contracts";
-import { CalendarPlus, ListRestart, Trash2 } from "lucide-react";
+import { CalendarPlus, History, ListRestart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { ReportExportButton } from "@/features/reports/components/report-export-button";
 import { ReportHistoryButton } from "@/features/reports/components/report-history-button";
+import { canExportReports } from "@/features/reports/lib/reports-permissions";
 import { getCurrentMonthInputValue } from "@/features/alimentacion/lib/alimentacion-formatters";
 
 import { ActividadGrupalDeleteDialog } from "../components/actividad-grupal-delete-dialog";
@@ -77,6 +78,7 @@ export function ActividadesGrupalesIndexPage({
       : selectedTenantId
     : user.tenantId;
   const canViewTrash = canViewActividadesGrupalesTrash(user);
+  const canExport = canExportReports(user);
   const tenantOptionsQuery = useActividadGrupalTenantOptionsQuery(showTenantFilter);
   const activityTypesQuery = useActividadGrupalTiposQuery(
     { tenantId: reportTenantId, includeInactive: true },
@@ -126,12 +128,12 @@ export function ActividadesGrupalesIndexPage({
           <button
             className="outline-action actividades-back-action actividades-trash-action"
             type="button"
-            aria-label="Ver papelera"
-            data-tooltip="Ver papelera"
+            aria-label="Ver log de eliminaciones"
+            data-tooltip="Ver log de eliminaciones"
             onClick={() => navigate(CREACION_ACTIVIDADES_TRASH_PATH)}
           >
-            <Trash2 aria-hidden="true" />
-            <span className="visually-hidden">Ver papelera</span>
+            <History aria-hidden="true" />
+            <span className="visually-hidden">Ver log de eliminaciones</span>
           </button>
         ) : null}
         <span className="actividades-form-nav__context">Listado activo</span>
@@ -141,8 +143,25 @@ export function ActividadesGrupalesIndexPage({
         activityMonth={activityMonth}
         exportButton={
           <div className="module-report-actions">
-            <ReportExportButton className="actividades-zip-action" period={reportPeriod} tenantId={reportTenantId} type="ACTAS_SESIONES_GRUPALES" />
-            <ReportHistoryButton period={reportPeriod} tenantId={reportTenantId} type="ACTAS_SESIONES_GRUPALES" />
+            {canExport ? (
+              <ReportExportButton
+                className="actividades-zip-action"
+                period={reportPeriod}
+                tenantId={reportTenantId}
+                type="ACTAS_SESIONES_GRUPALES"
+                filters={{
+                  search: search.trim() || null,
+                  activityTypeId: activityTypeId === "" ? null : activityTypeId,
+                  organizer: selectedOrganizer === "" ? null : selectedOrganizer,
+                }}
+              />
+            ) : null}
+            <ReportHistoryButton
+              canDownload={canExport}
+              period={reportPeriod}
+              tenantId={reportTenantId}
+              type="ACTAS_SESIONES_GRUPALES"
+            />
           </div>
         }
         search={search}
@@ -179,6 +198,7 @@ export function ActividadesGrupalesIndexPage({
         }
         onOpenActaPdf={(actividad) => openActividadGrupalActaPdf(actividad.id)}
         showTenantColumn={showTenantFilter}
+        showCreationTimestampColumn={user.role === "super_admin"}
       />
 
       {activityPendingDelete !== null ? (
@@ -199,7 +219,7 @@ export function ActividadesGrupalesIndexPage({
                 onSuccess: () => {
                   deleteMutation.reset();
                   setActivityPendingDelete(null);
-                  toast.success("Acta enviada a la papelera.");
+                  toast.success("Acta eliminada y registrada en el log.");
                 },
               },
             );

@@ -197,6 +197,22 @@
   font-weight: 800;
 }
 
+.home-user__details .home-user__location {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--color-care);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
+
+.home-user__location svg {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+}
+
 .home-nav ul {
   display: grid;
   gap: 10px;
@@ -222,6 +238,7 @@
   font-weight: 900;
   line-height: 1.25;
   text-align: left;
+  text-decoration: none;
   transition:
     background 160ms ease,
     border-color 160ms ease,
@@ -494,6 +511,31 @@
   gap: 16px;
 }
 
+.home-dashboard-section--auditor {
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid rgb(8 80 65 / 12%);
+  border-radius: 8px;
+  background: rgb(255 255 255 / 68%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 82%);
+}
+
+.home-dashboard-section--auditor .home-dashboard-section__header {
+  align-items: start;
+}
+
+.home-dashboard-section--auditor .home-dashboard-section__header h2 {
+  color: var(--color-deep);
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.home-dashboard-section--auditor .eyebrow {
+  color: var(--color-care);
+  font-size: 0.68rem;
+}
+
 .home-direct-access {
   display: grid;
   gap: clamp(14px, 1.8vw, 20px);
@@ -546,6 +588,11 @@
 
 .home-indicators-grid {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.home-dashboard-section--auditor .home-indicators-grid {
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 10px;
 }
 
 .home-shortcut-card,
@@ -762,6 +809,43 @@
   line-height: 1;
 }
 
+.home-dashboard-section--auditor .home-indicator-card {
+  min-height: 94px;
+  gap: 6px;
+  padding: 11px;
+  border-color: rgb(8 80 65 / 12%);
+  border-radius: 8px;
+  background: rgb(249 253 251 / 88%);
+  box-shadow: none;
+}
+
+.home-dashboard-section--auditor .home-indicator-card:hover {
+  box-shadow: 0 10px 24px rgb(8 80 65 / 8%);
+}
+
+.home-dashboard-section--auditor .home-indicator-card__icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+}
+
+.home-dashboard-section--auditor .home-indicator-card__icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.home-dashboard-section--auditor .home-indicator-card__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.15;
+  text-transform: none;
+}
+
+.home-dashboard-section--auditor .home-indicator-card strong {
+  font-size: 1.2rem;
+}
+
 .home-indicator-card {
   min-height: 128px;
   gap: 10px;
@@ -805,6 +889,48 @@
   color: var(--color-ink);
 }
 
+/* Panel de auditoría: métricas livianas y escaneables, como el resumen del período. */
+.home-dashboard-section--auditor .home-indicator-card {
+  min-height: 94px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto 1fr;
+  gap: 5px;
+  padding: 11px;
+  border-color: #dbe9e5;
+  border-radius: 8px;
+  background: #fbfdfc;
+  box-shadow: none;
+}
+
+.home-dashboard-section--auditor .home-indicator-card__icon {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+}
+
+.home-dashboard-section--auditor .home-indicator-card__label {
+  grid-column: 1;
+  grid-row: 2;
+  color: #3a6259;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.15;
+  text-transform: none;
+}
+
+.home-dashboard-section--auditor .home-indicator-card strong {
+  grid-column: 1;
+  grid-row: 3;
+  align-self: end;
+  color: #075541;
+  font-size: 1.18rem;
+  font-weight: 900;
+}
+
 .home-dashboard-feedback {
   margin: 0;
   padding: 16px 18px;
@@ -813,6 +939,199 @@
   background: rgb(250 238 218 / 54%);
   color: #7d5817;
   font-weight: 800;
+}
+
+.home-auditor-charts {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #dbe9e5;
+  border-radius: 8px;
+  background: rgb(255 255 255 / 68%);
+}
+.home-auditor-charts h2,
+.home-auditor-chart h3 {
+  margin: 0;
+  color: var(--color-deep);
+}
+.home-auditor-charts h2 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.home-auditor-charts__grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.72fr) minmax(0, 1.48fr);
+  gap: 12px;
+}
+.home-auditor-chart {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #dbe9e5;
+  border-radius: 12px;
+  background: #fbfdfc;
+}
+.home-auditor-chart h3 {
+  font-size: 0.82rem;
+}
+.home-auditor-chart--monthly {
+  grid-column: span 1;
+}
+.home-auditor-chart__legend {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: -4px;
+  color: #4a3860;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.home-auditor-chart__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.home-auditor-chart__legend i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+.home-auditor-chart .recharts-bar-rectangle :is(path, rect) {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  transition:
+    transform 160ms ease-out,
+    filter 160ms ease-out;
+}
+.home-auditor-chart .recharts-pie-sector {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    transform 160ms ease-out,
+    filter 160ms ease-out;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .home-auditor-chart :is(.recharts-bar-rectangle, .recharts-pie-sector) {
+    cursor: pointer;
+  }
+
+  .home-auditor-chart .recharts-bar-rectangle:hover :is(path, rect) {
+    transform: translateY(-4px) scaleY(1.035);
+    filter: drop-shadow(0 5px 5px rgb(100 22 184 / 24%));
+  }
+
+  .home-auditor-chart .recharts-pie-sector:hover {
+    transform: scale(1.055);
+    filter: drop-shadow(0 4px 4px rgb(100 22 184 / 20%));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-auditor-chart .recharts-bar-rectangle :is(path, rect),
+  .home-auditor-chart .recharts-pie-sector {
+    transition: none;
+  }
+}
+@media (max-width: 800px) {
+  .home-auditor-charts__grid {
+    grid-template-columns: 1fr;
+  }
+  .home-auditor-chart--monthly {
+    grid-column: auto;
+  }
+}
+
+/* Paleta del perfil Auditor: morado dominante con acentos del sistema visual de referencia. */
+.home-shell--auditor {
+  --auditor-purple: #6416b8;
+  --auditor-purple-deep: #461078;
+  --auditor-purple-soft: #f1e8fb;
+  --auditor-yellow: #f5bd22;
+  --auditor-magenta: #ed1450;
+  --auditor-blue: #087aa4;
+  --auditor-teal: #0ca6b7;
+  --auditor-green: #64b44e;
+}
+
+.home-shell--auditor .home-workspace {
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 84% 8%, rgb(100 22 184 / 10%), transparent 30%),
+    radial-gradient(circle at 58% 92%, rgb(12 166 183 / 9%), transparent 34%),
+    linear-gradient(135deg, #fbf9fd, #f6fbfa 58%, #fffdf5);
+}
+
+.home-shell--auditor .home-dashboard-section--auditor,
+.home-shell--auditor .home-auditor-charts {
+  position: relative;
+  overflow: hidden;
+  border-color: rgb(100 22 184 / 18%);
+  background: rgb(255 255 255 / 82%);
+  box-shadow: 0 16px 44px rgb(70 16 120 / 7%);
+}
+
+.home-shell--auditor .home-dashboard-section--auditor::before,
+.home-shell--auditor .home-auditor-charts::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--auditor-purple) 0 42%,
+    var(--auditor-yellow) 42% 57%,
+    var(--auditor-green) 57% 76%,
+    var(--auditor-teal) 76% 100%
+  );
+  content: "";
+}
+
+.home-shell--auditor .home-dashboard-section--auditor .eyebrow,
+.home-shell--auditor .home-auditor-charts .eyebrow {
+  color: var(--color-care);
+}
+
+.home-shell--auditor .home-dashboard-section--auditor .home-indicator-card,
+.home-shell--auditor .home-auditor-chart {
+  border-color: rgb(100 22 184 / 14%);
+  background: linear-gradient(180deg, #fff, #fcf9ff);
+}
+
+.home-shell--auditor .home-dashboard-section--auditor .home-indicator-card:hover {
+  border-color: rgb(100 22 184 / 32%);
+  box-shadow: 0 10px 26px rgb(100 22 184 / 12%);
+}
+
+.home-shell--auditor .home-dashboard-section--auditor .home-indicator-card strong,
+.home-shell--auditor .home-auditor-chart h3 {
+  color: var(--auditor-purple-deep);
+}
+
+.home-shell--auditor .home-indicator-card[data-tone="ink"] .home-indicator-card__icon {
+  background: rgb(100 22 184 / 12%);
+  color: var(--auditor-purple);
+}
+
+.home-shell--auditor .home-indicator-card[data-tone="emerald"] .home-indicator-card__icon {
+  background: rgb(100 180 78 / 14%);
+  color: #3d9138;
+}
+
+.home-shell--auditor .home-indicator-card[data-tone="sky"] .home-indicator-card__icon {
+  background: rgb(12 166 183 / 13%);
+  color: var(--auditor-teal);
+}
+
+.home-shell--auditor .home-indicator-card[data-tone="gold"] .home-indicator-card__icon {
+  background: rgb(245 189 34 / 18%);
+  color: #b87800;
+}
+
+.home-shell--auditor .home-indicator-card[data-tone="coral"] .home-indicator-card__icon {
+  background: rgb(237 20 80 / 10%);
+  color: var(--auditor-magenta);
+}
+
+.home-shell--auditor .home-auditor-chart {
+  box-shadow: inset 0 1px 0 #fff;
 }
 
 .visually-hidden {

@@ -1,17 +1,21 @@
 import {
   type ActividadGrupalEditDetail,
+  hasUserPermission,
   type ActividadGrupalDiligenciamientoDetail,
   type ActividadGrupalEmpleadoOption,
   type ActividadGrupalIntegranteOption,
   type ActividadGrupalIntegranteOptionsQuery,
   type ActividadGrupalListItem,
   type ActividadGrupalListQuery,
+  type ActividadGrupalOrganizer,
   type ActividadGrupalResponsibleDepartment,
   type ActividadGrupalSupportFile,
   type ActividadGrupalTenantOption,
   type ActividadGrupalFormOptionsResponse,
   type ActividadGrupalActaCorrectionPreviewResponse,
   type ApplyActividadGrupalActaCorrectionRequest,
+  type ActividadGrupalActaPrefixCorrectionPreviewRequest,
+  type ApplyActividadGrupalActaPrefixCorrectionRequest,
   type ApplyActividadGrupalActaCorrectionResponse,
   type CorrectActividadGrupalActaNumberRequest,
   type UpdateActividadGrupalRequest,
@@ -40,11 +44,13 @@ import {
 
 import {
   resolveActividadGrupalTenantForCreate,
+  canEditActividadGrupal,
   canManageActividadesGrupales,
   canCorrectActividadGrupalActaNumber,
   canBulkCorrectActividadGrupalActaNumbers,
   canViewActividadGrupal,
   canTrashActividadGrupal,
+  canCreateActividadGrupalWithOrganizer,
   resolvePermittedActividadGrupalOrganizers,
   resolveActividadesGrupalesScope,
 } from "../domain/actividad-grupal.policy";
@@ -112,6 +118,7 @@ export class ActividadesGrupalesService {
           tenantId,
           name: "Actividad",
           normalizedName: "actividad",
+          consecutiveConfig: null,
           isActive: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -124,6 +131,7 @@ export class ActividadesGrupalesService {
           tenantId,
           name: "Actividad",
           normalizedName: "actividad",
+          consecutiveConfig: null,
           isActive: true,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
@@ -149,6 +157,7 @@ export class ActividadesGrupalesService {
       tenantId: effectiveTenantId,
       scope,
       permittedOrganizers,
+      ...(permittedOrganizers === null ? {} : { permittedCreatorUserId: actor.id }),
     });
 
     return records
@@ -170,11 +179,11 @@ export class ActividadesGrupalesService {
     query: { tenantId: string | null },
     actor: AuthUser,
   ): Promise<ActividadGrupalFormOptionsResponse> {
-    this.ensureCanManageActivities(actor);
+    this.ensureCanCreateActivities(actor);
     const tenantId = this.resolveTenantIdForForm(actor, query.tenantId);
     const [empleados, activityTypes] = await Promise.all([
       this.actividadesGrupalesRepository.findActiveEmpleadoOptions(tenantId),
-      this.actividadGrupalTiposService.listForSessionForm(tenantId),
+      this.actividadGrupalTiposService.listForSessionForm(tenantId, actor),
     ]);
 
     return {
@@ -189,14 +198,29 @@ export class ActividadesGrupalesService {
     command: CreateActividadGrupalRequest,
     actor: AuthUser,
   ): Promise<ActividadGrupalListItem> {
-    this.ensureCanManageActivities(actor);
+    this.ensureCanCreateActivities(actor);
     this.resolveScopeOrThrow(actor);
 
+    if (!canCreateActividadGrupalWithOrganizer(actor, command.organizer)) {
+      throw new ForbiddenException("No tienes permiso para crear actividades de otro organizador.");
+    }
+
     const tenantId = this.resolveTenantIdForCreate(actor, command.tenantId);
-    await this.actividadGrupalTiposService.resolveForSessionCreate(
+    const activityType = await this.actividadGrupalTiposService.resolveForSessionCreate(
       command.activityTypeId,
       tenantId,
     );
+    const customConsecutive = activityType.consecutiveConfig;
+
+    if (
+      activityType.consecutiveConfig !== null &&
+      !activityType.consecutiveConfig.creatorUserIds.includes(actor.id)
+    ) {
+      throw new ForbiddenException(
+        "No tienes permiso para crear esta actividad con su consecutivo especial.",
+      );
+    }
+
     const activeEmpleados =
       await this.actividadesGrupalesRepository.findActiveEmpleadoOptions(tenantId);
     const activeEmpleadoIds = new Set(activeEmpleados.map((empleado) => empleado.id));
@@ -221,6 +245,7 @@ export class ActividadesGrupalesService {
       endTime: command.endTime,
       organizer: command.organizer,
       employeeIds: command.employeeIds,
+      customConsecutive,
     });
 
     return this.toListItem(record, actor);
@@ -230,7 +255,7 @@ export class ActividadesGrupalesService {
     activityId: string,
     actor: AuthUser,
   ): Promise<ActividadGrupalEditDetail> {
-    this.ensureCanManageActivities(actor);
+    this.ensureCanEditActivities(actor);
     const detail = await this.getEditableActivityOrThrow(activityId, actor);
 
     return actividadGrupalEditDetailSchema.parse({
@@ -247,7 +272,7 @@ export class ActividadesGrupalesService {
     command: UpdateActividadGrupalRequest,
     actor: AuthUser,
   ): Promise<ActividadGrupalListItem> {
-    this.ensureCanManageActivities(actor);
+    this.ensureCanEditActivities(actor);
     const detail = await this.getEditableActivityOrThrow(activityId, actor);
     await this.actividadGrupalTiposService.resolveForSessionUpdate(
       command.activityTypeId,
@@ -310,12 +335,14 @@ export class ActividadesGrupalesService {
 
   async previewActividadGrupalActaCorrection(
     tenantId: string,
+    organizer: ActividadGrupalOrganizer | null,
     actor: AuthUser,
   ): Promise<ActividadGrupalActaCorrectionPreviewResponse> {
     this.ensureCanCorrectActa(actor, true);
     const preview = await this.actividadesGrupalesRepository.previewActaNumberCorrection(
       tenantId,
       actor.id,
+      organizer,
     );
 
     return actividadGrupalActaCorrectionPreviewResponseSchema.parse({
@@ -328,6 +355,68 @@ export class ActividadesGrupalesService {
       warningCount: preview.warningCount,
       rows: preview.rows,
     });
+  }
+
+  async previewActividadGrupalActaPrefixCorrection(
+    command: ActividadGrupalActaPrefixCorrectionPreviewRequest,
+    actor: AuthUser,
+  ): Promise<ActividadGrupalActaCorrectionPreviewResponse> {
+    this.ensureCanCorrectActa(actor, true);
+    const prefix = command.prefix.trim().toUpperCase();
+
+    if (!/^[A-Z0-9]{2,24}$/.test(prefix)) {
+      throw new BadRequestException("El prefijo solo puede incluir letras y números.");
+    }
+
+    const previewPrefixCorrection = this.actividadesGrupalesRepository.previewActaPrefixCorrection;
+    if (previewPrefixCorrection === undefined) {
+      throw new BadRequestException("La migración de prefijos no está disponible.");
+    }
+
+    const preview = await previewPrefixCorrection.call(this.actividadesGrupalesRepository, {
+      tenantId: command.tenantId,
+      actorUserId: actor.id,
+      activityTypeId: command.activityTypeId,
+      prefix,
+    });
+
+    return actividadGrupalActaCorrectionPreviewResponseSchema.parse({
+      operationToken: preview.operationToken,
+      tenantId: preview.tenantId,
+      previewExpiresAt: preview.previewExpiresAt.toISOString(),
+      totalCount: preview.totalCount,
+      changedCount: preview.changedCount,
+      unchangedCount: preview.unchangedCount,
+      warningCount: preview.warningCount,
+      rows: preview.rows,
+    });
+  }
+
+  async applyActividadGrupalActaPrefixCorrection(
+    command: ApplyActividadGrupalActaPrefixCorrectionRequest,
+    actor: AuthUser,
+  ): Promise<ApplyActividadGrupalActaCorrectionResponse> {
+    this.ensureCanCorrectActa(actor, true);
+    const applyPrefixCorrection = this.actividadesGrupalesRepository.applyActaPrefixCorrection;
+    if (applyPrefixCorrection === undefined) {
+      throw new BadRequestException("La migración de prefijos no está disponible.");
+    }
+
+    try {
+      const result = await applyPrefixCorrection.call(this.actividadesGrupalesRepository, {
+        operationToken: command.operationToken,
+        actorUserId: actor.id,
+        reason: command.reason,
+      });
+
+      return applyActividadGrupalActaCorrectionResponseSchema.parse(result);
+    } catch (error) {
+      if (error instanceof ActaCorrectionConflictError) {
+        throw new ConflictException(error.message);
+      }
+
+      throw error;
+    }
   }
 
   async applyActividadGrupalActaCorrection(
@@ -380,7 +469,7 @@ export class ActividadesGrupalesService {
     query: ActividadGrupalIntegranteOptionsQuery,
     actor: AuthUser,
   ): Promise<ActividadGrupalIntegranteOption[]> {
-    this.ensureCanManageActivities(actor);
+    this.ensureCanEditActivities(actor);
     const detail = await this.getPermittedDiligenciamientoOrThrow(activityId, actor);
     const integrantes = await this.actividadesGrupalesRepository.searchIntegranteOptions({
       tenantId: detail.activity.tenantId,
@@ -394,7 +483,7 @@ export class ActividadesGrupalesService {
     command: SaveActividadGrupalDiligenciamientoCommand,
     actor: AuthUser,
   ): Promise<ActividadGrupalDiligenciamientoDetail> {
-    this.ensureCanManageActivities(actor);
+    this.ensureCanEditActivities(actor);
     const detail = await this.getPermittedDiligenciamientoOrThrow(command.activityId, actor);
     const removedPhotoIds = new Set(command.payload.removedPhotoFileIds);
     const currentPhotoFiles = detail.photoFiles.filter((file) => !removedPhotoIds.has(file.id));
@@ -486,6 +575,9 @@ export class ActividadesGrupalesService {
       activityId,
       scope,
       permittedOrganizers: resolvePermittedActividadGrupalOrganizers(actor),
+      ...(resolvePermittedActividadGrupalOrganizers(actor) === null
+        ? {}
+        : { permittedCreatorUserId: actor.id }),
     });
 
     if (detail === null) {
@@ -506,13 +598,20 @@ export class ActividadesGrupalesService {
       activityId,
       scope,
       permittedOrganizers: resolvePermittedActividadGrupalOrganizers(actor),
+      ...(resolvePermittedActividadGrupalOrganizers(actor) === null
+        ? {}
+        : { permittedCreatorUserId: actor.id }),
     });
 
     if (detail === null) {
       throw new NotFoundException("La actividad grupal no fue encontrada.");
     }
 
-    this.assertCanEditActivity(detail.activity, actor);
+    this.assertCanEditActivity(
+      detail.activity,
+      actor,
+      detail.assignedProfessionals.some((professional) => professional.id === actor.id),
+    );
 
     return detail;
   }
@@ -536,13 +635,37 @@ export class ActividadesGrupalesService {
     throw new ForbiddenException("No tienes permisos para diligenciar esta sesion.");
   }
 
-  private assertCanEditActivity(activity: ActividadGrupalRecord, actor: AuthUser): void {
-    if (!canTrashActividadGrupal(activity, actor)) {
+  private assertCanEditActivity(
+    activity: ActividadGrupalRecord,
+    actor: AuthUser,
+    isAssignedProfessional = false,
+  ): void {
+    if (!canEditActividadGrupal(activity, actor, isAssignedProfessional)) {
       throw new ForbiddenException("No tienes permisos para editar o eliminar esta actividad.");
     }
   }
 
-  private ensureCanManageActivities(actor: Pick<AuthUser, "role">) {
+  private ensureCanCreateActivities(actor: Pick<AuthUser, "role" | "permissions">) {
+    if (
+      !(actor.permissions === undefined
+        ? actor.role !== "auditor"
+        : hasUserPermission(actor, "actividades_grupales.create"))
+    ) {
+      throw new ForbiddenException("No tienes permisos para crear actividades.");
+    }
+  }
+
+  private ensureCanEditActivities(actor: Pick<AuthUser, "role" | "permissions">) {
+    if (
+      !(actor.permissions === undefined
+        ? actor.role !== "auditor"
+        : hasUserPermission(actor, "actividades_grupales.edit"))
+    ) {
+      throw new ForbiddenException("No tienes permisos para editar actividades.");
+    }
+  }
+
+  private ensureCanManageActivities(actor: Pick<AuthUser, "role" | "permissions">) {
     if (!canManageActividadesGrupales(actor)) {
       throw new ForbiddenException("No tienes permisos para crear o diligenciar actividades.");
     }
@@ -778,8 +901,12 @@ export class ActividadesGrupalesService {
       endTime: record.endTime,
       organizer: record.organizer,
       involvedEmployeesCount: record.involvedEmployeesCount,
-      canEdit: this.canEditActivity(record, actor),
-      canDelete: this.canEditActivity(record, actor),
+      canEdit: this.canEditActivity(
+        record,
+        actor,
+        record.assignedEmployeeIds?.includes(actor.id) ?? false,
+      ),
+      canDelete: canTrashActividadGrupal(record, actor),
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
     });
@@ -820,29 +947,23 @@ export class ActividadesGrupalesService {
     });
   }
 
-  private canEditActivity(activity: ActividadGrupalRecord, actor: AuthUser): boolean {
-    if (actor.role === "super_admin") {
-      return true;
-    }
-
-    if (activity.createdByUserId === actor.id) {
-      return true;
-    }
-
-    return (
-      (actor.role === "admin" || actor.role === "director") && actor.tenantId === activity.tenantId
-    );
+  private canEditActivity(
+    activity: ActividadGrupalRecord,
+    actor: AuthUser,
+    isAssignedProfessional = false,
+  ): boolean {
+    return canEditActividadGrupal(activity, actor, isAssignedProfessional);
   }
 
   private canEditDiligenciamiento(
     detail: ActividadGrupalDiligenciamientoDetailRecord,
     actor: AuthUser,
   ): boolean {
-    if (this.canEditActivity(detail.activity, actor)) {
-      return true;
-    }
-
-    return detail.assignedProfessionals.some((professional) => professional.id === actor.id);
+    return (
+      this.canEditActivity(detail.activity, actor) ||
+      (hasUserPermission(actor, "actividades_grupales.edit") &&
+        detail.assignedProfessionals.some((professional) => professional.id === actor.id))
+    );
   }
 
   private toSupportFile(file: ActividadGrupalSupportFileRecord): ActividadGrupalSupportFile {

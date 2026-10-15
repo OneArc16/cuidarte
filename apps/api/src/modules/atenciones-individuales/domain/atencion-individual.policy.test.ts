@@ -5,6 +5,7 @@ import { type AuthUser } from "@cuidarte/contracts";
 
 import {
   canAccessAtencionIndividualHistory,
+  canAccessAtencionIndividualMedicalHistory,
   canCreateAtencionIndividual,
   canEditAtencionIndividual,
   canEditOwnedAtencionIndividual,
@@ -105,7 +106,10 @@ describe("atencion-individual policy", () => {
 
     assert.equal(resolveAtencionIndividualHistoryAccess(medicoUser, ownAtencion), "edit");
     assert.equal(canEditOwnedAtencionIndividual(medicoUser, ownAtencion), true);
-    assert.equal(resolveAtencionIndividualHistoryAccess(medicoUser, otherProfessionalAtencion), null);
+    assert.equal(
+      resolveAtencionIndividualHistoryAccess(medicoUser, otherProfessionalAtencion),
+      null,
+    );
     assert.equal(canViewAtencionIndividual(medicoUser, otherProfessionalAtencion), false);
     assert.equal(
       resolveAtencionIndividualHistoryAccess(enfermeriaUser, {
@@ -157,6 +161,37 @@ describe("atencion-individual policy", () => {
       resolveAtencionIndividualHistoryAccess(recreacionistaUser, {
         createdByUserId: recreacionistaUser.id,
         createdByUserRole: recreacionistaUser.role,
+      }),
+      null,
+    );
+  });
+
+  it("allows only medical records with the dedicated medical history permission", () => {
+    const medicalHistoryReader: AuthUser = {
+      ...recreacionistaUser,
+      permissions: ["atenciones_individuales.medical_history"],
+    };
+
+    assert.equal(canAccessAtencionIndividualHistory(medicalHistoryReader), false);
+    assert.equal(canAccessAtencionIndividualMedicalHistory(medicalHistoryReader), true);
+    assert.equal(
+      canAccessAtencionIndividualMedicalHistory({
+        ...recreacionistaUser,
+        permissions: ["atenciones_individuales.view"],
+      }),
+      false,
+    );
+    assert.equal(
+      resolveAtencionIndividualHistoryAccess(medicalHistoryReader, {
+        createdByUserId: medicoUser.id,
+        createdByUserRole: "medico",
+      }),
+      "view",
+    );
+    assert.equal(
+      resolveAtencionIndividualHistoryAccess(medicalHistoryReader, {
+        createdByUserId: psicologoUser.id,
+        createdByUserRole: "psicologo",
       }),
       null,
     );

@@ -2,16 +2,19 @@ import {
   type ActividadGrupalFormOptionsResponse,
   type ActividadGrupalTipoSummary,
   type ActividadGrupalTenantOption,
+  type AuthUser,
 } from "@cuidarte/contracts";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Save, Search, Sparkles, X } from "lucide-react";
 import { type FieldErrors, type Resolver, useForm } from "react-hook-form";
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { formatEmpleadoRole } from "@/features/empleados/lib/empleados-formatters";
 
 import {
   formatActividadGrupalOrganizer,
+  getCreatableActividadGrupalOrganizerOptions,
   getActividadGrupalOrganizerOptions,
 } from "../lib/actividades-grupales-formatters";
 import {
@@ -22,6 +25,7 @@ import {
 import { ActividadGrupalFieldGroup } from "./actividad-grupal-field-group";
 
 type ActividadGrupalFormProps = {
+  user: AuthUser;
   mode: "create" | "edit";
   error: string | null;
   formOptions: ActividadGrupalFormOptionsResponse | null;
@@ -38,7 +42,11 @@ type ActividadGrupalFormProps = {
   onTenantChange: (tenantId: string) => void;
 };
 
+const EXCLUDED_SESSION_EMPLOYEE_ROLES: ReadonlySet<string> = new Set(["admin", "auditor"]);
+const ALL_EMPLOYEES_ANIMATION_TARGET = "__all__";
+
 export function ActividadGrupalForm({
+  user,
   mode,
   error,
   formOptions,
@@ -55,6 +63,10 @@ export function ActividadGrupalForm({
   tenantOptions,
 }: ActividadGrupalFormProps) {
   const [employeeSearch, setEmployeeSearch] = useState("");
+  const [employeeSelectionAnimation, setEmployeeSelectionAnimation] = useState<{
+    employeeId: string;
+    sequence: number;
+  } | null>(null);
   const form = useForm<ActividadGrupalFormValues>({
     resolver: zodResolver(actividadGrupalFormSchema) as Resolver<ActividadGrupalFormValues>,
     defaultValues: initialValues ?? createDefaultActividadGrupalFormValues(),
@@ -64,7 +76,13 @@ export function ActividadGrupalForm({
   const employeeIds = watch("employeeIds");
   const organizerValue = watch("organizer");
   const isTenantSelected = !shouldSelectTenant || selectedTenantId.trim() !== "";
-  const availableEmployees = formOptions?.empleados ?? [];
+  const availableEmployees = useMemo(
+    () =>
+      (formOptions?.empleados ?? []).filter(
+        (employee) => !EXCLUDED_SESSION_EMPLOYEE_ROLES.has(employee.role),
+      ),
+    [formOptions?.empleados],
+  );
   const activityTypeOptions = useMemo(() => {
     const options = [...(formOptions?.activityTypes ?? [])];
 
@@ -76,6 +94,7 @@ export function ActividadGrupalForm({
         ...currentActivityType,
         tenantId: selectedTenantId,
         normalizedName: currentActivityType.name.toLowerCase(),
+        consecutiveConfig: null,
         createdAt: "",
         updatedAt: "",
         deactivatedAt: null,
@@ -84,6 +103,13 @@ export function ActividadGrupalForm({
 
     return options;
   }, [currentActivityType, formOptions?.activityTypes, selectedTenantId]);
+  const organizerOptions = useMemo(
+    () =>
+      mode === "create"
+        ? getCreatableActividadGrupalOrganizerOptions(user)
+        : getActividadGrupalOrganizerOptions(),
+    [mode, user],
+  );
   const filteredEmployees = useMemo(() => {
     const search = employeeSearch.trim().toLowerCase();
 
@@ -119,6 +145,14 @@ export function ActividadGrupalForm({
   }, [selectedTenantId, setValue]);
 
   useEffect(() => {
+    if (mode !== "create" || organizerOptions.includes(organizerValue)) {
+      return;
+    }
+
+    setValue("organizer", organizerOptions[0] ?? "director", { shouldDirty: false });
+  }, [mode, organizerOptions, organizerValue, setValue]);
+
+  useEffect(() => {
     if (!isTenantSelected || isFormOptionsLoading || formOptions === null) {
       return;
     }
@@ -151,6 +185,10 @@ export function ActividadGrupalForm({
   }
 
   function toggleEmployee(employeeId: string) {
+    setEmployeeSelectionAnimation((current) => ({
+      employeeId,
+      sequence: (current?.sequence ?? 0) + 1,
+    }));
     const currentValue = getValues("employeeIds");
     const nextValue = currentValue.includes(employeeId)
       ? currentValue.filter((id) => id !== employeeId)
@@ -163,8 +201,26 @@ export function ActividadGrupalForm({
     });
   }
 
-  function handleInvalidSubmit(_errors: FieldErrors<ActividadGrupalFormValues>) {
-    return;
+  function selectAllEmployees() {
+    setEmployeeSelectionAnimation((current) => ({
+      employeeId: ALL_EMPLOYEES_ANIMATION_TARGET,
+      sequence: (current?.sequence ?? 0) + 1,
+    }));
+    setValue(
+      "employeeIds",
+      availableEmployees.map((employee) => employee.id),
+      {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      },
+    );
+  }
+
+  function handleInvalidSubmit(errors: FieldErrors<ActividadGrupalFormValues>) {
+    if (errors.employeeIds !== undefined) {
+      toast.error("Selecciona al menos un empleado.", { id: "actividad-empleados-required" });
+    }
   }
 
   return (
@@ -265,12 +321,18 @@ export function ActividadGrupalForm({
                 {...form.register("activityTypeId")}
               >
                 <option value="">Seleccionar</option>
-                {activityTypeOptions.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.name}
-                    {option.isActive ? "" : " (Inactiva)"}
+                {activityTypeOptions.length === 0 ? (
+                  <option value="" disabled>
+                    No hay tipos disponibles para tu usuario
                   </option>
-                ))}
+                ) : (
+                  activityTypeOptions.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.name}
+                      {option.isActive ? "" : " (Inactiva)"}
+                    </option>
+                  ))
+                )}
               </select>
             </ActividadGrupalFieldGroup>
 
@@ -316,7 +378,7 @@ export function ActividadGrupalForm({
                 value={mode === "edit" ? organizerValue : undefined}
                 {...(mode === "create" ? form.register("organizer") : {})}
               >
-                {getActividadGrupalOrganizerOptions().map((option) => (
+                {organizerOptions.map((option) => (
                   <option key={option} value={option}>
                     {formatActividadGrupalOrganizer(option)}
                   </option>
@@ -333,7 +395,22 @@ export function ActividadGrupalForm({
             <p className="eyebrow">Equipo involucrado</p>
             <h2>Selecciona los empleados</h2>
           </div>
-          <span>{employeeIds.length} seleccionados</span>
+          <div className="actividad-empleados-header-actions">
+            <button
+              className="outline-action actividad-empleados-select-all"
+              type="button"
+              disabled={
+                !isTenantSelected ||
+                isFormOptionsLoading ||
+                availableEmployees.length === 0 ||
+                availableEmployees.every((employee) => employeeIds.includes(employee.id))
+              }
+              onClick={selectAllEmployees}
+            >
+              Agregar todos
+            </button>
+            <span>{employeeIds.length} seleccionados</span>
+          </div>
         </div>
 
         <label className="actividad-empleados-search">
@@ -362,15 +439,20 @@ export function ActividadGrupalForm({
           <div className="actividad-empleados-list">
             {filteredEmployees.map((empleado) => {
               const isChecked = employeeIds.includes(empleado.id);
+              const isAnimating =
+                employeeSelectionAnimation?.employeeId === empleado.id ||
+                employeeSelectionAnimation?.employeeId === ALL_EMPLOYEES_ANIMATION_TARGET;
 
               return (
                 <label
-                  key={empleado.id}
-                  className={
-                    isChecked
-                      ? "actividad-empleado-option actividad-empleado-option--checked"
-                      : "actividad-empleado-option"
-                  }
+                  key={`${empleado.id}-${isAnimating ? employeeSelectionAnimation?.sequence : 0}`}
+                  className={[
+                    "actividad-empleado-option",
+                    isChecked ? "actividad-empleado-option--checked" : "",
+                    isAnimating ? "actividad-empleado-option--just-toggled" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                 >
                   <input
                     type="checkbox"
@@ -386,12 +468,6 @@ export function ActividadGrupalForm({
             })}
           </div>
         )}
-
-        {getError("employeeIds") !== undefined ? (
-          <p className="form-error" role="alert">
-            {getError("employeeIds")}
-          </p>
-        ) : null}
       </section>
 
       {error !== null ? (

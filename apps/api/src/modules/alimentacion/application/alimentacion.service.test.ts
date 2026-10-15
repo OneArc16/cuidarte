@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { type AuthUser } from "@cuidarte/contracts";
+import { createAlimentacionBatchRequestSchema, type AuthUser } from "@cuidarte/contracts";
 import {
   BadRequestException,
   ConflictException,
@@ -86,6 +86,8 @@ const adultoMayorRecord: AlimentacionAdultoOptionRecord = {
   tenantCity: "El Banco",
   tenantDepartment: "Magdalena",
   documentNumber: "1020304050",
+  names: "Rosa Elena",
+  surnames: "Martinez Rojas",
   fullName: "Rosa Elena Martinez Rojas",
 };
 
@@ -171,7 +173,7 @@ describe("AlimentacionService", () => {
     const result = await service.createBatch(
       {
         tenantId: null,
-        deliveryDate: "2026-04-24",
+        deliveryDates: ["2026-04-24"],
         organizer: "director",
         registros: [
           {
@@ -200,7 +202,8 @@ describe("AlimentacionService", () => {
         service.searchAdultosMayoresOptions(
           {
             search: "Rosa",
-            deliveryDate: "2026-04-24",
+            deliveryDates: ["2026-04-24"],
+            limit: "all",
             tenantId: null,
           },
           superAdminUser,
@@ -216,7 +219,8 @@ describe("AlimentacionService", () => {
     const result = await service.searchAdultosMayoresOptions(
       {
         search: "1020304050",
-        deliveryDate: "2026-04-24",
+        deliveryDates: ["2026-04-24"],
+        limit: "all",
         tenantId: null,
       },
       adminUser,
@@ -226,8 +230,9 @@ describe("AlimentacionService", () => {
     assert.equal(result[0]?.documentNumber, "1020304050");
     assert.deepEqual(repository.adultoOptionsQueries[0], {
       tenantId,
-      deliveryDate: "2026-04-24",
+      deliveryDates: ["2026-04-24"],
       search: "1020304050",
+      limit: "all",
     });
   });
 
@@ -238,7 +243,7 @@ describe("AlimentacionService", () => {
     const result = await service.createBatch(
       {
         tenantId: null,
-        deliveryDate: "2026-04-24",
+        deliveryDates: ["2026-04-24"],
         organizer: "nutricionista",
         registros: [
           {
@@ -258,9 +263,95 @@ describe("AlimentacionService", () => {
     assert.equal(repository.createdCommands[0]?.registros[0]?.adultoMayorId, adultoMayorId);
   });
 
-  it("rejects batch creation when a record already exists for the same date", async () => {
+  it("creates one record per selected date", async () => {
+    const repository = createRepository();
+    const service = new AlimentacionService(repository);
+
+    const result = await service.createBatch(
+      {
+        tenantId: null,
+        deliveryDates: ["2026-04-24", "2026-04-27"],
+        organizer: "nutricionista",
+        registros: [
+          {
+            adultoMayorId,
+            refrigerio1: "entregado",
+            almuerzo: "entregado",
+            refrigerio2: "no_aplica",
+            auxilioTransporte: "no_entregado",
+          },
+        ],
+      },
+      adminUser,
+    );
+
+    assert.equal(result.createdCount, 2);
+    assert.equal(result.dateCount, 2);
+    assert.equal(result.adultoMayorCount, 1);
+    assert.deepEqual(repository.createdCommands[0]?.deliveryDates, ["2026-04-24", "2026-04-27"]);
+  });
+
+  it("rejects multiple dates when the person lacks the permission", async () => {
+    const repository = createRepository();
+    const service = new AlimentacionService(repository);
+
+    await assert.rejects(
+      () =>
+        service.createBatch(
+          {
+            tenantId: null,
+            deliveryDates: ["2026-04-24", "2026-04-27"],
+            organizer: "director",
+            registros: [
+              {
+                adultoMayorId,
+                refrigerio1: "entregado",
+                almuerzo: "entregado",
+                refrigerio2: "no_aplica",
+                auxilioTransporte: "no_entregado",
+              },
+            ],
+          },
+          directorUser,
+        ),
+      { constructor: ForbiddenException },
+    );
+  });
+
+  it("creates only the missing dates when a batch has existing records", async () => {
     const repository = createRepository({
-      existingByAdultosAndDate: [alimentacionRecord],
+      existingByAdultosAndDates: [alimentacionRecord],
+    });
+    const service = new AlimentacionService(repository);
+
+    const result = await service.createBatch(
+      {
+        tenantId: null,
+        deliveryDates: ["2026-04-24", "2026-04-27"],
+        organizer: "nutricionista",
+        registros: [
+          {
+            adultoMayorId,
+            refrigerio1: "entregado",
+            almuerzo: "entregado",
+            refrigerio2: "entregado",
+            auxilioTransporte: "entregado",
+          },
+        ],
+      },
+      adminUser,
+    );
+
+    assert.equal(result.createdCount, 1);
+    assert.deepEqual(
+      repository.createdCommands[0]?.registros.map((registro) => registro.deliveryDate),
+      ["2026-04-27"],
+    );
+  });
+
+  it("rejects batch creation when every selected date already has a record", async () => {
+    const repository = createRepository({
+      existingByAdultosAndDates: [alimentacionRecord],
     });
     const service = new AlimentacionService(repository);
 
@@ -269,7 +360,7 @@ describe("AlimentacionService", () => {
         service.createBatch(
           {
             tenantId: null,
-            deliveryDate: "2026-04-24",
+            deliveryDates: ["2026-04-24"],
             organizer: "nutricionista",
             registros: [
               {
@@ -285,6 +376,64 @@ describe("AlimentacionService", () => {
         ),
       { constructor: ConflictException },
     );
+  });
+
+  it("enforces the batch limit after excluding existing records", async () => {
+    const registros = Array.from({ length: 323 }, (_, index) => ({
+      adultoMayorId: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+      refrigerio1: "entregado" as const,
+      almuerzo: "entregado" as const,
+      refrigerio2: "entregado" as const,
+      auxilioTransporte: "entregado" as const,
+    }));
+    const repository = createRepository({
+      adultosMayoresByIds: registros.map((registro) => ({
+        ...adultoMayorRecord,
+        id: registro.adultoMayorId,
+      })),
+    });
+    const service = new AlimentacionService(repository);
+
+    await assert.rejects(
+      () =>
+        service.createBatch(
+          {
+            tenantId: null,
+            deliveryDates: Array.from(
+              { length: 31 },
+              (_, index) => `2026-01-${String(index + 1).padStart(2, "0")}`,
+            ),
+            organizer: "nutricionista",
+            registros,
+          },
+          adminUser,
+        ),
+      { constructor: BadRequestException },
+    );
+
+    assert.equal(repository.createdCommands.length, 0);
+  });
+
+  it("allows the client to submit a batch whose actual count depends on existing records", () => {
+    const registros = Array.from({ length: 323 }, (_, index) => ({
+      adultoMayorId: `00000000-0000-4000-8000-${String(index + 1).padStart(12, "0")}`,
+      refrigerio1: "entregado" as const,
+      almuerzo: "entregado" as const,
+      refrigerio2: "entregado" as const,
+      auxilioTransporte: "entregado" as const,
+    }));
+
+    const result = createAlimentacionBatchRequestSchema.safeParse({
+      tenantId: null,
+      deliveryDates: Array.from(
+        { length: 31 },
+        (_, index) => `2026-01-${String(index + 1).padStart(2, "0")}`,
+      ),
+      organizer: "nutricionista",
+      registros,
+    });
+
+    assert.equal(result.success, true);
   });
 
   it("returns the existing record id when preloading an adult for the selected date", async () => {
@@ -487,7 +636,7 @@ describe("AlimentacionService", () => {
         service.createBatch(
           {
             tenantId: null,
-            deliveryDate: "2026-04-24",
+            deliveryDates: ["2026-04-24"],
             organizer: "director",
             registros: [
               {
@@ -509,7 +658,7 @@ describe("AlimentacionService", () => {
         service.createBatch(
           {
             tenantId: null,
-            deliveryDate: "2026-04-24",
+            deliveryDates: ["2026-04-24"],
             organizer: "director",
             registros: [
               {
@@ -595,10 +744,11 @@ describe("AlimentacionService", () => {
 
 function createRepository(
   overrides: {
-    existingByAdultosAndDate?: AlimentacionRecord[];
+    existingByAdultosAndDates?: AlimentacionRecord[];
     existingByAdultoAndDate?: AlimentacionRecord | null;
     records?: AlimentacionRecord[];
     adultoMayorById?: AlimentacionAdultoOptionRecord | null;
+    adultosMayoresByIds?: AlimentacionAdultoOptionRecord[];
     formatoEntregaRecords?: AlimentacionRecord[];
     deletedRecord?: AlimentacionRecord | null;
   } = {},
@@ -615,10 +765,11 @@ function createRepository(
   createdCommands: Array<{
     tenantId: string;
     actorUserId: string;
-    deliveryDate: string;
+    deliveryDates: string[];
     organizer: AlimentacionRecord["organizer"];
     registros: Array<{
       adultoMayorId: string;
+      deliveryDate: string;
       refrigerio1: AlimentacionRecord["refrigerio1"];
       almuerzo: AlimentacionRecord["almuerzo"];
       refrigerio2: AlimentacionRecord["refrigerio2"];
@@ -639,10 +790,11 @@ function createRepository(
   const createdCommands: Array<{
     tenantId: string;
     actorUserId: string;
-    deliveryDate: string;
+    deliveryDates: string[];
     organizer: AlimentacionRecord["organizer"];
     registros: Array<{
       adultoMayorId: string;
+      deliveryDate: string;
       refrigerio1: AlimentacionRecord["refrigerio1"];
       almuerzo: AlimentacionRecord["almuerzo"];
       refrigerio2: AlimentacionRecord["refrigerio2"];
@@ -690,6 +842,10 @@ function createRepository(
         : [];
     },
     async findAdultosMayoresByIds(requestTenantId, adultoMayorIds) {
+      if (overrides.adultosMayoresByIds !== undefined) {
+        return requestTenantId === tenantId ? overrides.adultosMayoresByIds : [];
+      }
+
       return adultoMayorIds.includes(adultoMayorId) && requestTenantId === tenantId
         ? [adultoMayorRecord]
         : [];
@@ -738,8 +894,8 @@ function createRepository(
     async findImportedFormatoVersionById() {
       return null;
     },
-    async findExistingByAdultosAndDate() {
-      return overrides.existingByAdultosAndDate ?? [];
+    async findExistingByAdultosAndDates() {
+      return overrides.existingByAdultosAndDates ?? [];
     },
     async findByAdultoMayorAndDate({ excludeId }) {
       if (overrides.existingByAdultoAndDate === undefined) {
@@ -788,6 +944,7 @@ function createRepository(
         adultoMayorId: command.adultoMayorId,
         deliveryMonth: command.deliveryMonth,
         version: 1,
+        templateVersion: command.templateVersion,
         signerEmployeeIdSnapshot: command.signerEmployeeIdSnapshot,
         signerNameSnapshot: command.signerNameSnapshot,
         signerRoleSnapshot: command.signerRoleSnapshot,

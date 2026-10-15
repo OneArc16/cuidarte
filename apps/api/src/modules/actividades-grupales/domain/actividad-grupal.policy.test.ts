@@ -4,15 +4,18 @@ import { describe, it } from "node:test";
 import { type AuthUser } from "@cuidarte/contracts";
 
 import {
+  canEditActividadGrupal,
   canListTrashActividadesGrupales,
   canManageActividadesGrupales,
-  canRestoreActividadGrupal,
+  canCreateActividadGrupalWithOrganizer,
   canTrashActividadGrupal,
+  resolveCreatableActividadGrupalOrganizers,
   canViewActividadGrupal,
   resolvePermittedActividadGrupalOrganizers,
 } from "./actividad-grupal.policy";
 
 const tenantId = "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054";
+const medicoUserId = "11111111-1111-4111-8111-111111111111";
 
 const adminUser: AuthUser = {
   id: "9f75c51f-74ab-40b7-84ef-9e4a93d14af1",
@@ -59,9 +62,34 @@ describe("actividad-grupal.policy", () => {
     assert.equal(canViewActividadGrupal({ organizer: "enfermeria" }, { role: "medico" }), true);
     assert.equal(canViewActividadGrupal({ organizer: "nutricionista" }, { role: "medico" }), false);
     assert.equal(canViewActividadGrupal({ organizer: "nutricionista" }, adminUser), true);
+    assert.equal(
+      canViewActividadGrupal(
+        {
+          organizer: "nutricionista",
+          activityTypeCreatorUserIds: [medicoUserId],
+        },
+        { ...adminUser, id: medicoUserId, role: "medico" },
+      ),
+      true,
+    );
   });
 
-  it("allows the creator or tenant admins to send an acta to trash", () => {
+  it("limits activity creation to a person's own organizer unless explicitly enabled", () => {
+    const medico = { role: "medico" as const };
+
+    assert.deepEqual(resolveCreatableActividadGrupalOrganizers(medico), ["medico"]);
+    assert.equal(canCreateActividadGrupalWithOrganizer(medico, "medico"), true);
+    assert.equal(canCreateActividadGrupalWithOrganizer(medico, "enfermeria"), false);
+    assert.equal(
+      canCreateActividadGrupalWithOrganizer(
+        { ...medico, allowedActividadGrupalOrganizers: ["enfermeria"] },
+        "enfermeria",
+      ),
+      true,
+    );
+  });
+
+  it("allows only admins and super admins to delete an acta", () => {
     const activity = {
       createdByUserId: adminUser.id,
       tenantId,
@@ -74,33 +102,46 @@ describe("actividad-grupal.policy", () => {
         id: "33333333-3333-4333-8333-333333333333",
         role: "director",
       }),
-      true,
+      false,
     );
     assert.equal(canTrashActividadGrupal(activity, auditorUser), false);
   });
 
-  it("allows tenant users to list the trash and restore their own actas", () => {
+  it("keeps edit permissions broader than delete permissions", () => {
     const activity = {
       createdByUserId: adminUser.id,
       tenantId,
     };
 
-    assert.equal(canListTrashActividadesGrupales(adminUser), true);
-    assert.equal(canListTrashActividadesGrupales(auditorUser), false);
-    assert.equal(canRestoreActividadGrupal(activity, adminUser), true);
+    assert.equal(canEditActividadGrupal(activity, adminUser), true);
     assert.equal(
-      canRestoreActividadGrupal(activity, {
+      canEditActividadGrupal(activity, {
         ...adminUser,
-        id: "44444444-4444-4444-8444-444444444444",
+        id: "33333333-3333-4333-8333-333333333333",
         role: "director",
       }),
       true,
     );
     assert.equal(
-      canRestoreActividadGrupal(activity, {
-        ...adminUser,
-        id: "55555555-5555-4555-8555-555555555555",
-        role: "medico",
+      canEditActividadGrupal(
+        { ...activity, createdByUserId: "33333333-3333-4333-8333-333333333333" },
+        {
+          ...adminUser,
+          id: "33333333-3333-4333-8333-333333333333",
+          role: "medico",
+        },
+      ),
+      true,
+    );
+  });
+
+  it("allows only admins and super admins to list the deletion log", () => {
+    assert.equal(canListTrashActividadesGrupales(adminUser), true);
+    assert.equal(canListTrashActividadesGrupales(auditorUser), false);
+    assert.equal(
+      canListTrashActividadesGrupales({
+        tenantId: adminUser.tenantId,
+        role: "director",
       }),
       false,
     );

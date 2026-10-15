@@ -31,4 +31,14 @@ export type AlimentacionFormatoFilesStorage = {
     contentType: string,
   ): Promise<ReadStoredAlimentacionFormatoFile>;
   deleteFile(relativePath: string): Promise<void>;
+  saveStagedFile(
+    batchId: string,
+    itemId: string,
+    file: { filename: string; contentType: string; buffer: Buffer },
+  ): Promise<StoredAlimentacionFormatoFile>;
+  readStagedFile(
+    relativePath: string,
+    filename: string,
+  ): Promise<ReadStoredAlimentacionFormatoFile>;
+  deleteStagedFile(relativePath: string): Promise<void>;
 };

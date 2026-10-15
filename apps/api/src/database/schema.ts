@@ -125,9 +125,18 @@ export const reportStatus = pgEnum("report_status", [
   "cancelled",
   "expired",
 ]);
-export const reportAnalyticsExportFormat = pgEnum("report_analytics_export_format", ["xlsx", "pdf", "pptx"]);
+export const reportAnalyticsExportFormat = pgEnum("report_analytics_export_format", [
+  "xlsx",
+  "pdf",
+  "pptx",
+]);
 export const reportAnalyticsExportStatus = pgEnum("report_analytics_export_status", [
-  "pending", "processing", "ready", "failed", "cancelled", "expired",
+  "pending",
+  "processing",
+  "ready",
+  "failed",
+  "cancelled",
+  "expired",
 ]);
 export const atencionEnfermeriaCareType = pgEnum("atencion_enfermeria_care_type", [
   "control_signos_vitales",
@@ -275,6 +284,10 @@ export const users = pgTable(
     phone: varchar("phone", { length: 40 }),
     role: userRole("role").notNull(),
     isTenantOwner: boolean("is_tenant_owner").notNull().default(false),
+    actividadGrupalAllowedOrganizers: jsonb("actividad_grupal_allowed_organizers")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     passwordHash: text("password_hash").notNull(),
     passwordSetByAdmin: boolean("password_set_by_admin").notNull().default(true),
     passwordChangedAt: timestamp("password_changed_at", { withTimezone: true }),
@@ -297,6 +310,24 @@ export const users = pgTable(
       .on(table.documentNumber)
       .where(sql`${table.tenantId} is null and ${table.documentNumber} is not null`),
     index("users_tenant_id_idx").on(table.tenantId),
+  ],
+);
+
+export const userPermissions = pgTable(
+  "user_permissions",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    permission: varchar("permission", { length: 80 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({
+      name: "user_permissions_pk",
+      columns: [table.userId, table.permission],
+    }),
+    index("user_permissions_permission_idx").on(table.permission),
   ],
 );
 
@@ -472,6 +503,8 @@ export const adultosMayores = pgTable(
     healthRegime: varchar("health_regime", { length: 120 }),
     epsId: uuid("eps_id").references(() => epsCatalog.id, { onDelete: "restrict" }),
     eps: varchar("eps", { length: 160 }),
+    antecedentesPersonalesVigentes: text("antecedentes_personales_vigentes"),
+    antecedentesFamiliaresVigentes: text("antecedentes_familiares_vigentes"),
     livesWithSomeone: boolean("lives_with_someone").notNull().default(false),
     companion: varchar("companion", { length: 160 }),
     economicIncome: integer("economic_income"),
@@ -704,6 +737,11 @@ export const actividadGrupalActaCorrectionOperations = pgTable(
     requestedByUserId: uuid("requested_by_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
+    organizer: actividadGrupalOrganizer("organizer"),
+    activityTypeId: uuid("activity_type_id").references(() => actividadGrupalTipos.id, {
+      onDelete: "restrict",
+    }),
+    targetPrefix: varchar("target_prefix", { length: 24 }),
     snapshotHash: varchar("snapshot_hash", { length: 64 }).notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     usedAt: timestamp("used_at", { withTimezone: true }),
@@ -715,6 +753,38 @@ export const actividadGrupalActaCorrectionOperations = pgTable(
   ],
 );
 
+export const actividadGrupalGlobalSeries = pgTable(
+  "actividad_grupal_global_series",
+  {
+    id: integer("id").primaryKey().default(1),
+    enabled: boolean("enabled").notNull().default(false),
+    prefix: varchar("prefix", { length: 24 }),
+    updatedByUserId: uuid("updated_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    check("actividad_grupal_global_series_singleton", sql`${table.id} = 1`),
+    check(
+      "actividad_grupal_global_series_config_complete",
+      sql`(${table.enabled} = false and ${table.prefix} is null) or (${table.enabled} = true and ${table.prefix} is not null)`,
+    ),
+  ],
+);
+
+export const actividadGrupalGlobalSeriesCounters = pgTable(
+  "actividad_grupal_global_series_counters",
+  {
+    tenantId: uuid("tenant_id")
+      .primaryKey()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    lastValue: integer("last_value").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+);
+
 export const actividadGrupalTipos = pgTable(
   "actividad_grupal_tipos",
   {
@@ -724,6 +794,12 @@ export const actividadGrupalTipos = pgTable(
       .references(() => tenants.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 120 }).notNull(),
     normalizedName: varchar("normalized_name", { length: 120 }).notNull(),
+    consecutivePrefix: varchar("consecutive_prefix", { length: 24 }),
+    consecutiveNextValue: integer("consecutive_next_value"),
+    consecutiveCreatorUserIds: jsonb("consecutive_creator_user_ids")
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     isActive: boolean("is_active").notNull().default(true),
     createdByUserId: uuid("created_by_user_id").references(() => users.id, {
       onDelete: "restrict",
@@ -740,7 +816,14 @@ export const actividadGrupalTipos = pgTable(
       table.tenantId,
       table.normalizedName,
     ),
+    uniqueIndex("actividad_grupal_tipos_tenant_consecutive_prefix_unique")
+      .on(table.tenantId, table.consecutivePrefix)
+      .where(sql`${table.consecutivePrefix} is not null`),
     index("actividad_grupal_tipos_tenant_active_idx").on(table.tenantId, table.isActive),
+    check(
+      "actividad_grupal_tipos_consecutive_config_complete",
+      sql`(${table.consecutivePrefix} is null and ${table.consecutiveNextValue} is null) or (${table.consecutivePrefix} is not null and ${table.consecutiveNextValue} > 0)`,
+    ),
   ],
 );
 
@@ -752,6 +835,7 @@ export const actividadesGrupales = pgTable(
       .notNull()
       .references(() => tenants.id, { onDelete: "restrict" }),
     actaNumber: varchar("acta_number", { length: 40 }).notNull(),
+    actaSeriesKey: varchar("acta_series_key", { length: 160 }).notNull(),
     actaOrganizer: actividadGrupalOrganizer("acta_organizer").notNull(),
     actaSequence: integer("acta_sequence").notNull(),
     previousActaNumber: varchar("previous_acta_number", { length: 40 }),
@@ -781,15 +865,15 @@ export const actividadesGrupales = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("actividades_grupales_tenant_acta_unique").on(table.tenantId, table.actaNumber),
-    uniqueIndex("actividades_grupales_tenant_acta_series_unique").on(
+    uniqueIndex("actividades_grupales_tenant_acta_unique")
+      .on(table.tenantId, table.actaNumber)
+      .where(sql`${table.deletedAt} is null`),
+    uniqueIndex("actividades_grupales_tenant_acta_series_unique")
+      .on(table.tenantId, table.actaSeriesKey, table.actaSequence)
+      .where(sql`${table.deletedAt} is null`),
+    index("actividades_grupales_tenant_acta_series_key_idx").on(
       table.tenantId,
-      table.actaOrganizer,
-      table.actaSequence,
-    ),
-    index("actividades_grupales_tenant_acta_series_idx").on(
-      table.tenantId,
-      table.actaOrganizer,
+      table.actaSeriesKey,
       table.actaSequence,
     ),
     check("actividades_grupales_acta_sequence_positive", sql`${table.actaSequence} > 0`),
@@ -937,6 +1021,7 @@ export const alimentacionFormatoEmissions = pgTable(
       .references(() => adultosMayores.id, { onDelete: "restrict" }),
     deliveryMonth: varchar("delivery_month", { length: 7 }).notNull(),
     version: integer("version").notNull(),
+    templateVersion: varchar("template_version", { length: 80 }),
     signerEmployeeIdSnapshot: uuid("signer_employee_id_snapshot")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
@@ -1011,6 +1096,73 @@ export const alimentacionFormatoImportedVersions = pgTable(
     index("alimentacion_formato_imported_versions_adulto_mayor_idx").on(table.adultoMayorId),
     index("alimentacion_formato_imported_versions_imported_by_user_idx").on(table.importedByUserId),
     check("alimentacion_formato_imported_versions_size_positive", sql`${table.sizeBytes} > 0`),
+  ],
+);
+
+export const alimentacionBulkImportBatches = pgTable(
+  "alimentacion_bulk_import_batches",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    mode: varchar("mode", { length: 12 }).notNull(),
+    deliveryMonth: varchar("delivery_month", { length: 7 }),
+    status: varchar("status", { length: 20 }).notNull().default("validated"),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("alimentacion_bulk_import_batches_tenant_idx").on(table.tenantId),
+    index("alimentacion_bulk_import_batches_expiry_idx").on(table.expiresAt),
+    index("alimentacion_bulk_import_batches_created_by_idx").on(table.createdByUserId),
+  ],
+);
+
+export const alimentacionBulkImportItems = pgTable(
+  "alimentacion_bulk_import_items",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    batchId: uuid("batch_id")
+      .notNull()
+      .references(() => alimentacionBulkImportBatches.id, { onDelete: "cascade" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    originalName: varchar("original_name", { length: 260 }).notNull(),
+    documentNumber: varchar("document_number", { length: 80 }),
+    normalizedDocumentNumber: varchar("normalized_document_number", { length: 80 }),
+    deliveryMonth: varchar("delivery_month", { length: 7 }),
+    adultoMayorId: uuid("adulto_mayor_id").references(() => adultosMayores.id, {
+      onDelete: "restrict",
+    }),
+    adultoMayorFullName: varchar("adulto_mayor_full_name", { length: 360 }),
+    sha256: varchar("sha256", { length: 64 }).notNull(),
+    sizeBytes: integer("size_bytes").notNull(),
+    stagedRelativePath: varchar("staged_relative_path", { length: 500 }).notNull(),
+    status: varchar("status", { length: 20 }).notNull(),
+    reasonCode: varchar("reason_code", { length: 40 }),
+    reasonMessage: varchar("reason_message", { length: 300 }),
+    existingVersion: integer("existing_version"),
+    importedVersionId: uuid("imported_version_id").references(
+      () => alimentacionFormatoImportedVersions.id,
+      { onDelete: "set null" },
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("alimentacion_bulk_import_items_batch_idx").on(table.batchId),
+    index("alimentacion_bulk_import_items_lookup_idx").on(
+      table.tenantId,
+      table.normalizedDocumentNumber,
+      table.deliveryMonth,
+    ),
+    index("alimentacion_bulk_import_items_hash_idx").on(table.sha256),
   ],
 );
 
@@ -1248,6 +1400,10 @@ export const reportJobs = pgTable(
     requestedByRole: userRole("requested_by_role").notNull(),
     type: reportType("type").notNull(),
     period: varchar("period", { length: 7 }).notNull(),
+    filterKey: varchar("filter_key", { length: 240 }).notNull().default(""),
+    activitySearch: varchar("activity_search", { length: 120 }),
+    activityTypeId: uuid("activity_type_id"),
+    activityOrganizer: actividadGrupalOrganizer("activity_organizer"),
     status: reportStatus("status").notNull().default("pending"),
     totalDocuments: integer("total_documents"),
     processedDocuments: integer("processed_documents").notNull().default(0),
@@ -1266,7 +1422,7 @@ export const reportJobs = pgTable(
     index("report_jobs_status_expires_at_idx").on(table.status, table.expiresAt),
     index("report_jobs_requested_by_user_idx").on(table.requestedByUserId, table.createdAt),
     uniqueIndex("report_jobs_active_unique")
-      .on(table.tenantId, table.type, table.period)
+      .on(table.tenantId, table.type, table.period, table.filterKey)
       .where(sql`${table.status} in ('pending', 'processing')`),
     check(
       "report_jobs_period_format",
@@ -1291,7 +1447,9 @@ export const reportAnalyticsExports = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     tenantId: uuid("tenant_id").references(() => tenants.id, { onDelete: "restrict" }),
     tenantName: varchar("tenant_name", { length: 160 }),
-    requestedByUserId: uuid("requested_by_user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+    requestedByUserId: uuid("requested_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
     requestedByRole: userRole("requested_by_role").notNull(),
     format: reportAnalyticsExportFormat("format").notNull(),
     from: date("from").notNull(),

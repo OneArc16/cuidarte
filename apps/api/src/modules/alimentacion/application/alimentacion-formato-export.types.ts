@@ -20,6 +20,8 @@ export type AlimentacionFormatoEntregaExportData = {
   tenantDepartment: string | null;
   adultoMayorId: string;
   documentNumber: string;
+  names: string;
+  surnames: string;
   fullName: string;
   deliveryMonth: string;
   records: AlimentacionFormatoEntregaExportRecord[];

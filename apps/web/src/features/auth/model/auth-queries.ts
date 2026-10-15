@@ -11,6 +11,9 @@ export function useCurrentUserQuery() {
   return useQuery({
     queryKey: authQueryKeys.me,
     queryFn: authApi.getMe,
+    refetchInterval: 15_000,
+    refetchOnReconnect: true,
+    refetchOnWindowFocus: "always",
     retry: false,
   });
 }

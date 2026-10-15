@@ -4,13 +4,28 @@ import {
   adultoMayorHealthRegimeSchema,
   adultoMayorZoneSchema,
 } from "@cuidarte/contracts";
-import { and, asc, desc, eq, ilike, isNotNull, isNull, lt, ne, or, type SQL } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  ilike,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
 import {
   adultoMayorDocuments,
   adultoMayorStatusHistory,
   adultosMayores,
+  atencionesEnfermeria,
+  atencionesIndividuales,
   auditLogs,
   epsCatalog,
   tenants,
@@ -80,6 +95,7 @@ type AdultoMayorSelectionRow = {
   socialProgramBeneficiary: boolean;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt: Date | null;
 };
 
 @Injectable()
@@ -427,6 +443,15 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
 
   async sendToTrash(command: SendAdultoMayorToTrashCommand): Promise<boolean> {
     return await this.database.db.transaction(async (tx) => {
+      const conditions: SQL[] = [
+        eq(adultosMayores.id, command.id),
+        isNull(adultosMayores.deletedAt),
+      ];
+
+      if (command.tenantId !== null) {
+        conditions.push(eq(adultosMayores.tenantId, command.tenantId));
+      }
+
       const [deleted] = await tx
         .update(adultosMayores)
         .set({
@@ -435,7 +460,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
           deletionReason: command.reason,
           updatedAt: new Date(),
         })
-        .where(and(eq(adultosMayores.id, command.id), isNull(adultosMayores.deletedAt)))
+        .where(and(...conditions))
         .returning({
           id: adultosMayores.id,
           tenantId: adultosMayores.tenantId,
@@ -464,6 +489,15 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
 
   async restore(command: RestoreAdultoMayorCommand): Promise<boolean> {
     return await this.database.db.transaction(async (tx) => {
+      const conditions: SQL[] = [
+        eq(adultosMayores.id, command.id),
+        isNotNull(adultosMayores.deletedAt),
+      ];
+
+      if (command.tenantId !== null) {
+        conditions.push(eq(adultosMayores.tenantId, command.tenantId));
+      }
+
       const [restored] = await tx
         .update(adultosMayores)
         .set({
@@ -472,7 +506,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
           deletionReason: null,
           updatedAt: new Date(),
         })
-        .where(and(eq(adultosMayores.id, command.id), isNotNull(adultosMayores.deletedAt)))
+        .where(and(...conditions))
         .returning({ id: adultosMayores.id, tenantId: adultosMayores.tenantId });
 
       if (restored === undefined) return false;
@@ -491,6 +525,18 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
 
   private buildWhere(query: FindAdultosMayoresQuery): SQL | undefined {
     const conditions = this.buildScopeConditions(query.scope);
+
+    if (query.attentionType === "medical") {
+      conditions.push(
+        sql`exists (select 1 from ${atencionesIndividuales} where ${atencionesIndividuales.adultoMayorId} = ${adultosMayores.id})`,
+      );
+    }
+
+    if (query.attentionType === "nursing") {
+      conditions.push(
+        sql`exists (select 1 from ${atencionesEnfermeria} where ${atencionesEnfermeria.adultoMayorId} = ${adultosMayores.id} and ${atencionesEnfermeria.deletedAt} is null)`,
+      );
+    }
 
     if (query.search !== null) {
       const searchPattern = `%${escapeLikePattern(query.search)}%`;
@@ -587,6 +633,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       socialProgramBeneficiary: adultosMayores.socialProgramBeneficiary,
       createdAt: adultosMayores.createdAt,
       updatedAt: adultosMayores.updatedAt,
+      deletedAt: adultosMayores.deletedAt,
     };
   }
 

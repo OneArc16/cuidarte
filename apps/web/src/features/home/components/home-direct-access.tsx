@@ -21,7 +21,7 @@ const HOME_ACCESS_MODULES = HOME_MODULES.filter(
 
 export function HomeDirectAccess({ navigate, user }: HomeDirectAccessProps) {
   const visibleShortcutModules = HOME_ACCESS_MODULES.filter((module) =>
-    canViewModule(module, user.role),
+    canViewModule(module, user),
   );
 
   return (

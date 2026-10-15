@@ -1,6 +1,6 @@
 import { BadRequestException } from "@nestjs/common";
 
-import { type AdultoMayorStatus, type AuthUser } from "@cuidarte/contracts";
+import { hasUserPermission, type AdultoMayorStatus, type AuthUser } from "@cuidarte/contracts";
 
 const DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
   timeZone: "America/Bogota",
@@ -57,8 +57,8 @@ export function assertAdultoMayorRecordDateAllowed(params: {
   }
 }
 
-export function canCorrectDeceasedStatus(actor: Pick<AuthUser, "role">) {
-  return actor.role === "super_admin" || actor.role === "admin" || actor.role === "director";
+export function canCorrectDeceasedStatus(actor: Pick<AuthUser, "role" | "permissions">) {
+  return hasUserPermission(actor, "adultos_mayores.edit");
 }
 
 function formatCurrentDate() {

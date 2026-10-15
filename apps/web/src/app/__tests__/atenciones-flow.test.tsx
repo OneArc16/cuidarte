@@ -194,6 +194,8 @@ describe("App atenciones flow", () => {
     expect(await screen.findByText("Nueva atencion individual")).toBeInTheDocument();
     await user.type(screen.getByLabelText("Motivo de consulta"), "Dolor en mano derecha");
     await user.type(screen.getByLabelText("Enfermedad actual"), "Paciente estable en seguimiento.");
+    await user.click(screen.getByRole("tab", { name: "Analisis" }));
+    await user.type(screen.getByLabelText("Análisis"), "Seguimiento clínico sin signos de alarma.");
     await user.click(screen.getByRole("tab", { name: "Diagnosticos" }));
 
     const cie10Input = screen.getByLabelText("Buscar CIE-10");
@@ -218,6 +220,7 @@ describe("App atenciones flow", () => {
       );
     });
     expect(createPayload).toMatchObject({
+      analisis: "Seguimiento clínico sin signos de alarma.",
       diagnosticos: [
         {
           codigoCie10: "G56.0",

@@ -41,11 +41,14 @@ export const atencionOrdenFormSchema = z.object({
 
 export const atencionDiagnosticoFormSchema = z.object({
   id: z.string().min(1),
-  codigoCie10: z.string().transform(normalizeCie10Code).pipe(
-    z
-      .string()
-      .regex(/^[A-TV-Z][0-9][0-9AB](\.[0-9A-TV-Z]{1,2})?$/, "Digite un codigo CIE-10 valido."),
-  ),
+  codigoCie10: z
+    .string()
+    .transform(normalizeCie10Code)
+    .pipe(
+      z
+        .string()
+        .regex(/^[A-TV-Z][0-9][0-9AB](\.[0-9A-TV-Z]{1,2})?$/, "Digite un codigo CIE-10 valido."),
+    ),
   descripcion: requiredTextSchema("Digite la descripcion del diagnostico."),
   tipo: z.enum(atencionDiagnosticoTipoValues),
 });
@@ -86,6 +89,10 @@ export type AtencionDiagnosticoFormValues = z.infer<typeof atencionDiagnosticoFo
 
 export function createDefaultAtencionIndividualFormValues(
   suggestedConsecutive: number,
+  antecedentesVigentes: {
+    personales: string | null;
+    familiares: string | null;
+  } = { personales: null, familiares: null },
 ): AtencionIndividualFormValues {
   return {
     attentionDate: getLocalDateInputValue(),
@@ -98,8 +105,8 @@ export function createDefaultAtencionIndividualFormValues(
     motivoConsulta: "",
     enfermedadActual: "",
     analisis: "",
-    antecedentesPersonales: "",
-    antecedentesFamiliares: "",
+    antecedentesPersonales: antecedentesVigentes.personales ?? "",
+    antecedentesFamiliares: antecedentesVigentes.familiares ?? "",
     tensionSistolica: "",
     tensionDiastolica: "",
     frecuenciaCardiaca: "",

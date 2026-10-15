@@ -5,7 +5,11 @@ import { type AuthUser } from "@cuidarte/contracts";
 
 import {
   canAccessAlimentacion,
+  canBulkImportAlimentacion,
+  canCreateMultipleDateAlimentacion,
   canDeleteAlimentacion,
+  canExportAlimentacion,
+  canImportAlimentacion,
   canManageAlimentacion,
   resolveAlimentacionScope,
 } from "./alimentacion.policy";
@@ -73,6 +77,57 @@ describe("alimentacion policy", () => {
     assert.equal(canDeleteAlimentacion(auditorUser), false);
     assert.equal(canDeleteAlimentacion(directorUser), true);
     assert.equal(canDeleteAlimentacion(medicoUser), false);
+  });
+
+  it("allows multiple dates only to explicitly authorized people", () => {
+    assert.equal(canCreateMultipleDateAlimentacion(adminUser), true);
+    assert.equal(canCreateMultipleDateAlimentacion(superAdminUser), true);
+    assert.equal(canCreateMultipleDateAlimentacion(directorUser), false);
+    assert.equal(
+      canCreateMultipleDateAlimentacion({
+        ...adminUser,
+        permissions: ["alimentacion.create"],
+      }),
+      false,
+    );
+    assert.equal(
+      canCreateMultipleDateAlimentacion({
+        ...adminUser,
+        permissions: ["alimentacion.create_multiple_dates"],
+      }),
+      true,
+    );
+  });
+
+  it("keeps individual and bulk format imports as separate permissions", () => {
+    assert.equal(canImportAlimentacion(directorUser), true);
+    assert.equal(canBulkImportAlimentacion(directorUser), true);
+
+    const userWithIndividualImport: AuthUser = {
+      ...medicoUser,
+      permissions: ["alimentacion.import"],
+    };
+    const userWithBulkImport: AuthUser = {
+      ...medicoUser,
+      permissions: ["alimentacion.bulk_import"],
+    };
+
+    assert.equal(canImportAlimentacion(userWithIndividualImport), true);
+    assert.equal(canBulkImportAlimentacion(userWithIndividualImport), false);
+    assert.equal(canImportAlimentacion(userWithBulkImport), false);
+    assert.equal(canBulkImportAlimentacion(userWithBulkImport), true);
+  });
+
+  it("allows format downloads only with the download permission", () => {
+    assert.equal(canExportAlimentacion(directorUser), true);
+    assert.equal(
+      canExportAlimentacion({ ...medicoUser, permissions: ["alimentacion.import"] }),
+      false,
+    );
+    assert.equal(
+      canExportAlimentacion({ ...medicoUser, permissions: ["alimentacion.export"] }),
+      true,
+    );
   });
 
   it("scopes supported roles by tenant and keeps super admin global", () => {

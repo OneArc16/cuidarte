@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { and, asc, eq, gte, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
 import { type AnyPgColumn } from "drizzle-orm/pg-core";
 
 import { DatabaseService } from "../../../database/database.service";
@@ -7,6 +7,7 @@ import {
   actividadGrupalTipos,
   actividadesGrupales,
   alimentacionRegistros,
+  adultosMayores,
   atencionesEnfermeria,
   atencionesIndividuales,
   tenants,
@@ -27,22 +28,33 @@ export class DrizzleReportsDashboardRepository implements ReportsDashboardReposi
   async aggregate(
     query: ReportsDashboardQuery & { scope: ReportsDashboardScope },
   ): Promise<ReportsDashboardAggregate> {
-    const [nursingRows, medicalRows, activityRows, foodRows, activityTypeRows, tenantRow] =
-      await Promise.all([
-        this.aggregateNursing(query),
-        this.aggregateMedical(query),
-        this.aggregateActivities(query),
-        this.aggregateFood(query),
-        this.aggregateActivitiesByType(query),
-        this.findTenant(query.scope),
-      ]);
+    const [
+      nursingRows,
+      medicalRows,
+      activityRows,
+      foodRows,
+      activityTypeRows,
+      sexDistribution,
+      tenantRow,
+    ] = await Promise.all([
+      this.aggregateNursing(query),
+      this.aggregateMedical(query),
+      this.aggregateActivities(query),
+      this.aggregateFood(query),
+      this.aggregateActivitiesByType(query),
+      this.aggregateSexDistribution(query),
+      this.findTenant(query.scope),
+    ]);
 
     const dailySeries = mergeDailyAggregates(nursingRows, medicalRows, activityRows, foodRows);
 
     return {
       tenantName: tenantRow?.name ?? null,
+      municipality: tenantRow?.city ?? null,
+      department: tenantRow?.department ?? null,
       dailySeries,
       activitiesByType: activityTypeRows,
+      sexDistribution,
       snackOneDelivered: foodRows.reduce((total, row) => total + row.snackOneDelivered, 0),
       snackTwoDelivered: foodRows.reduce((total, row) => total + row.snackTwoDelivered, 0),
     };
@@ -125,9 +137,11 @@ export class DrizzleReportsDashboardRepository implements ReportsDashboardReposi
         lunchesDelivered: sql<number>`count(*) filter (where ${alimentacionRegistros.almuerzo} = 'entregado')::int`,
       })
       .from(alimentacionRegistros)
+      .innerJoin(adultosMayores, eq(adultosMayores.id, alimentacionRegistros.adultoMayorId))
       .where(
         and(
           ...tenantCondition(alimentacionRegistros.tenantId, query.scope),
+          isNull(adultosMayores.deletedAt),
           gte(alimentacionRegistros.deliveryDate, query.from),
           lte(alimentacionRegistros.deliveryDate, query.to),
         ),
@@ -145,23 +159,53 @@ export class DrizzleReportsDashboardRepository implements ReportsDashboardReposi
       .select({
         activityTypeId: actividadGrupalTipos.id,
         activityTypeName: actividadGrupalTipos.name,
-        count: sql<number>`count(*)::int`,
+        count: sql<number>`count(${actividadesGrupales.id})::int`,
       })
-      .from(actividadesGrupales)
-      .innerJoin(
-        actividadGrupalTipos,
-        eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
-      )
-      .where(
+      .from(actividadGrupalTipos)
+      .leftJoin(
+        actividadesGrupales,
         and(
+          eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
           ...tenantCondition(actividadesGrupales.tenantId, query.scope),
           isNull(actividadesGrupales.deletedAt),
           gte(actividadesGrupales.activityDate, query.from),
           lte(actividadesGrupales.activityDate, query.to),
         ),
       )
+      .where(
+        query.scope.tenantId === null
+          ? or(eq(actividadGrupalTipos.isActive, true), sql`${actividadesGrupales.id} is not null`)
+          : and(
+              eq(actividadGrupalTipos.tenantId, query.scope.tenantId),
+              or(
+                eq(actividadGrupalTipos.isActive, true),
+                sql`${actividadesGrupales.id} is not null`,
+              ),
+            ),
+      )
       .groupBy(actividadGrupalTipos.id, actividadGrupalTipos.name)
       .orderBy(asc(actividadGrupalTipos.name));
+  }
+
+  private async aggregateSexDistribution(
+    query: ReportsDashboardQuery & { scope: ReportsDashboardScope },
+  ): Promise<{ male: number; female: number; other: number }> {
+    const rows = await this.database.db
+      .select({ sex: adultosMayores.sex, total: sql<number>`count(*)::int` })
+      .from(adultosMayores)
+      .where(
+        and(
+          ...tenantCondition(adultosMayores.tenantId, query.scope),
+          isNull(adultosMayores.deletedAt),
+        ),
+      )
+      .groupBy(adultosMayores.sex);
+
+    return {
+      male: rows.find((row) => row.sex === "male")?.total ?? 0,
+      female: rows.find((row) => row.sex === "female")?.total ?? 0,
+      other: rows.find((row) => row.sex === "other")?.total ?? 0,
+    };
   }
 
   private async findTenant(scope: ReportsDashboardScope) {
@@ -170,7 +214,7 @@ export class DrizzleReportsDashboardRepository implements ReportsDashboardReposi
     }
 
     const [row] = await this.database.db
-      .select({ name: tenants.name })
+      .select({ name: tenants.name, city: tenants.city, department: tenants.department })
       .from(tenants)
       .where(and(eq(tenants.id, scope.tenantId), eq(tenants.isActive, true)))
       .limit(1);

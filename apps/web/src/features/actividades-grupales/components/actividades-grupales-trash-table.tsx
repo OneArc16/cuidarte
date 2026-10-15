@@ -1,5 +1,4 @@
 import { type ActividadGrupalTrashListItem } from "@cuidarte/contracts";
-import { RotateCcw } from "lucide-react";
 
 import {
   formatActividadGrupalOrganizer,
@@ -11,14 +10,12 @@ import {
 type ActividadesGrupalesTrashTableProps = {
   actividadesGrupales: ActividadGrupalTrashListItem[];
   isLoading: boolean;
-  onRestore: (actividad: ActividadGrupalTrashListItem) => void;
   showTenantColumn: boolean;
 };
 
 export function ActividadesGrupalesTrashTable({
   actividadesGrupales,
   isLoading,
-  onRestore,
   showTenantColumn,
 }: ActividadesGrupalesTrashTableProps) {
   if (isLoading) {
@@ -27,7 +24,7 @@ export function ActividadesGrupalesTrashTable({
         <table className="actividades-table">
           <tbody>
             <tr>
-              <td>Cargando papelera...</td>
+              <td>Cargando log de eliminaciones...</td>
             </tr>
           </tbody>
         </table>
@@ -51,7 +48,6 @@ export function ActividadesGrupalesTrashTable({
           <col className="actividades-trash-col-motivo" />
           <col className="actividades-trash-col-eliminada-por" />
           <col className="actividades-trash-col-eliminada-el" />
-          <col className="actividades-trash-col-acciones" />
         </colgroup>
         <thead>
           <tr>
@@ -65,13 +61,12 @@ export function ActividadesGrupalesTrashTable({
             <th scope="col">Motivo</th>
             <th scope="col">Eliminada por</th>
             <th scope="col">Eliminada el</th>
-            <th scope="col">Acciones</th>
           </tr>
         </thead>
         <tbody>
           {actividadesGrupales.length === 0 ? (
             <tr>
-              <td colSpan={showTenantColumn ? 11 : 10}>No hay actas en la papelera.</td>
+              <td colSpan={showTenantColumn ? 10 : 9}>No hay eliminaciones registradas.</td>
             </tr>
           ) : (
             actividadesGrupales.map((actividad) => (
@@ -103,24 +98,6 @@ export function ActividadesGrupalesTrashTable({
                 </td>
                 <td>
                   <strong>{formatActividadGrupalTrashTimestamp(actividad.deletedAt)}</strong>
-                </td>
-                <td>
-                  <div className="actividades-row-actions">
-                    <button
-                      className="actividades-row-action"
-                      type="button"
-                      aria-label={`Restaurar acta ${formatActaNumber(actividad.actaNumber)}`}
-                      data-tooltip={
-                        actividad.canRestore
-                          ? "Restaurar acta"
-                          : "No tienes permisos para restaurar"
-                      }
-                      disabled={!actividad.canRestore}
-                      onClick={() => onRestore(actividad)}
-                    >
-                      <RotateCcw aria-hidden="true" />
-                    </button>
-                  </div>
                 </td>
               </tr>
             ))

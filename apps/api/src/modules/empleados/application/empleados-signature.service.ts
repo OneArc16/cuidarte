@@ -1,10 +1,7 @@
 import { createHash } from "node:crypto";
 import path from "node:path";
 
-import {
-  type AuthUser,
-  type SetTenantActiveSignerRequest,
-} from "@cuidarte/contracts";
+import { type AuthUser, type SetTenantActiveSignerRequest } from "@cuidarte/contracts";
 import {
   BadRequestException,
   ForbiddenException,
@@ -27,10 +24,7 @@ import {
   EmpleadoSignatureStoredFileNotFoundError,
   type EmpleadosSignatureFilesStorage,
 } from "../domain/empleados-signature-files.storage";
-import {
-  EMPLEADOS_REPOSITORY,
-  type EmpleadosRepository,
-} from "../domain/empleados.repository";
+import { EMPLEADOS_REPOSITORY, type EmpleadosRepository } from "../domain/empleados.repository";
 
 const MAX_SIGNATURE_FILE_SIZE_BYTES = 3 * 1024 * 1024;
 const ALLOWED_SIGNATURE_MIME_TYPES = new Set([
@@ -108,9 +102,7 @@ export class EmpleadosSignatureService {
     }
 
     if (!empleado.isActive) {
-      throw new BadRequestException(
-        "Solo puedes activar como firmante a un director activo.",
-      );
+      throw new BadRequestException("Solo puedes activar como firmante a un director activo.");
     }
 
     if (empleado.latestSignature === null) {
@@ -280,7 +272,9 @@ export class EmpleadosSignatureService {
     const tenantId = this.assertSignatureEligibleEmpleado(empleado);
 
     if (empleado.role !== "director") {
-      throw new BadRequestException("Solo los usuarios con rol Director pueden ser firmantes activos.");
+      throw new BadRequestException(
+        "Solo los usuarios con rol Director pueden ser firmantes activos.",
+      );
     }
 
     return tenantId;

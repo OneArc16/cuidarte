@@ -9,6 +9,8 @@ import {
   type ActaCorrectionPreview,
   type AppliedActaCorrection,
   type ApplyActaCorrectionCommand,
+  type PreviewActaPrefixCorrectionCommand,
+  type ApplyActaPrefixCorrectionCommand,
   type CorrectActividadGrupalActaNumberCommand,
   type ActividadGrupalTenantOptionRecord,
   type CreateActividadGrupalRecordCommand,
@@ -16,7 +18,6 @@ import {
   type FindActividadesGrupalesQuery,
   type FindActividadesGrupalesTrashQuery,
   type FindActividadGrupalByIdQuery,
-  type RestoreActividadGrupalRecordCommand,
   type SaveActividadGrupalDiligenciamientoRecordCommand,
   type SavedActividadGrupalDiligenciamientoRecord,
   type SearchActividadGrupalIntegrantesOptionsQuery,
@@ -36,6 +37,9 @@ export type ActividadesGrupalesRepository = {
   findActaReportCandidates?(query: {
     tenantId: string;
     period: string;
+    search: string | null;
+    activityTypeId: string | null;
+    organizer: import("@cuidarte/contracts").ActividadGrupalOrganizer | null;
   }): Promise<ActividadGrupalReportCandidateRecord[]>;
   findActiveEmpleadoOptions(tenantId: string): Promise<ActividadGrupalEmpleadoOptionRecord[]>;
   searchIntegranteOptions(
@@ -53,10 +57,16 @@ export type ActividadesGrupalesRepository = {
   previewActaNumberCorrection(
     tenantId: string,
     actorUserId: string,
+    organizer: import("@cuidarte/contracts").ActividadGrupalOrganizer | null,
   ): Promise<ActaCorrectionPreview>;
   applyActaNumberCorrection(command: ApplyActaCorrectionCommand): Promise<AppliedActaCorrection>;
+  previewActaPrefixCorrection?(
+    command: PreviewActaPrefixCorrectionCommand,
+  ): Promise<ActaCorrectionPreview>;
+  applyActaPrefixCorrection?(
+    command: ApplyActaPrefixCorrectionCommand,
+  ): Promise<AppliedActaCorrection>;
   delete(command: DeleteActividadGrupalRecordCommand): Promise<void>;
-  restore(command: RestoreActividadGrupalRecordCommand): Promise<boolean>;
   saveDiligenciamiento(
     command: SaveActividadGrupalDiligenciamientoRecordCommand,
   ): Promise<SavedActividadGrupalDiligenciamientoRecord>;

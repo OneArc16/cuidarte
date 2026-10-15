@@ -1,7 +1,19 @@
-import { type AuthUser } from "@cuidarte/contracts";
+import { hasUserPermission, type AuthUser } from "@cuidarte/contracts";
 
-export function canManageActividadGrupalTipos(user: Pick<AuthUser, "role">): boolean {
-  return user.role === "admin" || user.role === "super_admin";
+export function canManageActividadGrupalTipos(user: Pick<AuthUser, "role" | "permissions">): boolean {
+  return hasUserPermission(user, "ajustes.actividades.manage");
+}
+
+export function canViewActividadGrupalTipos(
+  user: Pick<AuthUser, "role" | "permissions">,
+): boolean {
+  return (
+    user.role === "super_admin" ||
+    hasUserPermission(user, "actividades_grupales.view") ||
+    hasUserPermission(user, "actividades_grupales.create") ||
+    hasUserPermission(user, "actividades_grupales.edit") ||
+    hasUserPermission(user, "ajustes.actividades.manage")
+  );
 }
 
 export function resolveActividadGrupalTipoTenantId(

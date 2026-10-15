@@ -32,10 +32,9 @@ import {
   reportsDashboardExportListResponseSchema,
 } from "@cuidarte/contracts";
 
+import { buildContentDisposition } from "../../../common/content-disposition";
 import { parseZodSchema } from "../../../common/parse-zod-schema";
 import { type AuthenticatedRequest } from "../../auth/authenticated-request";
-import { RequireRoles } from "../../auth/roles.decorator";
-import { RolesGuard } from "../../auth/roles.guard";
 import { SessionGuard } from "../../auth/session.guard";
 import { ReportsService } from "../application/reports.service";
 import { ReportsDashboardService } from "../application/reports-dashboard.service";
@@ -49,8 +48,7 @@ const reportIdParamSchema = z.uuid();
 @ApiTags("reports")
 @ApiBearerAuth()
 @Controller("reports")
-@UseGuards(SessionGuard, RolesGuard)
-@RequireRoles("super_admin", "admin", "director")
+@UseGuards(SessionGuard)
 export class ReportsController {
   constructor(
     private readonly reportsService: ReportsService,
@@ -73,7 +71,7 @@ export class ReportsController {
 
     reply
       .header("Content-Type", file.contentType)
-      .header("Content-Disposition", `attachment; filename="${file.filename}"`)
+      .header("Content-Disposition", buildContentDisposition("attachment", file.filename))
       .send(file.buffer);
   }
 
@@ -92,7 +90,7 @@ export class ReportsController {
 
     reply
       .header("Content-Type", file.contentType)
-      .header("Content-Disposition", `attachment; filename="${file.filename}"`)
+      .header("Content-Disposition", buildContentDisposition("attachment", file.filename))
       .send(file.buffer);
   }
 
@@ -111,7 +109,7 @@ export class ReportsController {
 
     reply
       .header("Content-Type", file.contentType)
-      .header("Content-Disposition", `attachment; filename="${file.filename}"`)
+      .header("Content-Disposition", buildContentDisposition("attachment", file.filename))
       .send(file.buffer);
   }
 
@@ -131,28 +129,57 @@ export class ReportsController {
   @HttpCode(HttpStatus.ACCEPTED)
   async createDashboardExport(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
     const command = parseZodSchema(createReportsDashboardExportRequestSchema, body);
-    return reportsDashboardExportResponseSchema.parse({ export: await this.reportsAnalyticsExportService.create(command, request.currentUser) });
+    return reportsDashboardExportResponseSchema.parse({
+      export: await this.reportsAnalyticsExportService.create(command, request.currentUser),
+    });
   }
 
   @Get("exports")
   async listDashboardExports(@Req() request: AuthenticatedRequest) {
-    return reportsDashboardExportListResponseSchema.parse({ exports: await this.reportsAnalyticsExportService.list(request.currentUser) });
+    return reportsDashboardExportListResponseSchema.parse({
+      exports: await this.reportsAnalyticsExportService.list(request.currentUser),
+    });
   }
 
   @Get("exports/:exportId")
-  async getDashboardExport(@Param("exportId") exportId: string, @Req() request: AuthenticatedRequest) {
-    return reportsDashboardExportResponseSchema.parse({ export: await this.reportsAnalyticsExportService.get(parseZodSchema(reportIdParamSchema, exportId), request.currentUser) });
+  async getDashboardExport(
+    @Param("exportId") exportId: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return reportsDashboardExportResponseSchema.parse({
+      export: await this.reportsAnalyticsExportService.get(
+        parseZodSchema(reportIdParamSchema, exportId),
+        request.currentUser,
+      ),
+    });
   }
 
   @Post("exports/:exportId/cancel")
-  async cancelDashboardExport(@Param("exportId") exportId: string, @Req() request: AuthenticatedRequest) {
-    return reportsDashboardExportResponseSchema.parse({ export: await this.reportsAnalyticsExportService.cancel(parseZodSchema(reportIdParamSchema, exportId), request.currentUser) });
+  async cancelDashboardExport(
+    @Param("exportId") exportId: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    return reportsDashboardExportResponseSchema.parse({
+      export: await this.reportsAnalyticsExportService.cancel(
+        parseZodSchema(reportIdParamSchema, exportId),
+        request.currentUser,
+      ),
+    });
   }
 
   @Get("exports/:exportId/download")
-  async downloadDashboardExport(@Param("exportId") exportId: string, @Req() request: AuthenticatedRequest, @Res({ passthrough: true }) reply: FastifyReply): Promise<StreamableFile> {
-    const download = await this.reportsAnalyticsExportService.download(parseZodSchema(reportIdParamSchema, exportId), request.currentUser);
-    reply.header("Content-Disposition", `attachment; filename="${download.filename}"`).header("Content-Length", String(download.sizeBytes));
+  async downloadDashboardExport(
+    @Param("exportId") exportId: string,
+    @Req() request: AuthenticatedRequest,
+    @Res({ passthrough: true }) reply: FastifyReply,
+  ): Promise<StreamableFile> {
+    const download = await this.reportsAnalyticsExportService.download(
+      parseZodSchema(reportIdParamSchema, exportId),
+      request.currentUser,
+    );
+    reply
+      .header("Content-Disposition", buildContentDisposition("attachment", download.filename))
+      .header("Content-Length", String(download.sizeBytes));
     return download.file;
   }
 
@@ -222,7 +249,7 @@ export class ReportsController {
     const reportId = parseZodSchema(reportIdParamSchema, reportIdValue);
     const download = await this.reportsService.downloadReport(reportId, request.currentUser);
 
-    reply.header("Content-Disposition", `attachment; filename="${download.filename}"`);
+    reply.header("Content-Disposition", buildContentDisposition("attachment", download.filename));
     reply.header("Content-Length", String(download.sizeBytes));
 
     return download.file;

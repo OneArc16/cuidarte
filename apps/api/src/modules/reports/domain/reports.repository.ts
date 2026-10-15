@@ -14,6 +14,7 @@ export type ReportsRepository = {
     tenantId: string;
     type: CreateReportJobCommand["type"];
     period: string;
+    filterKey: string;
   }): Promise<ReportJobRecord | null>;
   createJob(command: CreateReportJobCommand): Promise<ReportJobRecord>;
   findJobById(reportId: string): Promise<ReportJobRecord | null>;
@@ -23,6 +24,7 @@ export type ReportsRepository = {
     filters: ReportListFilters & { scopeTenantId: string | null },
   ): Promise<ReportJobRecord[]>;
   markProcessing(reportId: string, startedAt: Date): Promise<ReportJobRecord | null>;
+  setTotalDocuments(reportId: string, totalDocuments: number): Promise<void>;
   updateProgress(
     reportId: string,
     processedDocuments: number,

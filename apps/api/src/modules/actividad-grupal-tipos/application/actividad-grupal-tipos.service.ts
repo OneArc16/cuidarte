@@ -1,10 +1,14 @@
 import {
   type ActividadGrupalTipo,
+  type ActividadGrupalTipoCreatorOption,
   type ActividadGrupalTiposListQuery,
   type AuthUser,
   type CreateActividadGrupalTipoRequest,
   type UpdateActividadGrupalTipoRequest,
   type UpdateActividadGrupalTipoStatusRequest,
+  type UpdateActividadGrupalTipoConsecutiveConfigRequest,
+  type UpdateActividadGrupalTipoGlobalConsecutiveConfigRequest,
+  actividadGrupalTipoCreatorOptionSchema,
   actividadGrupalTipoSchema,
 } from "@cuidarte/contracts";
 import {
@@ -19,6 +23,7 @@ import {
 import { normalizeActividadGrupalTipoName } from "../domain/actividad-grupal-tipo-normalization";
 import {
   canManageActividadGrupalTipos,
+  canViewActividadGrupalTipos,
   resolveActividadGrupalTipoTenantId,
 } from "../domain/actividad-grupal-tipo.policy";
 import {
@@ -38,10 +43,14 @@ export class ActividadGrupalTiposService {
     query: ActividadGrupalTiposListQuery,
     actor: AuthUser,
   ): Promise<ActividadGrupalTipo[]> {
+    if (!canViewActividadGrupalTipos(actor)) {
+      throw new ForbiddenException("No tienes permisos para consultar actividades grupales.");
+    }
+
     const tenantId =
       actor.role === "super_admin" && query.tenantId === null
         ? null
-        : this.resolveTenantIdOrThrow(actor, query.tenantId);
+        : this.resolveTenantIdForList(actor, query.tenantId);
     const records = await this.actividadGrupalTiposRepository.findMany({
       tenantId: actor.role === "super_admin" && query.tenantId === null ? null : tenantId,
       includeInactive: query.includeInactive,
@@ -124,13 +133,136 @@ export class ActividadGrupalTiposService {
     return this.toResponse(record);
   }
 
-  async listForSessionForm(tenantId: string): Promise<ActividadGrupalTipo[]> {
+  async updateConsecutiveConfig(
+    id: string,
+    command: UpdateActividadGrupalTipoConsecutiveConfigRequest,
+    actor: AuthUser,
+  ): Promise<ActividadGrupalTipo> {
+    const current = await this.findAccessibleOrThrow(id, actor);
+    const enabled = command.enabled;
+    const prefix = enabled ? (command.prefix?.trim().toUpperCase() ?? "") : null;
+
+    if (enabled && !/^[A-Z0-9]{2,24}$/.test(prefix ?? "")) {
+      throw new BadRequestException("El prefijo solo puede incluir letras y números.");
+    }
+
+    const creatorUserIds = enabled ? [...new Set(command.creatorUserIds)] : [];
+    const creatorOptions = enabled
+      ? await this.actividadGrupalTiposRepository.findCreatorOptions(current.tenantId)
+      : [];
+    const allowedCreatorIds = new Set(creatorOptions.map((creator) => creator.id));
+
+    if (
+      enabled &&
+      (creatorUserIds.length === 0 ||
+        creatorUserIds.some((userId) => !allowedCreatorIds.has(userId)))
+    ) {
+      throw new BadRequestException("Selecciona personas activas del centro.");
+    }
+
+    const record = await this.actividadGrupalTiposRepository.updateConsecutiveConfig({
+      id: current.id,
+      actorUserId: actor.id,
+      prefix,
+      nextValue: enabled ? (command.nextValue ?? null) : null,
+      creatorUserIds,
+    });
+
+    return this.toResponse(record);
+  }
+
+  async updateGlobalConsecutiveConfig(
+    command: UpdateActividadGrupalTipoGlobalConsecutiveConfigRequest,
+    actor: AuthUser,
+  ): Promise<ActividadGrupalTipo[]> {
+    if (actor.role !== "super_admin") {
+      throw new ForbiddenException(
+        "Solo un super administrador puede configurar una actividad en todos los centros.",
+      );
+    }
+
+    const activityTypeIds = [...new Set(command.activityTypeIds)];
+    const activityTypes = await Promise.all(
+      activityTypeIds.map(async (id) => {
+        const record = await this.actividadGrupalTiposRepository.findById(id);
+
+        if (record === null) {
+          throw new NotFoundException("La actividad configurada no fue encontrada.");
+        }
+
+        return record;
+      }),
+    );
+    const normalizedNames = new Set(
+      activityTypes.map((activityType) => activityType.normalizedName),
+    );
+
+    if (normalizedNames.size !== 1) {
+      throw new BadRequestException("Selecciona la misma actividad en todos los centros.");
+    }
+
+    const prefix = command.enabled ? (command.prefix?.trim().toUpperCase() ?? "") : null;
+
+    if (command.enabled && !/^[A-Z0-9]{2,24}$/.test(prefix ?? "")) {
+      throw new BadRequestException("El prefijo solo puede incluir letras y números.");
+    }
+
+    const records = await Promise.all(
+      activityTypes.map(async (activityType) => {
+        const creatorUserIds = command.enabled
+          ? activityType.consecutiveCreatorUserIds.length > 0
+            ? activityType.consecutiveCreatorUserIds
+            : (
+                await this.actividadGrupalTiposRepository.findCreatorOptions(activityType.tenantId)
+              ).map((creator) => creator.id)
+          : [];
+
+        if (command.enabled && creatorUserIds.length === 0) {
+          throw new BadRequestException(
+            "Cada centro debe tener al menos una persona activa para esta actividad.",
+          );
+        }
+
+        return await this.actividadGrupalTiposRepository.updateConsecutiveConfig({
+          id: activityType.id,
+          actorUserId: actor.id,
+          prefix,
+          nextValue: command.enabled ? (activityType.consecutiveNextValue ?? 1) : null,
+          creatorUserIds,
+        });
+      }),
+    );
+
+    return records.map((record) => this.toResponse(record));
+  }
+
+  async listCreatorOptions(
+    id: string,
+    actor: AuthUser,
+  ): Promise<ActividadGrupalTipoCreatorOption[]> {
+    const current = await this.findAccessibleOrThrow(id, actor);
+    const records = await this.actividadGrupalTiposRepository.findCreatorOptions(current.tenantId);
+
+    return records.map((record) => actividadGrupalTipoCreatorOptionSchema.parse(record));
+  }
+
+  async listForSessionForm(
+    tenantId: string,
+    actor: Pick<AuthUser, "id">,
+  ): Promise<ActividadGrupalTipo[]> {
     const records = await this.actividadGrupalTiposRepository.findMany({
       tenantId,
       includeInactive: false,
     });
 
-    return records.map((record) => this.toResponse(record));
+    return records
+      .filter(
+        (record) =>
+          record.consecutivePrefix === null ||
+          record.consecutiveNextValue === null ||
+          record.consecutiveCreatorUserIds.includes(actor.id),
+      )
+      .map((record) => this.toResponse(record));
   }
 
   async resolveForSessionCreate(
@@ -205,6 +337,24 @@ export class ActividadGrupalTiposService {
     return tenantId;
   }
 
+  private resolveTenantIdForList(actor: AuthUser, requestedTenantId: string | null): string {
+    const tenantId = resolveActividadGrupalTipoTenantId(actor, requestedTenantId);
+
+    if (tenantId === null) {
+      throw new BadRequestException("El usuario no tiene un centro asociado.");
+    }
+
+    if (
+      actor.role !== "super_admin" &&
+      requestedTenantId !== null &&
+      requestedTenantId !== tenantId
+    ) {
+      throw new ForbiddenException("No puedes consultar actividades de otro centro.");
+    }
+
+    return tenantId;
+  }
+
   private ensureCanManage(actor: AuthUser): void {
     if (!canManageActividadGrupalTipos(actor)) {
       throw new ForbiddenException("No tienes permisos para administrar actividades.");
@@ -225,6 +375,14 @@ export class ActividadGrupalTiposService {
   private toResponse(record: ActividadGrupalTipoRecord): ActividadGrupalTipo {
     return actividadGrupalTipoSchema.parse({
       ...record,
+      consecutiveConfig:
+        record.consecutivePrefix === null || record.consecutiveNextValue === null
+          ? null
+          : {
+              prefix: record.consecutivePrefix,
+              nextValue: record.consecutiveNextValue,
+              creatorUserIds: record.consecutiveCreatorUserIds,
+            },
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
       deactivatedAt: record.deactivatedAt?.toISOString() ?? null,

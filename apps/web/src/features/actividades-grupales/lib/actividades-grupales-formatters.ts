@@ -2,6 +2,7 @@ import {
   type ActividadGrupalOrganizer,
   type ActividadGrupalResponsibleDepartment,
   type ActividadGrupalType,
+  type AuthUser,
   actividadGrupalOrganizerValues,
   actividadGrupalResponsibleDepartmentValues,
   actividadGrupalTypeValues,
@@ -32,6 +33,18 @@ const ORGANIZER_LABELS = {
   recreacionista: "Recreacionista",
 } satisfies Record<ActividadGrupalOrganizer, string>;
 
+const ORGANIZER_FILTER_OPTIONS: readonly {
+  value: ActividadGrupalOrganizer;
+  label: string;
+}[] = [
+  { value: "director", label: "Director" },
+  { value: "medico", label: "SALUD — Médico y Enfermería" },
+  { value: "psicologa", label: "PSICO — Psicología y Trabajo Social" },
+  { value: "nutricionista", label: "Nutricionista" },
+  { value: "fisioterapeuta", label: "Fisioterapeuta" },
+  { value: "recreacionista", label: "Recreacionista" },
+];
+
 const RESPONSIBLE_DEPARTMENT_LABELS = {
   direccion: "Direccion",
   medicina: "Medicina",
@@ -49,6 +62,41 @@ export function getActividadGrupalTypeOptions(): readonly ActividadGrupalType[] 
 
 export function getActividadGrupalOrganizerOptions(): readonly ActividadGrupalOrganizer[] {
   return actividadGrupalOrganizerValues;
+}
+
+const OWN_ORGANIZER_BY_ROLE: Partial<Record<AuthUser["role"], ActividadGrupalOrganizer>> = {
+  director: "director",
+  enfermeria: "enfermeria",
+  fisioterapeuta: "fisioterapeuta",
+  medico: "medico",
+  nutricionista: "nutricionista",
+  psicologo: "psicologa",
+  recreacionista: "recreacionista",
+  trabajadora_social: "trabajadora_social",
+};
+
+export function getCreatableActividadGrupalOrganizerOptions(
+  user: Pick<AuthUser, "role" | "allowedActividadGrupalOrganizers">,
+): readonly ActividadGrupalOrganizer[] {
+  if (user.role === "super_admin" || user.role === "admin") {
+    return getActividadGrupalOrganizerOptions();
+  }
+
+  const ownOrganizer = OWN_ORGANIZER_BY_ROLE[user.role];
+  const allowedOrganizers = user.allowedActividadGrupalOrganizers ?? [];
+
+  return [
+    ...new Set(
+      ownOrganizer === undefined ? allowedOrganizers : [ownOrganizer, ...allowedOrganizers],
+    ),
+  ];
+}
+
+export function getActividadGrupalOrganizerFilterOptions(): readonly {
+  value: ActividadGrupalOrganizer;
+  label: string;
+}[] {
+  return ORGANIZER_FILTER_OPTIONS;
 }
 
 export function getActividadGrupalResponsibleDepartmentOptions(): readonly ActividadGrupalResponsibleDepartment[] {
@@ -83,11 +131,15 @@ export function formatActivitySchedule(startTime: string, endTime: string): stri
   return `${startTime} - ${endTime}`;
 }
 
-export function formatActividadGrupalTrashTimestamp(value: string): string {
+export function formatActividadGrupalTimestamp(value: string): string {
   return new Intl.DateTimeFormat("es-CO", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(value));
+}
+
+export function formatActividadGrupalTrashTimestamp(value: string): string {
+  return formatActividadGrupalTimestamp(value);
 }
 
 export function formatActividadGrupalFileSize(sizeBytes: number): string {

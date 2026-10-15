@@ -6,6 +6,7 @@ import { EmpleadosModule } from "../empleados/empleados.module";
 import { TenantBrandingModule } from "../tenant-branding/tenant-branding.module";
 import { AlimentacionFormatoExportService } from "./application/alimentacion-formato-export.service";
 import { AlimentacionImportedFormatoService } from "./application/alimentacion-imported-formato.service";
+import { AlimentacionBulkImportService } from "./application/alimentacion-bulk-import.service";
 import { AlimentacionService } from "./application/alimentacion.service";
 import { ALIMENTACION_FORMATO_FILES_STORAGE } from "./domain/alimentacion-formato-files.storage";
 import { ALIMENTACION_REPOSITORY } from "./domain/alimentacion.repository";
@@ -20,6 +21,7 @@ import { AlimentacionController } from "./presentation/alimentacion.controller";
     AlimentacionService,
     AlimentacionFormatoExportService,
     AlimentacionImportedFormatoService,
+    AlimentacionBulkImportService,
     {
       provide: ALIMENTACION_REPOSITORY,
       useClass: DrizzleAlimentacionRepository,

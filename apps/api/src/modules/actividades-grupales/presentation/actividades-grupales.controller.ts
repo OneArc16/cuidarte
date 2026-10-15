@@ -35,12 +35,13 @@ import {
   actividadGrupalActaCorrectionPreviewRequestSchema,
   actividadGrupalActaCorrectionPreviewResponseSchema,
   applyActividadGrupalActaCorrectionRequestSchema,
+  actividadGrupalActaPrefixCorrectionPreviewRequestSchema,
+  applyActividadGrupalActaPrefixCorrectionRequestSchema,
   applyActividadGrupalActaCorrectionResponseSchema,
   correctActividadGrupalActaNumberRequestSchema,
   createActividadGrupalRequestSchema,
   deleteActividadGrupalRequestSchema,
   deleteActividadGrupalResponseSchema,
-  restoreActividadGrupalResponseSchema,
   saveActividadGrupalDiligenciamientoSchema,
   updateActividadGrupalRequestSchema,
 } from "@cuidarte/contracts";
@@ -48,6 +49,7 @@ import { type FastifyReply } from "fastify";
 import { type Multipart, type MultipartFile } from "@fastify/multipart";
 import { z } from "zod";
 
+import { buildContentDisposition } from "../../../common/content-disposition";
 import { parseZodSchema } from "../../../common/parse-zod-schema";
 import { type AuthenticatedRequest } from "../../auth/authenticated-request";
 import { SessionGuard } from "../../auth/session.guard";
@@ -88,10 +90,12 @@ export class ActividadesGrupalesController {
     return actividadGrupalListResponseSchema.parse({ actividadesGrupales });
   }
 
-  @Get("papelera")
-  @ApiOkResponse({ description: "Listado de actas eliminadas." })
+  @Get("log-eliminaciones")
+  @ApiOkResponse({ description: "Log de actas eliminadas." })
   @ApiUnauthorizedResponse({ description: "Sesion requerida." })
-  @ApiForbiddenResponse({ description: "El usuario no tiene permisos para consultar la papelera." })
+  @ApiForbiddenResponse({
+    description: "El usuario no tiene permisos para consultar el log de eliminacion.",
+  })
   async listActividadesGrupalesTrash(
     @Query() query: unknown,
     @Req() request: AuthenticatedRequest,
@@ -147,6 +151,32 @@ export class ActividadesGrupalesController {
     return actividadGrupalListItemSchema.parse(detail);
   }
 
+  @Post("acta-prefix-corrections/preview")
+  @ApiOkResponse({ description: "Vista previa de migración de prefijo." })
+  @ApiForbiddenResponse({ description: "Solo super administradores pueden migrar prefijos." })
+  async previewActaPrefixCorrection(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    const command = parseZodSchema(actividadGrupalActaPrefixCorrectionPreviewRequestSchema, body);
+    const preview = await this.actividadesGrupalesService.previewActividadGrupalActaPrefixCorrection(
+      command,
+      request.currentUser,
+    );
+
+    return actividadGrupalActaCorrectionPreviewResponseSchema.parse(preview);
+  }
+
+  @Post("acta-prefix-corrections/apply")
+  @ApiOkResponse({ description: "Migración de prefijo aplicada." })
+  @ApiForbiddenResponse({ description: "Solo super administradores pueden migrar prefijos." })
+  async applyActaPrefixCorrection(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    const command = parseZodSchema(applyActividadGrupalActaPrefixCorrectionRequestSchema, body);
+    const result = await this.actividadesGrupalesService.applyActividadGrupalActaPrefixCorrection(
+      command,
+      request.currentUser,
+    );
+
+    return applyActividadGrupalActaCorrectionResponseSchema.parse(result);
+  }
+
   @Post("acta-number-corrections/preview")
   @ApiOkResponse({ description: "Vista previa de la normalizacion de consecutivos." })
   @ApiForbiddenResponse({ description: "Solo super administradores pueden normalizar actas." })
@@ -155,6 +185,7 @@ export class ActividadesGrupalesController {
     const command = parseZodSchema(actividadGrupalActaCorrectionPreviewRequestSchema, body);
     const preview = await this.actividadesGrupalesService.previewActividadGrupalActaCorrection(
       command.tenantId,
+      command.organizer,
       request.currentUser,
     );
 
@@ -235,7 +266,7 @@ export class ActividadesGrupalesController {
   }
 
   @Delete(":id")
-  @ApiOkResponse({ description: "Acta enviada a la papelera." })
+  @ApiOkResponse({ description: "Acta eliminada y registrada en el log." })
   @ApiNotFoundResponse({ description: "Actividad no encontrada." })
   @ApiForbiddenResponse({ description: "El usuario no puede eliminar esta actividad." })
   @ApiUnauthorizedResponse({ description: "Sesion requerida." })
@@ -253,18 +284,6 @@ export class ActividadesGrupalesController {
     );
 
     return deleteActividadGrupalResponseSchema.parse({ success: true });
-  }
-
-  @Post(":id/restaurar")
-  @ApiOkResponse({ description: "Acta restaurada desde la papelera." })
-  @ApiNotFoundResponse({ description: "Acta eliminada no encontrada." })
-  @ApiForbiddenResponse({ description: "El usuario no puede restaurar esta actividad." })
-  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
-  async restoreActividadGrupal(@Param("id") id: string, @Req() request: AuthenticatedRequest) {
-    const activityId = parseZodSchema(actividadIdParamSchema, id);
-    await this.actividadesGrupalesTrashService.restore(activityId, request.currentUser);
-
-    return restoreActividadGrupalResponseSchema.parse({ success: true });
   }
 
   @Get(":id/diligenciamiento")
@@ -383,7 +402,7 @@ function sendFile(
   disposition: "attachment" | "inline",
 ) {
   reply.header("Content-Type", file.contentType);
-  reply.header("Content-Disposition", `${disposition}; filename="${file.filename}"`);
+  reply.header("Content-Disposition", buildContentDisposition(disposition, file.filename));
 
   return reply.send(file.buffer);
 }

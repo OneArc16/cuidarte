@@ -8,6 +8,7 @@ import { ApiError } from "@/shared/api/api-error";
 
 import { AlimentacionBatchForm } from "../components/alimentacion-batch-form";
 import { REGISTRO_ALIMENTACION_PATH, buildAlimentacionEditPath } from "../lib/alimentacion-paths";
+import { canCreateMultipleDateAlimentacion } from "../lib/alimentacion-permissions";
 import {
   getTodayDateInputValue,
   resolveAlimentacionApiError,
@@ -30,6 +31,7 @@ export function AlimentacionCreatePage({
   user,
 }: AlimentacionCreatePageProps) {
   const shouldSelectTenant = user.role === "super_admin";
+  const canCreateMultipleDates = canCreateMultipleDateAlimentacion(user);
   const [selectedTenantId, setSelectedTenantId] = useState(
     shouldSelectTenant ? "" : (user.tenantId ?? ""),
   );
@@ -44,14 +46,15 @@ export function AlimentacionCreatePage({
   useEffect(() => {
     if (
       lookupQuery.data?.existingRecordId !== null &&
-      lookupQuery.data?.existingRecordId !== undefined
+      lookupQuery.data?.existingRecordId !== undefined &&
+      !canCreateMultipleDates
     ) {
       toast.warning(
         "Este adulto mayor ya tiene un registro de alimentación para el día seleccionado.",
       );
       navigate(buildAlimentacionEditPath(lookupQuery.data.existingRecordId), { replace: true });
     }
-  }, [lookupQuery.data?.existingRecordId, navigate]);
+  }, [canCreateMultipleDates, lookupQuery.data?.existingRecordId, navigate]);
 
   useEffect(() => {
     if (!shouldSelectTenant) {
@@ -91,10 +94,15 @@ export function AlimentacionCreatePage({
           resolveAlimentacionApiError(lookupQuery.error) ??
           resolveAlimentacionApiError(tenantOptionsQuery.error)
         }
+        canCreateMultipleDates={canCreateMultipleDates}
         isPending={createMutation.isPending}
         isTenantOptionsLoading={tenantOptionsQuery.isLoading}
         prefilledAdultoMayor={
-          lookupQuery.data?.existingRecordId === null ? lookupQuery.data.adultoMayor : null
+          canCreateMultipleDates
+            ? (lookupQuery.data?.adultoMayor ?? null)
+            : lookupQuery.data?.existingRecordId === null
+              ? lookupQuery.data.adultoMayor
+              : null
         }
         selectedTenantId={selectedTenantId}
         shouldSelectTenant={shouldSelectTenant}
@@ -108,7 +116,7 @@ export function AlimentacionCreatePage({
             onError: (error) => {
               if (error instanceof ApiError && error.status === 409) {
                 toast.warning(
-                  "Uno o más adultos mayores ya tienen alimentos registrados para el día seleccionado.",
+                  "Uno o más adultos mayores ya tienen alimentos registrados para alguna fecha seleccionada.",
                 );
               }
             },

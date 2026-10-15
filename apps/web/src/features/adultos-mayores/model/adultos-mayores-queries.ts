@@ -1,10 +1,15 @@
-import { type CreateAdultoMayorRequest, type UpdateAdultoMayorRequest } from "@cuidarte/contracts";
+import {
+  type AdultoMayorAttentionFilter,
+  type CreateAdultoMayorRequest,
+  type UpdateAdultoMayorRequest,
+} from "@cuidarte/contracts";
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import * as adultosMayoresApi from "../api/adultos-mayores-api";
 
 export const adultosMayoresQueryKeys = {
-  list: (params: { search: string }) => ["adultos-mayores", params] as const,
+  list: (params: { search: string; attentionType: AdultoMayorAttentionFilter }) =>
+    ["adultos-mayores", params] as const,
   detail: (adultoMayorId: string) => ["adultos-mayores", adultoMayorId] as const,
   tenantOptions: () => ["adultos-mayores", "tenant-options"] as const,
   trashList: (params: { search: string }) => ["adultos-mayores", "papelera", params] as const,
@@ -24,7 +29,10 @@ async function invalidateAdultoMayorDependencies(queryClient: QueryClient) {
   ]);
 }
 
-export function useAdultosMayoresQuery(params: { search: string }) {
+export function useAdultosMayoresQuery(params: {
+  search: string;
+  attentionType: AdultoMayorAttentionFilter;
+}) {
   return useQuery({
     queryKey: adultosMayoresQueryKeys.list(params),
     queryFn: () => adultosMayoresApi.listAdultosMayores(params),

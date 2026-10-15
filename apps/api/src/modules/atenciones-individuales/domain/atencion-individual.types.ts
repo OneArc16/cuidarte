@@ -28,6 +28,8 @@ export type AtencionIndividualAdultoRecord = {
   sex: string;
   eps: string | null;
   healthRegime: string | null;
+  antecedentesPersonalesVigentes: string | null;
+  antecedentesFamiliaresVigentes: string | null;
 };
 
 export type AtencionIndividualRecord = {

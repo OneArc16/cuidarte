@@ -30,6 +30,7 @@ import { assertAdultoMayorRecordDateAllowed } from "../../adultos-mayores/domain
 import {
   canCreateAtencionEnfermeria,
   canOpenAtencionEnfermeriaModule,
+  canReadAtencionEnfermeriaHistory,
   canReadAtencionEnfermeriaModule,
   canEditAtencionEnfermeria,
   canManageAtencionEnfermeriaTrash,
@@ -100,7 +101,7 @@ export class AtencionesEnfermeriaService {
     adultoMayorId: string,
     actor: AuthUser,
   ): Promise<AtencionEnfermeriaHistoryResponse> {
-    this.ensureReadAccess(actor);
+    this.ensureHistoryReadAccess(actor);
     const scope = this.resolveScopeOrThrow(actor);
     const adultoMayor = await this.atencionesRepository.findAdultoMayorById({
       adultoMayorId,
@@ -258,6 +259,12 @@ export class AtencionesEnfermeriaService {
   private ensureReadAccess(actor: AuthUser) {
     if (!canReadAtencionEnfermeriaModule(actor)) {
       throw new ForbiddenException("No tienes permisos para acceder a este modulo.");
+    }
+  }
+
+  private ensureHistoryReadAccess(actor: AuthUser) {
+    if (!canReadAtencionEnfermeriaHistory(actor)) {
+      throw new ForbiddenException("No tienes permisos para consultar el historial de enfermería.");
     }
   }
 

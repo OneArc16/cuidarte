@@ -5,12 +5,6 @@ import { type AuthUser } from "@cuidarte/contracts";
 import "reflect-metadata";
 import { GUARDS_METADATA } from "@nestjs/common/constants";
 
-import {
-  atencionEnfermeriaCrossReadRoleValues,
-  atencionEnfermeriaModuleRoleValues,
-} from "@cuidarte/contracts";
-import { REQUIRED_ROLES_KEY } from "../../auth/roles.decorator";
-import { RolesGuard } from "../../auth/roles.guard";
 import { SessionGuard } from "../../auth/session.guard";
 import { AtencionesEnfermeriaController } from "./atenciones-enfermeria.controller";
 
@@ -24,32 +18,10 @@ const currentUser: AuthUser = {
 };
 
 describe("AtencionesEnfermeriaController", () => {
-  it("protects the module with the expected roles and guards", () => {
-    assert.deepEqual(Reflect.getMetadata(REQUIRED_ROLES_KEY, AtencionesEnfermeriaController), [
-      ...atencionEnfermeriaModuleRoleValues,
-    ]);
+  it("requires an authenticated session", () => {
     assert.deepEqual(Reflect.getMetadata(GUARDS_METADATA, AtencionesEnfermeriaController), [
       SessionGuard,
-      RolesGuard,
     ]);
-    assert.deepEqual(
-      Reflect.getMetadata(
-        REQUIRED_ROLES_KEY,
-        AtencionesEnfermeriaController.prototype.listAtenciones,
-      ),
-      atencionEnfermeriaCrossReadRoleValues,
-    );
-    assert.deepEqual(
-      Reflect.getMetadata(
-        REQUIRED_ROLES_KEY,
-        AtencionesEnfermeriaController.prototype.getHistoriaClinica,
-      ),
-      atencionEnfermeriaCrossReadRoleValues,
-    );
-    assert.deepEqual(
-      Reflect.getMetadata(REQUIRED_ROLES_KEY, AtencionesEnfermeriaController.prototype.getAtencion),
-      atencionEnfermeriaCrossReadRoleValues,
-    );
   });
 
   it("passes the parsed query and current user to the list service", async () => {

@@ -2,6 +2,8 @@ import {
   type CreateEmpleadoRequest,
   type SetTenantActiveSignerRequest,
   type UpdateEmpleadoRequest,
+  type UpdateEmpleadoPermissionsRequest,
+  type UpdateEmpleadoActividadGrupalOrganizerPermissionRequest,
 } from "@cuidarte/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -12,6 +14,9 @@ export const empleadosQueryKeys = {
   detail: (empleadoId: string) => ["empleados", empleadoId] as const,
   tenantOptions: () => ["empleados", "tenant-options"] as const,
   signaturePreview: (empleadoId: string) => ["empleados", empleadoId, "signature-preview"] as const,
+  permissions: (empleadoId: string) => ["empleados", empleadoId, "permissions"] as const,
+  activityOrganizerPermission: (empleadoId: string) =>
+    ["empleados", empleadoId, "activity-organizer-permission"] as const,
 };
 
 export function useEmpleadosQuery(params: { search: string }) {
@@ -33,7 +38,10 @@ export function useEmpleadoTenantOptionsQuery(enabled: boolean) {
 
 export function useEmpleadoQuery(empleadoId: string | null) {
   return useQuery({
-    queryKey: empleadoId === null ? ["empleados", "detail", "empty"] : empleadosQueryKeys.detail(empleadoId),
+    queryKey:
+      empleadoId === null
+        ? ["empleados", "detail", "empty"]
+        : empleadosQueryKeys.detail(empleadoId),
     queryFn: () => {
       if (empleadoId === null) {
         throw new Error("Empleado no seleccionado.");
@@ -43,6 +51,63 @@ export function useEmpleadoQuery(empleadoId: string | null) {
     },
     enabled: empleadoId !== null,
     retry: false,
+  });
+}
+
+export function useEmpleadoPermissionsQuery(empleadoId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: empleadosQueryKeys.permissions(empleadoId),
+    queryFn: () => empleadosApi.getEmpleadoPermissions(empleadoId),
+    enabled,
+    retry: false,
+  });
+}
+
+export function useUpdateEmpleadoPermissionsMutation(empleadoId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: UpdateEmpleadoPermissionsRequest) =>
+      empleadosApi.updateEmpleadoPermissions(empleadoId, request),
+    onSuccess: async (response) => {
+      queryClient.setQueryData(empleadosQueryKeys.permissions(empleadoId), response);
+      await queryClient.invalidateQueries({ queryKey: empleadosQueryKeys.permissions(empleadoId) });
+    },
+  });
+}
+
+export function useEmpleadoActividadGrupalOrganizerPermissionQuery(
+  empleadoId: string,
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: empleadosQueryKeys.activityOrganizerPermission(empleadoId),
+    queryFn: () => empleadosApi.getEmpleadoActividadGrupalOrganizerPermission(empleadoId),
+    enabled,
+    retry: false,
+  });
+}
+
+export function useUpdateEmpleadoActividadGrupalOrganizerPermissionMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      empleadoId,
+      request,
+    }: {
+      empleadoId: string;
+      request: UpdateEmpleadoActividadGrupalOrganizerPermissionRequest;
+    }) => empleadosApi.updateEmpleadoActividadGrupalOrganizerPermission(empleadoId, request),
+    onSuccess: async (response) => {
+      queryClient.setQueryData(
+        empleadosQueryKeys.activityOrganizerPermission(response.employeeId),
+        response,
+      );
+      await queryClient.invalidateQueries({
+        queryKey: empleadosQueryKeys.activityOrganizerPermission(response.employeeId),
+      });
+    },
   });
 }
 
@@ -71,7 +136,8 @@ export function useUpdateEmpleadoMutation(empleadoId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (request: UpdateEmpleadoRequest) => empleadosApi.updateEmpleado(empleadoId, request),
+    mutationFn: (request: UpdateEmpleadoRequest) =>
+      empleadosApi.updateEmpleado(empleadoId, request),
     onSuccess: async (detail) => {
       queryClient.setQueryData(empleadosQueryKeys.detail(empleadoId), detail);
       await queryClient.invalidateQueries({ queryKey: ["empleados"] });

@@ -132,6 +132,13 @@ export function AdultosMayoresImportPage({ navigate, user }: AdultosMayoresImpor
     });
   }
 
+  function handleCancelConfirmation() {
+    confirmMutation.reset();
+    validateMutation.reset();
+    setActiveImportId(null);
+    setLocalError(null);
+  }
+
   const isBusy = validateMutation.isPending || confirmMutation.isPending || importQuery.isLoading;
   const selectedTenantName = canSelectTenant
     ? (tenantOptions.find((tenant) => tenant.id === selectedTenantId)?.name ?? "")
@@ -249,6 +256,7 @@ export function AdultosMayoresImportPage({ navigate, user }: AdultosMayoresImpor
               detail={activeDetail}
               isPending={confirmMutation.isPending}
               onConfirm={handleConfirm}
+              onCancel={handleCancelConfirmation}
             />
           </div>
         </>

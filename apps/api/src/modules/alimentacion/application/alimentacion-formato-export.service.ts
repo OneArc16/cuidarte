@@ -5,6 +5,7 @@ import { type AlimentacionFormatoEntregaExportQuery, type AuthUser } from "@cuid
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   InternalServerErrorException,
@@ -17,13 +18,16 @@ import {
   ALIMENTACION_FORMATO_FILES_STORAGE,
   type AlimentacionFormatoFilesStorage,
 } from "../domain/alimentacion-formato-files.storage";
+import { canExportAlimentacion } from "../domain/alimentacion.policy";
 import {
   buildFormatoEntregaPdfFilename,
   buildFormatoEntregaPdfHtml,
 } from "./alimentacion-formato-pdf-template";
+import { ALIMENTACION_FORMAT_TEMPLATE_VERSION } from "./alimentacion-formato-template-version";
 import { AlimentacionService } from "./alimentacion.service";
 import { type AlimentacionFormatoEntregaExportData } from "./alimentacion-formato-export.types";
 import playwrightEnv from "../../../common/playwright-env";
+import { getRequiredPdfLetterheadDataUrl } from "../../../common/pdf-letterhead";
 
 export type ExportedAlimentacionFormatoEntregaPdf = {
   buffer: Buffer;
@@ -41,8 +45,6 @@ type CurrentFormatoDependencies = {
 };
 
 const INSTITUTIONAL_LOGO_RELATIVE_PATH = path.join("public", "logos", "gobernacion-magdalena.png");
-const DATED_VISIT_LIST_FORMAT_ROLLOUT_AT = new Date("2026-09-01T18:27:35.000Z");
-
 let cachedInstitutionalLogoDataUrl: string | null | undefined;
 
 @Injectable()
@@ -60,11 +62,18 @@ export class AlimentacionFormatoExportService {
     query: AlimentacionFormatoEntregaExportQuery,
     actor: AuthUser,
   ): Promise<ExportedAlimentacionFormatoEntregaPdf> {
+    this.ensureCanExport(actor);
     const generatedAt = new Date();
     const exportData = await this.alimentacionService.prepareFormatoEntregaExport(
       adultoMayorId,
       query,
       actor,
+    );
+    const filename = buildFormatoEntregaPdfFilename(
+      exportData.documentNumber,
+      exportData.surnames,
+      exportData.names,
+      exportData.deliveryMonth,
     );
     const existingEmission = await this.alimentacionService.findLatestFormatoEntregaEmission(
       adultoMayorId,
@@ -96,27 +105,26 @@ export class AlimentacionFormatoExportService {
           actor,
         );
 
-        return storedFile;
+        return { ...storedFile, filename };
       }
     }
     const { directorSignature, tenantLogoVersion } =
       currentDependenciesForReuse ??
       (await this.resolveCurrentFormatoDependencies(exportData.tenantId));
-    const [institutionalLogoDataUrl, directorSignatureDataUrl, tenantLogoFile] = await Promise.all([
-      this.getInstitutionalLogoDataUrl(),
-      this.getDirectorSignatureDataUrl(directorSignature.signature),
-      this.tenantBrandingService.readLogoVersionFile(tenantLogoVersion),
-    ]);
+    const [institutionalLogoDataUrl, membreteDataUrl, directorSignatureDataUrl, tenantLogoFile] =
+      await Promise.all([
+        this.getInstitutionalLogoDataUrl(),
+        this.getRequiredMembreteDataUrl(),
+        this.getDirectorSignatureDataUrl(directorSignature.signature),
+        this.tenantBrandingService.readLogoVersionFile(tenantLogoVersion),
+      ]);
     const tenantLogoDataUrl = `data:${tenantLogoFile.contentType};base64,${tenantLogoFile.buffer.toString("base64")}`;
     const pdfBuffer = await this.renderPdf(
       exportData,
       institutionalLogoDataUrl,
+      membreteDataUrl,
       tenantLogoDataUrl,
       directorSignatureDataUrl,
-    );
-    const filename = buildFormatoEntregaPdfFilename(
-      exportData.documentNumber,
-      exportData.deliveryMonth,
     );
     const storedFile = await this.formatoFilesStorage.saveFile(
       {
@@ -136,6 +144,7 @@ export class AlimentacionFormatoExportService {
         tenantId: exportData.tenantId,
         adultoMayorId: exportData.adultoMayorId,
         deliveryMonth: exportData.deliveryMonth,
+        templateVersion: ALIMENTACION_FORMAT_TEMPLATE_VERSION,
         signerEmployeeIdSnapshot: directorSignature.activeSigner.employeeId,
         signerNameSnapshot: directorSignature.employeeFullName,
         signerRoleSnapshot: directorSignature.employeeRole,
@@ -170,9 +179,16 @@ export class AlimentacionFormatoExportService {
     };
   }
 
+  private ensureCanExport(actor: Pick<AuthUser, "role" | "permissions">) {
+    if (!canExportAlimentacion(actor)) {
+      throw new ForbiddenException("No tienes permisos para descargar formatos de alimentacion.");
+    }
+  }
+
   private async renderPdf(
     data: AlimentacionFormatoEntregaExportData,
     institutionalLogoDataUrl: string | null,
+    membreteDataUrl: string,
     tenantLogoDataUrl: string,
     directorSignatureDataUrl: string | null,
   ): Promise<Buffer> {
@@ -188,6 +204,7 @@ export class AlimentacionFormatoExportService {
         buildFormatoEntregaPdfHtml({
           data,
           institutionalLogoDataUrl,
+          membreteDataUrl,
           tenantLogoDataUrl,
           directorSignatureDataUrl,
         }),
@@ -198,8 +215,7 @@ export class AlimentacionFormatoExportService {
 
       return Buffer.from(
         await page.pdf({
-          width: "216mm",
-          height: "279mm",
+          format: "Letter",
           printBackground: true,
           preferCSSPageSize: true,
           margin: {
@@ -273,6 +289,7 @@ export class AlimentacionFormatoExportService {
   private shouldReuseExistingEmission(
     existingEmission: {
       issuedAt: Date;
+      templateVersion: string | null;
       signerEmployeeIdSnapshot: string;
       signatureVersionIdSnapshot: string;
       tenantLogoVersionIdSnapshot: string | null;
@@ -283,7 +300,7 @@ export class AlimentacionFormatoExportService {
     exportData: AlimentacionFormatoEntregaExportData,
     currentDependencies: CurrentFormatoDependencies,
   ): boolean {
-    if (existingEmission.issuedAt < DATED_VISIT_LIST_FORMAT_ROLLOUT_AT) {
+    if (existingEmission.templateVersion !== ALIMENTACION_FORMAT_TEMPLATE_VERSION) {
       return false;
     }
 
@@ -329,6 +346,17 @@ export class AlimentacionFormatoExportService {
       logoBuffer === null ? null : `data:image/png;base64,${logoBuffer.toString("base64")}`;
 
     return cachedInstitutionalLogoDataUrl;
+  }
+
+  private async getRequiredMembreteDataUrl(): Promise<string> {
+    try {
+      return await getRequiredPdfLetterheadDataUrl();
+    } catch (error) {
+      throw new InternalServerErrorException(
+        "No fue posible cargar el membrete obligatorio del formato de alimentacion.",
+        { cause: error },
+      );
+    }
   }
 
   private async deleteStoredPdfBestEffort(relativePath: string) {

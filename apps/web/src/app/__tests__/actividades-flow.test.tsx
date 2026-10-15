@@ -9,7 +9,9 @@ import {
   actividadGrupalFormOptionsFixture,
   actividadGrupalIntegranteFixture,
   authUserFixture,
+  auditorUserFixture,
   empleadoFixture,
+  superAdminUserFixture,
 } from "../../test/fixtures";
 import { server } from "../../test/test-server";
 import { renderAppAtPath, resetAppTestState } from "../../test/helpers/app-test.helpers";
@@ -62,6 +64,7 @@ describe("App actividades flow", () => {
     renderAppAtPath("/creacion-actividades");
 
     expect(await screen.findByRole("table")).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Creada el" })).not.toBeInTheDocument();
     expect(
       await screen.findByRole("button", { name: actividadGrupalFixture.activityName }),
     ).toBeInTheDocument();
@@ -75,6 +78,16 @@ describe("App actividades flow", () => {
       screen.getByRole("button", {
         name: `Ver PDF del acta 0004`,
       }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the real creation timestamp only to super admins", async () => {
+    server.use(mockAuthMe(superAdminUserFixture));
+    renderAppAtPath("/creacion-actividades");
+
+    expect(await screen.findByRole("columnheader", { name: "Creada el" })).toBeInTheDocument();
+    expect(
+      document.querySelector(`time[datetime="${actividadGrupalFixture.createdAt}"]`),
     ).toBeInTheDocument();
   });
 
@@ -139,9 +152,7 @@ describe("App actividades flow", () => {
     });
 
     expect(await screen.findByText("Vista de solo lectura")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Guardar" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Guardar" })).not.toBeInTheDocument();
   });
 
   it("filters the activities list by type", async () => {
@@ -240,9 +251,7 @@ describe("App actividades flow", () => {
     const user = userEvent.setup();
     renderAppAtPath(`/creacion-actividades/${actividadGrupalFixture.id}/diligenciamiento`);
 
-    expect(
-      await screen.findByRole("button", { name: "Guardar" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Guardar" })).toBeInTheDocument();
     expect(
       screen.getByText("Escribe un nombre o documento para buscar adultos mayores."),
     ).toBeInTheDocument();
@@ -270,6 +279,7 @@ describe("App actividades flow", () => {
       screen.getByLabelText("Adjuntar documento PDF"),
       new File(["pdf"], "soporte-final.pdf", { type: "application/pdf" }),
     );
+    expect(await screen.findByText("soporte-final.pdf")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Guardar" }));
 
     await waitFor(() => {
@@ -314,9 +324,7 @@ describe("App actividades flow", () => {
     const user = userEvent.setup();
     renderAppAtPath(`/creacion-actividades/${actividadGrupalFixture.id}/diligenciamiento`);
 
-    expect(
-      await screen.findByRole("button", { name: "Guardar" }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Guardar" })).toBeInTheDocument();
     expect(screen.getByText("No hay integrantes seleccionados.")).toBeInTheDocument();
 
     await user.type(screen.getByLabelText("Objetivos"), "Objetivos sin asistentes");
@@ -341,6 +349,11 @@ describe("App actividades flow", () => {
       http.get("http://localhost:3001/api/actividades-grupales/form-options", () =>
         HttpResponse.json({
           ...actividadGrupalFormOptionsFixture,
+          empleados: [
+            empleadoFixture,
+            { id: authUserFixture.id, fullName: authUserFixture.fullName, role: authUserFixture.role },
+            { id: auditorUserFixture.id, fullName: auditorUserFixture.fullName, role: auditorUserFixture.role },
+          ],
           nextActaNumber: 5,
         }),
       ),
@@ -369,6 +382,9 @@ describe("App actividades flow", () => {
     await waitFor(() => {
       expect(screen.getByLabelText(/Numero de acta/i)).toHaveValue("0005");
     });
+    expect(screen.queryByRole("checkbox", { name: /Admin Centro Demo/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: /Auditor Centro Demo/i })).not.toBeInTheDocument();
+
     await user.type(screen.getByLabelText("Nombre de la actividad"), "Actividad creada desde test");
     await user.selectOptions(screen.getByLabelText("Tipo de actividad"), "salud_preventiva");
     await user.type(screen.getByLabelText("Fecha de la actividad"), "2026-04-24");

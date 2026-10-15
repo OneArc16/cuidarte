@@ -49,7 +49,10 @@ export type AdultosMayoresImportRepository = {
     confirmedAt: Date;
   }): Promise<void>;
   markImportAsFailed(params: { importId: string; failureCode: string }): Promise<void>;
-  commitValidatedBatch(params: { importId: string; actorUserId: string }): Promise<AdultoMayorImportCommitResult>;
+  commitValidatedBatch(params: {
+    importId: string;
+    actorUserId: string;
+  }): Promise<AdultoMayorImportCommitResult>;
   attachCreatedAdults(params: {
     importId: string;
     createdAdults: Array<{ documentType: string; documentNumber: string; adultoId: string }>;

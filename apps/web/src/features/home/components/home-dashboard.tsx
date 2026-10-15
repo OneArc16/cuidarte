@@ -6,14 +6,16 @@ import {
   type AuthUser,
   homeDashboardShortcutModuleIdValues,
 } from "@cuidarte/contracts";
-import { CalendarPlus } from "lucide-react";
+import { BusFront, CalendarPlus, Utensils } from "lucide-react";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { CREACION_ACTIVIDADES_PATH } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
 import { saveActividadesGrupalesFilters } from "@/features/actividades-grupales/lib/actividades-grupales-filter-state";
 
 import { HomeDashboardIndicatorCard } from "./home-dashboard-indicator-card";
+import { HomeAuditorCharts } from "./home-auditor-charts";
 import { HomeDashboardShortcutCard } from "./home-dashboard-shortcut-card";
+import { AnimatedDashboardMetric } from "./animated-dashboard-metric";
 import {
   HOME_DASHBOARD_INDICATORS,
   type HomeDashboardIndicatorDefinition,
@@ -34,21 +36,54 @@ const HOME_SHORTCUT_MODULE_IDS = new Set(homeDashboardShortcutModuleIdValues);
 const HOME_SHORTCUT_MODULES = HOME_MODULES.filter((module) =>
   HOME_SHORTCUT_MODULE_IDS.has(module.id as HomeDashboardShortcutModuleId),
 ) as readonly ShortcutHomeModule[];
+const AUDITOR_HIDDEN_INDICATOR_IDS = new Set<HomeDashboardIndicatorId>([
+  "atenciones_enfermeria",
+  "atenciones_medico",
+  "raciones_entregadas",
+]);
 
 export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
   const dashboardQuery = useHomeDashboardQuery();
+  const isAuditor = user.role === "auditor";
   const shortcutTotals = buildShortcutTotals(dashboardQuery.data);
   const indicatorTotals = buildIndicatorTotals(dashboardQuery.data);
   const visibleShortcutModules = HOME_SHORTCUT_MODULES.filter((module) =>
-    canViewModule(module, user.role),
+    canViewModule(module, user),
   );
   const visibleIndicators = HOME_DASHBOARD_INDICATORS.filter(
-    (indicator) => indicatorTotals[indicator.id] !== undefined,
+    (indicator) =>
+      indicatorTotals[indicator.id] !== undefined &&
+      (!isAuditor || !AUDITOR_HIDDEN_INDICATOR_IDS.has(indicator.id)),
   );
   const activityIndicators =
     user.role === "super_admin"
       ? consolidateActivityIndicators(dashboardQuery.data?.activityIndicators ?? [])
       : (dashboardQuery.data?.activityIndicators ?? []);
+  const auditorFoodSummary = isAuditor ? dashboardQuery.data?.foodSummary : null;
+  const auditorFoodMetrics =
+    auditorFoodSummary === null || auditorFoodSummary === undefined
+      ? []
+      : [
+          {
+            id: "total-entregado",
+            label: "Total entregado",
+            icon: Utensils,
+            tone: "ink",
+            total: auditorFoodSummary.deliveredTotal,
+          },
+          {
+            id: "auxilio-transporte",
+            label: "Auxilios de transporte",
+            icon: BusFront,
+            tone: "coral",
+            total: auditorFoodSummary.auxilioTransporteTotal,
+          },
+        ];
+  const alimentacionModule = HOME_SHORTCUT_MODULES.find(
+    (module) => module.id === "registro-alimentacion",
+  );
+  const showAuditorAlimentacionActivity =
+    isAuditor && alimentacionModule !== undefined && auditorFoodMetrics.length > 0;
 
   return (
     <>
@@ -56,37 +91,46 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
         {user.fullName}
       </h1>
 
-      <section className="home-dashboard-section" aria-labelledby="home-shortcuts-title">
-        <div className="home-dashboard-section__header">
-          <div>
-            <span className="eyebrow">Accesos</span>
-            <h2 id="home-shortcuts-title">Módulos del sistema</h2>
-          </div>
-        </div>
-
-        <div
-          className="home-shortcuts-grid"
-          aria-busy={dashboardQuery.isLoading ? "true" : "false"}
-        >
-          {visibleShortcutModules.map((module) => (
-            <HomeDashboardShortcutCard
-              key={module.id}
-              module={module}
-              total={shortcutTotals[module.id as HomeDashboardShortcutModuleId]}
-              onClick={() => {
-                navigate(module.path);
-              }}
-            />
-          ))}
-        </div>
-      </section>
-
-      {visibleIndicators.length > 0 || activityIndicators.length > 0 ? (
-        <section className="home-dashboard-section" aria-labelledby="home-indicators-title">
+      {!isAuditor ? (
+        <section className="home-dashboard-section" aria-labelledby="home-shortcuts-title">
           <div className="home-dashboard-section__header">
             <div>
-              <span className="eyebrow">Indicadores</span>
-              <h2 id="home-indicators-title">Resumen operativo</h2>
+              <span className="eyebrow">Accesos</span>
+              <h2 id="home-shortcuts-title">Módulos del sistema</h2>
+            </div>
+          </div>
+
+          <div
+            className="home-shortcuts-grid"
+            aria-busy={dashboardQuery.isLoading ? "true" : "false"}
+          >
+            {visibleShortcutModules.map((module) => (
+              <HomeDashboardShortcutCard
+                key={module.id}
+                module={module}
+                total={shortcutTotals[module.id as HomeDashboardShortcutModuleId]}
+                onClick={() => {
+                  navigate(module.path);
+                }}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {visibleIndicators.length > 0 ||
+      activityIndicators.length > 0 ||
+      showAuditorAlimentacionActivity ? (
+        <section
+          className={`home-dashboard-section${isAuditor ? " home-dashboard-section--auditor" : ""}`}
+          aria-labelledby="home-indicators-title"
+        >
+          <div className="home-dashboard-section__header">
+            <div>
+              <span id={isAuditor ? "home-indicators-title" : undefined} className="eyebrow">
+                {isAuditor ? "Actividades Realizadas" : "Indicadores"}
+              </span>
+              {!isAuditor ? <h2 id="home-indicators-title">Resumen operativo</h2> : null}
             </div>
           </div>
 
@@ -112,6 +156,32 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
                 />
               );
             })}
+            {showAuditorAlimentacionActivity
+              ? auditorFoodMetrics.map((metric) => {
+                  const Icon = metric.icon;
+
+                  return (
+                    <button
+                      key={metric.id}
+                      className="home-indicator-card"
+                      data-tone={metric.tone}
+                      type="button"
+                      aria-label={metric.label}
+                      onClick={() => {
+                        navigate(alimentacionModule.path);
+                      }}
+                    >
+                      <span className="home-indicator-card__icon" aria-hidden="true">
+                        <Icon />
+                      </span>
+                      <span className="home-indicator-card__label">{metric.label}</span>
+                      <strong>
+                        <AnimatedDashboardMetric value={metric.total} />
+                      </strong>
+                    </button>
+                  );
+                })
+              : null}
             {activityIndicators.map((indicator) => (
               <button
                 key={indicator.activityTypeId}
@@ -138,7 +208,9 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
                 <span className="home-indicator-card__icon" aria-hidden="true">
                   <CalendarPlus />
                 </span>
-                <strong>{indicator.total}</strong>
+                <strong>
+                  <AnimatedDashboardMetric value={indicator.total} />
+                </strong>
               </button>
             ))}
           </div>
@@ -149,6 +221,11 @@ export function HomeDashboard({ navigate, user }: HomeDashboardProps) {
         <p className="home-dashboard-feedback" role="status">
           No fue posible actualizar los indicadores ahora. Los accesos siguen disponibles.
         </p>
+      ) : null}
+      {isAuditor &&
+      dashboardQuery.data?.analytics !== null &&
+      dashboardQuery.data?.analytics !== undefined ? (
+        <HomeAuditorCharts analytics={dashboardQuery.data.analytics} />
       ) : null}
     </>
   );

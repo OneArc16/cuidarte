@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { ConflictException } from "@nestjs/common";
+import { ConflictException, ForbiddenException } from "@nestjs/common";
 
 import { AlimentacionFormatoExportService } from "./alimentacion-formato-export.service";
+import { ALIMENTACION_FORMAT_TEMPLATE_VERSION } from "./alimentacion-formato-template-version";
 
 const tenantId = "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054";
 const adultoMayorId = "0b17e370-8f81-48c0-b707-c7046f497855";
@@ -18,6 +19,34 @@ const actor = {
 };
 
 describe("AlimentacionFormatoExportService tenant logo integration", () => {
+  it("does not prepare a format when the actor lacks download permission", async () => {
+    let exportWasPrepared = false;
+    const service = new AlimentacionFormatoExportService(
+      {
+        async prepareFormatoEntregaExport() {
+          exportWasPrepared = true;
+        },
+      } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+    );
+
+    await assert.rejects(
+      () =>
+        service.exportPdf(
+          adultoMayorId,
+          { deliveryMonth: "2026-07" },
+          {
+            ...actor,
+            permissions: ["alimentacion.view"],
+          },
+        ),
+      ForbiddenException,
+    );
+    assert.equal(exportWasPrepared, false);
+  });
+
   it("serves historical emissions when records and snapshot assets still match", async () => {
     let renderWasCalled = false;
     let exportWasPrepared = false;
@@ -33,6 +62,8 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantDepartment: "Cundinamarca",
             adultoMayorId,
             documentNumber: "1020304050",
+            names: "Rosa",
+            surnames: "Martinez",
             fullName: "Rosa Martinez",
             deliveryMonth: "2026-07",
             records: [
@@ -53,7 +84,8 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantId,
             adultoMayorId,
             deliveryMonth: "2026-07",
-            issuedAt: new Date("2026-09-01T19:00:00.000Z"),
+            issuedAt: new Date("2026-10-07T16:36:00.000Z"),
+            templateVersion: ALIMENTACION_FORMAT_TEMPLATE_VERSION,
             pdfRelativePath: `${tenantId}/historic.pdf`,
             filename: "historic.pdf",
             signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -97,8 +129,75 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
     const result = await service.exportPdf(adultoMayorId, { deliveryMonth: "2026-07" }, actor);
 
     assert.deepEqual(result.buffer, Buffer.from("historic-pdf"));
+    assert.equal(result.filename, "1020304050_MARTINEZ_ROSA_FORMATO_ENTREGA_2026_07.pdf");
     assert.equal(renderWasCalled, false);
     assert.equal(exportWasPrepared, true);
+  });
+
+  it("reissues legacy emissions without a verifiable template version", async () => {
+    for (const templateVersion of [null, "v2-without-membrete"]) {
+      let savedPdfCount = 0;
+      let createdEmissionCount = 0;
+      const service = new AlimentacionFormatoExportService(
+        {
+          ...alimentacionServiceForNewEmission(),
+          async findLatestFormatoEntregaEmission() {
+            return {
+              tenantId,
+              adultoMayorId,
+              deliveryMonth: "2026-07",
+              issuedAt: new Date("2026-10-07T16:35:59.999Z"),
+              templateVersion,
+              pdfRelativePath: `${tenantId}/historic.pdf`,
+              filename: "historic.pdf",
+              signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
+              signatureVersionIdSnapshot: "7cf28395-e93e-420f-b7e0-92314361a02b",
+              tenantLogoVersionIdSnapshot: logoVersionId,
+              sourceRecordCount: 0,
+              sourceDateFrom: null,
+              sourceDateTo: null,
+            };
+          },
+          async createFormatoEntregaEmission() {
+            createdEmissionCount += 1;
+          },
+        } as never,
+        directorSignatureService() as never,
+        {
+          async resolveActiveLogo() {
+            return {
+              id: logoVersionId,
+              tenantId,
+              relativePath: `${tenantId}/branding/logos/version.png`,
+            };
+          },
+          async readLogoVersionFile() {
+            return { buffer: Buffer.from("tenant-logo"), contentType: "image/png" };
+          },
+        } as never,
+        {
+          async saveFile(_scope: unknown, file: { filename: string }) {
+            savedPdfCount += 1;
+
+            return { filename: file.filename, relativePath: `${tenantId}/reissued.pdf` };
+          },
+        } as never,
+      );
+      Object.assign(service, {
+        async renderPdf() {
+          return Buffer.from("reissued-pdf");
+        },
+        async getInstitutionalLogoDataUrl() {
+          return null;
+        },
+      });
+
+      const result = await service.exportPdf(adultoMayorId, { deliveryMonth: "2026-07" }, actor);
+
+      assert.deepEqual(result.buffer, Buffer.from("reissued-pdf"));
+      assert.equal(savedPdfCount, 1);
+      assert.equal(createdEmissionCount, 1);
+    }
   });
 
   it("does not reuse an emission when the active signature file is missing", async () => {
@@ -113,6 +212,8 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantDepartment: "Cundinamarca",
             adultoMayorId,
             documentNumber: "1020304050",
+            names: "Rosa",
+            surnames: "Martinez",
             fullName: "Rosa Martinez",
             deliveryMonth: "2026-07",
             records: [
@@ -133,7 +234,8 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantId,
             adultoMayorId,
             deliveryMonth: "2026-07",
-            issuedAt: new Date("2026-09-01T19:00:00.000Z"),
+            issuedAt: new Date("2026-10-07T16:36:00.000Z"),
+            templateVersion: ALIMENTACION_FORMAT_TEMPLATE_VERSION,
             pdfRelativePath: `${tenantId}/historic.pdf`,
             filename: "historic.pdf",
             signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -253,6 +355,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
     await service.exportPdf(adultoMayorId, { deliveryMonth: "2026-07" }, actor);
 
     assert.equal(createdEmissions[0]?.tenantLogoVersionIdSnapshot, logoVersionId);
+    assert.equal(createdEmissions[0]?.templateVersion, ALIMENTACION_FORMAT_TEMPLATE_VERSION);
     assert.equal(
       createdEmissions[0]?.signerEmployeeIdSnapshot,
       "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -261,7 +364,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
     assert.equal(resolvedSignerRequested, true);
   });
 
-  it("reissues emissions created before the dated visit list rollout", async () => {
+  it("reissues when the stored template version is outdated", async () => {
     let savedPdfCount = 0;
     let createdEmissionCount = 0;
     let logoWasResolved = false;
@@ -273,7 +376,8 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantId,
             adultoMayorId,
             deliveryMonth: "2026-07",
-            issuedAt: new Date("2026-09-01T18:00:00.000Z"),
+            issuedAt: new Date("2026-10-05T15:56:19.999Z"),
+            templateVersion: "v2-without-membrete",
             pdfRelativePath: `${tenantId}/historic.pdf`,
             filename: "historic.pdf",
             signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -340,6 +444,8 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantDepartment: "Cundinamarca",
             adultoMayorId,
             documentNumber: "1020304050",
+            names: "Rosa",
+            surnames: "Martinez",
             fullName: "Rosa Martinez",
             deliveryMonth: "2026-07",
             records: [
@@ -350,7 +456,7 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
                 almuerzo: "entregado",
                 refrigerio2: "entregado",
                 auxilioTransporte: "entregado",
-                updatedAt: new Date("2026-09-01T20:00:00.000Z"),
+                updatedAt: new Date("2026-10-05T15:56:21.000Z"),
               },
             ],
           };
@@ -360,7 +466,8 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantId,
             adultoMayorId,
             deliveryMonth: "2026-07",
-            issuedAt: new Date("2026-09-01T19:00:00.000Z"),
+            issuedAt: new Date("2026-10-05T15:56:20.000Z"),
+            templateVersion: ALIMENTACION_FORMAT_TEMPLATE_VERSION,
             pdfRelativePath: `${tenantId}/historic.pdf`,
             filename: "historic.pdf",
             signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -422,6 +529,8 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantDepartment: "Cundinamarca",
             adultoMayorId,
             documentNumber: "1020304050",
+            names: "Rosa",
+            surnames: "Martinez",
             fullName: "Rosa Martinez",
             deliveryMonth: "2026-07",
             records: [
@@ -442,7 +551,8 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
             tenantId,
             adultoMayorId,
             deliveryMonth: "2026-07",
-            issuedAt: new Date("2026-09-01T19:00:00.000Z"),
+            issuedAt: new Date("2026-10-06T00:00:00.000Z"),
+            templateVersion: ALIMENTACION_FORMAT_TEMPLATE_VERSION,
             pdfRelativePath: `${tenantId}/historic.pdf`,
             filename: "historic.pdf",
             signerEmployeeIdSnapshot: "2b93919b-182e-49a9-a61c-85f55428061b",
@@ -568,6 +678,51 @@ describe("AlimentacionFormatoExportService tenant logo integration", () => {
     assert.equal(renderWasCalled, false);
     assert.equal(storedPdfCount, 0);
   });
+
+  it("does not render or store a new PDF when the mandatory letterhead is unavailable", async () => {
+    let renderWasCalled = false;
+    let storedPdfCount = 0;
+    const service = new AlimentacionFormatoExportService(
+      alimentacionServiceForNewEmission() as never,
+      directorSignatureService() as never,
+      {
+        async resolveActiveLogo() {
+          return {
+            id: logoVersionId,
+            tenantId,
+            relativePath: `${tenantId}/branding/logos/version.png`,
+          };
+        },
+        async readLogoVersionFile() {
+          return { buffer: Buffer.from("tenant-logo"), contentType: "image/png" };
+        },
+      } as never,
+      {
+        async saveFile() {
+          storedPdfCount += 1;
+        },
+      } as never,
+    );
+    Object.assign(service, {
+      async getRequiredMembreteDataUrl() {
+        throw new Error("membrete unavailable");
+      },
+      async renderPdf() {
+        renderWasCalled = true;
+        return Buffer.from("new-pdf");
+      },
+      async getInstitutionalLogoDataUrl() {
+        return null;
+      },
+    });
+
+    await assert.rejects(
+      () => service.exportPdf(adultoMayorId, { deliveryMonth: "2026-07" }, actor),
+      /membrete unavailable/,
+    );
+    assert.equal(renderWasCalled, false);
+    assert.equal(storedPdfCount, 0);
+  });
 });
 
 function alimentacionServiceForNewEmission() {
@@ -583,6 +738,8 @@ function alimentacionServiceForNewEmission() {
         tenantDepartment: "Cundinamarca",
         adultoMayorId,
         documentNumber: "1020304050",
+        names: "Rosa",
+        surnames: "Martinez",
         fullName: "Rosa Martinez",
         deliveryMonth: "2026-07",
         records: [],

@@ -9,6 +9,12 @@ export const actividadGrupalFixture = {
   actaNumber: "0004",
   activityName: "Jornada psicomotriz",
   activityType: "fisioterapia",
+  activityTypeId: "55555555-5555-4555-8555-555555555555",
+  activityTypeCatalog: {
+    id: "55555555-5555-4555-8555-555555555555",
+    name: "Fisioterapia",
+    isActive: true,
+  },
   activityDate: "2026-04-23",
   startTime: "08:30",
   endTime: "10:00",
@@ -28,12 +34,23 @@ export const actividadGrupalTrashFixture = {
   deletionReason: "Registro duplicado",
   canEdit: false,
   canDelete: false,
-  canRestore: true,
 } as const;
 
 export const actividadGrupalFormOptionsFixture = {
-  nextActaNumber: 4,
   empleados: [empleadoFixture],
+  activityTypes: [
+    {
+      id: actividadGrupalFixture.activityTypeId,
+      tenantId: actividadGrupalFixture.tenantId,
+      name: actividadGrupalFixture.activityTypeCatalog.name,
+      normalizedName: "fisioterapia",
+      consecutiveConfig: null,
+      isActive: true,
+      createdAt: "2026-04-23T12:00:00.000Z",
+      updatedAt: "2026-04-23T12:00:00.000Z",
+      deactivatedAt: null,
+    },
+  ],
 } as const;
 
 export const actividadGrupalIntegranteFixture = {

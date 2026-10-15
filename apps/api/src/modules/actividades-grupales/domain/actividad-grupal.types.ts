@@ -25,12 +25,14 @@ export type FindActividadesGrupalesQuery = {
   tenantId: string | null;
   scope: ActividadesGrupalesScope;
   permittedOrganizers: readonly ActividadGrupalOrganizer[] | null;
+  permittedCreatorUserId?: string | null;
 };
 
 export type FindActividadGrupalByIdQuery = {
   activityId: string;
   scope: ActividadesGrupalesScope;
   permittedOrganizers: readonly ActividadGrupalOrganizer[] | null;
+  permittedCreatorUserId?: string | null;
 };
 
 export type FindActividadesGrupalesTrashQuery = FindActividadesGrupalesQuery;
@@ -81,6 +83,7 @@ export type CreateActividadGrupalRecordCommand = {
   endTime: string;
   organizer: ActividadGrupalOrganizer;
   employeeIds: string[];
+  customConsecutive: { prefix: string; nextValue: number; scope?: "global" | "activity-type" } | null;
 };
 
 export type UpdateActividadGrupalRecordCommand = {
@@ -100,11 +103,6 @@ export type DeleteActividadGrupalRecordCommand = {
   activityId: string;
   actorUserId: string;
   reason: string;
-};
-
-export type RestoreActividadGrupalRecordCommand = {
-  activityId: string;
-  actorUserId: string;
 };
 
 export type CorrectActividadGrupalActaNumberCommand = {
@@ -136,6 +134,19 @@ export type ActaCorrectionPreview = {
   unchangedCount: number;
   warningCount: number;
   rows: ActaCorrectionPreviewRow[];
+};
+
+export type PreviewActaPrefixCorrectionCommand = {
+  tenantId: string;
+  actorUserId: string;
+  activityTypeId: string;
+  prefix: string;
+};
+
+export type ApplyActaPrefixCorrectionCommand = {
+  operationToken: string;
+  actorUserId: string;
+  reason: string;
 };
 
 export type ApplyActaCorrectionCommand = {
@@ -198,11 +209,13 @@ export type ActividadGrupalRecord = {
   activityTypeId: string;
   activityTypeName: string;
   activityTypeIsActive: boolean;
+  activityTypeCreatorUserIds?: string[];
   activityDate: string;
   startTime: string;
   endTime: string;
   organizer: ActividadGrupalOrganizer;
   involvedEmployeesCount: number;
+  assignedEmployeeIds?: string[];
   createdAt: Date;
   updatedAt: Date;
 };

@@ -6,6 +6,7 @@ export const adultoMayorDocumentTypeSchema = z.enum(["cc", "ce", "passport", "ot
 export const adultoMayorSexSchema = z.enum(["female", "male", "other"]);
 export const adultoMayorStatusSchema = z.enum(["alive", "deceased"]);
 export const adultoMayorZoneSchema = z.enum(["urban", "rural"]);
+export const adultoMayorAttentionFilterSchema = z.enum(["all", "medical", "nursing"]);
 export const adultoMayorBloodTypeSchema = z.enum([
   "a_positive",
   "a_negative",
@@ -244,6 +245,7 @@ export const adultoMayorImportHistoryItemSchema = z.object({
 
 export const adultoMayorListQuerySchema = z.object({
   search: nullableSearchSchema.optional().default(null),
+  attentionType: adultoMayorAttentionFilterSchema.optional(),
 });
 
 export const sendAdultoMayorToTrashRequestSchema = z.object({
@@ -474,6 +476,7 @@ export type AdultoMayorImportTemplateResponse = z.infer<
 export type AdultoMayorImportTemplateQuery = z.infer<typeof adultoMayorImportTemplateQuerySchema>;
 export type AdultoMayorImportValidateQuery = z.infer<typeof adultoMayorImportValidateQuerySchema>;
 export type AdultoMayorListQuery = z.infer<typeof adultoMayorListQuerySchema>;
+export type AdultoMayorAttentionFilter = z.infer<typeof adultoMayorAttentionFilterSchema>;
 export type AdultoMayorListItem = z.infer<typeof adultoMayorListItemSchema>;
 export type AdultoMayorTrashListItem = z.infer<typeof adultoMayorTrashListItemSchema>;
 export type AdultoMayorDetail = z.infer<typeof adultoMayorDetailSchema>;

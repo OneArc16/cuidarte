@@ -4,6 +4,7 @@ import { DatabaseModule } from "../../database/database.module";
 import { ActividadesGrupalesModule } from "../actividades-grupales/actividades-grupales.module";
 import { AlimentacionModule } from "../alimentacion/alimentacion.module";
 import { AuthModule } from "../auth/auth.module";
+import { TenantBrandingModule } from "../tenant-branding/tenant-branding.module";
 import { ReportJobsQueue } from "./application/report-jobs.queue";
 import { ReportsDashboardService } from "./application/reports-dashboard.service";
 import { ReportsDashboardExcelService } from "./application/reports-dashboard-excel.service";
@@ -27,7 +28,13 @@ import { StreamingReportZipWriter } from "./infrastructure/streaming-report-zip-
 import { ReportsController } from "./presentation/reports.controller";
 
 @Module({
-  imports: [AuthModule, DatabaseModule, AlimentacionModule, ActividadesGrupalesModule],
+  imports: [
+    AuthModule,
+    DatabaseModule,
+    AlimentacionModule,
+    ActividadesGrupalesModule,
+    TenantBrandingModule,
+  ],
   controllers: [ReportsController],
   providers: [
     ReportsService,
@@ -44,7 +51,10 @@ import { ReportsController } from "./presentation/reports.controller";
       provide: REPORTS_REPOSITORY,
       useClass: DrizzleReportsRepository,
     },
-    { provide: REPORTS_ANALYTICS_EXPORTS_REPOSITORY, useClass: DrizzleReportsAnalyticsExportsRepository },
+    {
+      provide: REPORTS_ANALYTICS_EXPORTS_REPOSITORY,
+      useClass: DrizzleReportsAnalyticsExportsRepository,
+    },
     {
       provide: REPORTS_DASHBOARD_REPOSITORY,
       useClass: DrizzleReportsDashboardRepository,

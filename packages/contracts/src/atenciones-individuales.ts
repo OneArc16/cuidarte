@@ -265,6 +265,10 @@ export const atencionIndividualHistoryItemSchema = z.object({
 
 export const atencionIndividualLookupResponseSchema = z.object({
   adultoMayor: atencionIndividualAdultoResumenSchema,
+  antecedentesVigentes: z.object({
+    personales: z.string().max(3000).nullable(),
+    familiares: z.string().max(3000).nullable(),
+  }),
   suggestedConsecutive: z.number().int().min(1),
 });
 
@@ -314,6 +318,4 @@ export type AtencionIndividualHistoryResponse = z.infer<
   typeof atencionIndividualHistoryResponseSchema
 >;
 export type MedicalAttentionHistoryItem = z.infer<typeof medicalAttentionHistoryItemSchema>;
-export type MedicalAttentionHistoryResponse = z.infer<
-  typeof medicalAttentionHistoryResponseSchema
->;
+export type MedicalAttentionHistoryResponse = z.infer<typeof medicalAttentionHistoryResponseSchema>;

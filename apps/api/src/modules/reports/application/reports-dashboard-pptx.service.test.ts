@@ -1,17 +1,18 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { type ReportsDashboardResponse } from "@cuidarte/contracts";
+import { type AuthUser, type ReportsDashboardResponse } from "@cuidarte/contracts";
+import JSZip from "jszip";
 
-import { ReportsDashboardPptxService } from "./reports-dashboard-pptx.service";
+import { buildMonthlySeries, ReportsDashboardPptxService } from "./reports-dashboard-pptx.service";
 
 describe("ReportsDashboardPptxService", () => {
-  it("generates an OOXML presentation with editable chart slides", async () => {
+  it("generates an OOXML presentation with editable monthly chart slides", async () => {
     const service = new ReportsDashboardPptxService({
       getDashboard: async () => dashboard,
     } as never);
 
-    const file = await service.exportPptx({ from: "2026-09-01", to: "2026-09-02" }, {} as never);
+    const file = await service.exportPptx({ from: "2026-09-01", to: "2026-09-02" }, actor);
 
     assert.equal(
       file.contentType,
@@ -19,12 +20,48 @@ describe("ReportsDashboardPptxService", () => {
     );
     assert.equal(file.buffer.subarray(0, 2).toString(), "PK");
     assert.match(file.filename, /2026-09-01-2026-09-02\.pptx$/);
+
+    const zip = await JSZip.loadAsync(Uint8Array.from(file.buffer));
+    const slideNames = Object.keys(zip.files).filter((name) =>
+      /^ppt\/slides\/slide\d+\.xml$/.test(name),
+    );
+    const coverXml = await zip.file("ppt/slides/slide1.xml")?.async("string");
+
+    assert.equal(slideNames.length, 5);
+    assert.ok(coverXml?.includes("Sede:"));
+    assert.ok(!coverXml?.includes("Metodolog"));
+
+    assert.deepEqual(buildMonthlySeries(dashboard.dailySeries), [
+      {
+        month: "2026-09",
+        nursingAttendances: 1,
+        medicalAttendances: 2,
+        transportAllowancesDelivered: 3,
+        snacksDelivered: 3,
+        lunchesDelivered: 4,
+      },
+    ]);
   });
 });
 
+const actor: AuthUser = {
+  id: "11111111-1111-4111-8111-111111111111",
+  tenantId: null,
+  email: "superadmin@cuidarte.test",
+  fullName: "Super Admin CuidarTe",
+  role: "super_admin",
+  passwordSetByAdmin: false,
+};
+
 const dashboard: ReportsDashboardResponse = {
   range: { from: "2026-09-01", to: "2026-09-02" },
-  scope: { tenantId: null, tenantName: null, isConsolidated: true },
+  scope: {
+    tenantId: null,
+    tenantName: null,
+    isConsolidated: true,
+    municipality: "Santa Marta",
+    department: "Magdalena",
+  },
   summary: {
     nursingAttendances: 1,
     medicalAttendances: 2,
@@ -62,4 +99,5 @@ const dashboard: ReportsDashboardResponse = {
       count: 1,
     },
   ],
+  sexDistribution: { male: 0, female: 0, other: 0 },
 };

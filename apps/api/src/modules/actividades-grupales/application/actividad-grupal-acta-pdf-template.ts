@@ -50,13 +50,14 @@ type ActaTableCell =
 type BuildActividadGrupalActaPdfHtmlOptions = {
   detail: ActividadGrupalActaPdfDetail;
   logoDataUrl: string | null;
+  membreteDataUrl?: string | null;
   photoAssets: PreparedActividadGrupalActaPhotoAsset[];
 };
 
 const ACTA_DOCUMENT_BASE_STYLES = `
       @page {
-        size: 216mm 279mm;
-        margin: 12mm;
+        size: 215.9mm 279.4mm;
+        margin: 0;
       }
 
       html,
@@ -77,13 +78,36 @@ const ACTA_DOCUMENT_BASE_STYLES = `
       }
 
       .acta-document {
-        width: 100%;
-        min-height: 100%;
-        padding: 0;
+        width: 215.9mm;
+        min-height: 279.4mm;
+        padding: 45mm 24mm 32mm;
         color: #000;
         font-family: Arial, Helvetica, sans-serif;
         font-size: 7.4pt;
         line-height: 1.24;
+        position: relative;
+        z-index: 1;
+        box-decoration-break: clone;
+        -webkit-box-decoration-break: clone;
+      }
+
+      .pdf-letterhead {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 0;
+        width: 215.9mm;
+        height: 279.4mm;
+        opacity: 0.45;
+        pointer-events: none;
+      }
+
+      .pdf-letterhead img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        object-position: center;
       }`;
 
 const ACTA_SECTION_TITLE_STYLES = `
@@ -96,6 +120,8 @@ const ACTA_SECTION_TITLE_STYLES = `
         font-size: 7pt;
         font-weight: 700;
         line-height: 1.2;
+        break-after: avoid;
+        page-break-after: avoid;
       }`;
 
 const ACTA_PHOTO_EVIDENCE_STYLES = `
@@ -126,6 +152,7 @@ const ACTA_PHOTO_EVIDENCE_STYLES = `
 export function buildActividadGrupalActaPdfHtml({
   detail,
   logoDataUrl,
+  membreteDataUrl = null,
   photoAssets,
 }: BuildActividadGrupalActaPdfHtmlOptions): string {
   const actaDate = formatActaDate(detail.activityDate);
@@ -167,6 +194,14 @@ export function buildActividadGrupalActaPdfHtml({
         vertical-align: top;
       }
 
+      .acta-document tr,
+      .acta-document__header,
+      .acta-document__meta,
+      .acta-document__people-table {
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
       .acta-document__header {
         margin-bottom: 3mm;
       }
@@ -174,13 +209,18 @@ export function buildActividadGrupalActaPdfHtml({
       .acta-document__logo-cell {
         width: 42mm;
         height: 14mm;
+        padding: 1mm !important;
         text-align: center;
         vertical-align: middle;
       }
 
       .acta-document__logo {
-        max-width: 34mm;
-        max-height: 10mm;
+        display: block;
+        width: 100%;
+        height: 10mm;
+        max-width: 100%;
+        max-height: 100%;
+        margin: 0 auto;
         object-fit: contain;
       }
 
@@ -214,15 +254,15 @@ export function buildActividadGrupalActaPdfHtml({
       }
 
       .acta-document__meta-label {
-        width: 26mm;
+        width: 15%;
       }
 
       .acta-document__meta-city {
-        width: 48mm;
+        width: 26%;
       }
 
       .acta-document__meta-time {
-        width: 24mm;
+        width: 14.5%;
       }
 
       .acta-document__meta th {
@@ -254,6 +294,8 @@ export function buildActividadGrupalActaPdfHtml({
         line-height: 1.28;
         white-space: pre-wrap;
         overflow-wrap: anywhere;
+        orphans: 3;
+        widows: 3;
       }
 
       .acta-document__section-body--objectives {
@@ -316,6 +358,7 @@ export function buildActividadGrupalActaPdfHtml({
     </style>
   </head>
   <body>
+    ${renderLetterhead(membreteDataUrl)}
     <article class="acta-document" aria-label="Acta de sesion grupal">
       <table class="acta-document__header" aria-label="Encabezado del acta">
         <tbody>
@@ -328,7 +371,7 @@ export function buildActividadGrupalActaPdfHtml({
             </th>
           </tr>
           <tr>
-            <td class="acta-document__quality">SISTEMA DE GESTION DE CALIDAD</td>
+            <td class="acta-document__quality">SISTEMA DE GESTIÓN DE CALIDAD</td>
           </tr>
         </tbody>
       </table>
@@ -363,8 +406,8 @@ export function buildActividadGrupalActaPdfHtml({
       </table>
 
       ${renderTextSection("OBJETIVOS:", detail.objectives, "objectives")}
-      ${renderTextSection("DESARROLLO DE LA REUNION:", detail.development, "development")}
-      ${renderTextSection("CONCLUSION:", detail.conclusion, "conclusion")}
+      ${renderTextSection("DESARROLLO DE LA REUNIÓN:", detail.development, "development")}
+      ${renderTextSection("CONCLUSIÓN:", detail.conclusion, "conclusion")}
 
       ${renderPeopleSection(
         "PROFESIONALES RESPONSABLES",
@@ -394,6 +437,7 @@ export function buildActividadGrupalActaPdfHtml({
 
 export function buildActividadGrupalActaPhotoEvidencePdfHtml(
   photoAssets: PreparedActividadGrupalActaPhotoAsset[],
+  membreteDataUrl: string | null = null,
 ): string {
   return `<!doctype html>
 <html lang="es">
@@ -407,6 +451,7 @@ export function buildActividadGrupalActaPhotoEvidencePdfHtml(
     </style>
   </head>
   <body>
+    ${renderLetterhead(membreteDataUrl)}
     <article class="acta-document" aria-label="Evidencia fotografica del acta">
       ${renderPhotoEvidenceSection(photoAssets, { forcePageBreak: false })}
     </article>
@@ -415,9 +460,28 @@ export function buildActividadGrupalActaPhotoEvidencePdfHtml(
 }
 
 export function buildActividadGrupalActaPdfFilename(
-  detail: Pick<ActividadGrupalDiligenciamientoDetail, "actaNumber">,
+  detail: Pick<
+    ActividadGrupalDiligenciamientoDetail,
+    "actaNumber" | "activityName" | "activityTypeCatalog" | "activityDate"
+  >,
 ): string {
-  return `acta-sesion-grupal-${formatActaNumber(detail.actaNumber)}.pdf`;
+  return (
+    [
+      formatFilenameSegment(detail.actaNumber),
+      formatFilenameSegment(detail.activityName),
+      "ACTA",
+      formatFilenameSegment(detail.activityTypeCatalog.name),
+      detail.activityDate.replaceAll("-", "_"),
+    ].join("_") + ".pdf"
+  );
+}
+
+function renderLetterhead(membreteDataUrl: string | null): string {
+  if (membreteDataUrl === null) {
+    return "";
+  }
+
+  return `<div class="pdf-letterhead" aria-hidden="true"><img src="${escapeHtml(membreteDataUrl)}" alt="" /></div>`;
 }
 
 function textCell(value: string): ActaTableCell {
@@ -539,14 +603,14 @@ function formatActaDate(date: string): string {
   return `${day}/${month}/${year}`;
 }
 
-function formatActaNumber(value: string): string {
-  const normalizedValue = value.trim();
-
-  if (/^\d+$/.test(normalizedValue)) {
-    return normalizedValue.padStart(4, "0");
-  }
-
-  return normalizedValue.replace(/\s+/g, "-").replace(/[^A-Za-z0-9_-]/g, "-");
+function formatFilenameSegment(value: string): string {
+  return value
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleUpperCase("es-CO")
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
 function formatActaTime(time: string): string {

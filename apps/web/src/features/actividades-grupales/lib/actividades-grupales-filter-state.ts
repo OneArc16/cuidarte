@@ -38,7 +38,7 @@ export function loadActividadesGrupalesFilters(
       activityMonth: readActivityMonth(parsedValue.activityMonth, fallback.activityMonth),
       activityType: readEnum(parsedValue.activityType, actividadGrupalTypeValues),
       activityTypeId: readUuid(parsedValue.activityTypeId, fallback.activityTypeId),
-      organizer: readEnum(parsedValue.organizer, actividadGrupalOrganizerValues),
+      organizer: readOrganizer(parsedValue.organizer),
       tenantId: readString(parsedValue.tenantId, fallback.tenantId),
     };
   } catch {
@@ -82,6 +82,20 @@ function readUuid(value: unknown, fallback: string): string {
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
     ? value
     : fallback;
+}
+
+function readOrganizer(value: unknown): ActividadGrupalOrganizer | "" {
+  const organizer = readEnum(value, actividadGrupalOrganizerValues);
+
+  if (organizer === "enfermeria") {
+    return "medico";
+  }
+
+  if (organizer === "trabajadora_social") {
+    return "psicologa";
+  }
+
+  return organizer;
 }
 
 function readEnum<T extends string>(value: unknown, allowedValues: readonly T[]): T | "" {

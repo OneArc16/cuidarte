@@ -10,7 +10,7 @@ export const homeDashboardFixture = {
     },
     {
       moduleId: "registro-alimentacion",
-      total: 140,
+      total: 123200,
     },
     {
       moduleId: "gestion-empleados",
@@ -44,7 +44,7 @@ export const homeDashboardFixture = {
     },
     {
       id: "raciones_entregadas",
-      total: 123200,
+      total: 16,
     },
     {
       id: "encuentro_intergeneracional",
@@ -71,4 +71,20 @@ export const homeDashboardFixture = {
       total: 56,
     },
   ],
+  foodSummary: {
+    deliveredTotal: 104,
+    auxilioTransporteTotal: 16,
+  },
+  analytics: {
+    sexDistribution: { female: 260, male: 208, other: 0 },
+    activitiesByType: [
+      { label: "Fisioterapia", total: 56 },
+      { label: "Nutrición", total: 42 },
+    ],
+    monthlyDeliveries: Array.from({ length: 12 }, (_, index) => ({
+      month: `2026-${String(index + 1).padStart(2, "0")}`,
+      rationsDelivered: index + 4,
+      transportAllowancesDelivered: index,
+    })),
+  },
 } as const;

@@ -73,6 +73,7 @@ const records: EmpleadoRecord[] = [
     role: "medico",
     isActive: true,
     isTenantOwner: false,
+    actividadGrupalAllowedOrganizers: [],
     latestSignature: null,
     tenantActiveSigner: null,
     currentDirectorSignatureAssignment: null,
@@ -95,6 +96,7 @@ const records: EmpleadoRecord[] = [
     role: "director",
     isActive: true,
     isTenantOwner: false,
+    actividadGrupalAllowedOrganizers: [],
     latestSignature: null,
     tenantActiveSigner: null,
     currentDirectorSignatureAssignment: null,
@@ -412,10 +414,12 @@ function createCommand() {
   };
 }
 
-function createRepository(overrides: {
-  currentRecord?: EmpleadoRecord;
-  documentConflict?: EmpleadoRecord;
-} = {}) {
+function createRepository(
+  overrides: {
+    currentRecord?: EmpleadoRecord;
+    documentConflict?: EmpleadoRecord;
+  } = {},
+) {
   const repository = {
     queries: [] as FindEmpleadosQuery[],
     created: [] as Array<Parameters<EmpleadosRepository["create"]>[0]>,
@@ -429,7 +433,8 @@ function createRepository(overrides: {
       );
     },
     async findById(query) {
-      const availableRecords = overrides.currentRecord === undefined ? records : [overrides.currentRecord, ...records];
+      const availableRecords =
+        overrides.currentRecord === undefined ? records : [overrides.currentRecord, ...records];
 
       return (
         availableRecords.find(
@@ -448,6 +453,11 @@ function createRepository(overrides: {
     async findTenantOptions() {
       return [{ id: tenantId, name: "Centro de Vida Demo" }];
     },
+    async findPermissionsByUserId() {
+      return [];
+    },
+    async replacePermissions() {},
+    async updateActividadGrupalOrganizerPermission() {},
     async findLatestSignatureVersionByEmployeeId() {
       return null;
     },
@@ -539,6 +549,9 @@ function createRepository(overrides: {
     },
     async setTenantActiveSigner() {
       throw new Error("No implementado para esta prueba.");
+    },
+    async clearTenantActiveSigner() {
+      return null;
     },
   } satisfies EmpleadosRepository & {
     queries: FindEmpleadosQuery[];

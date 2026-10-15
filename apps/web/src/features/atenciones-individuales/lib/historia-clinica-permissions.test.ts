@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   canCreateAtencionIndividual,
   canOpenHistoriaClinica,
+  canOpenHistoriaMedica,
   canSeeAtencionInHistoriaClinica,
   resolveHistoriaClinicaAction,
 } from "./historia-clinica-permissions";
@@ -83,6 +84,24 @@ describe("historia clinica permissions", () => {
     expect(canCreateAtencionIndividual(adminUser)).toBe(false);
     expect(canCreateAtencionIndividual(auditorUser)).toBe(false);
     expect(canCreateAtencionIndividual(directorUser)).toBe(false);
+  });
+
+  it("allows the dedicated medical history permission without general clinical access", () => {
+    const historyReader = {
+      ...recreacionistaUser,
+      permissions: [
+        "atenciones_individuales.medical_history",
+      ] as "atenciones_individuales.medical_history"[],
+    };
+
+    expect(canOpenHistoriaClinica(historyReader)).toBe(false);
+    expect(canOpenHistoriaMedica(historyReader)).toBe(true);
+    expect(
+      canOpenHistoriaMedica({
+        ...recreacionistaUser,
+        permissions: ["atenciones_individuales.view"],
+      }),
+    ).toBe(false);
   });
 
   it("resolves edit for professionals only when they own the attention", () => {

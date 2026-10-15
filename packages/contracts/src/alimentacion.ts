@@ -31,7 +31,16 @@ export const alimentacionEditorRoleValues = [
 export const alimentacionStatusSchema = z.enum(alimentacionStatusValues);
 export const alimentacionOrganizerSchema = z.enum(alimentacionOrganizerValues);
 
-const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+export const alimentacionDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+export const ALIMENTACION_MAX_BATCH_DATES = 31;
+export const ALIMENTACION_MAX_BATCH_RECORDS = 10_000;
+
+const deliveryDatesSchema = z
+  .array(alimentacionDateSchema)
+  .min(1, "Selecciona al menos un día.")
+  .max(ALIMENTACION_MAX_BATCH_DATES, "Puedes seleccionar máximo 31 días.")
+  .refine((dates) => new Set(dates).size === dates.length, "No repitas días.");
+
 export const alimentacionDeliveryMonthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 
 const nullableSearchSchema = z
@@ -89,17 +98,105 @@ export const alimentacionListQuerySchema = z.object({
 
 export const alimentacionAdultoOptionsQuerySchema = z.object({
   search: nullableSearchSchema.optional().default(null),
-  deliveryDate: dateSchema,
+  deliveryDates: z.preprocess(
+    (value) => (Array.isArray(value) ? value : value === undefined ? [] : [value]),
+    deliveryDatesSchema,
+  ),
   limit: z.enum(["suggestions", "all"]).optional().default("suggestions"),
   tenantId: nullableTenantIdSchema.optional().default(null),
 });
 
 export const alimentacionLookupByAdultoMayorQuerySchema = z.object({
-  deliveryDate: dateSchema,
+  deliveryDate: alimentacionDateSchema,
 });
 
 export const alimentacionFormatoEntregaExportQuerySchema = z.object({
   deliveryMonth: alimentacionDeliveryMonthSchema,
+});
+
+export const alimentacionBulkImportModeSchema = z.enum(["month", "all"]);
+export const alimentacionBulkImportItemStatusSchema = z.enum([
+  "ready",
+  "warning",
+  "error",
+  "imported",
+  "skipped",
+]);
+export const alimentacionBulkImportDecisionSchema = z.enum(["import", "skip"]);
+export const alimentacionBulkImportReasonCodeSchema = z.enum([
+  "INVALID_FILENAME",
+  "INVALID_MONTH",
+  "INVALID_PDF",
+  "ADULTO_NOT_FOUND",
+  "AMBIGUOUS_ADULTO",
+  "DUPLICATE_IN_BATCH",
+  "ALREADY_IMPORTED",
+  "DUPLICATE_FILE",
+  "BATCH_EXPIRED",
+]);
+
+export const alimentacionBulkImportValidateQuerySchema = z
+  .object({
+    mode: alimentacionBulkImportModeSchema,
+    deliveryMonth: nullableMonthSchema.optional().default(null),
+    tenantId: nullableTenantIdSchema.optional().default(null),
+  })
+  .superRefine((value, context) => {
+    if (value.mode === "month" && value.deliveryMonth === null) {
+      context.addIssue({
+        code: "custom",
+        path: ["deliveryMonth"],
+        message: "El mes es obligatorio cuando la importacion es mensual.",
+      });
+    }
+  });
+
+const alimentacionBulkImportSummarySchema = z.object({
+  total: z.number().int().min(0),
+  ready: z.number().int().min(0),
+  warnings: z.number().int().min(0),
+  errors: z.number().int().min(0),
+  imported: z.number().int().min(0).default(0),
+  skipped: z.number().int().min(0).default(0),
+});
+
+export const alimentacionBulkImportItemSchema = z.object({
+  itemId: z.uuid(),
+  originalName: z.string().min(1).max(260),
+  status: alimentacionBulkImportItemStatusSchema,
+  reasonCode: alimentacionBulkImportReasonCodeSchema.nullable().default(null),
+  reasonMessage: z.string().min(1).max(300).nullable().default(null),
+  documentNumber: z.string().min(1).max(80).nullable().default(null),
+  deliveryMonth: alimentacionDeliveryMonthSchema.nullable().default(null),
+  adultoMayorId: z.uuid().nullable().default(null),
+  adultoMayorFullName: z.string().min(1).max(360).nullable().default(null),
+  existingVersion: z.number().int().positive().nullable().default(null),
+  importedVersion: z.number().int().positive().nullable().default(null),
+});
+
+export const alimentacionBulkImportValidateResponseSchema = z.object({
+  batchId: z.uuid(),
+  expiresAt: z.string().min(1),
+  summary: alimentacionBulkImportSummarySchema,
+  items: z.array(alimentacionBulkImportItemSchema),
+});
+
+export const alimentacionBulkImportConfirmRequestSchema = z.object({
+  batchId: z.uuid(),
+  items: z
+    .array(
+      z.object({
+        itemId: z.uuid(),
+        decision: alimentacionBulkImportDecisionSchema,
+      }),
+    )
+    .min(1),
+});
+
+export const alimentacionBulkImportConfirmResponseSchema = z.object({
+  batchId: z.uuid(),
+  summary: alimentacionBulkImportSummarySchema,
+  items: z.array(alimentacionBulkImportItemSchema),
 });
 
 export const alimentacionImportedFormatoVersionSchema = z.object({
@@ -133,6 +230,7 @@ export const alimentacionAdultoOptionSchema = z.object({
   documentNumber: z.string().min(1).max(80),
   fullName: z.string().min(1).max(180),
   alreadyRegistered: z.boolean().default(false),
+  registeredDeliveryDates: z.array(alimentacionDateSchema).default([]),
 });
 
 export const alimentacionListItemSchema = z.object({
@@ -142,7 +240,7 @@ export const alimentacionListItemSchema = z.object({
   adultoMayorId: z.uuid(),
   documentNumber: z.string().min(1).max(80),
   fullName: z.string().min(1).max(180),
-  deliveryDate: dateSchema,
+  deliveryDate: alimentacionDateSchema,
   organizer: alimentacionOrganizerSchema,
   refrigerio1: alimentacionStatusSchema,
   almuerzo: alimentacionStatusSchema,
@@ -158,7 +256,7 @@ export const alimentacionDetailSchema = alimentacionListItemSchema;
 
 export const createAlimentacionBatchRequestSchema = z.object({
   tenantId: nullableTenantIdSchema.optional().default(null),
-  deliveryDate: dateSchema,
+  deliveryDates: deliveryDatesSchema,
   organizer: alimentacionOrganizerSchema,
   registros: z
     .array(alimentacionBatchRecordSchema)
@@ -172,7 +270,7 @@ export const createAlimentacionBatchRequestSchema = z.object({
 });
 
 export const updateAlimentacionRequestSchema = z.object({
-  deliveryDate: dateSchema,
+  deliveryDate: alimentacionDateSchema,
   organizer: alimentacionOrganizerSchema,
   refrigerio1: alimentacionStatusSchema,
   almuerzo: alimentacionStatusSchema,
@@ -194,6 +292,8 @@ export const alimentacionAdultoOptionsResponseSchema = z.object({
 
 export const createAlimentacionBatchResponseSchema = z.object({
   createdCount: z.number().int().min(1),
+  dateCount: z.number().int().min(1).optional(),
+  adultoMayorCount: z.number().int().min(1).optional(),
 });
 
 export const deleteAlimentacionResponseSchema = z.object({
@@ -214,6 +314,26 @@ export type AlimentacionLookupByAdultoMayorQuery = z.infer<
 >;
 export type AlimentacionFormatoEntregaExportQuery = z.infer<
   typeof alimentacionFormatoEntregaExportQuerySchema
+>;
+export type AlimentacionBulkImportMode = z.infer<typeof alimentacionBulkImportModeSchema>;
+export type AlimentacionBulkImportItemStatus = z.infer<
+  typeof alimentacionBulkImportItemStatusSchema
+>;
+export type AlimentacionBulkImportReasonCode = z.infer<
+  typeof alimentacionBulkImportReasonCodeSchema
+>;
+export type AlimentacionBulkImportValidateQuery = z.infer<
+  typeof alimentacionBulkImportValidateQuerySchema
+>;
+export type AlimentacionBulkImportItem = z.infer<typeof alimentacionBulkImportItemSchema>;
+export type AlimentacionBulkImportValidateResponse = z.infer<
+  typeof alimentacionBulkImportValidateResponseSchema
+>;
+export type AlimentacionBulkImportConfirmRequest = z.infer<
+  typeof alimentacionBulkImportConfirmRequestSchema
+>;
+export type AlimentacionBulkImportConfirmResponse = z.infer<
+  typeof alimentacionBulkImportConfirmResponseSchema
 >;
 export type AlimentacionImportedFormatoVersion = z.infer<
   typeof alimentacionImportedFormatoVersionSchema

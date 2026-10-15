@@ -6,6 +6,8 @@ import {
   type CreateActividadGrupalRequest,
   type SaveActividadGrupalDiligenciamiento,
   type ApplyActividadGrupalActaCorrectionRequest,
+  type ActividadGrupalActaPrefixCorrectionPreviewRequest,
+  type ApplyActividadGrupalActaPrefixCorrectionRequest,
   type CorrectActividadGrupalActaNumberRequest,
 } from "@cuidarte/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -33,10 +35,6 @@ type TrashActividadesGrupalesParams = {
   tenantId: string | null;
 };
 
-type RestoreActividadGrupalMutationRequest = {
-  activityId: string;
-};
-
 type DeleteActividadGrupalMutationRequest = {
   activityId: string;
   reason: string;
@@ -59,7 +57,7 @@ export const actividadesGrupalesQueryKeys = {
     ["actividades-grupales", "form-options", tenantId] as const,
   editDetail: (activityId: string) => ["actividades-grupales", activityId, "edit"] as const,
   trashList: (params: TrashActividadesGrupalesParams) =>
-    ["actividades-grupales", "papelera", params] as const,
+    ["actividades-grupales", "log-eliminaciones", params] as const,
 };
 
 export function useActividadesGrupalesQuery(params: {
@@ -213,8 +211,11 @@ export function useCorrectActividadGrupalActaNumberMutation() {
 
 export function usePreviewActividadGrupalActaCorrectionMutation() {
   return useMutation({
-    mutationFn: (tenantId: string) =>
-      actividadesGrupalesApi.previewActividadGrupalActaCorrection(tenantId),
+    mutationFn: (request: { tenantId: string; organizer: ActividadGrupalOrganizer | null }) =>
+      actividadesGrupalesApi.previewActividadGrupalActaCorrection(
+        request.tenantId,
+        request.organizer,
+      ),
   });
 }
 
@@ -248,26 +249,7 @@ export function useDeleteActividadGrupalMutation() {
       });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] }),
-        queryClient.invalidateQueries({ queryKey: ["actividades-grupales", "papelera"] }),
-        queryClient.invalidateQueries({ queryKey: ["home"] }),
-      ]);
-    },
-  });
-}
-
-export function useRestoreActividadGrupalMutation() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (request: RestoreActividadGrupalMutationRequest) =>
-      actividadesGrupalesApi.restoreActividadGrupal(request.activityId),
-    onSuccess: async (_, request) => {
-      queryClient.removeQueries({
-        queryKey: actividadesGrupalesQueryKeys.editDetail(request.activityId),
-      });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] }),
-        queryClient.invalidateQueries({ queryKey: ["actividades-grupales", "papelera"] }),
+        queryClient.invalidateQueries({ queryKey: ["actividades-grupales", "log-eliminaciones"] }),
         queryClient.invalidateQueries({ queryKey: ["home"] }),
       ]);
     },
@@ -283,6 +265,29 @@ export function useSaveActividadGrupalDiligenciamientoMutation() {
     onSuccess: async (detail, request) => {
       queryClient.setQueryData(actividadesGrupalesQueryKeys.detail(request.activityId), detail);
       await queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] });
+    },
+  });
+}
+
+export function usePreviewActividadGrupalActaPrefixCorrectionMutation() {
+  return useMutation({
+    mutationFn: (request: ActividadGrupalActaPrefixCorrectionPreviewRequest) =>
+      actividadesGrupalesApi.previewActividadGrupalActaPrefixCorrection(request),
+  });
+}
+
+export function useApplyActividadGrupalActaPrefixCorrectionMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: ApplyActividadGrupalActaPrefixCorrectionRequest) =>
+      actividadesGrupalesApi.applyActividadGrupalActaPrefixCorrection(request),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["actividades-grupales"] }),
+        queryClient.invalidateQueries({ queryKey: ["actividad-grupal-tipos"] }),
+        queryClient.invalidateQueries({ queryKey: ["home"] }),
+      ]);
     },
   });
 }

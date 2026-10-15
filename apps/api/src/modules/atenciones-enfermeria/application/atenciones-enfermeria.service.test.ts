@@ -13,7 +13,13 @@ import { type AtencionesEnfermeriaRepository } from "../domain/atenciones-enferm
 import {
   type AtencionEnfermeriaAdultoRecord,
   type AtencionEnfermeriaDetailRecord,
+  type AtencionEnfermeriaHistoryItemRecord,
   type AtencionEnfermeriaListItemRecord,
+  type FindAtencionEnfermeriaByIdQuery,
+  type FindAtencionEnfermeriaHistoryByAdultoMayorQuery,
+  type FindAtencionEnfermeriaListQuery,
+  type CreateAtencionEnfermeriaRecordCommand,
+  type UpdateAtencionEnfermeriaRecordCommand,
 } from "../domain/atencion-enfermeria.types";
 
 const tenantId = "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054";
@@ -95,6 +101,8 @@ const detailRecord: AtencionEnfermeriaDetailRecord = {
   version: 1,
   createdAt: new Date("2026-08-16T13:00:00.000Z"),
   updatedAt: new Date("2026-08-16T13:00:00.000Z"),
+  deletedAt: null,
+  deletedByUserId: null,
 };
 
 const { nursingNote: _nursingNote, ...listItemWithoutNote } = detailRecord;
@@ -167,8 +175,18 @@ describe("AtencionesEnfermeriaService", () => {
 
     assert.equal(history.atenciones[0]?.access, "view");
     assert.equal(detail.id, recordId);
-    assert.equal(repository.historyCalls[0]?.scope?.tenantId, tenantId);
-    assert.equal(repository.findByIdCalls[0]?.scope?.tenantId, tenantId);
+    assert.equal(
+      repository.historyCalls[0]?.scope.type === "tenant"
+        ? repository.historyCalls[0].scope.tenantId
+        : undefined,
+      tenantId,
+    );
+    assert.equal(
+      repository.findByIdCalls[0]?.scope.type === "tenant"
+        ? repository.findByIdCalls[0].scope.tenantId
+        : undefined,
+      tenantId,
+    );
   });
 
   it("rejects history access when the adult belongs to another tenant", async () => {
@@ -329,11 +347,11 @@ function createRepository(seed: {
       adultoMayorId: string;
       scope: { type: "all" } | { type: "tenant"; tenantId: string };
     }>,
-    findManyCalls: [] as Array<Record<string, unknown>>,
-    findByIdCalls: [] as Array<Record<string, unknown>>,
-    historyCalls: [] as Array<Record<string, unknown>>,
-    createCalls: [] as Array<Record<string, unknown>>,
-    updateCalls: [] as Array<Record<string, unknown>>,
+    findManyCalls: [] as FindAtencionEnfermeriaListQuery[],
+    findByIdCalls: [] as FindAtencionEnfermeriaByIdQuery[],
+    historyCalls: [] as FindAtencionEnfermeriaHistoryByAdultoMayorQuery[],
+    createCalls: [] as CreateAtencionEnfermeriaRecordCommand[],
+    updateCalls: [] as UpdateAtencionEnfermeriaRecordCommand[],
     updateResult: null as Error | null,
     async findAdultoMayorById(query: {
       adultoMayorId: string;
@@ -342,23 +360,23 @@ function createRepository(seed: {
       this.findAdultoMayorCalls.push(query);
       return this.adulto;
     },
-    async findMany(query: Record<string, unknown>) {
+    async findMany(query: FindAtencionEnfermeriaListQuery) {
       this.findManyCalls.push(query);
       return this.listItems;
     },
-    async findById(query: Record<string, unknown>) {
+    async findById(query: FindAtencionEnfermeriaByIdQuery) {
       this.findByIdCalls.push(query);
       return detailRecord;
     },
-    async findHistoryByAdultoMayor(query: Record<string, unknown>) {
+    async findHistoryByAdultoMayor(query: FindAtencionEnfermeriaHistoryByAdultoMayorQuery) {
       this.historyCalls.push(query);
       return this.listItems;
     },
-    async create(command: Record<string, unknown>) {
+    async create(command: CreateAtencionEnfermeriaRecordCommand) {
       this.createCalls.push(command);
       return detailRecord;
     },
-    async update(command: Record<string, unknown>) {
+    async update(command: UpdateAtencionEnfermeriaRecordCommand) {
       this.updateCalls.push(command);
 
       if (this.updateResult instanceof Error) {
@@ -367,7 +385,17 @@ function createRepository(seed: {
 
       return detailRecord;
     },
-    async findAdultoMayorScopeById() {
+    async findTrashByAdultoMayor(
+      _query: FindAtencionEnfermeriaHistoryByAdultoMayorQuery,
+    ): Promise<AtencionEnfermeriaHistoryItemRecord[]> {
+      return [];
+    },
+    async softDelete(_command: { id: string; actorUserId: string; tenantId: string }) {},
+    async restore(_command: { id: string; actorUserId: string; tenantId: string }) {},
+    async findAdultoMayorScopeById(_query: {
+      adultoMayorId: string;
+      scope: { type: "all" } | { type: "tenant"; tenantId: string };
+    }) {
       return null;
     },
   } satisfies RepositoryStub;
@@ -380,10 +408,10 @@ type RepositoryStub = AtencionesEnfermeriaRepository & {
     adultoMayorId: string;
     scope: { type: "all" } | { type: "tenant"; tenantId: string };
   }>;
-  findManyCalls: Array<Record<string, unknown>>;
-  findByIdCalls: Array<Record<string, unknown>>;
-  historyCalls: Array<Record<string, unknown>>;
-  createCalls: Array<Record<string, unknown>>;
-  updateCalls: Array<Record<string, unknown>>;
+  findManyCalls: FindAtencionEnfermeriaListQuery[];
+  findByIdCalls: FindAtencionEnfermeriaByIdQuery[];
+  historyCalls: FindAtencionEnfermeriaHistoryByAdultoMayorQuery[];
+  createCalls: CreateAtencionEnfermeriaRecordCommand[];
+  updateCalls: UpdateAtencionEnfermeriaRecordCommand[];
   updateResult: Error | null;
 };

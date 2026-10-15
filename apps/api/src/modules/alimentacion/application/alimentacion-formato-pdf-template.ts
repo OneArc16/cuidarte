@@ -14,22 +14,39 @@ const ACTIVITY_DESCRIPTION_VALUE = "Entrega de alimentos";
 type BuildFormatoEntregaPdfHtmlParams = {
   data: AlimentacionFormatoEntregaExportData;
   institutionalLogoDataUrl: string | null;
+  membreteDataUrl?: string | null;
   tenantLogoDataUrl: string;
   directorSignatureDataUrl: string | null;
 };
 
 export function buildFormatoEntregaPdfFilename(
   documentNumber: string,
+  surnames: string,
+  names: string,
   deliveryMonth: string,
 ): string {
-  const sanitizedDocument = documentNumber.replace(/[^a-zA-Z0-9._-]/g, "-");
+  return [documentNumber, surnames, names, "FORMATO_ENTREGA", deliveryMonth]
+    .map(formatFilenamePart)
+    .join("_")
+    .concat(".pdf");
+}
 
-  return `formato-entrega-${sanitizedDocument}-${deliveryMonth}.pdf`;
+function formatFilenamePart(value: string): string {
+  const formatted = String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  return formatted === "" ? "SIN_DATO" : formatted;
 }
 
 export function buildFormatoEntregaPdfHtml({
   data,
   institutionalLogoDataUrl,
+  membreteDataUrl = null,
   tenantLogoDataUrl,
   directorSignatureDataUrl,
 }: BuildFormatoEntregaPdfHtmlParams): string {
@@ -54,8 +71,8 @@ export function buildFormatoEntregaPdfHtml({
         <style>
           * { box-sizing: border-box; }
           @page {
-            size: A4 portrait;
-            margin: 9mm 8mm;
+            size: 215.9mm 279.4mm;
+            margin: 0;
           }
           body {
             margin: 0;
@@ -66,7 +83,34 @@ export function buildFormatoEntregaPdfHtml({
           }
           .page {
             display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            align-content: start;
+            align-items: start;
             gap: 7mm;
+            position: relative;
+            z-index: 1;
+            width: 215.9mm;
+            min-height: 279.4mm;
+            padding: 45mm 8mm 32mm;
+            box-decoration-break: clone;
+            -webkit-box-decoration-break: clone;
+          }
+          .pdf-letterhead {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 0;
+            width: 215.9mm;
+            height: 279.4mm;
+            opacity: 0.45;
+            pointer-events: none;
+          }
+          .pdf-letterhead img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
           }
           .page + .page {
             break-before: page;
@@ -74,6 +118,9 @@ export function buildFormatoEntregaPdfHtml({
           }
           .stub {
             border: 1px solid #111;
+            break-inside: avoid;
+            page-break-inside: avoid;
+            zoom: 0.6666667;
           }
           .stub-header {
             display: grid;
@@ -147,7 +194,7 @@ export function buildFormatoEntregaPdfHtml({
             font-weight: 500;
           }
           .products-table .day-label {
-            width: calc((100% - 140px) / 12);
+            width: calc((100% - 140px) / 15);
             font-size: 10px;
             line-height: 1.05;
           }
@@ -206,9 +253,18 @@ export function buildFormatoEntregaPdfHtml({
         </style>
       </head>
       <body>
+        ${renderLetterhead(membreteDataUrl)}
         ${stubSections}
       </body>
     </html>`;
+}
+
+function renderLetterhead(membreteDataUrl: string | null): string {
+  if (membreteDataUrl === null) {
+    return "";
+  }
+
+  return `<div class="pdf-letterhead" aria-hidden="true"><img src="${escapeHtml(membreteDataUrl)}" alt="" /></div>`;
 }
 
 function buildPageHtml({

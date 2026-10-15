@@ -32,6 +32,7 @@ import {
   type EmpleadosRepository,
 } from "../../empleados/domain/empleados.repository";
 import playwrightEnv from "../../../common/playwright-env";
+import { getPdfLetterheadDataUrl } from "../../../common/pdf-letterhead";
 
 export type ExportedActividadGrupalActaPdf = {
   buffer: Buffer;
@@ -61,26 +62,31 @@ export class ActividadesGrupalesActaExportService {
   async exportPdf(activityId: string, actor: AuthUser): Promise<ExportedActividadGrupalActaPdf> {
     const { detail, photoFiles, pdfFile } =
       await this.actividadesGrupalesService.getActividadGrupalActaExportData(activityId, actor);
-    const [detailWithSignatures, logoDataUrl, photoAssets, supportPdf] = await Promise.all([
-      hydrateActividadGrupalActaPdfDetailWithSignatures(detail, {
-        empleadosRepository: this.empleadosRepository,
-        empleadosSignatureService: this.empleadosSignatureService,
-      }),
-      this.getLogoDataUrl(),
-      prepareActividadGrupalActaPhotoAssets(photoFiles, this.filesStorage),
-      prepareActividadGrupalActaSupportPdf(pdfFile, this.filesStorage),
-    ]);
+    const [detailWithSignatures, logoDataUrl, membreteDataUrl, photoAssets, supportPdf] =
+      await Promise.all([
+        hydrateActividadGrupalActaPdfDetailWithSignatures(detail, {
+          empleadosRepository: this.empleadosRepository,
+          empleadosSignatureService: this.empleadosSignatureService,
+        }),
+        this.getLogoDataUrl(),
+        getPdfLetterheadDataUrl(),
+        prepareActividadGrupalActaPhotoAssets(photoFiles, this.filesStorage),
+        prepareActividadGrupalActaSupportPdf(pdfFile, this.filesStorage),
+      ]);
     const actaPdf = await this.renderPdfHtml(
       buildActividadGrupalActaPdfHtml({
         detail: detailWithSignatures,
         logoDataUrl,
+        membreteDataUrl,
         photoAssets: [],
       }),
     );
     const photoPdf =
       photoAssets.length === 0
         ? null
-        : await this.renderPdfHtml(buildActividadGrupalActaPhotoEvidencePdfHtml(photoAssets));
+        : await this.renderPdfHtml(
+            buildActividadGrupalActaPhotoEvidencePdfHtml(photoAssets, membreteDataUrl),
+          );
     const orderedPdfParts = [actaPdf, supportPdf, photoPdf].filter(
       (pdfPart): pdfPart is Buffer => pdfPart !== null,
     );

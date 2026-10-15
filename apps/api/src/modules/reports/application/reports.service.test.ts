@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { type AuthUser, type ReportStatus } from "@cuidarte/contracts";
+import { ForbiddenException } from "@nestjs/common";
 
 import { type ReportArchiveWriter } from "../domain/report-archive-writer";
 import { type ReportFilesStorage, type StoredReportFile } from "../domain/report-files.storage";
@@ -118,6 +119,23 @@ describe("ReportsService job recovery", () => {
     assert.equal(response.id, duplicate.id);
     assert.deepEqual(harness.queue.enqueuedReportIds, []);
   });
+
+  it("rejects ZIP generation for a report viewer without download permission", async () => {
+    const harness = createHarness({ documents: ["uno.pdf"] });
+
+    await assert.rejects(
+      () =>
+        harness.service.createReport(
+          {
+            type: "FORMATOS_ENTREGA_ALIMENTACION",
+            period: "2026-08",
+            tenantId: actor.tenantId,
+          },
+          { ...actor, role: "auditor", permissions: ["reportes.view"] },
+        ),
+      ForbiddenException,
+    );
+  });
 });
 
 type HarnessOptions = {
@@ -166,6 +184,8 @@ function createReportRecord(overrides: Partial<ReportJobRecord> = {}): ReportJob
 
   return {
     id: "report-1",
+    filterKey: "",
+    activityFilters: { search: null, activityTypeId: null, organizer: null },
     tenantId: actor.tenantId!,
     tenantName: "Centro Demo",
     requestedByUserId: actor.id,
@@ -227,7 +247,10 @@ class InMemoryReportsRepository implements ReportsRepository {
   }
 
   async markProcessing(reportId: string, startedAt: Date): Promise<ReportJobRecord | null> {
-    if (reportId !== this.report.id && this.recoverableReports.every((job) => job.id !== reportId)) {
+    if (
+      reportId !== this.report.id &&
+      this.recoverableReports.every((job) => job.id !== reportId)
+    ) {
       return null;
     }
 
@@ -239,6 +262,10 @@ class InMemoryReportsRepository implements ReportsRepository {
     this.report.updatedAt = startedAt;
 
     return this.report;
+  }
+
+  async setTotalDocuments(_reportId: string, totalDocuments: number): Promise<void> {
+    this.report.totalDocuments = totalDocuments;
   }
 
   async updateProgress(
@@ -377,7 +404,11 @@ class StaticReportSource implements ReportSource {
     };
   }
 
-  async *documents(): AsyncIterable<{ filename: string; buffer: Buffer; contentType: "application/pdf" }> {
+  async *documents(): AsyncIterable<{
+    filename: string;
+    buffer: Buffer;
+    contentType: "application/pdf";
+  }> {
     for (const filename of this.filenames) {
       yield {
         filename,

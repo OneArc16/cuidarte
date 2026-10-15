@@ -47,8 +47,8 @@ describe("HomeService", () => {
         },
       }),
       summarizeAlimentacion: async () => ({
-        recordsTotal: 140,
         deliveredRationsTotal: 123200,
+        auxilioTransporteTotal: 12,
       }),
       countEmpleados: async () => 42,
       countCompletedImports: async () => 12,
@@ -61,7 +61,7 @@ describe("HomeService", () => {
       { moduleId: "adultos-mayores", total: 468 },
       { moduleId: "importacion-adultos-mayores", total: 12 },
       { moduleId: "sesiones-grupales", total: 469 },
-      { moduleId: "registro-alimentacion", total: 140 },
+      { moduleId: "registro-alimentacion", total: 123200 },
       { moduleId: "gestion-empleados", total: 42 },
       { moduleId: "backoffice", total: 12 },
     ]);
@@ -71,7 +71,7 @@ describe("HomeService", () => {
       { id: "atenciones_medico", total: 31 },
       { id: "salud_preventiva", total: 140 },
       { id: "sesiones_psicosocial", total: 140 },
-      { id: "raciones_entregadas", total: 123200 },
+      { id: "raciones_entregadas", total: 12 },
       { id: "encuentro_intergeneracional", total: 7 },
       { id: "nutricion", total: 56 },
       { id: "actividades_manualidad", total: 42 },
@@ -79,6 +79,10 @@ describe("HomeService", () => {
       { id: "actividad_campo", total: 112 },
       { id: "actividades_recreacion", total: 56 },
     ]);
+    assert.deepEqual(result.foodSummary, {
+      deliveredTotal: 123200,
+      auxilioTransporteTotal: 12,
+    });
   });
 
   it("does not rely on undefined where clauses for super admin dashboard queries", async () => {
@@ -138,8 +142,8 @@ describe("HomeService", () => {
         },
       }),
       summarizeAlimentacion: async () => ({
-        recordsTotal: 0,
         deliveredRationsTotal: 0,
+        auxilioTransporteTotal: 0,
       }),
       countEmpleados: async () => 0,
       countCompletedImports: async () => 0,
@@ -217,14 +221,14 @@ function stubService(
       byIndicatorId: Partial<Record<HomeDashboardIndicatorId, number>>;
     }>;
     summarizeAlimentacion?: (scope: unknown) => Promise<{
-      recordsTotal: number;
       deliveredRationsTotal: number;
+      auxilioTransporteTotal: number;
     }>;
     countEmpleados?: (scope: unknown) => Promise<number>;
     countCompletedImports?: (scope: unknown) => Promise<number>;
     countActiveTenants?: () => Promise<number>;
   },
-  ) {
+) {
   Object.assign(service as unknown as Record<string, unknown>, stubs);
 }
 
@@ -233,7 +237,7 @@ function createDashboardDatabase() {
     db: {
       select(selection: Record<string, unknown>) {
         const queryKind =
-          "recordsTotal" in selection
+          "deliveredRationsTotal" in selection
             ? "alimentacion"
             : "activityTypeId" in selection
               ? "actividadesGrouped"
@@ -267,8 +271,8 @@ function createDashboardDatabase() {
 
             return Promise.resolve([
               {
-                recordsTotal: 140,
                 deliveredRationsTotal: 123200,
+                auxilioTransporteTotal: 12,
               },
             ]);
           },
@@ -286,8 +290,8 @@ function createDashboardDatabase() {
 
             return Promise.resolve([
               {
-                recordsTotal: 140,
                 deliveredRationsTotal: 123200,
+                auxilioTransporteTotal: 12,
               },
             ]).then(resolve, reject);
           },

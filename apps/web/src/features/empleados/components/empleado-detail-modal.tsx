@@ -16,11 +16,7 @@ type EmpleadoDetailModalProps = {
   onClose: () => void;
 };
 
-export function EmpleadoDetailModal({
-  empleadoId,
-  onClose,
-  showTenant,
-}: EmpleadoDetailModalProps) {
+export function EmpleadoDetailModal({ empleadoId, onClose, showTenant }: EmpleadoDetailModalProps) {
   const empleadoQuery = useEmpleadoQuery(empleadoId);
   const detail = empleadoQuery.data ?? null;
 

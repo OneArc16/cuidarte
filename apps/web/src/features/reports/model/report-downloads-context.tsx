@@ -1,4 +1,10 @@
-import { type ReportJob, type ReportStatus, type ReportType, type ReportsDashboardExport, type ReportAnalyticsExportFormat } from "@cuidarte/contracts";
+import {
+  type ReportJob,
+  type ReportStatus,
+  type ReportType,
+  type ReportsDashboardExport,
+  type ReportAnalyticsExportFormat,
+} from "@cuidarte/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   type ReactNode,
@@ -17,6 +23,7 @@ import { downloadReportFile } from "../lib/download-report-file";
 
 export type ReportDownloadTask = {
   reportId: string;
+  filterKey?: string;
   type: ReportType;
   tenantName: string;
   period: string;
@@ -41,7 +48,11 @@ type ReportDownloadsContextValue = {
   registerTask: (task: ReportDownloadTask) => void;
   registerReport: (report: ReportJob) => void;
   startReportDownload: (report: ReportJob) => void;
-  startAnalyticsExport: (request: { from: string; to: string; format: ReportAnalyticsExportFormat }) => Promise<void>;
+  startAnalyticsExport: (request: {
+    from: string;
+    to: string;
+    format: ReportAnalyticsExportFormat;
+  }) => Promise<void>;
   cancelReport: (reportId: string) => Promise<void>;
   removeTask: (reportId: string) => void;
 };
@@ -173,29 +184,61 @@ export function ReportDownloadsProvider({
     [downloadReadyReport, updateTask],
   );
 
-  const downloadReadyAnalyticsExport = useCallback(async (item: ReportsDashboardExport) => {
-    if (downloadingIdsRef.current.has(item.id)) return;
-    downloadingIdsRef.current.add(item.id);
-    const controller = new AbortController();
-    downloadControllersRef.current.set(item.id, controller);
-    updateTask({ ...toAnalyticsTask(item), transferStatus: "preparing" });
-    try {
-      const download = await reportsApi.downloadReportsDashboardExport(item.id, { signal: controller.signal, onProgress: (downloadedBytes, totalBytes) => updateTask({ ...toAnalyticsTask(item), downloadedBytes, totalBytes, transferStatus: "downloading" }) });
-      downloadReportFile(download.blob, download.filename ?? item.downloadFilename ?? `${item.id}.${item.format}`);
-      removeTask(item.id);
-      setIsOpen(false);
-      toast.success(`${item.format.toUpperCase()} descargado correctamente.`);
-    } catch (error) {
-      if (controller.signal.aborted) { updateTask({ ...toAnalyticsTask(item), transferStatus: "cancelled", errorMessage: "Descarga cancelada." }); return; }
-      updateTask({ ...toAnalyticsTask(item), errorMessage: error instanceof Error ? error.message : "No fue posible descargar la exportacion." });
-    } finally { downloadingIdsRef.current.delete(item.id); downloadControllersRef.current.delete(item.id); }
-  }, [removeTask, updateTask]);
+  const downloadReadyAnalyticsExport = useCallback(
+    async (item: ReportsDashboardExport) => {
+      if (downloadingIdsRef.current.has(item.id)) return;
+      downloadingIdsRef.current.add(item.id);
+      const controller = new AbortController();
+      downloadControllersRef.current.set(item.id, controller);
+      updateTask({ ...toAnalyticsTask(item), transferStatus: "preparing" });
+      try {
+        const download = await reportsApi.downloadReportsDashboardExport(item.id, {
+          signal: controller.signal,
+          onProgress: (downloadedBytes, totalBytes) =>
+            updateTask({
+              ...toAnalyticsTask(item),
+              downloadedBytes,
+              totalBytes,
+              transferStatus: "downloading",
+            }),
+        });
+        downloadReportFile(
+          download.blob,
+          download.filename ?? item.downloadFilename ?? `${item.id}.${item.format}`,
+        );
+        removeTask(item.id);
+        setIsOpen(false);
+        toast.success(`${item.format.toUpperCase()} descargado correctamente.`);
+      } catch (error) {
+        if (controller.signal.aborted) {
+          updateTask({
+            ...toAnalyticsTask(item),
+            transferStatus: "cancelled",
+            errorMessage: "Descarga cancelada.",
+          });
+          return;
+        }
+        updateTask({
+          ...toAnalyticsTask(item),
+          errorMessage:
+            error instanceof Error ? error.message : "No fue posible descargar la exportacion.",
+        });
+      } finally {
+        downloadingIdsRef.current.delete(item.id);
+        downloadControllersRef.current.delete(item.id);
+      }
+    },
+    [removeTask, updateTask],
+  );
 
-  const refreshAnalyticsExport = useCallback(async (id: string) => {
-    const response = await reportsApi.getReportsDashboardExport(id);
-    updateTask(toAnalyticsTask(response.export));
-    if (response.export.status === "ready") await downloadReadyAnalyticsExport(response.export);
-  }, [downloadReadyAnalyticsExport, updateTask]);
+  const refreshAnalyticsExport = useCallback(
+    async (id: string) => {
+      const response = await reportsApi.getReportsDashboardExport(id);
+      updateTask(toAnalyticsTask(response.export));
+      if (response.export.status === "ready") await downloadReadyAnalyticsExport(response.export);
+    },
+    [downloadReadyAnalyticsExport, updateTask],
+  );
 
   const pollActiveReports = useCallback(async () => {
     if (pollingInFlightRef.current) {
@@ -212,7 +255,13 @@ export function ReportDownloadsProvider({
 
     pollingInFlightRef.current = true;
     try {
-      await Promise.all(activeReports.map((task) => task.analyticsFormat ? refreshAnalyticsExport(task.reportId) : refreshReport(task.reportId)));
+      await Promise.all(
+        activeReports.map((task) =>
+          task.analyticsFormat
+            ? refreshAnalyticsExport(task.reportId)
+            : refreshReport(task.reportId),
+        ),
+      );
     } finally {
       pollingInFlightRef.current = false;
     }
@@ -258,11 +307,23 @@ export function ReportDownloadsProvider({
       })
       .catch(() => undefined);
 
-    void reportsApi.listReportsDashboardExports().then((response) => {
-      if (cancelled) return;
-      const active = response.exports.filter((item) => item.status === "pending" || item.status === "processing");
-      if (active.length > 0) { setIsOpen(true); setTaskMap((current) => { const next = new Map(current); active.forEach((item) => next.set(item.id, toAnalyticsTask(item))); return next; }); }
-    }).catch(() => undefined);
+    void reportsApi
+      .listReportsDashboardExports()
+      .then((response) => {
+        if (cancelled) return;
+        const active = response.exports.filter(
+          (item) => item.status === "pending" || item.status === "processing",
+        );
+        if (active.length > 0) {
+          setIsOpen(true);
+          setTaskMap((current) => {
+            const next = new Map(current);
+            active.forEach((item) => next.set(item.id, toAnalyticsTask(item)));
+            return next;
+          });
+        }
+      })
+      .catch(() => undefined);
 
     return () => {
       cancelled = true;
@@ -321,7 +382,11 @@ export function ReportDownloadsProvider({
           const response = await reportsApi.createReportsDashboardExport(request);
           updateTask(toAnalyticsTask(response.export));
           setIsOpen(true);
-        } catch (error) { toast.error(error instanceof Error ? error.message : "No fue posible iniciar la exportacion."); }
+        } catch (error) {
+          toast.error(
+            error instanceof Error ? error.message : "No fue posible iniciar la exportacion.",
+          );
+        }
       },
       cancelReport: async (reportId) => {
         const currentTask = taskMapRef.current.get(reportId);
@@ -374,6 +439,7 @@ export function useReportDownloads(): ReportDownloadsContextValue {
 function toDownloadTask(report: ReportJob): ReportDownloadTask {
   return {
     reportId: report.id,
+    filterKey: report.filterKey,
     type: report.type,
     tenantName: report.tenantName,
     period: report.period,
@@ -388,7 +454,32 @@ function toDownloadTask(report: ReportJob): ReportDownloadTask {
 }
 
 function toAnalyticsTask(item: ReportsDashboardExport): ReportDownloadTask {
-  return { reportId: item.id, type: "ACTAS_SESIONES_GRUPALES", tenantName: item.tenantName ?? "Todos los centros", period: `${item.from} - ${item.to}`, status: item.status === "failed" ? "failed" : item.status === "expired" ? "expired" : item.status === "cancelled" ? "cancelled" : item.status === "ready" ? "ready" : item.status, processedDocuments: item.progress, totalDocuments: 100, downloadedBytes: 0, totalBytes: null, transferStatus: "idle", errorMessage: item.errorMessage, analyticsFormat: item.format, from: item.from, to: item.to, progress: item.progress };
+  return {
+    reportId: item.id,
+    type: "ACTAS_SESIONES_GRUPALES",
+    tenantName: item.tenantName ?? "Todos los centros",
+    period: `${item.from} - ${item.to}`,
+    status:
+      item.status === "failed"
+        ? "failed"
+        : item.status === "expired"
+          ? "expired"
+          : item.status === "cancelled"
+            ? "cancelled"
+            : item.status === "ready"
+              ? "ready"
+              : item.status,
+    processedDocuments: item.progress,
+    totalDocuments: 100,
+    downloadedBytes: 0,
+    totalBytes: null,
+    transferStatus: "idle",
+    errorMessage: item.errorMessage,
+    analyticsFormat: item.format,
+    from: item.from,
+    to: item.to,
+    progress: item.progress,
+  };
 }
 
 function isActiveTask(task: ReportDownloadTask): boolean {

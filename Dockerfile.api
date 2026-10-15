@@ -45,7 +45,8 @@ RUN npm install -g pnpm@10.10.0
 
 COPY --from=build /app /app
 
-RUN pnpm --filter @cuidarte/api exec playwright install --with-deps chromium \
+RUN test -s /app/apps/web/public/logos/membrete.png \
+    && pnpm --filter @cuidarte/api exec playwright install --with-deps chromium \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /root/.cache
 

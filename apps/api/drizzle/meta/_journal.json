@@ -309,6 +309,146 @@
       "when": 1789259500000,
       "tag": "0043_tenants_allow_duplicate_document",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1789694175443,
+      "tag": "0044_actividades_grupales_active_acta_unique",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1789695000000,
+      "tag": "0045_actividades_grupales_correction_organizer",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1789743470709,
+      "tag": "0046_actividades_grupales_shared_team_acta_series",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1789744279838,
+      "tag": "0047_actividades_grupales_legacy_team_acta_prefixes",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1789747000000,
+      "tag": "0048_actividades_grupales_active_team_acta_sequences",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1790184702640,
+      "tag": "0049_adorable_human_robot",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1790184800000,
+      "tag": "0050_actividad_grupal_acta_prefix_corrections",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1790194857282,
+      "tag": "0051_flaky_infant_terrible",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1790198086473,
+      "tag": "0052_old_omega_flight",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1790207471183,
+      "tag": "0053_flimsy_boomer",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1790210000000,
+      "tag": "0054_production_actividad_grupal_series",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1790211000000,
+      "tag": "0055_employees_activity_organizer_permission",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1790212000000,
+      "tag": "0056_employees_activity_organizer_permissions",
+      "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1790344474459,
+      "tag": "0057_short_black_cat",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1790354414736,
+      "tag": "0058_alimentacion_multiple_dates_permission",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1790368740444,
+      "tag": "0059_noisy_tarantula",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1791400000000,
+      "tag": "0060_auditor_reports_view",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1791418000000,
+      "tag": "0061_alimentacion_delivery_days_permission",
+      "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1791572277042,
+      "tag": "0062_gigantic_raider",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1792004131637,
+      "tag": "0063_talented_post",
+      "breakpoints": true
     }
   ]
 }

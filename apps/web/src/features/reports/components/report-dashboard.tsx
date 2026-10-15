@@ -11,12 +11,15 @@ import {
 import { type ReactNode } from "react";
 import { type ReportsDashboardResponse } from "@cuidarte/contracts";
 
+import { AnimatedNumber } from "@/components/animated-number";
+
 import { ReportDashboardCharts } from "./report-dashboard-charts";
 
 type ReportDashboardProps = {
   data: ReportsDashboardResponse | undefined;
   isLoading: boolean;
   isError: boolean;
+  showMonthlyAttentionChart: boolean;
 };
 
 const METRICS = [
@@ -35,7 +38,12 @@ const METRICS = [
   { key: "lunchesDelivered", label: "Almuerzos entregados", icon: Utensils, tone: "green" },
 ] as const;
 
-export function ReportDashboard({ data, isLoading, isError }: ReportDashboardProps) {
+export function ReportDashboard({
+  data,
+  isLoading,
+  isError,
+  showMonthlyAttentionChart,
+}: ReportDashboardProps) {
   return (
     <>
       <section className="reports-dashboard" aria-labelledby="reports-dashboard-title">
@@ -66,7 +74,12 @@ export function ReportDashboard({ data, isLoading, isError }: ReportDashboardPro
                     </span>
                     <div>
                       <span>{metric.label}</span>
-                      <strong>{data.summary[metric.key]}</strong>
+                      <strong>
+                        <AnimatedNumber
+                          value={data.summary[metric.key]}
+                          animationKey={`${data.range.from}-${data.range.to}`}
+                        />
+                      </strong>
                     </div>
                   </article>
                 );
@@ -74,7 +87,12 @@ export function ReportDashboard({ data, isLoading, isError }: ReportDashboardPro
             </div>
           </>
         ) : null}
-        {data && !isLoading && !isError ? <ReportDashboardCharts data={data} /> : null}
+        {data && !isLoading && !isError ? (
+          <ReportDashboardCharts
+            data={data}
+            showMonthlyAttentionChart={showMonthlyAttentionChart}
+          />
+        ) : null}
       </section>
     </>
   );

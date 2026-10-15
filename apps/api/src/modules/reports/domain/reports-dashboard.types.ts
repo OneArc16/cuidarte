@@ -25,8 +25,11 @@ export type ReportsDashboardActivityTypeAggregate = {
 
 export type ReportsDashboardAggregate = {
   tenantName: string | null;
+  municipality?: string | null;
+  department?: string | null;
   dailySeries: ReportsDashboardDailyAggregate[];
   activitiesByType: ReportsDashboardActivityTypeAggregate[];
+  sexDistribution: { male: number; female: number; other: number };
   snackOneDelivered: number;
   snackTwoDelivered: number;
 };

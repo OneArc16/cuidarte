@@ -7,6 +7,7 @@ import {
   canCreateAtencionEnfermeria,
   canEditAtencionEnfermeria,
   canOpenAtencionEnfermeriaModule,
+  canReadAtencionEnfermeriaHistory,
   canReadAtencionEnfermeriaModule,
   canViewAtencionEnfermeria,
   resolveAtencionEnfermeriaAccess,
@@ -53,6 +54,30 @@ describe("atencion-enfermeria.policy", () => {
     assert.equal(canReadAtencionEnfermeriaModule(nurseUser), true);
     assert.equal(canReadAtencionEnfermeriaModule(adminUser), true);
     assert.equal(canReadAtencionEnfermeriaModule(medicUser), true);
+  });
+
+  it("allows reading with the dedicated nursing history permission", () => {
+    const historyReader: AuthUser = {
+      ...medicUser,
+      permissions: ["atenciones_enfermeria.nursing_history"],
+    };
+
+    assert.equal(canReadAtencionEnfermeriaModule(historyReader), false);
+    assert.equal(canReadAtencionEnfermeriaHistory(historyReader), true);
+    assert.equal(
+      canReadAtencionEnfermeriaHistory({
+        ...medicUser,
+        permissions: ["atenciones_enfermeria.view"],
+      }),
+      false,
+    );
+    assert.equal(
+      canViewAtencionEnfermeria(historyReader, {
+        tenantId,
+        createdByUserId: nurseUser.id,
+      }),
+      true,
+    );
   });
 
   it("allows creation only for the nursing role", () => {

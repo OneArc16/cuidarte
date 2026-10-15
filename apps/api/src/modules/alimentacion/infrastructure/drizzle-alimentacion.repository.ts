@@ -18,6 +18,8 @@ import {
 import { DatabaseService } from "../../../database/database.service";
 import {
   adultosMayores,
+  alimentacionBulkImportBatches,
+  alimentacionBulkImportItems,
   alimentacionFormatoEmissions,
   alimentacionFormatoImportedVersions,
   alimentacionRegistros,
@@ -31,10 +33,14 @@ import {
   type AlimentacionFormatoEntregaRecord,
   type AlimentacionFormatoReportCandidateRecord,
   type AlimentacionImportedFormatoVersionRecord,
+  type AlimentacionBulkImportBatchRecord,
+  type AlimentacionBulkImportItemRecord,
   type AlimentacionRecord,
   type AlimentacionTenantOptionRecord,
   type CreateAlimentacionFormatoEmissionCommand,
   type CreateAlimentacionImportedFormatoVersionCommand,
+  type CreateAlimentacionBulkImportBatchCommand,
+  type CreateAlimentacionBulkImportItemCommand,
   type CreateAlimentacionFormatoEntregaExportAuditCommand,
   type CreateAlimentacionImportedFormatoDownloadAuditCommand,
   type CreateAlimentacionBatchRecordCommand,
@@ -44,7 +50,7 @@ import {
   type FindAlimentacionFormatoEntregaByAdultoAndMonthQuery,
   type FindAlimentacionImportedFormatoVersionByIdQuery,
   type FindAlimentacionImportedFormatoVersionsQuery,
-  type FindAlimentacionExistingRecordsByAdultosAndDateQuery,
+  type FindAlimentacionExistingRecordsByAdultosAndDatesQuery,
   type FindAlimentacionRecordByAdultoMayorAndDateQuery,
   type FindAlimentacionRecordByIdQuery,
   type FindAlimentacionRecordsQuery,
@@ -52,6 +58,8 @@ import {
   type SearchAlimentacionAdultosMayoresOptionsQuery,
 } from "../domain/alimentacion.types";
 import { type AlimentacionRepository } from "../domain/alimentacion.repository";
+
+const CREATE_MANY_INSERT_BATCH_SIZE = 1_000;
 
 type AlimentacionRecordRow = {
   id: string;
@@ -81,6 +89,7 @@ type AlimentacionAdultoOptionRow = {
   names: string;
   surnames: string;
   alreadyRegistered?: boolean;
+  registeredDeliveryDates?: string[];
   status: AlimentacionAdultoOptionRecord["status"];
   deathDate: string | null;
 };
@@ -109,6 +118,7 @@ type AlimentacionFormatoEmissionRow = {
   adultoMayorId: string;
   deliveryMonth: string;
   version: number;
+  templateVersion: string | null;
   signerEmployeeIdSnapshot: string;
   signerNameSnapshot: string;
   signerRoleSnapshot: string;
@@ -186,10 +196,16 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
   async searchAdultosMayoresOptions(
     query: SearchAlimentacionAdultosMayoresOptionsQuery,
   ): Promise<AlimentacionAdultoOptionRecord[]> {
+    const latestDeliveryDate = [...query.deliveryDates].sort().at(-1);
+
+    if (latestDeliveryDate === undefined) {
+      return [];
+    }
+
     const conditions: SQL[] = [
       eq(adultosMayores.tenantId, query.tenantId),
       isNull(adultosMayores.deletedAt),
-      or(isNull(adultosMayores.deathDate), gte(adultosMayores.deathDate, query.deliveryDate))!,
+      or(isNull(adultosMayores.deathDate), gte(adultosMayores.deathDate, latestDeliveryDate))!,
     ];
 
     if (query.search !== null) {
@@ -214,7 +230,13 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         documentNumber: adultosMayores.documentNumber,
         names: adultosMayores.names,
         surnames: adultosMayores.surnames,
-        alreadyRegistered: sql<boolean>`${alimentacionRegistros.id} is not null`,
+        // `alreadyRegistered` means that every requested day is occupied.  A person with a
+        // record on only one of several selected days must remain selectable so the form can
+        // explain the partial conflict instead of silently leaving them out of "Agregar todos".
+        alreadyRegistered: sql<boolean>`count(${alimentacionRegistros.id}) >= ${query.deliveryDates.length}`,
+        registeredDeliveryDates: sql<
+          string[]
+        >`coalesce(json_agg(distinct ${alimentacionRegistros.deliveryDate}::text) filter (where ${alimentacionRegistros.deliveryDate} is not null), '[]'::json)`,
         status: adultosMayores.status,
         deathDate: adultosMayores.deathDate,
       })
@@ -224,10 +246,22 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         alimentacionRegistros,
         and(
           eq(alimentacionRegistros.adultoMayorId, adultosMayores.id),
-          eq(alimentacionRegistros.deliveryDate, query.deliveryDate),
+          inArray(alimentacionRegistros.deliveryDate, query.deliveryDates),
         ),
       )
       .where(and(...conditions))
+      .groupBy(
+        adultosMayores.id,
+        adultosMayores.tenantId,
+        tenants.name,
+        tenants.city,
+        tenants.department,
+        adultosMayores.documentNumber,
+        adultosMayores.names,
+        adultosMayores.surnames,
+        adultosMayores.status,
+        adultosMayores.deathDate,
+      )
       .orderBy(asc(adultosMayores.surnames), asc(adultosMayores.names))
       .limit(query.limit === "all" ? 1_000 : 12);
 
@@ -302,6 +336,35 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
     return row === undefined ? null : this.toAdultoOption(row);
   }
 
+  async findAdultosByNormalizedDocumentNumbers(
+    tenantId: string,
+    normalizedDocumentNumbers: string[],
+  ): Promise<AlimentacionAdultoOptionRecord[]> {
+    if (normalizedDocumentNumbers.length === 0) return [];
+
+    const rows = await this.database.db
+      .select({
+        id: adultosMayores.id,
+        tenantId: adultosMayores.tenantId,
+        tenantName: tenants.name,
+        tenantCity: tenants.city,
+        tenantDepartment: tenants.department,
+        documentNumber: adultosMayores.documentNumber,
+        names: adultosMayores.names,
+        surnames: adultosMayores.surnames,
+        status: adultosMayores.status,
+        deathDate: adultosMayores.deathDate,
+      })
+      .from(adultosMayores)
+      .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
+      .where(and(eq(adultosMayores.tenantId, tenantId), isNull(adultosMayores.deletedAt)));
+
+    const wanted = new Set(normalizedDocumentNumbers);
+    return rows
+      .filter((row) => wanted.has(normalizeBulkDocumentNumber(row.documentNumber)))
+      .map((row) => this.toAdultoOption(row));
+  }
+
   async findFormatoEntregaByAdultoAndMonth(
     query: FindAlimentacionFormatoEntregaByAdultoAndMonthQuery,
   ): Promise<AlimentacionFormatoEntregaRecord[]> {
@@ -365,6 +428,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         adultoMayorId: alimentacionFormatoEmissions.adultoMayorId,
         deliveryMonth: alimentacionFormatoEmissions.deliveryMonth,
         version: alimentacionFormatoEmissions.version,
+        templateVersion: alimentacionFormatoEmissions.templateVersion,
         signerEmployeeIdSnapshot: alimentacionFormatoEmissions.signerEmployeeIdSnapshot,
         signerNameSnapshot: alimentacionFormatoEmissions.signerNameSnapshot,
         signerRoleSnapshot: alimentacionFormatoEmissions.signerRoleSnapshot,
@@ -598,10 +662,10 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
     return row === undefined ? null : this.toImportedFormatoVersionRecord(row);
   }
 
-  async findExistingByAdultosAndDate(
-    query: FindAlimentacionExistingRecordsByAdultosAndDateQuery,
+  async findExistingByAdultosAndDates(
+    query: FindAlimentacionExistingRecordsByAdultosAndDatesQuery,
   ): Promise<AlimentacionRecord[]> {
-    if (query.adultoMayorIds.length === 0) {
+    if (query.adultoMayorIds.length === 0 || query.deliveryDates.length === 0) {
       return [];
     }
 
@@ -613,11 +677,15 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       .where(
         and(
           eq(alimentacionRegistros.tenantId, query.tenantId),
-          eq(alimentacionRegistros.deliveryDate, query.deliveryDate),
+          inArray(alimentacionRegistros.deliveryDate, query.deliveryDates),
           inArray(alimentacionRegistros.adultoMayorId, query.adultoMayorIds),
         ),
       )
-      .orderBy(asc(adultosMayores.surnames), asc(adultosMayores.names));
+      .orderBy(
+        asc(adultosMayores.surnames),
+        asc(adultosMayores.names),
+        asc(alimentacionRegistros.deliveryDate),
+      );
 
     return rows.map((row) => this.toRecord(row));
   }
@@ -649,39 +717,50 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
   async createMany(command: CreateAlimentacionBatchRecordCommand): Promise<number> {
     return await this.database.db.transaction(async (tx) => {
       const now = new Date();
-      const createdRows = await tx
-        .insert(alimentacionRegistros)
-        .values(
-          command.registros.map((registro) => ({
-            tenantId: command.tenantId,
-            adultoMayorId: registro.adultoMayorId,
-            deliveryDate: command.deliveryDate,
-            organizer: command.organizer,
-            refrigerio1: registro.refrigerio1,
-            almuerzo: registro.almuerzo,
-            refrigerio2: registro.refrigerio2,
-            auxilioTransporte: registro.auxilioTransporte,
-            createdByUserId: command.actorUserId,
-            updatedByUserId: command.actorUserId,
-            createdAt: now,
-            updatedAt: now,
-          })),
-        )
-        .returning({ id: alimentacionRegistros.id });
+      const recordsToCreate = command.registros.map((registro) => ({
+        tenantId: command.tenantId,
+        adultoMayorId: registro.adultoMayorId,
+        deliveryDate: registro.deliveryDate,
+        organizer: command.organizer,
+        refrigerio1: registro.refrigerio1,
+        almuerzo: registro.almuerzo,
+        refrigerio2: registro.refrigerio2,
+        auxilioTransporte: registro.auxilioTransporte,
+        createdByUserId: command.actorUserId,
+        updatedByUserId: command.actorUserId,
+        createdAt: now,
+        updatedAt: now,
+      }));
+      let createdCount = 0;
+
+      for (
+        let startIndex = 0;
+        startIndex < recordsToCreate.length;
+        startIndex += CREATE_MANY_INSERT_BATCH_SIZE
+      ) {
+        const createdRows = await tx
+          .insert(alimentacionRegistros)
+          .values(recordsToCreate.slice(startIndex, startIndex + CREATE_MANY_INSERT_BATCH_SIZE))
+          .returning({ id: alimentacionRegistros.id });
+
+        createdCount += createdRows.length;
+      }
 
       await tx.insert(auditLogs).values({
         actorUserId: command.actorUserId,
         action: "alimentacion.created",
         targetTenantId: command.tenantId,
-        summary: `Registros de alimentacion creados: ${createdRows.length}`,
+        summary: `Registros de alimentacion creados: ${createdCount}`,
         metadata: {
-          deliveryDate: command.deliveryDate,
+          deliveryDates: command.deliveryDates,
           organizer: command.organizer,
-          createdCount: createdRows.length,
+          adultoMayorCount: new Set(command.registros.map((registro) => registro.adultoMayorId))
+            .size,
+          createdCount,
         },
       });
 
-      return createdRows.length;
+      return createdCount;
     });
   }
 
@@ -845,6 +924,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
           adultoMayorId: command.adultoMayorId,
           deliveryMonth: command.deliveryMonth,
           version: nextVersion,
+          templateVersion: command.templateVersion,
           signerEmployeeIdSnapshot: command.signerEmployeeIdSnapshot,
           signerNameSnapshot: command.signerNameSnapshot,
           signerRoleSnapshot: command.signerRoleSnapshot,
@@ -880,6 +960,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
           adultoMayorId: command.adultoMayorId,
           deliveryMonth: command.deliveryMonth,
           version: created.version,
+          templateVersion: command.templateVersion,
           signerEmployeeIdSnapshot: command.signerEmployeeIdSnapshot,
           signatureVersionIdSnapshot: command.signatureVersionIdSnapshot,
           tenantLogoVersionIdSnapshot: command.tenantLogoVersionIdSnapshot,
@@ -977,6 +1058,100 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
     return importedVersion;
   }
 
+  async createBulkImportBatch(
+    command: CreateAlimentacionBulkImportBatchCommand,
+  ): Promise<AlimentacionBulkImportBatchRecord> {
+    const [row] = await this.database.db
+      .insert(alimentacionBulkImportBatches)
+      .values(command)
+      .returning();
+    if (row === undefined) throw new Error("No fue posible crear el lote de importacion.");
+    return { ...row, mode: row.mode as "month" | "all" };
+  }
+
+  async createBulkImportItems(
+    commands: CreateAlimentacionBulkImportItemCommand[],
+  ): Promise<AlimentacionBulkImportItemRecord[]> {
+    if (commands.length === 0) return [];
+    const rows = await this.database.db
+      .insert(alimentacionBulkImportItems)
+      .values(commands)
+      .returning();
+    return rows.map((row) => ({
+      ...row,
+      importedVersion: null,
+    })) as AlimentacionBulkImportItemRecord[];
+  }
+
+  async findBulkImportBatch(id: string): Promise<AlimentacionBulkImportBatchRecord | null> {
+    const [row] = await this.database.db
+      .select()
+      .from(alimentacionBulkImportBatches)
+      .where(eq(alimentacionBulkImportBatches.id, id))
+      .limit(1);
+    return row === undefined ? null : { ...row, mode: row.mode as "month" | "all" };
+  }
+
+  async findBulkImportItems(batchId: string): Promise<AlimentacionBulkImportItemRecord[]> {
+    const rows = await this.database.db
+      .select({
+        id: alimentacionBulkImportItems.id,
+        batchId: alimentacionBulkImportItems.batchId,
+        tenantId: alimentacionBulkImportItems.tenantId,
+        originalName: alimentacionBulkImportItems.originalName,
+        documentNumber: alimentacionBulkImportItems.documentNumber,
+        deliveryMonth: alimentacionBulkImportItems.deliveryMonth,
+        adultoMayorId: alimentacionBulkImportItems.adultoMayorId,
+        adultoMayorFullName: alimentacionBulkImportItems.adultoMayorFullName,
+        sha256: alimentacionBulkImportItems.sha256,
+        sizeBytes: alimentacionBulkImportItems.sizeBytes,
+        stagedRelativePath: alimentacionBulkImportItems.stagedRelativePath,
+        status: alimentacionBulkImportItems.status,
+        reasonCode: alimentacionBulkImportItems.reasonCode,
+        reasonMessage: alimentacionBulkImportItems.reasonMessage,
+        existingVersion: alimentacionBulkImportItems.existingVersion,
+        importedVersionId: alimentacionBulkImportItems.importedVersionId,
+        importedVersion: alimentacionFormatoImportedVersions.version,
+      })
+      .from(alimentacionBulkImportItems)
+      .leftJoin(
+        alimentacionFormatoImportedVersions,
+        eq(alimentacionFormatoImportedVersions.id, alimentacionBulkImportItems.importedVersionId),
+      )
+      .where(eq(alimentacionBulkImportItems.batchId, batchId))
+      .orderBy(asc(alimentacionBulkImportItems.createdAt));
+    return rows as AlimentacionBulkImportItemRecord[];
+  }
+
+  async updateBulkImportItem(
+    id: string,
+    patch: Partial<
+      Pick<
+        AlimentacionBulkImportItemRecord,
+        "status" | "reasonCode" | "reasonMessage" | "importedVersionId" | "importedVersion"
+      >
+    >,
+  ): Promise<AlimentacionBulkImportItemRecord> {
+    const [row] = await this.database.db
+      .update(alimentacionBulkImportItems)
+      .set({
+        ...(patch.status === undefined ? {} : { status: patch.status }),
+        ...(patch.reasonCode === undefined ? {} : { reasonCode: patch.reasonCode }),
+        ...(patch.reasonMessage === undefined ? {} : { reasonMessage: patch.reasonMessage }),
+        ...(patch.importedVersionId === undefined
+          ? {}
+          : { importedVersionId: patch.importedVersionId }),
+        updatedAt: new Date(),
+      })
+      .where(eq(alimentacionBulkImportItems.id, id))
+      .returning();
+    if (row === undefined) throw new Error("El item de importacion no fue encontrado.");
+    return {
+      ...row,
+      importedVersion: patch.importedVersion ?? null,
+    } as AlimentacionBulkImportItemRecord;
+  }
+
   private getRecordSelection() {
     return {
       id: alimentacionRegistros.id,
@@ -1069,8 +1244,11 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       tenantCity: row.tenantCity,
       tenantDepartment: row.tenantDepartment,
       documentNumber: row.documentNumber,
+      names: row.names,
+      surnames: row.surnames,
       fullName: `${row.names} ${row.surnames}`.trim(),
       alreadyRegistered: row.alreadyRegistered ?? false,
+      registeredDeliveryDates: row.registeredDeliveryDates ?? [],
       ...(row.status === undefined ? {} : { status: row.status }),
       deathDate: row.deathDate,
     };
@@ -1295,6 +1473,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         adultoMayorId: alimentacionFormatoEmissions.adultoMayorId,
         deliveryMonth: alimentacionFormatoEmissions.deliveryMonth,
         version: alimentacionFormatoEmissions.version,
+        templateVersion: alimentacionFormatoEmissions.templateVersion,
         signerEmployeeIdSnapshot: alimentacionFormatoEmissions.signerEmployeeIdSnapshot,
         signerNameSnapshot: alimentacionFormatoEmissions.signerNameSnapshot,
         signerRoleSnapshot: alimentacionFormatoEmissions.signerRoleSnapshot,
@@ -1324,6 +1503,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       adultoMayorId: row.adultoMayorId,
       deliveryMonth: row.deliveryMonth,
       version: row.version,
+      templateVersion: row.templateVersion,
       signerEmployeeIdSnapshot: row.signerEmployeeIdSnapshot,
       signerNameSnapshot: row.signerNameSnapshot,
       signerRoleSnapshot:
@@ -1360,6 +1540,10 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       importedAt: row.importedAt,
     };
   }
+}
+
+function normalizeBulkDocumentNumber(value: string): string {
+  return value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 }
 
 function escapeLikePattern(value: string): string {

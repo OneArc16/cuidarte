@@ -2,11 +2,17 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { type AuthUser } from "@cuidarte/contracts";
-import { ForbiddenException } from "@nestjs/common";
+import { ConflictException, ForbiddenException } from "@nestjs/common";
 
 import { calculateAgeFromBirthDate } from "./age";
 import { AdultosMayoresService } from "./adultos-mayores.service";
-import { type AdultoMayorRecord, type FindAdultosMayoresQuery } from "../domain/adulto-mayor.types";
+import {
+  type AdultoMayorRecord,
+  type FindAdultosMayoresQuery,
+  type FindAdultosMayoresTrashQuery,
+  type RestoreAdultoMayorCommand,
+  type SendAdultoMayorToTrashCommand,
+} from "../domain/adulto-mayor.types";
 import { type AdultosMayoresRepository } from "../domain/adultos-mayores.repository";
 import { type AdultosMayoresFilesStorage } from "../domain/adultos-mayores-files.storage";
 import { type UbicacionesService } from "../../ubicaciones/application/ubicaciones.service";
@@ -34,6 +40,11 @@ const tenantAuditorUser: AuthUser = {
   fullName: "Auditor Centro Demo",
   role: "auditor",
   passwordSetByAdmin: true,
+};
+
+const tenantDeleteUser: AuthUser = {
+  ...tenantAdminUser,
+  permissions: ["adultos_mayores.delete"],
 };
 
 const superAdminUser: AuthUser = {
@@ -156,6 +167,19 @@ describe("AdultosMayoresService", () => {
     });
   });
 
+  it("forwards the attention type filter within the actor scope", async () => {
+    const repository = createRepository();
+    const service = createService(repository);
+
+    await service.listAdultosMayores({ search: null, attentionType: "nursing" }, tenantAdminUser);
+
+    assert.deepEqual(repository.queries[0], {
+      search: null,
+      attentionType: "nursing",
+      scope: { type: "tenant", tenantId },
+    });
+  });
+
   it("allows SuperAdmin users to list all tenants", async () => {
     const repository = createRepository();
     const service = createService(repository);
@@ -253,6 +277,33 @@ describe("AdultosMayoresService", () => {
     );
   });
 
+  it("explains when the duplicate adulto mayor is in trash", async () => {
+    const repository = createRepository();
+    const trashedRecord = records[0]!;
+    repository.findByDocument = async () => ({
+      ...trashedRecord,
+      deletedAt: new Date("2026-04-22T12:00:00.000Z"),
+    });
+    const service = createService(repository);
+
+    await assert.rejects(
+      () =>
+        service.createAdultoMayor(
+          {
+            ...createCommand(),
+            documentType: trashedRecord.documentType,
+            documentNumber: trashedRecord.documentNumber,
+          },
+          tenantAdminUser,
+        ),
+      {
+        constructor: ConflictException,
+        message:
+          "El adulto mayor con ese documento está en la papelera. Puedes restaurarlo desde la papelera antes de crearlo nuevamente.",
+      },
+    );
+  });
+
   it("allows only SuperAdmin users to send an adulto mayor to trash", async () => {
     const repository = createRepository();
     const service = createService(repository);
@@ -273,6 +324,37 @@ describe("AdultosMayoresService", () => {
         ),
       { constructor: ForbiddenException },
     );
+  });
+
+  it("scopes trash listing and mutations to the actor's center", async () => {
+    const repository = createRepository();
+    const service = createService(repository);
+    const currentRecord = records[0]!;
+
+    await service.listTrashAdultosMayores({ search: null }, tenantDeleteUser);
+    assert.deepEqual(repository.trashQueries[0], {
+      search: null,
+      scope: { type: "tenant", tenantId },
+    });
+
+    await service.sendAdultoMayorToTrash(
+      currentRecord.id,
+      { reason: "Registro duplicado" },
+      tenantDeleteUser,
+    );
+    assert.deepEqual(repository.trashCommands[0], {
+      id: currentRecord.id,
+      actorUserId: tenantDeleteUser.id,
+      tenantId,
+      reason: "Registro duplicado",
+    });
+
+    await service.restoreAdultoMayor(currentRecord.id, tenantDeleteUser);
+    assert.deepEqual(repository.restoreCommands[0], {
+      id: currentRecord.id,
+      actorUserId: tenantDeleteUser.id,
+      tenantId,
+    });
   });
 
   it("allows only SuperAdmin users to restore an adulto mayor", async () => {
@@ -335,12 +417,23 @@ function createCommand() {
   };
 }
 
-function createRepository(): AdultosMayoresRepository & { queries: FindAdultosMayoresQuery[] } {
+function createRepository(): AdultosMayoresRepository & {
+  queries: FindAdultosMayoresQuery[];
+  trashQueries: FindAdultosMayoresTrashQuery[];
+  trashCommands: SendAdultoMayorToTrashCommand[];
+  restoreCommands: RestoreAdultoMayorCommand[];
+} {
   const queries: FindAdultosMayoresQuery[] = [];
+  const trashQueries: FindAdultosMayoresTrashQuery[] = [];
+  const trashCommands: SendAdultoMayorToTrashCommand[] = [];
+  const restoreCommands: RestoreAdultoMayorCommand[] = [];
   const storedRecords = records.map((record) => ({ ...record }));
 
   return {
     queries,
+    trashQueries,
+    trashCommands,
+    restoreCommands,
     async findMany(query) {
       queries.push(query);
 
@@ -352,7 +445,8 @@ function createRepository(): AdultosMayoresRepository & { queries: FindAdultosMa
 
       return storedRecords;
     },
-    async findTrashMany() {
+    async findTrashMany(query) {
+      trashQueries.push(query);
       return [];
     },
     async findById(query) {
@@ -420,10 +514,12 @@ function createRepository(): AdultosMayoresRepository & { queries: FindAdultosMa
 
       return updatedRecord;
     },
-    async sendToTrash() {
+    async sendToTrash(command) {
+      trashCommands.push(command);
       return true;
     },
-    async restore() {
+    async restore(command) {
+      restoreCommands.push(command);
       return true;
     },
     async findDocumentByAdultoId() {

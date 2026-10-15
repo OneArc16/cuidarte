@@ -1,5 +1,5 @@
 import { type HomeDashboardIndicatorDefinition } from "../lib/home-dashboard-definitions";
-import { formatDashboardMetricValue } from "../lib/home-formatters";
+import { AnimatedDashboardMetric } from "./animated-dashboard-metric";
 
 type HomeDashboardIndicatorCardProps = {
   definition: HomeDashboardIndicatorDefinition;
@@ -26,7 +26,9 @@ export function HomeDashboardIndicatorCard({
       <span className="home-indicator-card__icon" aria-hidden="true">
         <Icon />
       </span>
-      <strong>{formatDashboardMetricValue(total)}</strong>
+      <strong>
+        <AnimatedDashboardMetric value={total} />
+      </strong>
     </button>
   );
 }

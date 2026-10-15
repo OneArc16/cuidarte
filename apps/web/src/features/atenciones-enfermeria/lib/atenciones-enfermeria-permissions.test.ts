@@ -5,6 +5,7 @@ import {
   canEditAtencionEnfermeria,
   canOpenAtencionesEnfermeriaModule,
   canReadAtencionesEnfermeria,
+  canReadHistoriaEnfermeria,
   resolveAtencionEnfermeriaAccess,
 } from "./atenciones-enfermeria-permissions";
 
@@ -28,6 +29,24 @@ describe("atenciones enfermeria permissions", () => {
     expect(canReadAtencionesEnfermeria({ role: "admin" })).toBe(true);
     expect(canReadAtencionesEnfermeria({ role: "medico" })).toBe(true);
     expect(canReadAtencionesEnfermeria({ role: "recreacionista" })).toBe(false);
+  });
+
+  it("allows the dedicated nursing history permission", () => {
+    const historyReader = {
+      role: "recreacionista" as const,
+      permissions: [
+        "atenciones_enfermeria.nursing_history",
+      ] as "atenciones_enfermeria.nursing_history"[],
+    };
+
+    expect(canReadAtencionesEnfermeria(historyReader)).toBe(false);
+    expect(canReadHistoriaEnfermeria(historyReader)).toBe(true);
+    expect(
+      canReadHistoriaEnfermeria({
+        role: "recreacionista",
+        permissions: ["atenciones_enfermeria.view"],
+      }),
+    ).toBe(false);
   });
 
   it("allows creation only for nursing users", () => {

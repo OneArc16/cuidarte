@@ -6,6 +6,7 @@ import { BadRequestException, ForbiddenException } from "@nestjs/common";
 
 import {
   assertCanAccessReportJob,
+  assertCanExportReports,
   assertCanUseReports,
   resolveReportTenantId,
 } from "./report.policy";
@@ -20,19 +21,45 @@ const tenantUser: AuthUser = {
 };
 
 describe("report.policy", () => {
-  it("allows super_admin, admin and director", () => {
+  it("allows super_admin, admin, auditor and director", () => {
     assert.doesNotThrow(() => assertCanUseReports({ ...tenantUser, role: "super_admin" }));
     assert.doesNotThrow(() => assertCanUseReports({ ...tenantUser, role: "admin" }));
+    assert.doesNotThrow(() => assertCanUseReports({ ...tenantUser, role: "auditor" }));
     assert.doesNotThrow(() => assertCanUseReports({ ...tenantUser, role: "director" }));
   });
 
-  it("rejects auditor and operational roles", () => {
-    assert.throws(
-      () => assertCanUseReports({ ...tenantUser, role: "auditor" }),
-      ForbiddenException,
-    );
+  it("rejects operational roles", () => {
     assert.throws(
       () => assertCanUseReports({ ...tenantUser, role: "nutricionista" }),
+      ForbiddenException,
+    );
+  });
+
+  it("allows downloads by default only to super admins, admins, and directors", () => {
+    assert.doesNotThrow(() => assertCanExportReports({ ...tenantUser, role: "super_admin" }));
+    assert.doesNotThrow(() => assertCanExportReports({ ...tenantUser, role: "admin" }));
+    assert.doesNotThrow(() => assertCanExportReports({ ...tenantUser, role: "director" }));
+    assert.throws(
+      () => assertCanExportReports({ ...tenantUser, role: "auditor" }),
+      ForbiddenException,
+    );
+  });
+
+  it("allows a person with explicit report permissions to download", () => {
+    assert.doesNotThrow(() =>
+      assertCanExportReports({
+        ...tenantUser,
+        role: "nutricionista",
+        permissions: ["reportes.view", "reportes.export"],
+      }),
+    );
+    assert.throws(
+      () =>
+        assertCanExportReports({
+          ...tenantUser,
+          role: "auditor",
+          permissions: ["reportes.view"],
+        }),
       ForbiddenException,
     );
   });

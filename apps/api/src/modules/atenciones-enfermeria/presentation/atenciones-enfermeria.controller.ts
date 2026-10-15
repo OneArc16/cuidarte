@@ -15,16 +15,12 @@ import {
   atencionEnfermeriaListResponseSchema,
   atencionEnfermeriaLookupResponseSchema,
   createAtencionEnfermeriaRequestSchema,
-  atencionEnfermeriaCrossReadRoleValues,
   updateAtencionEnfermeriaRequestSchema,
-  atencionEnfermeriaModuleRoleValues,
 } from "@cuidarte/contracts";
 import { z } from "zod";
 
 import { parseZodSchema } from "../../../common/parse-zod-schema";
 import { type AuthenticatedRequest } from "../../auth/authenticated-request";
-import { RequireRoles } from "../../auth/roles.decorator";
-import { RolesGuard } from "../../auth/roles.guard";
 import { SessionGuard } from "../../auth/session.guard";
 import { AtencionesEnfermeriaService } from "../application/atenciones-enfermeria.service";
 
@@ -32,13 +28,11 @@ const idParamSchema = z.uuid();
 
 @ApiTags("atenciones-enfermeria")
 @Controller("atenciones-enfermeria")
-@UseGuards(SessionGuard, RolesGuard)
-@RequireRoles(...atencionEnfermeriaModuleRoleValues)
+@UseGuards(SessionGuard)
 export class AtencionesEnfermeriaController {
   constructor(private readonly atencionesService: AtencionesEnfermeriaService) {}
 
   @Get()
-  @RequireRoles(...atencionEnfermeriaCrossReadRoleValues)
   @ApiOkResponse({ description: "Listado de atenciones de enfermeria dentro del alcance." })
   @ApiForbiddenResponse({ description: "El usuario no puede acceder a este modulo." })
   @ApiUnauthorizedResponse({ description: "Sesion requerida." })
@@ -68,7 +62,6 @@ export class AtencionesEnfermeriaController {
   }
 
   @Get("adultos-mayores/:adultoMayorId/history")
-  @RequireRoles(...atencionEnfermeriaCrossReadRoleValues)
   @ApiOkResponse({ description: "Historia de atenciones de enfermeria del adulto mayor." })
   @ApiNotFoundResponse({ description: "Adulto mayor no encontrado." })
   @ApiForbiddenResponse({ description: "El usuario no puede consultar esta historia." })
@@ -87,7 +80,6 @@ export class AtencionesEnfermeriaController {
   }
 
   @Get(":id")
-  @RequireRoles(...atencionEnfermeriaCrossReadRoleValues)
   @ApiOkResponse({ description: "Detalle de atencion de enfermeria." })
   @ApiNotFoundResponse({ description: "Atencion no encontrada." })
   @ApiForbiddenResponse({ description: "El usuario no puede consultar esta atencion." })
@@ -100,8 +92,10 @@ export class AtencionesEnfermeriaController {
   }
 
   @Get("adultos-mayores/:adultoMayorId/trash")
-  @RequireRoles("super_admin", "admin", "director")
-  async getPapelera(@Param("adultoMayorId") adultoMayorIdParam: string, @Req() request: AuthenticatedRequest) {
+  async getPapelera(
+    @Param("adultoMayorId") adultoMayorIdParam: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
     const adultoMayorId = parseZodSchema(idParamSchema, adultoMayorIdParam);
     return atencionEnfermeriaHistoryResponseSchema.parse(
       await this.atencionesService.getPapelera(adultoMayorId, request.currentUser),
@@ -109,14 +103,12 @@ export class AtencionesEnfermeriaController {
   }
 
   @Post(":id/trash")
-  @RequireRoles("super_admin", "admin", "director")
   async deleteAtencion(@Param("id") idParam: string, @Req() request: AuthenticatedRequest) {
     const id = parseZodSchema(idParamSchema, idParam);
     return this.atencionesService.deleteAtencion(id, request.currentUser);
   }
 
   @Post(":id/restore")
-  @RequireRoles("super_admin", "admin", "director")
   async restoreAtencion(@Param("id") idParam: string, @Req() request: AuthenticatedRequest) {
     const id = parseZodSchema(idParamSchema, idParam);
     return this.atencionesService.restoreAtencion(id, request.currentUser);

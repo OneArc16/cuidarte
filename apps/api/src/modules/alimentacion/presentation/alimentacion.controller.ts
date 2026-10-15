@@ -11,6 +11,7 @@ import {
   Query,
   Req,
   Res,
+  Optional,
   UseGuards,
 } from "@nestjs/common";
 import {
@@ -29,7 +30,10 @@ import {
   alimentacionAdultoOptionsResponseSchema,
   alimentacionDetailSchema,
   alimentacionFormatoEntregaExportQuerySchema,
-  alimentacionEditorRoleValues,
+  alimentacionBulkImportValidateQuerySchema,
+  alimentacionBulkImportValidateResponseSchema,
+  alimentacionBulkImportConfirmRequestSchema,
+  alimentacionBulkImportConfirmResponseSchema,
   alimentacionImportedFormatoUploadResponseSchema,
   alimentacionImportedFormatoVersionsResponseSchema,
   alimentacionListQuerySchema,
@@ -48,17 +52,17 @@ import { z } from "zod";
 
 import { parseZodSchema } from "../../../common/parse-zod-schema";
 import { type AuthenticatedRequest } from "../../auth/authenticated-request";
-import { RequireRoles } from "../../auth/roles.decorator";
-import { RolesGuard } from "../../auth/roles.guard";
 import { SessionGuard } from "../../auth/session.guard";
 import { AlimentacionFormatoExportService } from "../application/alimentacion-formato-export.service";
 import { AlimentacionImportedFormatoService } from "../application/alimentacion-imported-formato.service";
+import { AlimentacionBulkImportService } from "../application/alimentacion-bulk-import.service";
 import { AlimentacionService } from "../application/alimentacion.service";
 import { type BufferedAlimentacionFormatoPdfUpload } from "../domain/alimentacion.types";
 
 const recordIdParamSchema = z.uuid();
 const adultoMayorIdParamSchema = z.uuid();
 const importedVersionIdParamSchema = z.uuid();
+const bulkImportBatchIdParamSchema = z.uuid();
 
 type MultipartAuthenticatedRequest = AuthenticatedRequest & {
   isMultipart: () => boolean;
@@ -73,6 +77,7 @@ export class AlimentacionController {
     private readonly alimentacionService: AlimentacionService,
     private readonly alimentacionFormatoExportService: AlimentacionFormatoExportService,
     private readonly alimentacionImportedFormatoService: AlimentacionImportedFormatoService,
+    @Optional() private readonly alimentacionBulkImportService?: AlimentacionBulkImportService,
   ) {}
 
   @Get()
@@ -89,6 +94,41 @@ export class AlimentacionController {
     );
 
     return alimentacionListResponseSchema.parse({ registros });
+  }
+
+  @Post("formato-entrega/imported-pdfs/batch/validate")
+  @ApiConsumes("multipart/form-data")
+  async validateBulkImportedFormatoPdfs(
+    @Query() query: unknown,
+    @Req() request: MultipartAuthenticatedRequest,
+  ) {
+    const parsedQuery = parseZodSchema(alimentacionBulkImportValidateQuerySchema, query);
+    const uploads = await parseBulkImportedFormatoMultipartRequest(request);
+    return alimentacionBulkImportValidateResponseSchema.parse(
+      await this.alimentacionBulkImportService!.validate(parsedQuery, uploads, request.currentUser),
+    );
+  }
+
+  @Post("formato-entrega/imported-pdfs/batch/confirm")
+  async confirmBulkImportedFormatoPdfs(
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const command = parseZodSchema(alimentacionBulkImportConfirmRequestSchema, body);
+    return alimentacionBulkImportConfirmResponseSchema.parse(
+      await this.alimentacionBulkImportService!.confirm(command, request.currentUser),
+    );
+  }
+
+  @Get("formato-entrega/imported-pdfs/batch/:batchId")
+  async getBulkImportedFormatoBatch(
+    @Param("batchId") batchIdParam: string,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const batchId = parseZodSchema(bulkImportBatchIdParamSchema, batchIdParam);
+    return alimentacionBulkImportValidateResponseSchema.parse(
+      await this.alimentacionBulkImportService!.get(batchId, request.currentUser),
+    );
   }
 
   @Get("tenant-options")
@@ -283,8 +323,6 @@ export class AlimentacionController {
   }
 
   @Delete(":id")
-  @UseGuards(RolesGuard)
-  @RequireRoles(...alimentacionEditorRoleValues)
   @ApiOkResponse({ description: "Registro de alimentacion eliminado." })
   @ApiNotFoundResponse({ description: "Registro no encontrado." })
   @ApiForbiddenResponse({ description: "El usuario no puede eliminar el registro solicitado." })
@@ -341,6 +379,26 @@ async function parseImportedFormatoMultipartRequest(
   }
 
   return upload;
+}
+
+async function parseBulkImportedFormatoMultipartRequest(
+  request: MultipartAuthenticatedRequest,
+): Promise<BufferedAlimentacionFormatoPdfUpload[]> {
+  if (!request.isMultipart()) {
+    throw new BadRequestException("La solicitud debe enviarse como multipart/form-data.");
+  }
+
+  const uploads: BufferedAlimentacionFormatoPdfUpload[] = [];
+  for await (const part of request.parts()) {
+    if (part.type === "field") {
+      throw new BadRequestException("El formulario no admite campos adicionales.");
+    }
+    if (part.fieldname !== "files") {
+      throw new BadRequestException("Los archivos deben enviarse en el campo files.");
+    }
+    uploads.push(await toBufferedImportedFormatoUpload(part));
+  }
+  return uploads;
 }
 
 async function toBufferedImportedFormatoUpload(

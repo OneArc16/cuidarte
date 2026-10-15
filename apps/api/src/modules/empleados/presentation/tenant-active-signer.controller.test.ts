@@ -29,10 +29,9 @@ describe("TenantActiveSignerController", () => {
       },
     } as never);
 
-    const result = await controller.getActiveSigner(
-      "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054",
-      { currentUser } as never,
-    );
+    const result = await controller.getActiveSigner("7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054", {
+      currentUser,
+    } as never);
 
     assert.equal(result.activeSigner?.employeeId, "aeeb7b27-2c8d-48ce-b2f8-3397d34a6e72");
   });
@@ -82,10 +81,9 @@ describe("TenantActiveSignerController", () => {
       },
     } as never);
 
-    const result = await controller.clearActiveSigner(
-      "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054",
-      { currentUser } as never,
-    );
+    const result = await controller.clearActiveSigner("7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054", {
+      currentUser,
+    } as never);
 
     assert.equal(receivedTenantId, "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054");
     assert.equal(result.activeSigner, null);

@@ -7,6 +7,13 @@ import {
 } from "./alimentacion-formato-pdf-template";
 
 describe("alimentacion-formato-pdf-template", () => {
+  it("builds the delivery format filename with the adult's document and name", () => {
+    assert.equal(
+      buildFormatoEntregaPdfFilename("930824", "Castillo Díaz", "Joaquín", "2026-07"),
+      "930824_CASTILLO_DIAZ_JOAQUIN_FORMATO_ENTREGA_2026_07.pdf",
+    );
+  });
+
   it("renders two visual stubs and fills visit marks sequentially", () => {
     const html = buildFormatoEntregaPdfHtml({
       data: {
@@ -16,6 +23,8 @@ describe("alimentacion-formato-pdf-template", () => {
         tenantDepartment: "Magdalena",
         adultoMayorId: "0b17e370-8f81-48c0-b707-c7046f497855",
         documentNumber: "1020304050",
+        names: "Rosa Elena",
+        surnames: "Martinez Rojas",
         fullName: "Rosa Elena Martinez Rojas",
         deliveryMonth: "2026-04",
         records: [
@@ -49,6 +58,7 @@ describe("alimentacion-formato-pdf-template", () => {
         ],
       },
       institutionalLogoDataUrl: null,
+      membreteDataUrl: "data:image/png;base64,bWVtYnJldGU=",
       tenantLogoDataUrl: "data:image/png;base64,bG9nbw==",
       directorSignatureDataUrl: "data:image/png;base64,ZmlybWE=",
     });
@@ -59,10 +69,10 @@ describe("alimentacion-formato-pdf-template", () => {
     );
     assert.match(html, /EL BANCO - MAGDALENA/);
     assert.equal((html.match(/>Dia<br>1<\/th>/g) ?? []).length, 2);
-    assert.equal((html.match(/>Dia<br>12<\/th>/g) ?? []).length, 2);
-    assert.ok(!html.includes("Dia<br>13"));
-    assert.ok(!html.includes("Dia<br>24"));
-    assert.ok(!html.includes("Dia<br>25"));
+    assert.equal((html.match(/>Dia<br>15<\/th>/g) ?? []).length, 2);
+    assert.ok(!html.includes("Dia<br>16"));
+    assert.ok(!html.includes("Dia<br>30"));
+    assert.ok(!html.includes("Dia<br>31"));
     assert.equal((html.match(/data-block-index="/g) ?? []).length, 2);
     assert.equal((html.match(/>X</g) ?? []).length, 8);
     assert.match(html, /class="delivery-dates">01-04-2026, 13-04-2026, 25-04-2026<\/td>/);
@@ -72,9 +82,17 @@ describe("alimentacion-formato-pdf-template", () => {
     assert.match(html, /alt="Logo de Centro de Vida Demo"/);
     assert.match(html, /stub-logo--institutional/);
     assert.match(html, /stub-logo--tenant/);
+    assert.match(html, /@page\s*{\s*size: 215\.9mm 279\.4mm;\s*margin: 0;/);
+    assert.match(html, /class="pdf-letterhead"/);
+    assert.match(html, /data:image\/png;base64,bWVtYnJldGU=/);
+    assert.match(html, /top: 0;/);
+    assert.match(html, /left: 0;/);
+    assert.match(html, /opacity: 0\.45;/);
+    assert.match(html, /\.page\s*{[\s\S]*padding: 45mm 8mm 32mm;/);
+    assert.match(html, /break-inside: avoid;/);
   });
 
-  it("uses the lower stub for visits 13 to 24 without changing the visual day labels", () => {
+  it("uses the lower stub for visits 16 to 30 without changing the visual day labels", () => {
     const html = buildFormatoEntregaPdfHtml({
       data: {
         tenantId: "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054",
@@ -83,15 +101,17 @@ describe("alimentacion-formato-pdf-template", () => {
         tenantDepartment: "Magdalena",
         adultoMayorId: "0b17e370-8f81-48c0-b707-c7046f497855",
         documentNumber: "1020304050",
+        names: "Rosa Elena",
+        surnames: "Martinez Rojas",
         fullName: "Rosa Elena Martinez Rojas",
         deliveryMonth: "2026-04",
-        records: Array.from({ length: 13 }, (_, index) => ({
+        records: Array.from({ length: 16 }, (_, index) => ({
           deliveryDate: `2026-04-${String(index + 1).padStart(2, "0")}`,
           organizer: "director" as const,
-          refrigerio1: index === 12 ? "entregado" : "no_entregado",
-          almuerzo: index === 12 ? "entregado" : "no_entregado",
-          refrigerio2: index === 12 ? "entregado" : "no_entregado",
-          auxilioTransporte: index === 12 ? "entregado" : "no_entregado",
+          refrigerio1: index === 15 ? "entregado" : "no_entregado",
+          almuerzo: index === 15 ? "entregado" : "no_entregado",
+          refrigerio2: index === 15 ? "entregado" : "no_entregado",
+          auxilioTransporte: index === 15 ? "entregado" : "no_entregado",
           updatedAt: new Date(`2026-04-${String(index + 1).padStart(2, "0")}T12:00:00.000Z`),
         })),
       },
@@ -102,8 +122,8 @@ describe("alimentacion-formato-pdf-template", () => {
 
     assert.equal((html.match(/>X</g) ?? []).length, 4);
     assert.equal((html.match(/>Dia<br>1<\/th>/g) ?? []).length, 2);
-    assert.ok(!html.includes("Dia<br>13"));
-    assert.match(html, /class="delivery-dates">13-04-2026<\/td>/);
+    assert.ok(!html.includes("Dia<br>16"));
+    assert.match(html, /class="delivery-dates">16-04-2026<\/td>/);
     assert.equal((html.match(/class="delivery-dates"><\/td>/g) ?? []).length, 1);
   });
 
@@ -116,6 +136,8 @@ describe("alimentacion-formato-pdf-template", () => {
         tenantDepartment: null,
         adultoMayorId: "0b17e370-8f81-48c0-b707-c7046f497855",
         documentNumber: "1020304050",
+        names: "Rosa Elena",
+        surnames: "Martinez Rojas",
         fullName: "Rosa Elena Martinez Rojas",
         deliveryMonth: "2026-02",
         records: [],
@@ -138,6 +160,8 @@ describe("alimentacion-formato-pdf-template", () => {
         tenantDepartment: "Magdalena",
         adultoMayorId: "0b17e370-8f81-48c0-b707-c7046f497855",
         documentNumber: "1020304050",
+        names: "Rosa Elena",
+        surnames: "Martinez Rojas",
         fullName: "Rosa Elena Martinez Rojas",
         deliveryMonth: "2026-04",
         records: [],
@@ -151,10 +175,10 @@ describe("alimentacion-formato-pdf-template", () => {
     assert.match(html, /signature-cell__image-wrap/);
   });
 
-  it("builds a sanitized filename", () => {
+  it("normalizes spaces and punctuation in filename values", () => {
     assert.equal(
-      buildFormatoEntregaPdfFilename("10 20/30", "2026-04"),
-      "formato-entrega-10-20-30-2026-04.pdf",
+      buildFormatoEntregaPdfFilename("10 20/30", "Gómez Pérez", "María Elena", "2026-04"),
+      "10_20_30_GOMEZ_PEREZ_MARIA_ELENA_FORMATO_ENTREGA_2026_04.pdf",
     );
   });
 });

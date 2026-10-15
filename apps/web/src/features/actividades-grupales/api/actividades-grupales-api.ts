@@ -10,12 +10,13 @@ import {
   type ActividadGrupalTenantOptionsResponse,
   type ActividadGrupalActaCorrectionPreviewResponse,
   type ApplyActividadGrupalActaCorrectionRequest,
+  type ActividadGrupalActaPrefixCorrectionPreviewRequest,
+  type ApplyActividadGrupalActaPrefixCorrectionRequest,
   type ApplyActividadGrupalActaCorrectionResponse,
   type CorrectActividadGrupalActaNumberRequest,
   type ActividadGrupalType,
   type CreateActividadGrupalRequest,
   type SaveActividadGrupalDiligenciamiento,
-  type RestoreActividadGrupalResponse,
   type UpdateActividadGrupalRequest,
   actividadGrupalEditDetailSchema,
   actividadGrupalDiligenciamientoDetailSchema,
@@ -26,9 +27,10 @@ import {
   actividadGrupalTrashListResponseSchema,
   actividadGrupalTenantOptionsResponseSchema,
   actividadGrupalActaCorrectionPreviewResponseSchema,
+  actividadGrupalActaPrefixCorrectionPreviewRequestSchema,
+  applyActividadGrupalActaPrefixCorrectionRequestSchema,
   applyActividadGrupalActaCorrectionResponseSchema,
   deleteActividadGrupalResponseSchema,
-  restoreActividadGrupalResponseSchema,
 } from "@cuidarte/contracts";
 
 import { getApiBaseUrl } from "@/shared/api/api-config";
@@ -120,13 +122,40 @@ export function correctActividadGrupalActaNumber(
   );
 }
 
+export function previewActividadGrupalActaPrefixCorrection(
+  request: ActividadGrupalActaPrefixCorrectionPreviewRequest,
+): Promise<ActividadGrupalActaCorrectionPreviewResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/actividades-grupales/acta-prefix-corrections/preview`,
+    actividadGrupalActaCorrectionPreviewResponseSchema,
+    {
+      method: "POST",
+      body: actividadGrupalActaPrefixCorrectionPreviewRequestSchema.parse(request),
+    },
+  );
+}
+
+export function applyActividadGrupalActaPrefixCorrection(
+  request: ApplyActividadGrupalActaPrefixCorrectionRequest,
+): Promise<ApplyActividadGrupalActaCorrectionResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/actividades-grupales/acta-prefix-corrections/apply`,
+    applyActividadGrupalActaCorrectionResponseSchema,
+    {
+      method: "POST",
+      body: applyActividadGrupalActaPrefixCorrectionRequestSchema.parse(request),
+    },
+  );
+}
+
 export function previewActividadGrupalActaCorrection(
   tenantId: string,
+  organizer: ActividadGrupalOrganizer | null,
 ): Promise<ActividadGrupalActaCorrectionPreviewResponse> {
   return fetchJson(
     `${getApiBaseUrl()}/actividades-grupales/acta-number-corrections/preview`,
     actividadGrupalActaCorrectionPreviewResponseSchema,
-    { method: "POST", body: { tenantId, scope: "all" } },
+    { method: "POST", body: { tenantId, scope: "all", organizer } },
   );
 }
 
@@ -150,18 +179,6 @@ export function deleteActividadGrupal(
     {
       method: "DELETE",
       body: { reason },
-    },
-  );
-}
-
-export function restoreActividadGrupal(
-  activityId: string,
-): Promise<RestoreActividadGrupalResponse> {
-  return fetchJson(
-    `${getApiBaseUrl()}/actividades-grupales/${activityId}/restaurar`,
-    restoreActividadGrupalResponseSchema,
-    {
-      method: "POST",
     },
   );
 }
@@ -297,5 +314,5 @@ function buildActividadesGrupalesTrashUrl(params: TrashActividadesGrupalesParams
 
   const queryString = searchParams.toString();
 
-  return `${getApiBaseUrl()}/actividades-grupales/papelera${queryString === "" ? "" : `?${queryString}`}`;
+  return `${getApiBaseUrl()}/actividades-grupales/log-eliminaciones${queryString === "" ? "" : `?${queryString}`}`;
 }

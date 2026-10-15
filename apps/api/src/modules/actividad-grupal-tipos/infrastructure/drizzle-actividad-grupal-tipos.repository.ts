@@ -1,14 +1,15 @@
 import { Injectable } from "@nestjs/common";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
-import { actividadGrupalTipos, auditLogs } from "../../../database/schema";
+import { actividadGrupalTipos, auditLogs, users } from "../../../database/schema";
 import {
   type ActividadGrupalTipoRecord,
   type CreateActividadGrupalTipoCommand,
   type FindActividadGrupalTiposQuery,
   type UpdateActividadGrupalTipoCommand,
   type UpdateActividadGrupalTipoStatusCommand,
+  type UpdateActividadGrupalTipoConsecutiveConfigCommand,
 } from "../domain/actividad-grupal-tipo.types";
 import { type ActividadGrupalTiposRepository } from "../domain/actividad-grupal-tipos.repository";
 
@@ -166,12 +167,73 @@ export class DrizzleActividadGrupalTiposRepository implements ActividadGrupalTip
     });
   }
 
+  async updateConsecutiveConfig(
+    command: UpdateActividadGrupalTipoConsecutiveConfigCommand,
+  ): Promise<ActividadGrupalTipoRecord> {
+    return await this.database.db.transaction(async (tx) => {
+      const now = new Date();
+      const [updated] = await tx
+        .update(actividadGrupalTipos)
+        .set({
+          consecutivePrefix: command.prefix,
+          consecutiveNextValue: command.nextValue,
+          consecutiveCreatorUserIds:
+            command.creatorUserIds as (typeof actividadGrupalTipos.$inferInsert)["consecutiveCreatorUserIds"],
+          updatedAt: now,
+        })
+        .where(eq(actividadGrupalTipos.id, command.id))
+        .returning(this.getSelection());
+
+      if (updated === undefined) {
+        throw new Error("No fue posible actualizar el consecutivo de la actividad grupal.");
+      }
+
+      await tx.insert(auditLogs).values({
+        actorUserId: command.actorUserId,
+        action: "actividades-grupales.tipo.consecutive-configured",
+        targetTenantId: updated.tenantId,
+        summary: "Consecutivo configurado para actividad grupal",
+        metadata: {
+          activityTypeId: updated.id,
+          prefix: command.prefix,
+          nextValue: command.nextValue,
+          creatorUserIds: command.creatorUserIds,
+        },
+      });
+
+      return updated;
+    });
+  }
+
+  async findCreatorOptions(tenantId: string) {
+    return await this.database.db
+      .select({
+        id: users.id,
+        fullName: users.fullName,
+        role: users.role,
+      })
+      .from(users)
+      .where(
+        and(
+          eq(users.isActive, true),
+          or(
+            eq(users.tenantId, tenantId),
+            and(isNull(users.tenantId), eq(users.role, "super_admin")),
+          ),
+        ),
+      )
+      .orderBy(asc(users.fullName));
+  }
+
   private getSelection() {
     return {
       id: actividadGrupalTipos.id,
       tenantId: actividadGrupalTipos.tenantId,
       name: actividadGrupalTipos.name,
       normalizedName: actividadGrupalTipos.normalizedName,
+      consecutivePrefix: actividadGrupalTipos.consecutivePrefix,
+      consecutiveNextValue: actividadGrupalTipos.consecutiveNextValue,
+      consecutiveCreatorUserIds: actividadGrupalTipos.consecutiveCreatorUserIds,
       isActive: actividadGrupalTipos.isActive,
       createdAt: actividadGrupalTipos.createdAt,
       updatedAt: actividadGrupalTipos.updatedAt,

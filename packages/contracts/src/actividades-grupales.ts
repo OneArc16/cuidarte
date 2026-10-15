@@ -210,10 +210,27 @@ export const actividadGrupalTipoSchema = z.object({
   tenantId: z.uuid(),
   name: z.string().min(1).max(120),
   normalizedName: z.string().min(1).max(120),
+  consecutiveConfig: z
+    .object({
+      prefix: z.string().min(2).max(24),
+      nextValue: z.number().int().positive(),
+      creatorUserIds: z.array(z.uuid()),
+    })
+    .nullable(),
   isActive: z.boolean(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
   deactivatedAt: z.string().min(1).nullable(),
+});
+
+export const actividadGrupalTipoCreatorOptionSchema = z.object({
+  id: z.uuid(),
+  fullName: z.string().min(1).max(180),
+  role: userRoleSchema,
+});
+
+export const actividadGrupalTipoCreatorOptionsResponseSchema = z.object({
+  creators: z.array(actividadGrupalTipoCreatorOptionSchema),
 });
 
 export const actividadGrupalTipoSummarySchema = z.object({
@@ -251,9 +268,83 @@ export const updateActividadGrupalTipoStatusRequestSchema = z.object({
   isActive: z.boolean(),
 });
 
+export const updateActividadGrupalTipoConsecutiveConfigRequestSchema = z
+  .object({
+    enabled: z.boolean().default(true),
+    prefix: z.string().trim().toUpperCase().min(2).max(24).optional(),
+    nextValue: z.number().int().min(1).max(2_147_483_647).optional(),
+    creatorUserIds: z.array(z.uuid()).default([]),
+  })
+  .superRefine((value, context) => {
+    if (!value.enabled) return;
+
+    if (value.prefix === undefined) {
+      context.addIssue({ code: "custom", path: ["prefix"], message: "Ingresa un prefijo." });
+    }
+
+    if (value.nextValue === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["nextValue"],
+        message: "Indica el próximo consecutivo.",
+      });
+    }
+
+    if (value.creatorUserIds.length === 0) {
+      context.addIssue({
+        code: "custom",
+        path: ["creatorUserIds"],
+        message: "Selecciona al menos una persona.",
+      });
+    }
+  });
+
+export const updateActividadGrupalTipoGlobalConsecutiveConfigRequestSchema = z
+  .object({
+    activityTypeIds: z.array(z.uuid()).min(1),
+    enabled: z.boolean().default(true),
+    prefix: z.string().trim().toUpperCase().min(2).max(24).optional(),
+  })
+  .superRefine((value, context) => {
+    if (!value.enabled) return;
+
+    if (value.prefix === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["prefix"],
+        message: "Ingresa un prefijo.",
+      });
+    }
+  });
+
+export const actividadGrupalTiposGlobalConsecutiveConfigResponseSchema = z.object({
+  activityTypes: z.array(actividadGrupalTipoSchema),
+});
 export const actividadGrupalTiposListResponseSchema = z.object({
   activityTypes: z.array(actividadGrupalTipoSchema),
 });
+
+export const actividadGrupalGlobalSeriesSchema = z.object({
+  enabled: z.boolean(),
+  prefix: z.string().min(2).max(24).nullable(),
+  tenantCount: z.number().int().nonnegative(),
+  updatedAt: z.string().min(1).nullable(),
+});
+
+export const updateActividadGrupalGlobalSeriesRequestSchema = z
+  .object({
+    enabled: z.boolean().default(true),
+    prefix: z.string().trim().toUpperCase().min(2).max(24).optional(),
+  })
+  .superRefine((value, context) => {
+    if (value.enabled && value.prefix === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["prefix"],
+        message: "Ingresa un prefijo global.",
+      });
+    }
+  });
 
 export const actividadGrupalListItemSchema = z.object({
   id: z.uuid(),
@@ -350,7 +441,6 @@ export const actividadGrupalTrashListItemSchema = actividadGrupalListItemSchema.
   deletedByUserId: z.uuid(),
   deletedByUserFullName: z.string().min(1).max(180),
   deletionReason: z.string().max(500).nullable(),
-  canRestore: z.boolean(),
 });
 
 export const actividadGrupalTrashListQuerySchema = actividadGrupalListQuerySchema;
@@ -370,7 +460,7 @@ export const correctActividadGrupalActaNumberRequestSchema = z.object({
 });
 
 export const deleteActividadGrupalRequestSchema = z.object({
-  reason: z.string().trim().min(1, "Indica el motivo de enviar el acta a la papelera.").max(500),
+  reason: z.string().trim().min(1, "Indica el motivo de eliminar el acta.").max(500),
 });
 
 export const actividadGrupalActaCorrectionPreviewRowSchema = z.object({
@@ -399,6 +489,18 @@ export const actividadGrupalActaCorrectionPreviewResponseSchema = z.object({
 export const actividadGrupalActaCorrectionPreviewRequestSchema = z.object({
   tenantId: z.uuid(),
   scope: z.literal("all"),
+  organizer: actividadGrupalOrganizerSchema.nullable().default(null),
+});
+
+export const actividadGrupalActaPrefixCorrectionPreviewRequestSchema = z.object({
+  tenantId: z.uuid(),
+  activityTypeId: z.uuid(),
+  prefix: z.string().trim().toUpperCase().min(2).max(24),
+});
+
+export const applyActividadGrupalActaPrefixCorrectionRequestSchema = z.object({
+  operationToken: z.uuid(),
+  reason: z.string().trim().min(1, "Indica el motivo de la corrección.").max(500),
 });
 
 export const applyActividadGrupalActaCorrectionRequestSchema = z.object({
@@ -425,10 +527,6 @@ export const deleteActividadGrupalResponseSchema = z.object({
   success: z.literal(true),
 });
 
-export const restoreActividadGrupalResponseSchema = z.object({
-  success: z.literal(true),
-});
-
 export type ActividadGrupalType = z.infer<typeof actividadGrupalTypeSchema>;
 export type ActividadGrupalOrganizer = z.infer<typeof actividadGrupalOrganizerSchema>;
 export type ActividadGrupalResponsibleDepartment = z.infer<
@@ -441,6 +539,12 @@ export type ActividadGrupalEmpleadoOption = z.infer<typeof actividadGrupalEmplea
 export type ActividadGrupalIntegranteOption = z.infer<typeof actividadGrupalIntegranteOptionSchema>;
 export type ActividadGrupalSupportFile = z.infer<typeof actividadGrupalSupportFileSchema>;
 export type ActividadGrupalTipo = z.infer<typeof actividadGrupalTipoSchema>;
+export type ActividadGrupalTipoCreatorOption = z.infer<
+  typeof actividadGrupalTipoCreatorOptionSchema
+>;
+export type ActividadGrupalTipoCreatorOptionsResponse = z.infer<
+  typeof actividadGrupalTipoCreatorOptionsResponseSchema
+>;
 export type ActividadGrupalTipoSummary = z.infer<typeof actividadGrupalTipoSummarySchema>;
 export type ActividadGrupalTiposListQuery = z.infer<typeof actividadGrupalTiposListQuerySchema>;
 export type CreateActividadGrupalTipoRequest = z.infer<
@@ -452,14 +556,26 @@ export type UpdateActividadGrupalTipoRequest = z.infer<
 export type UpdateActividadGrupalTipoStatusRequest = z.infer<
   typeof updateActividadGrupalTipoStatusRequestSchema
 >;
+export type UpdateActividadGrupalTipoConsecutiveConfigRequest = z.infer<
+  typeof updateActividadGrupalTipoConsecutiveConfigRequestSchema
+>;
+export type UpdateActividadGrupalTipoGlobalConsecutiveConfigRequest = z.infer<
+  typeof updateActividadGrupalTipoGlobalConsecutiveConfigRequestSchema
+>;
+export type ActividadGrupalTiposGlobalConsecutiveConfigResponse = z.infer<
+  typeof actividadGrupalTiposGlobalConsecutiveConfigResponseSchema
+>;
 export type ActividadGrupalTiposListResponse = z.infer<
   typeof actividadGrupalTiposListResponseSchema
+>;
+export type ActividadGrupalGlobalSeries = z.infer<typeof actividadGrupalGlobalSeriesSchema>;
+export type UpdateActividadGrupalGlobalSeriesRequest = z.infer<
+  typeof updateActividadGrupalGlobalSeriesRequestSchema
 >;
 export type ActividadGrupalTrashListItem = z.infer<typeof actividadGrupalTrashListItemSchema>;
 export type ActividadGrupalTrashListResponse = z.infer<
   typeof actividadGrupalTrashListResponseSchema
 >;
-export type RestoreActividadGrupalResponse = z.infer<typeof restoreActividadGrupalResponseSchema>;
 export type ActividadGrupalListItem = z.infer<typeof actividadGrupalListItemSchema>;
 export type CreateActividadGrupalRequest = z.infer<typeof createActividadGrupalRequestSchema>;
 export type UpdateActividadGrupalRequest = z.infer<typeof updateActividadGrupalRequestSchema>;
@@ -485,6 +601,12 @@ export type ActividadGrupalActaCorrectionPreviewResponse = z.infer<
 >;
 export type ActividadGrupalActaCorrectionPreviewRequest = z.infer<
   typeof actividadGrupalActaCorrectionPreviewRequestSchema
+>;
+export type ActividadGrupalActaPrefixCorrectionPreviewRequest = z.infer<
+  typeof actividadGrupalActaPrefixCorrectionPreviewRequestSchema
+>;
+export type ApplyActividadGrupalActaPrefixCorrectionRequest = z.infer<
+  typeof applyActividadGrupalActaPrefixCorrectionRequestSchema
 >;
 export type ApplyActividadGrupalActaCorrectionRequest = z.infer<
   typeof applyActividadGrupalActaCorrectionRequestSchema

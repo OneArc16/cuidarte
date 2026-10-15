@@ -1,17 +1,27 @@
-import { type AdultoMayorListItem, type AuthUser } from "@cuidarte/contracts";
+import {
+  type AdultoMayorAttentionFilter,
+  type AdultoMayorListItem,
+  type AuthUser,
+} from "@cuidarte/contracts";
 import { Plus } from "lucide-react";
 import { useState } from "react";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { useSessionStorageState } from "@/shared/hooks/use-session-storage-state";
-import { buildAtencionIndividualCreatePath } from "@/features/atenciones-individuales/lib/atenciones-individuales-paths";
-import { buildHistoriaClinicaPath } from "@/features/atenciones-individuales/lib/atenciones-individuales-paths";
+import {
+  buildAtencionIndividualCreatePath,
+  buildHistoriaClinicaPath,
+  buildHistoriaMedicaPath,
+} from "@/features/atenciones-individuales/lib/atenciones-individuales-paths";
 import { canManageAlimentacion } from "@/features/alimentacion/lib/alimentacion-permissions";
 import { buildAlimentacionCreateFromAdultoPath } from "@/features/alimentacion/lib/alimentacion-paths";
 import {
   canCreateAtencionIndividual,
   canOpenHistoriaClinica,
+  canOpenHistoriaMedica,
 } from "@/features/atenciones-individuales/lib/historia-clinica-permissions";
+import { buildAtencionesEnfermeriaHistoryPath } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-paths";
+import { canReadHistoriaEnfermeria } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-permissions";
 import {
   canManageAdultosMayores,
   canManageAdultosMayoresTrash,
@@ -45,17 +55,23 @@ type ExportTarget = "excel" | "pdf" | null;
 
 export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexPageProps) {
   const [search, setSearch] = useSessionStorageState(`cuidarte:adultos-mayores:search:${user.id}`);
+  const [attentionType, setAttentionType] = useSessionStorageState<AdultoMayorAttentionFilter>(
+    `cuidarte:adultos-mayores:attention-type:${user.id}`,
+    "all",
+  );
   const [exportTarget, setExportTarget] = useState<ExportTarget>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [adultoMayorPendingTrash, setAdultoMayorPendingTrash] =
     useState<AdultoMayorListItem | null>(null);
-  const adultosMayoresQuery = useAdultosMayoresQuery({ search });
+  const adultosMayoresQuery = useAdultosMayoresQuery({ search, attentionType });
   const adultosMayores = adultosMayoresQuery.data?.adultosMayores ?? [];
   const showTenantColumn = user.role === "super_admin";
   const canManageRecords = canManageAdultosMayores(user);
   const canCreateClinicalAttention = canCreateAtencionIndividual(user);
   const hideAtencionIndividualAction = user.role === "enfermeria";
   const canOpenClinicalHistory = canOpenHistoriaClinica(user);
+  const canOpenMedicalHistory = canOpenHistoriaMedica(user);
+  const canOpenNursingHistory = canReadHistoriaEnfermeria(user);
   const canCreateFeedingRecord = canManageAlimentacion(user);
   const canImportRecords = canImportAdultosMayores(user);
   const canManageTrash = canManageAdultosMayoresTrash(user);
@@ -76,8 +92,8 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
     try {
       const blob =
         target === "excel"
-          ? await exportAdultosMayoresExcel(search)
-          : await exportAdultosMayoresPdf(search);
+          ? await exportAdultosMayoresExcel({ search, attentionType })
+          : await exportAdultosMayoresPdf({ search, attentionType });
 
       if (target === "excel") {
         downloadBlob(blob, "adultos-mayores.xlsx");
@@ -101,8 +117,10 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
         canImportAdultosMayores={canImportRecords}
         canManageTrash={canManageTrash}
         search={search}
+        attentionType={attentionType}
         isExporting={exportTarget !== null}
         onSearchChange={setSearch}
+        onAttentionTypeChange={setAttentionType}
         onImportAdultosMayores={() => navigate(ADULTOS_MAYORES_IMPORT_PATH)}
         onExportExcel={handleExportExcel}
         onExportPdf={handleExportPdf}
@@ -124,6 +142,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
 
       <AdultosMayoresTable
         adultosMayores={adultosMayores}
+        attentionType={attentionType}
         canManageAlimentacion={canCreateFeedingRecord}
         isLoading={adultosMayoresQuery.isLoading}
         showTenantColumn={showTenantColumn}
@@ -131,6 +150,8 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
         canManageAdultosMayores={canManageRecords}
         canManageTrash={canManageTrash}
         canOpenHistoriaClinica={canOpenClinicalHistory}
+        canOpenHistoriaMedica={canOpenMedicalHistory}
+        canOpenHistoriaEnfermeria={canOpenNursingHistory}
         hideAtencionIndividualAction={hideAtencionIndividualAction}
         onOpenAlimentacion={(adultoMayorId) =>
           navigate(buildAlimentacionCreateFromAdultoPath(adultoMayorId))
@@ -139,6 +160,10 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
           navigate(buildAtencionIndividualCreatePath(adultoMayorId))
         }
         onOpenHistoriaClinica={(adultoMayorId) => navigate(buildHistoriaClinicaPath(adultoMayorId))}
+        onOpenHistoriaEnfermeria={(adultoMayorId) =>
+          navigate(buildAtencionesEnfermeriaHistoryPath(adultoMayorId))
+        }
+        onOpenHistoriaMedica={(adultoMayorId) => navigate(buildHistoriaMedicaPath(adultoMayorId))}
         onEdit={(adultoMayorId) => navigate(buildAdultoMayorEditPath(adultoMayorId))}
         onSendToTrash={(adultoMayor) => {
           sendToTrashMutation.reset();

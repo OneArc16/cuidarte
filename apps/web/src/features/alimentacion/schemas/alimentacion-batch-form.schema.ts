@@ -12,13 +12,15 @@ import { getTodayDateInputValue } from "../lib/alimentacion-formatters";
 
 export const alimentacionBatchFormSchema = z.object({
   tenantId: z.string().trim(),
-  deliveryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  deliveryDates: z
+    .array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/))
+    .min(1, "Selecciona al menos un día de entrega."),
   organizer: alimentacionOrganizerSchema,
 });
 
 export type AlimentacionBatchFormValues = {
   tenantId: string;
-  deliveryDate: string;
+  deliveryDates: string[];
   organizer: AlimentacionOrganizer;
 };
 
@@ -33,7 +35,7 @@ export type AlimentacionBatchRowValues = {
 export function createDefaultAlimentacionBatchFormValues(): AlimentacionBatchFormValues {
   return {
     tenantId: "",
-    deliveryDate: getTodayDateInputValue(),
+    deliveryDates: [getTodayDateInputValue()],
     organizer: "director",
   };
 }
@@ -79,7 +81,7 @@ export function toCreateAlimentacionBatchRequest(
 ): CreateAlimentacionBatchRequest {
   return createAlimentacionBatchRequestSchema.parse({
     tenantId: values.tenantId.trim() === "" ? null : values.tenantId,
-    deliveryDate: values.deliveryDate,
+    deliveryDates: values.deliveryDates,
     organizer: values.organizer,
     registros: rows.map((row) => ({
       adultoMayorId: row.adultoMayor.id,

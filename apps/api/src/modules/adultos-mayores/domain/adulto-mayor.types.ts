@@ -1,5 +1,6 @@
 import {
   type AdultoMayorBloodType,
+  type AdultoMayorAttentionFilter,
   type AdultoMayorDocumentType,
   type AdultoMayorHealthRegime,
   type AdultoMayorSex,
@@ -18,6 +19,7 @@ export type AdultosMayoresScope =
 
 export type FindAdultosMayoresQuery = {
   search: string | null;
+  attentionType?: AdultoMayorAttentionFilter;
   scope: AdultosMayoresScope;
 };
 
@@ -146,6 +148,7 @@ export type AdultoMayorRecord = {
   createdAt: Date;
   updatedAt: Date;
   documentFile: AdultoMayorDocumentRecord | null;
+  deletedAt?: Date | null;
 };
 
 export type AdultoMayorTrashRecord = Pick<
@@ -173,12 +176,14 @@ export type AdultoMayorTrashRecord = Pick<
 export type SendAdultoMayorToTrashCommand = {
   id: string;
   actorUserId: string;
+  tenantId: string | null;
   reason: string;
 };
 
 export type RestoreAdultoMayorCommand = {
   id: string;
   actorUserId: string;
+  tenantId: string | null;
 };
 
 export type AdultoMayorStatusHistoryRecord = {

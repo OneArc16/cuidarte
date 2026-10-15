@@ -5,9 +5,6 @@ import { type AuthUser } from "@cuidarte/contracts";
 import "reflect-metadata";
 import { GUARDS_METADATA } from "@nestjs/common/constants";
 
-import { homeDashboardAccessRoleValues } from "@cuidarte/contracts";
-import { REQUIRED_ROLES_KEY } from "../auth/roles.decorator";
-import { RolesGuard } from "../auth/roles.guard";
 import { SessionGuard } from "../auth/session.guard";
 import { HomeController } from "./home.controller";
 
@@ -21,14 +18,8 @@ const currentUser: AuthUser = {
 };
 
 describe("HomeController", () => {
-  it("protects the dashboard with the expected roles and guards", () => {
-    assert.deepEqual(Reflect.getMetadata(REQUIRED_ROLES_KEY, HomeController), [
-      ...homeDashboardAccessRoleValues,
-    ]);
-    assert.deepEqual(Reflect.getMetadata(GUARDS_METADATA, HomeController), [
-      SessionGuard,
-      RolesGuard,
-    ]);
+  it("requires an authenticated session", () => {
+    assert.deepEqual(Reflect.getMetadata(GUARDS_METADATA, HomeController), [SessionGuard]);
   });
 
   it("passes the current user to the dashboard service", async () => {
