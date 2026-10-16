@@ -115,6 +115,7 @@ const ACTA_SECTION_TITLE_STYLES = `
         margin: 0;
         padding: 3px 5px;
         border: 1px solid #111;
+        border-bottom: 0;
         background: #f4f4f4;
         color: #000;
         font-size: 7pt;
@@ -288,7 +289,8 @@ export function buildActividadGrupalActaPdfHtml({
         min-height: 17mm;
         padding: 5px 7px;
         border: 1px solid #111;
-        border-top: 0;
+        box-decoration-break: clone;
+        -webkit-box-decoration-break: clone;
         color: #000;
         font-size: 6.9pt;
         line-height: 1.28;

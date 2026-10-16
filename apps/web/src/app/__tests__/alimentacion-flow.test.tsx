@@ -524,7 +524,6 @@ describe("App alimentacion flow", () => {
     renderAppAtPath("/registro-alimentacion/new");
 
     await user.click(await screen.findByRole("button", { name: /Días de entrega:/i }));
-    await user.click(screen.getByRole("button", { name: "Limpiar" }));
     expect(screen.getByText("Selecciona uno o varios días")).toBeInTheDocument();
     await user.click(screen.getByText("14", { selector: "button" }));
     await user.click(screen.getByText("15", { selector: "button" }));

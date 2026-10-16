@@ -8,8 +8,6 @@ import {
 } from "@cuidarte/contracts";
 import { z } from "zod";
 
-import { getTodayDateInputValue } from "../lib/alimentacion-formatters";
-
 export const alimentacionBatchFormSchema = z.object({
   tenantId: z.string().trim(),
   deliveryDates: z
@@ -35,7 +33,7 @@ export type AlimentacionBatchRowValues = {
 export function createDefaultAlimentacionBatchFormValues(): AlimentacionBatchFormValues {
   return {
     tenantId: "",
-    deliveryDates: [getTodayDateInputValue()],
+    deliveryDates: [],
     organizer: "director",
   };
 }

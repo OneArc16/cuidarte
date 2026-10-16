@@ -99,6 +99,23 @@ describe("actividad-grupal-acta-pdf-template", () => {
     assert.match(html, /\.acta-document__section-title[\s\S]*break-after: avoid;/);
   });
 
+  it("closes and restarts text-section borders when they span pages", () => {
+    const html = buildActividadGrupalActaPdfHtml({
+      detail: createDetail(),
+      logoDataUrl: null,
+      photoAssets: [],
+    });
+
+    assert.match(
+      html,
+      /\.acta-document__section-title\s*{[\s\S]*border-bottom: 0;/,
+    );
+    assert.match(
+      html,
+      /\.acta-document__section-body\s*{[\s\S]*border: 1px solid #111;[\s\S]*box-decoration-break: clone;[\s\S]*-webkit-box-decoration-break: clone;/,
+    );
+  });
+
   it("renders the letterhead as an unscaled full-page background", () => {
     const html = buildActividadGrupalActaPdfHtml({
       detail: createDetail(),
