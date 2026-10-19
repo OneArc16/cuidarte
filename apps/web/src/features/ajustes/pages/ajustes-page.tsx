@@ -834,7 +834,6 @@ function ActivityConsecutiveConfigDialog({
           {!isPeopleMode ? (
             <fieldset className="ajustes-consecutive-dialog__mode-selector">
               <legend>Tipo de consecutivo</legend>
-              <p>Define si todos comparten una serie o si cada equipo conserva la suya.</p>
               <div role="radiogroup" aria-label="Tipo de consecutivo">
                 <button
                   type="button"
@@ -874,13 +873,6 @@ function ActivityConsecutiveConfigDialog({
               <div className="ajustes-consecutive-dialog__series-header">
                 <div>
                   <h3 id="actividad-series-title">Serie especial</h3>
-                  <p>
-                    {specialSeriesEnabled
-                      ? consecutiveMode === "individual"
-                        ? "Cada equipo usa este prefijo con su propio consecutivo."
-                        : "Las actas de esta actividad usan su propio prefijo."
-                      : "Las actas usan la serie general."}
-                  </p>
                 </div>
                 <button
                   className="ajustes-consecutive-dialog__switch"
