@@ -13,6 +13,8 @@ import {
   type CreateAlimentacionBatchRequest,
   type CreateAlimentacionBatchResponse,
   type DeleteAlimentacionResponse,
+  type DeleteAlimentacionRecordsRequest,
+  type DeleteAlimentacionRecordsResponse,
   type UpdateAlimentacionRequest,
   alimentacionAdultoOptionsResponseSchema,
   alimentacionDetailSchema,
@@ -25,6 +27,7 @@ import {
   alimentacionTenantOptionsResponseSchema,
   createAlimentacionBatchResponseSchema,
   deleteAlimentacionResponseSchema,
+  deleteAlimentacionRecordsResponseSchema,
 } from "@cuidarte/contracts";
 
 import { getApiBaseUrl } from "@/shared/api/api-config";
@@ -137,6 +140,16 @@ export function deleteAlimentacionRecord(recordId: string): Promise<DeleteAlimen
     {
       method: "DELETE",
     },
+  );
+}
+
+export function deleteAlimentacionRecords(
+  request: DeleteAlimentacionRecordsRequest,
+): Promise<DeleteAlimentacionRecordsResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/registro-alimentacion/bulk`,
+    deleteAlimentacionRecordsResponseSchema,
+    { method: "DELETE", body: request },
   );
 }
 

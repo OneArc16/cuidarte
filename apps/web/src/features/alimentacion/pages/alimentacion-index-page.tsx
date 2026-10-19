@@ -1,10 +1,6 @@
-import {
-  type AlimentacionImportedFormatoVersion,
-  type AlimentacionListItem,
-  type AuthUser,
-} from "@cuidarte/contracts";
+import { type AlimentacionImportedFormatoVersion, type AuthUser } from "@cuidarte/contracts";
 import { Files, Plus } from "lucide-react";
-import { type ChangeEvent, useRef, useState } from "react";
+import { type ChangeEvent, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
@@ -13,7 +9,6 @@ import {
   buildAlimentacionFormatoEntregaPdfUrl,
   buildAlimentacionImportedFormatoVersionDownloadUrl,
 } from "../api/alimentacion-api";
-import { AlimentacionDeleteDialog } from "../components/alimentacion-delete-dialog";
 import { AlimentacionImportedPdfDialog } from "../components/alimentacion-imported-pdf-dialog";
 import { AlimentacionImportedPdfVersionsDialog } from "../components/alimentacion-imported-pdf-versions-dialog";
 import { AlimentacionBulkImportDialog } from "../components/alimentacion-bulk-import-dialog";
@@ -38,10 +33,15 @@ import {
   resolveAlimentacionApiError,
 } from "../lib/alimentacion-formatters";
 import {
+  type AlimentacionFilterState,
+  loadAlimentacionFilters,
+  saveAlimentacionFilters,
+} from "../lib/alimentacion-filter-state";
+import {
   useAlimentacionListQuery,
   useAlimentacionImportedFormatoVersionsQuery,
   useAlimentacionTenantOptionsQuery,
-  useDeleteAlimentacionRecordMutation,
+  useDeleteAlimentacionRecordsMutation,
   useImportAlimentacionFormatoEntregaMutation,
 } from "../model/alimentacion-queries";
 
@@ -72,21 +72,29 @@ type ImportedFormatoHistoryTarget = {
 const MAX_IMPORTED_FORMATO_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
 export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageProps) {
-  const [search, setSearch] = useState("");
-  const [deliveryMonth, setDeliveryMonth] = useState(getCurrentMonthInputValue());
-  const [selectedTenantId, setSelectedTenantId] = useState("");
+  const defaultFilters: AlimentacionFilterState = {
+    search: "",
+    deliveryMonth: getCurrentMonthInputValue(),
+    tenantId: "",
+  };
+  const [filters, setFilters] = useState(() => loadAlimentacionFilters(user.id, defaultFilters));
+  const { search, deliveryMonth, tenantId: selectedTenantId } = filters;
   const [exportingAdultoMayorId, setExportingAdultoMayorId] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [importTarget, setImportTarget] = useState<ImportTarget | null>(null);
   const [importDialog, setImportDialog] = useState<ImportDialogState | null>(null);
   const [historyTarget, setHistoryTarget] = useState<ImportedFormatoHistoryTarget | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<AlimentacionListItem | null>(null);
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [downloadingImportedVersionId, setDownloadingImportedVersionId] = useState<string | null>(
     null,
   );
   const importFileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    saveAlimentacionFilters(user.id, filters);
+  }, [filters, user.id]);
+
   const showTenantFilter = user.role === "super_admin";
   const tenantOptionsQuery = useAlimentacionTenantOptionsQuery(showTenantFilter);
   const canManageRecords = canManageAlimentacion(user);
@@ -108,7 +116,7 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
     tenantId: reportTenantId,
   });
   const importMutation = useImportAlimentacionFormatoEntregaMutation();
-  const deleteMutation = useDeleteAlimentacionRecordMutation();
+  const deleteMutation = useDeleteAlimentacionRecordsMutation();
   const importedVersionsQuery = useAlimentacionImportedFormatoVersionsQuery(
     historyTarget?.adultoMayorId ?? null,
     historyTarget?.deliveryMonth ?? null,
@@ -248,31 +256,22 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
     });
   }
 
-  function handleRequestDelete(record: AlimentacionListItem) {
+  function handleDeleteRecords(params: { fullName: string; recordIds: string[] }) {
     deleteMutation.reset();
-    setDeleteTarget(record);
-  }
-
-  function closeDeleteDialog() {
-    if (deleteMutation.isPending) {
-      return;
-    }
-
-    deleteMutation.reset();
-    setDeleteTarget(null);
-  }
-
-  function confirmDelete() {
-    if (deleteTarget === null) {
-      return;
-    }
-
-    deleteMutation.mutate(deleteTarget.id, {
-      onSuccess: () => {
-        toast.success(`Registro de alimentación eliminado para ${deleteTarget.fullName}.`);
-        setDeleteTarget(null);
+    deleteMutation.mutate(
+      { recordIds: params.recordIds },
+      {
+        onSuccess: () => {
+          toast.success(
+            `${params.recordIds.length} ${params.recordIds.length === 1 ? "día eliminado" : "días eliminados"} para ${params.fullName}.`,
+          );
+        },
+        onError: (error: unknown) =>
+          toast.error(
+            resolveAlimentacionApiError(error) ?? "No fue posible eliminar los días seleccionados.",
+          ),
       },
-    });
+    );
   }
 
   return (
@@ -324,9 +323,9 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
             />
           </div>
         }
-        onMonthChange={setDeliveryMonth}
-        onSearchChange={setSearch}
-        onTenantChange={setSelectedTenantId}
+        onMonthChange={(value) => setFilters((current) => ({ ...current, deliveryMonth: value }))}
+        onSearchChange={(value) => setFilters((current) => ({ ...current, search: value }))}
+        onTenantChange={(value) => setFilters((current) => ({ ...current, tenantId: value }))}
       />
 
       {registrosQuery.isError ? (
@@ -370,7 +369,7 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
         showDeliveredDays={canViewDeliveredDays}
         showTenantColumn={showTenantFilter}
         onExportFormato={handleExportFormato}
-        onDelete={handleRequestDelete}
+        onDeleteRecords={handleDeleteRecords}
         onImportFormato={handleRequestImport}
         onDownloadImportedFormato={(params) => void handleDownloadImportedFormato(params)}
         onOpenImportedFormatoHistory={openImportedFormatoHistory}
@@ -435,21 +434,6 @@ export function AlimentacionIndexPage({ navigate, user }: AlimentacionIndexPageP
           versions={importedVersionsQuery.data?.versions ?? []}
           onClose={() => setHistoryTarget(null)}
           onDownload={handleHistoryDownload}
-        />
-      ) : null}
-
-      {deleteTarget !== null ? (
-        <AlimentacionDeleteDialog
-          errorMessage={
-            deleteMutation.isError
-              ? (resolveAlimentacionApiError(deleteMutation.error) ??
-                "No fue posible eliminar el registro.")
-              : null
-          }
-          isPending={deleteMutation.isPending}
-          record={deleteTarget}
-          onClose={closeDeleteDialog}
-          onConfirm={confirmDelete}
         />
       ) : null}
     </section>

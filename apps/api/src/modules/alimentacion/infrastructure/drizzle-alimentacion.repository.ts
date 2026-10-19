@@ -45,6 +45,7 @@ import {
   type CreateAlimentacionImportedFormatoDownloadAuditCommand,
   type CreateAlimentacionBatchRecordCommand,
   type DeleteAlimentacionRecordCommand,
+  type DeleteAlimentacionRecordsCommand,
   type FindAlimentacionAdultoMayorByIdQuery,
   type FindLatestAlimentacionFormatoEmissionQuery,
   type FindAlimentacionFormatoEntregaByAdultoAndMonthQuery,
@@ -862,6 +863,41 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       await tx.delete(alimentacionRegistros).where(eq(alimentacionRegistros.id, command.id));
 
       return deletedRecord;
+    });
+  }
+
+  async deleteMany(
+    command: DeleteAlimentacionRecordsCommand,
+  ): Promise<AlimentacionRecord[] | null> {
+    const ids = [...new Set(command.ids)];
+
+    return await this.database.db.transaction(async (tx) => {
+      const rows = await tx
+        .select(this.getRecordSelection())
+        .from(alimentacionRegistros)
+        .innerJoin(adultosMayores, eq(adultosMayores.id, alimentacionRegistros.adultoMayorId))
+        .innerJoin(tenants, eq(tenants.id, alimentacionRegistros.tenantId))
+        .where(this.buildScopedWhere(command.scope, [inArray(alimentacionRegistros.id, ids)]));
+
+      if (rows.length !== ids.length) {
+        return null;
+      }
+
+      const deletedRecords = rows.map((row) => this.toRecord(row));
+
+      await tx.insert(auditLogs).values(
+        deletedRecords.map((record) => ({
+          actorUserId: command.actorUserId,
+          action: "alimentacion.deleted",
+          targetTenantId: record.tenantId,
+          summary: `Registro de alimentacion eliminado: ${record.fullName} (${record.deliveryDate})`,
+          metadata: { record: this.toAuditRecordSnapshot(record) },
+        })),
+      );
+
+      await tx.delete(alimentacionRegistros).where(inArray(alimentacionRegistros.id, ids));
+
+      return deletedRecords;
     });
   }
 

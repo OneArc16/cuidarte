@@ -327,3 +327,9 @@ export type DeleteAlimentacionRecordCommand = {
   actorUserId: string;
   scope: AlimentacionScope;
 };
+
+export type DeleteAlimentacionRecordsCommand = {
+  ids: string[];
+  actorUserId: string;
+  scope: AlimentacionScope;
+};

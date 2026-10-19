@@ -1,5 +1,6 @@
 import {
   type CreateAlimentacionBatchRequest,
+  type DeleteAlimentacionRecordsRequest,
   type AlimentacionImportedFormatoUploadResponse,
   type AlimentacionBulkImportConfirmRequest,
   type AlimentacionBulkImportValidateQuery,
@@ -144,6 +145,21 @@ export function useDeleteAlimentacionRecordMutation() {
         queryKey: alimentacionQueryKeys.detail(recordId),
       });
 
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["alimentacion"] }),
+        queryClient.invalidateQueries({ queryKey: ["home"] }),
+      ]);
+    },
+  });
+}
+
+export function useDeleteAlimentacionRecordsMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: DeleteAlimentacionRecordsRequest) =>
+      alimentacionApi.deleteAlimentacionRecords(request),
+    onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["alimentacion"] }),
         queryClient.invalidateQueries({ queryKey: ["home"] }),

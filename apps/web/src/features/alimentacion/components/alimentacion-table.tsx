@@ -5,12 +5,13 @@ import {
   Download,
   FileDown,
   History,
+  ListChecks,
   LoaderCircle,
   Pencil,
   Trash2,
   Upload,
 } from "lucide-react";
-import { Fragment, useCallback, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   formatAlimentacionOrganizer,
@@ -44,7 +45,7 @@ type AlimentacionTableProps = {
     versionId: string;
     originalName: string;
   }) => void;
-  onDelete: (record: AlimentacionListItem) => void;
+  onDeleteRecords: (params: { fullName: string; recordIds: string[] }) => void;
   onOpenImportedFormatoHistory: (params: {
     adultoMayorId: string;
     deliveryMonth: string;
@@ -74,7 +75,7 @@ export function AlimentacionTable({
   onExportFormato,
   onImportFormato,
   onDownloadImportedFormato,
-  onDelete,
+  onDeleteRecords,
   onOpenImportedFormatoHistory,
   exportingAdultoMayorId,
   importingAdultoMayorId,
@@ -84,6 +85,7 @@ export function AlimentacionTable({
   showTenantColumn,
 }: AlimentacionTableProps) {
   const [expandedGroupIds, setExpandedGroupIds] = useState<Set<string>>(new Set());
+  const [selectedRecordIds, setSelectedRecordIds] = useState<Set<string>>(new Set());
   const shouldReduceMotion = useReducedMotion();
   const toggleGroupRows = useCallback((groupId: string) => {
     setExpandedGroupIds((current) => {
@@ -142,6 +144,48 @@ export function AlimentacionTable({
         return right.deliveryMonth.localeCompare(left.deliveryMonth);
       });
   }, [records]);
+
+  useEffect(() => {
+    const availableIds = new Set(
+      records.filter((record) => record.canDelete).map((record) => record.id),
+    );
+
+    setSelectedRecordIds((current) => {
+      const next = new Set([...current].filter((id) => availableIds.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [records]);
+
+  function toggleRecordSelection(recordId: string) {
+    setSelectedRecordIds((current) => {
+      const next = new Set(current);
+      if (next.has(recordId)) {
+        next.delete(recordId);
+      } else {
+        next.add(recordId);
+      }
+      return next;
+    });
+  }
+
+  function toggleGroupSelection(recordsToToggle: AlimentacionListItem[]) {
+    const deletableIds = recordsToToggle
+      .filter((record) => record.canDelete)
+      .map((record) => record.id);
+    const areAllSelected = deletableIds.length > 0 && deletableIds.every((id) => selectedRecordIds.has(id));
+
+    setSelectedRecordIds((current) => {
+      const next = new Set(current);
+      for (const id of deletableIds) {
+        if (areAllSelected) {
+          next.delete(id);
+        } else {
+          next.add(id);
+        }
+      }
+      return next;
+    });
+  }
 
   if (isLoading) {
     return (
@@ -218,6 +262,13 @@ export function AlimentacionTable({
               const detailRecords = group.records.filter(
                 (record) => getRecordDeliveryMonth(record) === group.deliveryMonth,
               );
+              const deletableDetailRecords = detailRecords.filter((record) => record.canDelete);
+              const selectedDetailIds = deletableDetailRecords
+                .filter((record) => selectedRecordIds.has(record.id))
+                .map((record) => record.id);
+              const areAllDetailRecordsSelected =
+                deletableDetailRecords.length > 0 &&
+                selectedDetailIds.length === deletableDetailRecords.length;
               const importedFormato = latestRecord.importedFormato;
 
               return (
@@ -378,6 +429,47 @@ export function AlimentacionTable({
                                 ) : null}
                               </>
                             ) : null}
+                            {deletableDetailRecords.length > 0 ? (
+                              <>
+                                <button
+                                  className="alimentacion-row-action alimentacion-row-action--select"
+                                  type="button"
+                                  aria-label={`${areAllDetailRecordsSelected ? "Quitar selección de" : "Seleccionar todos los"} días de ${group.fullName}`}
+                                  data-tooltip={
+                                    areAllDetailRecordsSelected
+                                      ? "Quitar selección"
+                                      : "Seleccionar todos los días"
+                                  }
+                                  onClick={() => toggleGroupSelection(detailRecords)}
+                                >
+                                  <ListChecks aria-hidden="true" />
+                                </button>
+                                <button
+                                  className="alimentacion-row-action alimentacion-row-action--danger"
+                                  type="button"
+                                  aria-label={`Eliminar ${selectedDetailIds.length} días de alimentación de ${group.fullName}`}
+                                  data-tooltip={
+                                    selectedDetailIds.length === 0
+                                      ? "Selecciona días para eliminar"
+                                      : `Eliminar ${selectedDetailIds.length} días seleccionados`
+                                  }
+                                  disabled={selectedDetailIds.length === 0}
+                                  onClick={() => {
+                                    onDeleteRecords({
+                                      fullName: group.fullName,
+                                      recordIds: selectedDetailIds,
+                                    });
+                                    setSelectedRecordIds((current) => {
+                                      const next = new Set(current);
+                                      for (const id of selectedDetailIds) next.delete(id);
+                                      return next;
+                                    });
+                                  }}
+                                >
+                                  <Trash2 aria-hidden="true" />
+                                </button>
+                              </>
+                            ) : null}
                           </>
                         ) : null}
                         <button
@@ -434,6 +526,20 @@ export function AlimentacionTable({
                             <td>{formatAlimentacionStatus(record.auxilioTransporte)}</td>
                             {showTenantColumn ? <td>{record.tenantName}</td> : null}
                             <td>
+                              <div className="alimentacion-table-row-actions">
+                                {record.canDelete ? (
+                                  <label
+                                    className="alimentacion-detail-select"
+                                    title="Seleccionar día para eliminar"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedRecordIds.has(record.id)}
+                                      aria-label={`Seleccionar el día ${record.deliveryDate} de ${record.fullName}`}
+                                      onChange={() => toggleRecordSelection(record.id)}
+                                    />
+                                  </label>
+                                ) : null}
                               {canManageAlimentacion ? (
                                 <button
                                   className="alimentacion-row-action"
@@ -445,17 +551,7 @@ export function AlimentacionTable({
                                   <Pencil aria-hidden="true" />
                                 </button>
                               ) : null}
-                              {record.canDelete ? (
-                                <button
-                                  className="alimentacion-row-action alimentacion-row-action--danger"
-                                  type="button"
-                                  aria-label={`Eliminar alimentación de ${record.fullName} del día ${record.deliveryDate}`}
-                                  data-tooltip="Eliminar registro"
-                                  onClick={() => onDelete(record)}
-                                >
-                                  <Trash2 aria-hidden="true" />
-                                </button>
-                              ) : null}
+                              </div>
                             </td>
                           </motion.tr>
                         ))

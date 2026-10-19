@@ -300,6 +300,21 @@ export const deleteAlimentacionResponseSchema = z.object({
   success: z.literal(true),
 });
 
+export const deleteAlimentacionRecordsRequestSchema = z.object({
+  recordIds: z
+    .array(z.uuid())
+    .min(1, "Selecciona al menos un día para eliminar.")
+    .max(1000)
+    .refine((recordIds) => new Set(recordIds).size === recordIds.length, {
+      message: "No puedes repetir días en la eliminación.",
+    }),
+});
+
+export const deleteAlimentacionRecordsResponseSchema = z.object({
+  success: z.literal(true),
+  deletedCount: z.number().int().positive(),
+});
+
 export const alimentacionLookupByAdultoMayorResponseSchema = z.object({
   adultoMayor: alimentacionAdultoOptionSchema,
   existingRecordId: z.uuid().nullable(),
@@ -359,6 +374,12 @@ export type AlimentacionAdultoOptionsResponse = z.infer<
 >;
 export type CreateAlimentacionBatchResponse = z.infer<typeof createAlimentacionBatchResponseSchema>;
 export type DeleteAlimentacionResponse = z.infer<typeof deleteAlimentacionResponseSchema>;
+export type DeleteAlimentacionRecordsRequest = z.infer<
+  typeof deleteAlimentacionRecordsRequestSchema
+>;
+export type DeleteAlimentacionRecordsResponse = z.infer<
+  typeof deleteAlimentacionRecordsResponseSchema
+>;
 export type AlimentacionLookupByAdultoMayorResponse = z.infer<
   typeof alimentacionLookupByAdultoMayorResponseSchema
 >;

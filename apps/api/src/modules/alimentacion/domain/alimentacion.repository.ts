@@ -16,6 +16,7 @@ import {
   type CreateAlimentacionImportedFormatoDownloadAuditCommand,
   type CreateAlimentacionBatchRecordCommand,
   type DeleteAlimentacionRecordCommand,
+  type DeleteAlimentacionRecordsCommand,
   type FindAlimentacionAdultoMayorByIdQuery,
   type FindLatestAlimentacionFormatoEmissionQuery,
   type FindAlimentacionFormatoEntregaByAdultoAndMonthQuery,
@@ -70,6 +71,7 @@ export type AlimentacionRepository = {
   createMany(command: CreateAlimentacionBatchRecordCommand): Promise<number>;
   update(command: UpdateAlimentacionRecordCommand): Promise<AlimentacionRecord>;
   delete(command: DeleteAlimentacionRecordCommand): Promise<AlimentacionRecord | null>;
+  deleteMany(command: DeleteAlimentacionRecordsCommand): Promise<AlimentacionRecord[] | null>;
   createFormatoEntregaExportAudit(
     command: CreateAlimentacionFormatoEntregaExportAuditCommand,
   ): Promise<void>;

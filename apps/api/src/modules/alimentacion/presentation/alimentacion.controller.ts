@@ -41,6 +41,8 @@ import {
   alimentacionLookupByAdultoMayorQuerySchema,
   alimentacionLookupByAdultoMayorResponseSchema,
   alimentacionTenantOptionsResponseSchema,
+  deleteAlimentacionRecordsRequestSchema,
+  deleteAlimentacionRecordsResponseSchema,
   deleteAlimentacionResponseSchema,
   createAlimentacionBatchRequestSchema,
   createAlimentacionBatchResponseSchema,
@@ -320,6 +322,18 @@ export class AlimentacionController {
     const record = await this.alimentacionService.updateRegistro(id, command, request.currentUser);
 
     return alimentacionDetailSchema.parse(record);
+  }
+
+  @Delete("bulk")
+  @ApiOkResponse({ description: "Registros de alimentacion eliminados." })
+  @ApiNotFoundResponse({ description: "Uno o más registros no fueron encontrados." })
+  @ApiForbiddenResponse({ description: "El usuario no puede eliminar los registros solicitados." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  async deleteRegistros(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
+    const command = parseZodSchema(deleteAlimentacionRecordsRequestSchema, body);
+    const result = await this.alimentacionService.deleteRegistros(command.recordIds, request.currentUser);
+
+    return deleteAlimentacionRecordsResponseSchema.parse({ success: true, ...result });
   }
 
   @Delete(":id")

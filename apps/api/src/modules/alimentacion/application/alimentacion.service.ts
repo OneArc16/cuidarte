@@ -305,6 +305,22 @@ export class AlimentacionService {
     }
   }
 
+  async deleteRegistros(ids: string[], actor: AuthUser): Promise<{ deletedCount: number }> {
+    this.ensureCanDelete(actor);
+    const scope = this.resolveScopeOrThrow(actor);
+    const deletedRecords = await this.alimentacionRepository.deleteMany({
+      ids,
+      actorUserId: actor.id,
+      scope,
+    });
+
+    if (deletedRecords === null) {
+      throw new NotFoundException("Uno o más registros de alimentación no fueron encontrados.");
+    }
+
+    return { deletedCount: deletedRecords.length };
+  }
+
   async prepareFormatoEntregaExport(
     adultoMayorId: string,
     query: AlimentacionFormatoEntregaExportQuery,

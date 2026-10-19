@@ -933,6 +933,9 @@ function createRepository(
 
       return overrides.deletedRecord ?? alimentacionRecord;
     },
+    async deleteMany(command) {
+      return command.ids.map((id) => ({ ...alimentacionRecord, id }));
+    },
     async createFormatoEntregaExportAudit(command) {
       formatoEntregaAuditCommands.push(command);
     },
