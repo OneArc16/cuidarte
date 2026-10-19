@@ -1,8 +1,11 @@
 import { http, HttpResponse } from "msw";
 
-import { backofficeTenantDetailFixture, empleadoFixture } from "../fixtures";
+import { backofficeTenantDetailFixture, empleadoFixture, equiposFixture } from "../fixtures";
 
 export const empleadosHandlers = [
+  http.get("http://localhost:3001/api/equipos", () =>
+    HttpResponse.json({ equipos: equiposFixture }),
+  ),
   http.get("http://localhost:3001/api/empleados", () =>
     HttpResponse.json({ empleados: [empleadoFixture] }),
   ),

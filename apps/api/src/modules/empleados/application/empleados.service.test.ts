@@ -14,6 +14,7 @@ import { type EmpleadosRepository } from "../domain/empleados.repository";
 
 const tenantId = "7c11e9f0-1bb0-4a59-a1f9-5392ba7e0054";
 const otherTenantId = "3436e34e-05b3-4da7-9895-5c4ef847d23a";
+const teamId = "1b2138cb-4b5f-4f7d-8c95-871102334455";
 
 const adminUser: AuthUser = {
   id: "9f75c51f-74ab-40b7-84ef-9e4a93d14af1",
@@ -71,6 +72,9 @@ const records: EmpleadoRecord[] = [
     documentNumber: "1010101010",
     phone: "3105551212",
     role: "medico",
+    teamId: null,
+    teamName: null,
+    teamIsVisible: null,
     isActive: true,
     isTenantOwner: false,
     actividadGrupalAllowedOrganizers: [],
@@ -94,6 +98,9 @@ const records: EmpleadoRecord[] = [
     documentNumber: "2020202020",
     phone: null,
     role: "director",
+    teamId: null,
+    teamName: null,
+    teamIsVisible: null,
     isActive: true,
     isTenantOwner: false,
     actividadGrupalAllowedOrganizers: [],
@@ -190,6 +197,7 @@ describe("EmpleadosService", () => {
             documentNumber: "1010101010",
             phone: "3125553030",
             role: "medico",
+            teamId: null,
             isActive: true,
           },
           auditorUser,
@@ -209,6 +217,7 @@ describe("EmpleadosService", () => {
     assert.equal(result.isActive, true);
     assert.equal(repository.created[0]?.tenantId, tenantId);
     assert.equal(repository.created[0]?.role, "admin");
+    assert.equal(repository.created[0]?.teamId, teamId);
   });
 
   it("creates tenant employees in the director tenant", async () => {
@@ -260,6 +269,7 @@ describe("EmpleadosService", () => {
         documentNumber: "1010101010",
         phone: "3125553030",
         role: "medico",
+        teamId,
         isActive: false,
         password: "Cuidarte123!",
       },
@@ -268,6 +278,7 @@ describe("EmpleadosService", () => {
 
     assert.equal(result.phone, "3125553030");
     assert.equal(result.isActive, false);
+    assert.equal(repository.updates[0]?.teamId, teamId);
     assert.equal(repository.auditEntries[0]?.length, 3);
     assert.equal(repository.auditEntries[0]?.[1]?.action, "empleados.deactivated");
     assert.equal(repository.auditEntries[0]?.[2]?.action, "empleados.password_reset");
@@ -288,6 +299,7 @@ describe("EmpleadosService", () => {
         documentNumber: "1010101010",
         phone: "3001234567",
         role: "medico",
+        teamId: null,
         isActive: true,
       },
       directorUser,
@@ -347,6 +359,7 @@ describe("EmpleadosService", () => {
             documentNumber: "900123123",
             phone: "3105550000",
             role: "admin",
+            teamId: null,
             isActive: false,
           },
           adminUser,
@@ -389,6 +402,7 @@ describe("EmpleadosService", () => {
             documentNumber: activeDirector.documentNumber ?? "2020202020",
             phone: activeDirector.phone,
             role: "admin",
+            teamId: null,
             isActive: true,
           },
           adminUser,
@@ -409,6 +423,7 @@ function createCommand() {
     documentNumber: "3030303030",
     phone: "3115552020",
     role: "admin" as const,
+    teamId,
     isActive: true,
     password: "Cuidarte123!",
   };
@@ -510,6 +525,8 @@ function createRepository(
         documentNumber: command.documentNumber,
         phone: command.phone,
         role: command.role,
+        teamId: command.teamId,
+        teamName: command.teamId === null ? null : "Salud",
         isActive: command.isActive,
       } satisfies EmpleadoRecord;
     },
@@ -541,6 +558,8 @@ function createRepository(
         documentNumber: command.documentNumber,
         phone: command.phone,
         role: command.role,
+        teamId: command.teamId,
+        teamName: command.teamId === null ? null : "Salud",
         isActive: command.isActive,
       } satisfies EmpleadoRecord;
     },

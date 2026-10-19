@@ -19,6 +19,7 @@ export const empleadoFormSchema = z.object({
   documentNumber: requiredTextSchema(80),
   phone: optionalTextSchema(40),
   role: userRoleSchema,
+  teamId: z.string(),
   isActive: z.boolean(),
   password: z.string().max(128),
 });
@@ -36,6 +37,7 @@ export function createDefaultEmpleadoFormValues(): EmpleadoFormValues {
     documentNumber: "",
     phone: "",
     role: "director",
+    teamId: "",
     isActive: true,
     password: "",
   };
@@ -52,6 +54,7 @@ export function toEmpleadoFormValues(detail: EmpleadoDetail): EmpleadoFormValues
     documentNumber: detail.documentNumber ?? "",
     phone: detail.phone ?? "",
     role: detail.role,
+    teamId: detail.team?.id ?? "",
     isActive: detail.isActive,
     password: "",
   };
@@ -68,6 +71,7 @@ export function toCreateEmpleadoRequest(values: EmpleadoFormValues): CreateEmple
     documentNumber: values.documentNumber,
     phone: toNullableText(values.phone),
     role: values.role,
+    teamId: toNullableTeamId(values.teamId),
     isActive: values.isActive,
     password: values.password,
   };
@@ -85,6 +89,7 @@ export function toUpdateEmpleadoRequest(values: EmpleadoFormValues): UpdateEmple
     documentNumber: values.documentNumber,
     phone: toNullableText(values.phone),
     role: values.role,
+    teamId: toNullableTeamId(values.teamId),
     isActive: values.isActive,
     ...(password === "" ? {} : { password }),
   };
@@ -94,4 +99,8 @@ function toNullableText(value: string): string | null {
   const trimmedValue = value.trim();
 
   return trimmedValue === "" ? null : trimmedValue;
+}
+
+function toNullableTeamId(value: string): CreateEmpleadoRequest["teamId"] {
+  return value === "" ? null : value;
 }

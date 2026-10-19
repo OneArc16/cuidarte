@@ -8,6 +8,7 @@ import {
   authUserFixture,
   directorUserFixture,
   empleadoFixture,
+  equiposFixture,
 } from "../../test/fixtures";
 import { server } from "../../test/test-server";
 import { renderAppAtPath, resetAppTestState } from "../../test/helpers/app-test.helpers";
@@ -23,6 +24,7 @@ type EmpleadoMutationPayload = {
   documentNumber?: string;
   phone?: string;
   role?: string;
+  teamId?: string | null;
   isActive?: boolean;
   password?: string;
 };
@@ -123,6 +125,7 @@ describe("App empleados flow", () => {
     await user.type(screen.getByLabelText("Numero de documento"), "2020202020");
     await user.type(screen.getByLabelText("Telefono"), "3115552020");
     await user.selectOptions(screen.getByLabelText("Tipo de usuario"), "admin");
+    await user.selectOptions(screen.getByLabelText("Equipo asignado"), equiposFixture[0].id);
     await user.click(screen.getByRole("button", { name: /Inactivar usuario/i }));
     await user.type(screen.getByLabelText("Contrasena"), "Cuidarte123!");
     await user.click(screen.getByRole("button", { name: "Guardar" }));
@@ -142,6 +145,7 @@ describe("App empleados flow", () => {
       documentNumber: "2020202020",
       phone: "3115552020",
       role: "admin",
+      teamId: equiposFixture[0].id,
       isActive: false,
       password: "Cuidarte123!",
     });
@@ -189,6 +193,7 @@ describe("App empleados flow", () => {
     await user.type(screen.getByLabelText("Correo electronico"), "paola.ruiz@centro-demo.test");
     await user.type(screen.getByLabelText("Numero de documento"), "3030303030");
     await user.selectOptions(screen.getByLabelText("Tipo de usuario"), "medico");
+    await user.selectOptions(screen.getByLabelText("Equipo asignado"), equiposFixture[1].id);
     await user.type(screen.getByLabelText("Contrasena"), "Cuidarte123!");
     await user.click(screen.getByRole("button", { name: "Guardar" }));
 
@@ -200,6 +205,7 @@ describe("App empleados flow", () => {
     expect(createPayload).toMatchObject({
       tenantId: null,
       role: "medico",
+      teamId: equiposFixture[1].id,
       email: "paola.ruiz@centro-demo.test",
     });
   });
@@ -225,6 +231,7 @@ describe("App empleados flow", () => {
 
     await user.clear(phoneInput);
     await user.type(phoneInput, "3125553030");
+    await user.selectOptions(screen.getByLabelText("Equipo asignado"), equiposFixture[4].id);
     await user.click(screen.getByRole("button", { name: /Inactivar usuario/i }));
     await user.click(screen.getByRole("button", { name: "Guardar" }));
 
@@ -238,6 +245,7 @@ describe("App empleados flow", () => {
       documentNumber: empleadoFixture.documentNumber,
       phone: "3125553030",
       role: empleadoFixture.role,
+      teamId: equiposFixture[4].id,
       isActive: false,
     });
     expect(updatePayload).not.toHaveProperty("password");

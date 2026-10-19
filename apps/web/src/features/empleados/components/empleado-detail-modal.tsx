@@ -94,6 +94,12 @@ export function EmpleadoDetailModal({ empleadoId, onClose, showTenant }: Emplead
               <dd>{formatEmpleadoRole(detail.role)}</dd>
             </div>
             <div>
+              <dt>Equipo asignado</dt>
+              <dd>
+                {detail.team?.name ?? "Sin equipo asignado"}
+              </dd>
+            </div>
+            <div>
               <dt>Estado</dt>
               <dd>{formatEmpleadoStatus(detail.isActive)}</dd>
             </div>

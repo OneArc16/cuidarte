@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
 import { EmpleadoDirectorSignaturePanel } from "../components/empleado-director-signature-panel";
+import { useEquiposQuery } from "@/features/equipos/model/equipos-queries";
 import { EmpleadoForm } from "../components/empleado-form";
 import { EMPLEADOS_PATH } from "../lib/empleados-paths";
 import { resolveEmpleadosApiError } from "../lib/empleados-formatters";
@@ -19,6 +20,7 @@ type EmpleadoEditPageProps = {
 export function EmpleadoEditPage({ empleadoId, navigate, user }: EmpleadoEditPageProps) {
   const empleadoQuery = useEmpleadoQuery(empleadoId);
   const updateMutation = useUpdateEmpleadoMutation(empleadoId);
+  const equiposQuery = useEquiposQuery();
 
   if (empleadoQuery.isLoading) {
     return (
@@ -69,6 +71,7 @@ export function EmpleadoEditPage({ empleadoId, navigate, user }: EmpleadoEditPag
         detail={empleadoQuery.data}
         isPending={updateMutation.isPending}
         error={resolveEmpleadosApiError(updateMutation.error)}
+        teamOptions={equiposQuery.data?.equipos ?? []}
         onCancel={() => navigate(EMPLEADOS_PATH)}
         onSubmit={(values) => {
           updateMutation.mutate(values, {

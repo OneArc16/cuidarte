@@ -11,6 +11,7 @@ import { AuthModule } from "./modules/auth/auth.module";
 import { BackofficeModule } from "./modules/backoffice/backoffice.module";
 import { EmpleadosModule } from "./modules/empleados/empleados.module";
 import { EpsModule } from "./modules/eps/eps.module";
+import { EquiposModule } from "./modules/equipos/equipos.module";
 import { HealthModule } from "./modules/health/health.module";
 import { HomeModule } from "./modules/home/home.module";
 import { ReportsModule } from "./modules/reports/reports.module";
@@ -28,6 +29,7 @@ import { UbicacionesModule } from "./modules/ubicaciones/ubicaciones.module";
     AuthModule,
     BackofficeModule,
     EmpleadosModule,
+    EquiposModule,
     EpsModule,
     HealthModule,
     HomeModule,

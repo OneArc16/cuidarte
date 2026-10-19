@@ -1,0 +1,1 @@
+ALTER TABLE "employee_teams" ADD COLUMN "is_visible" boolean DEFAULT true NOT NULL;

@@ -223,6 +223,7 @@ export class EmpleadosService {
           metadata: {
             email: command.email,
             role: command.role,
+            teamId: command.teamId,
             documentNumber: command.documentNumber,
             isActive: command.isActive,
           },
@@ -389,6 +390,7 @@ export class EmpleadosService {
             email: command.after.email,
             fullName: joinFullName(command.after),
             role: command.after.role,
+            teamId: command.after.teamId,
             documentNumber: command.after.documentNumber,
             phone: command.after.phone,
             isActive: command.after.isActive,
@@ -438,6 +440,10 @@ export class EmpleadosService {
       email: record.email,
       phone: record.phone,
       role: record.role,
+      team:
+        record.teamId === null || record.teamName === null || record.teamIsVisible === null
+          ? null
+          : { id: record.teamId, name: record.teamName, isVisible: record.teamIsVisible },
       isActive: record.isActive,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
@@ -508,6 +514,7 @@ export class EmpleadosService {
       email: record.email,
       fullName: record.fullName,
       role: record.role,
+      teamId: record.teamId,
       documentNumber: record.documentNumber,
       phone: record.phone,
       isActive: record.isActive,

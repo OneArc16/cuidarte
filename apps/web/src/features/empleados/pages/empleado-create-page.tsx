@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
 import { EmpleadoForm } from "../components/empleado-form";
+import { useEquiposQuery } from "@/features/equipos/model/equipos-queries";
 import { buildEmpleadoEditPath, EMPLEADOS_PATH } from "../lib/empleados-paths";
 import { resolveEmpleadosApiError } from "../lib/empleados-formatters";
 import { canEditEmpleados } from "../lib/empleados-permissions";
@@ -21,6 +22,7 @@ export function EmpleadoCreatePage({ navigate, user }: EmpleadoCreatePageProps) 
   const shouldSelectTenant = user.role === "super_admin";
   const tenantOptionsQuery = useEmpleadoTenantOptionsQuery(shouldSelectTenant);
   const createMutation = useCreateEmpleadoMutation();
+  const equiposQuery = useEquiposQuery();
   const tenantOptions = tenantOptionsQuery.data?.tenants ?? [];
   const queryError = shouldSelectTenant ? resolveEmpleadosApiError(tenantOptionsQuery.error) : null;
   const mutationError = resolveEmpleadosApiError(createMutation.error);
@@ -49,6 +51,7 @@ export function EmpleadoCreatePage({ navigate, user }: EmpleadoCreatePageProps) 
         currentUserRole={user.role}
         shouldSelectTenant={shouldSelectTenant}
         tenantOptions={tenantOptions}
+        teamOptions={equiposQuery.data?.equipos ?? []}
         isPending={createMutation.isPending}
         error={mutationError ?? queryError}
         onCancel={() => navigate(EMPLEADOS_PATH)}

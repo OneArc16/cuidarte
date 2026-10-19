@@ -14,6 +14,7 @@ import {
   Save,
   Search,
   ShieldCheck,
+  UsersRound,
   Waypoints,
   X,
 } from "lucide-react";
@@ -23,7 +24,9 @@ import { toast } from "sonner";
 import { useActividadGrupalTenantOptionsQuery } from "@/features/actividades-grupales/model/actividades-grupales-queries";
 import { resolveActividadesGrupalesApiError } from "@/features/actividades-grupales/lib/actividades-grupales-formatters";
 import { canManageEmpleadoPermissions } from "@/features/empleados/lib/empleados-permissions";
+import { canManageAjustes } from "../lib/ajustes-permissions";
 import { AjustesPermissionsDialog } from "../components/ajustes-permissions-dialog";
+import { AjustesEquiposDialog } from "../components/ajustes-equipos-dialog";
 import { AjustesActivityOrganizerPermissionsDialog } from "../components/ajustes-activity-organizer-permissions-dialog";
 import {
   useUpdateActividadGrupalTipoGlobalConsecutiveConfigMutation,
@@ -63,6 +66,7 @@ export function AjustesPage({ user }: AjustesPageProps) {
     useState<ActividadGrupalTipo | null>(null);
   const [globalSeriesActivity, setGlobalSeriesActivity] = useState<ActivityCatalogRow | null>(null);
   const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
+  const [equiposDialogOpen, setEquiposDialogOpen] = useState(false);
   const [organizerPermissionsDialogOpen, setOrganizerPermissionsDialogOpen] = useState(false);
   const isAllTenantsSelected = shouldSelectTenant && selectedTenantId === ALL_TENANTS_VALUE;
   const effectiveTenantId = shouldSelectTenant
@@ -190,8 +194,20 @@ export function AjustesPage({ user }: AjustesPageProps) {
     <section className="actividades-stack ajustes-page" aria-label="Ajustes">
       <div className="home-dashboard-section__header ajustes-page__header">
         <span className="eyebrow">Ajustes</span>
-        {canManageEmpleadoPermissions(user) ? (
-          <div className="ajustes-page__header-actions">
+        <div className="ajustes-page__header-actions">
+          {canManageAjustes(user) ? (
+            <button
+              className="ajustes-page__icon-button ajustes-page__icon-button--teams"
+              type="button"
+              aria-label="Administrar equipos"
+              data-tooltip="Crear y editar equipos"
+              onClick={() => setEquiposDialogOpen(true)}
+            >
+              <UsersRound aria-hidden="true" />
+            </button>
+          ) : null}
+          {canManageEmpleadoPermissions(user) ? (
+            <>
             <button
               className="ajustes-page__icon-button ajustes-page__icon-button--permissions"
               type="button"
@@ -210,8 +226,9 @@ export function AjustesPage({ user }: AjustesPageProps) {
             >
               <Waypoints aria-hidden="true" />
             </button>
-          </div>
-        ) : null}
+            </>
+          ) : null}
+        </div>
       </div>
 
       <section className="actividad-form-panel">
@@ -622,6 +639,7 @@ export function AjustesPage({ user }: AjustesPageProps) {
       {permissionsDialogOpen ? (
         <AjustesPermissionsDialog onClose={() => setPermissionsDialogOpen(false)} />
       ) : null}
+      {equiposDialogOpen ? <AjustesEquiposDialog onClose={() => setEquiposDialogOpen(false)} /> : null}
       {organizerPermissionsDialogOpen ? (
         <AjustesActivityOrganizerPermissionsDialog
           onClose={() => setOrganizerPermissionsDialogOpen(false)}

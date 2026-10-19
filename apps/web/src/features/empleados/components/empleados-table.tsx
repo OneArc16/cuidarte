@@ -25,7 +25,7 @@ export function EmpleadosTable({
   onView,
   showTenantColumn,
 }: EmpleadosTableProps) {
-  const columnCount = showTenantColumn ? 8 : 7;
+  const columnCount = showTenantColumn ? 9 : 8;
 
   return (
     <section className="empleados-table-wrap" aria-label="Usuarios registrados">
@@ -38,6 +38,7 @@ export function EmpleadosTable({
             <th scope="col">Email</th>
             <th scope="col">Telefono</th>
             <th scope="col">Tipo de usuario</th>
+            <th scope="col">Equipo</th>
             <th scope="col">Estado</th>
             <th scope="col">
               <span className="visually-hidden">Acciones</span>
@@ -67,6 +68,19 @@ export function EmpleadosTable({
               <td>{empleado.email}</td>
               <td>{formatEmpleadoPhone(empleado.phone)}</td>
               <td>{formatEmpleadoRole(empleado.role)}</td>
+              <td>
+                {empleado.team === null ? (
+                  <span className="empleado-team-badge" data-state="unassigned">Sin equipo</span>
+                ) : (
+                  <span
+                    className="empleado-team-badge"
+                    data-state={empleado.team.isVisible ? "assigned" : "hidden"}
+                    title={empleado.team.isVisible ? undefined : "Equipo oculto"}
+                  >
+                    {empleado.team.name}
+                  </span>
+                )}
+              </td>
               <td>
                 <span
                   className="empleado-status-badge"

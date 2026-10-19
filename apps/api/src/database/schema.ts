@@ -283,6 +283,7 @@ export const users = pgTable(
     documentNumber: varchar("document_number", { length: 80 }),
     phone: varchar("phone", { length: 40 }),
     role: userRole("role").notNull(),
+    teamId: uuid("team_id").references(() => employeeTeams.id, { onDelete: "restrict" }),
     isTenantOwner: boolean("is_tenant_owner").notNull().default(false),
     actividadGrupalAllowedOrganizers: jsonb("actividad_grupal_allowed_organizers")
       .$type<string[]>()
@@ -311,6 +312,19 @@ export const users = pgTable(
       .where(sql`${table.tenantId} is null and ${table.documentNumber} is not null`),
     index("users_tenant_id_idx").on(table.tenantId),
   ],
+);
+
+export const employeeTeams = pgTable(
+  "employee_teams",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: varchar("name", { length: 120 }).notNull(),
+    normalizedName: varchar("normalized_name", { length: 120 }).notNull(),
+    isVisible: boolean("is_visible").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("employee_teams_normalized_name_unique").on(table.normalizedName)],
 );
 
 export const userPermissions = pgTable(

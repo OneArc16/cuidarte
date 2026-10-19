@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { userRoleSchema } from "./auth.js";
+import { equipoOptionSchema } from "./equipos.js";
 
 const requiredTextSchema = (maxLength: number) => z.string().trim().min(1).max(maxLength);
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -65,6 +66,7 @@ export const empleadoListItemSchema = z.object({
   email: z.email().max(320),
   phone: z.string().max(40).nullable(),
   role: userRoleSchema,
+  team: equipoOptionSchema.nullable(),
   isActive: z.boolean(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
@@ -129,6 +131,7 @@ export const empleadoCommandSchema = z.object({
   documentNumber: requiredTextSchema(80),
   phone: nullableTextSchema(40),
   role: userRoleSchema,
+  teamId: z.uuid().nullable().optional().default(null),
   isActive: z.boolean(),
 });
 

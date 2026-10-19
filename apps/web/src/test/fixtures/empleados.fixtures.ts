@@ -13,6 +13,7 @@ export const empleadoFixture = {
   email: "laura.perez@centro-demo.test",
   phone: "3105551212",
   role: "medico",
+  team: null,
   isActive: true,
   tenantActiveSigner: null,
   createdAt: "2026-04-21T12:00:00.000Z",

@@ -17,6 +17,150 @@
     transform 160ms ease;
 }
 
+.ajustes-page__icon-button--teams {
+  border-color: rgb(29 158 117 / 34%);
+  background: #ecfaf4;
+  color: #087257;
+}
+
+.ajustes-equipos-dialog-backdrop {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgb(13 39 32 / 38%);
+  backdrop-filter: blur(5px);
+}
+
+.ajustes-equipos-dialog {
+  width: min(590px, 100%);
+  max-height: min(650px, calc(100dvh - 44px));
+  overflow: auto;
+  border: 1px solid rgb(8 80 65 / 18%);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 26px 70px rgb(11 54 43 / 28%);
+}
+
+.ajustes-equipos-dialog__header,
+.ajustes-equipos-dialog__create,
+.ajustes-equipos-dialog__list li,
+.ajustes-equipos-dialog__edit-form {
+  display: flex;
+  align-items: center;
+}
+
+.ajustes-equipos-dialog__header {
+  justify-content: space-between;
+  gap: 18px;
+  padding: 23px 24px 18px;
+  border-bottom: 1px solid #e0ebe6;
+}
+
+.ajustes-equipos-dialog__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #087257;
+  font-size: 0.67rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ajustes-equipos-dialog__eyebrow svg { width: 15px; height: 15px; }
+.ajustes-equipos-dialog__header h2 { margin: 9px 0 4px; color: #17362d; font-size: 1.45rem; }
+.ajustes-equipos-dialog__header p { margin: 0; color: #6b7d76; font-size: 0.87rem; }
+
+.ajustes-equipos-dialog__close,
+.ajustes-equipos-dialog__list button {
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #087257;
+  cursor: pointer;
+}
+
+.ajustes-equipos-dialog__close { width: 34px; height: 34px; border-radius: 9px; background: #f0f7f4; }
+.ajustes-equipos-dialog__close svg { width: 18px; height: 18px; }
+.ajustes-equipos-dialog__body { display: grid; gap: 18px; padding: 20px 24px 24px; }
+
+.ajustes-equipos-dialog__create { align-items: end; gap: 10px; }
+.ajustes-equipos-dialog__create label { display: grid; flex: 1; gap: 6px; }
+.ajustes-equipos-dialog__create label > span { color: #193b31; font-size: 0.76rem; font-weight: 850; }
+.ajustes-equipos-dialog input { min-height: 42px; padding: 0 12px; border: 1px solid #c9ddd4; border-radius: 9px; color: #18362d; outline: 0; }
+.ajustes-equipos-dialog input:focus { border-color: #199c75; box-shadow: 0 0 0 3px rgb(25 156 117 / 13%); }
+.ajustes-equipos-dialog__create-button {
+  display: grid;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: #61c0a3;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 7px 15px rgb(27 144 108 / 16%);
+  transition: background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.ajustes-equipos-dialog__create-button svg { width: 20px; height: 20px; stroke-width: 2.25; }
+.ajustes-equipos-dialog__create-button:hover:not(:disabled),
+.ajustes-equipos-dialog__create-button:focus-visible {
+  background: #279a79;
+  box-shadow: 0 9px 18px rgb(27 144 108 / 24%);
+  transform: translateY(-1px);
+}
+.ajustes-equipos-dialog__create-button:focus-visible { outline: 3px solid rgb(25 156 117 / 22%); outline-offset: 2px; }
+.ajustes-equipos-dialog__create-button:disabled { cursor: not-allowed; opacity: 0.45; box-shadow: none; }
+.ajustes-equipos-dialog__list { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.ajustes-equipos-dialog__list li {
+  justify-content: space-between;
+  min-height: 52px;
+  gap: 12px;
+  padding: 8px 10px 8px 14px;
+  border: 1px solid #dfebe6;
+  border-radius: 10px;
+  background: #fbfdfc;
+  transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+.ajustes-equipos-dialog__list li:hover,
+.ajustes-equipos-dialog__list li:focus-within {
+  border-color: #b9dfd0;
+  background: #f4fbf8;
+  box-shadow: 0 8px 18px rgb(12 92 70 / 9%);
+  transform: translateX(3px);
+}
+.ajustes-equipos-dialog__team-name { display: flex; min-width: 0; align-items: center; gap: 8px; }
+.ajustes-equipos-dialog__list strong { color: #1b382f; font-size: 0.9rem; }
+.ajustes-equipos-dialog__team-name span { padding: 3px 6px; border-radius: 5px; background: #eef1f0; color: #738079; font-size: 0.63rem; font-weight: 850; letter-spacing: 0.04em; text-transform: uppercase; }
+.ajustes-equipos-dialog__actions { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 2px; }
+.ajustes-equipos-dialog__actions button { gap: 6px; padding: 7px 9px; border-radius: 7px; font-size: 0.76rem; font-weight: 850; }
+.ajustes-equipos-dialog__actions button:first-child { color: #66766f; }
+.ajustes-equipos-dialog__list button:hover, .ajustes-equipos-dialog__list button:focus-visible { background: #e8f6f0; }
+.ajustes-equipos-dialog__list svg { width: 15px; height: 15px; }
+.ajustes-equipos-dialog__edit-form { width: 100%; gap: 7px; }
+.ajustes-equipos-dialog__edit-form input { flex: 1; min-width: 0; min-height: 36px; }
+.ajustes-equipos-dialog__edit-form button { width: 34px; height: 34px; border-radius: 7px; }
+.ajustes-equipos-dialog__muted { margin: 0; color: #75857f; font-size: 0.86rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ajustes-equipos-dialog__list li { transition: none; }
+  .ajustes-equipos-dialog__list li:hover,
+  .ajustes-equipos-dialog__list li:focus-within { transform: none; }
+}
+
+@media (max-width: 600px) {
+  .ajustes-equipos-dialog-backdrop { padding: 12px; }
+  .ajustes-equipos-dialog__header, .ajustes-equipos-dialog__body { padding-right: 16px; padding-left: 16px; }
+  .ajustes-equipos-dialog__create { align-items: stretch; flex-direction: column; }
+}
+
 .ajustes-organizer-permissions-dialog {
   width: min(780px, calc(100vw - 44px));
   max-height: min(620px, calc(100dvh - 44px));

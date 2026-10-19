@@ -99,6 +99,7 @@ export type EmpleadoCommandRecord = {
   documentNumber: string;
   phone: string | null;
   role: UserRole;
+  teamId: string | null;
   isActive: boolean;
   passwordHash?: string;
 };
@@ -203,6 +204,9 @@ export type EmpleadoRecord = {
   documentNumber: string | null;
   phone: string | null;
   role: UserRole;
+  teamId: string | null;
+  teamName: string | null;
+  teamIsVisible: boolean | null;
   isActive: boolean;
   isTenantOwner: boolean;
   actividadGrupalAllowedOrganizers: ActividadGrupalOrganizer[];

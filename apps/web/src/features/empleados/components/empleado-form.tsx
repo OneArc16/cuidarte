@@ -1,6 +1,7 @@
 import {
   type AuthUser,
   type EmpleadoDetail,
+  type EquipoOption,
   type EmpleadoTenantOption,
   type CreateEmpleadoRequest,
   type UpdateEmpleadoRequest,
@@ -30,6 +31,7 @@ type EmpleadoFormProps =
       error: string | null;
       isPending: boolean;
       shouldSelectTenant: boolean;
+      teamOptions: EquipoOption[];
       tenantOptions: EmpleadoTenantOption[];
       onCancel: () => void;
       onSubmit: (values: CreateEmpleadoRequest) => void;
@@ -40,6 +42,7 @@ type EmpleadoFormProps =
       detail: EmpleadoDetail;
       error: string | null;
       isPending: boolean;
+      teamOptions: EquipoOption[];
       footerAction?: ReactNode;
       onCancel: () => void;
       onSubmit: (values: UpdateEmpleadoRequest) => void;
@@ -63,6 +66,10 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
   const selectedRole = watch("role");
   const isActive = watch("isActive");
   const roleOptions = getAssignableEmpleadoRoles(props.currentUserRole);
+  const selectedTeamId = watch("teamId");
+  const teamOptions = props.teamOptions.filter(
+    (team) => team.isVisible || team.id === selectedTeamId,
+  );
   const shouldShowTenantSelect =
     props.mode === "create" && props.shouldSelectTenant && selectedRole !== "super_admin";
 
@@ -252,6 +259,24 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
               {roleOptions.map((role) => (
                 <option key={role} value={role}>
                   {formatEmpleadoRole(role)}
+                </option>
+              ))}
+            </select>
+          </EmpleadoFieldGroup>
+
+          <EmpleadoFieldGroup
+            className="empleado-form-field--compact"
+            label="Equipo asignado"
+            error={getError("teamId")}
+          >
+            <select
+              aria-invalid={getError("teamId") === undefined ? "false" : "true"}
+              {...form.register("teamId")}
+            >
+              <option value="">Sin equipo asignado</option>
+              {teamOptions.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
                 </option>
               ))}
             </select>

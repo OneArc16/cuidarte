@@ -9,6 +9,7 @@ import {
   tenantActiveSigners,
   tenantDirectorSignatureAssignments,
   tenants,
+  employeeTeams,
   users,
   userPermissions,
 } from "../../../database/schema";
@@ -50,6 +51,9 @@ type EmpleadoSelectionRow = {
   documentNumber: string | null;
   phone: string | null;
   role: EmpleadoRecord["role"];
+  teamId: string | null;
+  teamName: string | null;
+  teamIsVisible: boolean | null;
   isActive: boolean;
   isTenantOwner: boolean;
   actividadGrupalAllowedOrganizers: string[];
@@ -66,6 +70,7 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       .select(this.getEmpleadoSelection())
       .from(users)
       .leftJoin(tenants, eq(tenants.id, users.tenantId))
+      .leftJoin(employeeTeams, eq(employeeTeams.id, users.teamId))
       .where(this.buildWhere(query))
       .orderBy(asc(users.fullName));
 
@@ -77,6 +82,7 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       .select(this.getEmpleadoSelection())
       .from(users)
       .leftJoin(tenants, eq(tenants.id, users.tenantId))
+      .leftJoin(employeeTeams, eq(employeeTeams.id, users.teamId))
       .where(this.buildScopedWhere(query.scope, [eq(users.id, query.id)]))
       .limit(1);
 
@@ -119,6 +125,7 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       .select(this.getEmpleadoSelection())
       .from(users)
       .leftJoin(tenants, eq(tenants.id, users.tenantId))
+      .leftJoin(employeeTeams, eq(employeeTeams.id, users.teamId))
       .where(and(...conditions))
       .limit(1);
 
@@ -139,6 +146,7 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       .select(this.getEmpleadoSelection())
       .from(users)
       .leftJoin(tenants, eq(tenants.id, users.tenantId))
+      .leftJoin(employeeTeams, eq(employeeTeams.id, users.teamId))
       .where(and(...conditions))
       .limit(1);
 
@@ -667,6 +675,9 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       documentNumber: users.documentNumber,
       phone: users.phone,
       role: users.role,
+      teamId: users.teamId,
+      teamName: employeeTeams.name,
+      teamIsVisible: employeeTeams.isVisible,
       isActive: users.isActive,
       isTenantOwner: users.isTenantOwner,
       actividadGrupalAllowedOrganizers: users.actividadGrupalAllowedOrganizers,
@@ -686,6 +697,7 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       documentNumber: command.documentNumber,
       phone: command.phone,
       role: command.role,
+      teamId: command.teamId,
       isActive: command.isActive,
     } satisfies Partial<typeof users.$inferInsert>;
   }
@@ -712,6 +724,7 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       .select(this.getEmpleadoSelection())
       .from(users)
       .leftJoin(tenants, eq(tenants.id, users.tenantId))
+      .leftJoin(employeeTeams, eq(employeeTeams.id, users.teamId))
       .where(eq(users.id, id))
       .limit(1);
 
