@@ -71,6 +71,51 @@ describe("ActividadGrupalTiposService", () => {
       ),
     );
   });
+
+  it("starts a new sequence for every team when an activity becomes individual", async () => {
+    const current = createTypeRecord({
+      consecutiveMode: "group",
+      consecutivePrefix: "MANU",
+      consecutiveNextValue: 8,
+      consecutiveCreatorUserIds: [actor.id],
+    });
+    const commands: Parameters<ActividadGrupalTiposRepository["updateConsecutiveConfig"]>[0][] = [];
+    const repository = {
+      findById: async () => current,
+      findCreatorOptions: async () => [
+        { id: actor.id, fullName: actor.fullName, role: actor.role },
+      ],
+      updateConsecutiveConfig: async (
+        command: Parameters<ActividadGrupalTiposRepository["updateConsecutiveConfig"]>[0],
+      ) => {
+        commands.push(command);
+        return {
+          ...current,
+          consecutiveMode: command.consecutiveMode,
+          consecutivePrefix: command.prefix,
+          consecutiveNextValue: command.nextValue,
+          consecutiveCreatorUserIds: command.creatorUserIds,
+        };
+      },
+    } as unknown as ActividadGrupalTiposRepository;
+    const service = new ActividadGrupalTiposService(repository);
+
+    const result = await service.updateConsecutiveConfig(
+      current.id,
+      {
+        enabled: true,
+        consecutiveMode: "individual",
+        prefix: "MANU",
+        nextValue: 8,
+        creatorUserIds: [actor.id],
+      },
+      { ...actor, permissions: ["ajustes.actividades.manage"] },
+    );
+
+    assert.equal(commands[0]?.nextValue, 1);
+    assert.equal(result.consecutiveMode, "individual");
+    assert.equal(result.consecutiveConfig?.nextValue, 1);
+  });
 });
 
 function createTypeRecord(
@@ -85,6 +130,7 @@ function createTypeRecord(
     tenantId,
     name: "Actividad",
     normalizedName: "actividad",
+    consecutiveMode: "group" as const,
     consecutivePrefix: null,
     consecutiveNextValue: null,
     consecutiveCreatorUserIds: [],

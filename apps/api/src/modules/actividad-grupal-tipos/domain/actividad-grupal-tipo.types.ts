@@ -1,4 +1,4 @@
-import { type UserRole } from "@cuidarte/contracts";
+import { type ActividadGrupalConsecutiveMode, type UserRole } from "@cuidarte/contracts";
 
 export type ActividadGrupalTipoCreatorOptionRecord = {
   id: string;
@@ -11,6 +11,7 @@ export type ActividadGrupalTipoRecord = {
   tenantId: string;
   name: string;
   normalizedName: string;
+  consecutiveMode: ActividadGrupalConsecutiveMode;
   consecutivePrefix: string | null;
   consecutiveNextValue: number | null;
   consecutiveCreatorUserIds: string[];
@@ -48,6 +49,7 @@ export type UpdateActividadGrupalTipoStatusCommand = {
 export type UpdateActividadGrupalTipoConsecutiveConfigCommand = {
   id: string;
   actorUserId: string;
+  consecutiveMode: ActividadGrupalConsecutiveMode;
   prefix: string | null;
   nextValue: number | null;
   creatorUserIds: string[];

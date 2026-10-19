@@ -23,10 +23,12 @@ const enfermeriaUserId = "22222222-2222-4222-8222-222222222222";
 const directorUserId = "33333333-3333-4333-8333-333333333333";
 const inactiveEmpleadoId = "44444444-4444-4444-8444-444444444444";
 const activityTypeId = "55555555-5555-4555-8555-555555555555";
+const saludTeamId = "c7f8d66f-26c0-4df4-9b1d-8c26a9c9537f";
 
 const medicoUser: AuthUser = {
   id: medicoUserId,
   tenantId,
+  teamId: saludTeamId,
   email: "medico@centro-demo.test",
   fullName: "Medico Centro Demo",
   role: "medico",
@@ -36,6 +38,7 @@ const medicoUser: AuthUser = {
 const enfermeriaUser: AuthUser = {
   id: enfermeriaUserId,
   tenantId,
+  teamId: saludTeamId,
   email: "enfermeria@centro-demo.test",
   fullName: "Enfermera Centro Demo",
   role: "enfermeria",
@@ -319,7 +322,35 @@ describe("ActividadesGrupalesService", () => {
     assert.equal(result.tenantId, tenantId);
     assert.equal(result.actaNumber, "FISIO-001");
     assert.equal(repository.created[0]?.tenantId, tenantId);
+    assert.equal(repository.created[0]?.teamId, saludTeamId);
+    assert.equal(repository.created[0]?.consecutiveMode, "group");
     assert.deepEqual(repository.created[0]?.employeeIds, [medicoUserId, enfermeriaUserId]);
+  });
+
+  it("requires a team assignment before creating an activity", async () => {
+    const repository = createRepository();
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+
+    await assert.rejects(
+      () =>
+        service.createActividadGrupal(
+          {
+            tenantId: null,
+            activityName: "Jornada psicomotriz",
+            activityType: "fisioterapia",
+            activityTypeId,
+            activityDate: "2026-04-23",
+            startTime: "08:30",
+            endTime: "10:00",
+            organizer: "medico",
+            employeeIds: [medicoUserId],
+          },
+          { ...medicoUser, teamId: null },
+        ),
+      { constructor: BadRequestException },
+    );
+
+    assert.equal(repository.created.length, 0);
   });
 
   it("rejects creation for a different organizer when the person lacks the explicit scope", async () => {
@@ -550,12 +581,22 @@ describe("ActividadesGrupalesService", () => {
 });
 
 function createRepository(): ActividadesGrupalesRepository & {
-  created: { tenantId: string; employeeIds: string[] }[];
+  created: {
+    tenantId: string;
+    teamId: string;
+    consecutiveMode: "group" | "individual";
+    employeeIds: string[];
+  }[];
   corrections: CorrectActividadGrupalActaNumberCommand[];
   queries: FindActividadesGrupalesQuery[];
 } {
   const queries: FindActividadesGrupalesQuery[] = [];
-  const created: { tenantId: string; employeeIds: string[] }[] = [];
+  const created: {
+    tenantId: string;
+    teamId: string;
+    consecutiveMode: "group" | "individual";
+    employeeIds: string[];
+  }[] = [];
   const corrections: CorrectActividadGrupalActaNumberCommand[] = [];
   const employeesByTenant = new Map<string, ActividadGrupalEmpleadoOptionRecord[]>([
     [
@@ -662,6 +703,8 @@ function createRepository(): ActividadesGrupalesRepository & {
     async create(command) {
       created.push({
         tenantId: command.tenantId,
+        teamId: command.teamId,
+        consecutiveMode: command.consecutiveMode,
         employeeIds: command.employeeIds,
       });
 

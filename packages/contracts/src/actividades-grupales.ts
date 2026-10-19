@@ -210,6 +210,7 @@ export const actividadGrupalTipoSchema = z.object({
   tenantId: z.uuid(),
   name: z.string().min(1).max(120),
   normalizedName: z.string().min(1).max(120),
+  consecutiveMode: z.enum(["group", "individual"]).default("group"),
   consecutiveConfig: z
     .object({
       prefix: z.string().min(2).max(24),
@@ -271,6 +272,7 @@ export const updateActividadGrupalTipoStatusRequestSchema = z.object({
 export const updateActividadGrupalTipoConsecutiveConfigRequestSchema = z
   .object({
     enabled: z.boolean().default(true),
+    consecutiveMode: z.enum(["group", "individual"]).default("group"),
     prefix: z.string().trim().toUpperCase().min(2).max(24).optional(),
     nextValue: z.number().int().min(1).max(2_147_483_647).optional(),
     creatorUserIds: z.array(z.uuid()).default([]),
@@ -303,6 +305,7 @@ export const updateActividadGrupalTipoGlobalConsecutiveConfigRequestSchema = z
   .object({
     activityTypeIds: z.array(z.uuid()).min(1),
     enabled: z.boolean().default(true),
+    consecutiveMode: z.enum(["group", "individual"]).default("group"),
     prefix: z.string().trim().toUpperCase().min(2).max(24).optional(),
   })
   .superRefine((value, context) => {
@@ -539,6 +542,7 @@ export type ActividadGrupalEmpleadoOption = z.infer<typeof actividadGrupalEmplea
 export type ActividadGrupalIntegranteOption = z.infer<typeof actividadGrupalIntegranteOptionSchema>;
 export type ActividadGrupalSupportFile = z.infer<typeof actividadGrupalSupportFileSchema>;
 export type ActividadGrupalTipo = z.infer<typeof actividadGrupalTipoSchema>;
+export type ActividadGrupalConsecutiveMode = ActividadGrupalTipo["consecutiveMode"];
 export type ActividadGrupalTipoCreatorOption = z.infer<
   typeof actividadGrupalTipoCreatorOptionSchema
 >;

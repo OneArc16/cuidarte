@@ -75,6 +75,7 @@ export function ActividadGrupalForm({
   const { getValues, reset, resetField, setError, setValue, watch } = form;
   const employeeIds = watch("employeeIds");
   const organizerValue = watch("organizer");
+  const requiresTeamAssignment = mode === "create" && user.teamId == null;
   const isTenantSelected = !shouldSelectTenant || selectedTenantId.trim() !== "";
   const availableEmployees = useMemo(
     () =>
@@ -84,6 +85,10 @@ export function ActividadGrupalForm({
     [formOptions?.empleados],
   );
   const activityTypeOptions = useMemo(() => {
+    if (requiresTeamAssignment) {
+      return [];
+    }
+
     const options = [...(formOptions?.activityTypes ?? [])];
 
     if (
@@ -94,6 +99,7 @@ export function ActividadGrupalForm({
         ...currentActivityType,
         tenantId: selectedTenantId,
         normalizedName: currentActivityType.name.toLowerCase(),
+        consecutiveMode: "group",
         consecutiveConfig: null,
         createdAt: "",
         updatedAt: "",
@@ -102,7 +108,7 @@ export function ActividadGrupalForm({
     }
 
     return options;
-  }, [currentActivityType, formOptions?.activityTypes, selectedTenantId]);
+  }, [currentActivityType, formOptions?.activityTypes, requiresTeamAssignment, selectedTenantId]);
   const organizerOptions = useMemo(
     () =>
       mode === "create"
@@ -241,6 +247,13 @@ export function ActividadGrupalForm({
             return;
           }
 
+          if (requiresTeamAssignment) {
+            toast.error("Debes tener un equipo asignado.", {
+              id: "actividad-team-required",
+            });
+            return;
+          }
+
           onSubmit(values);
         }, handleInvalidSubmit)(event);
       }}
@@ -252,7 +265,7 @@ export function ActividadGrupalForm({
             <strong>{mode === "create" ? "Automatico" : "Asignado"}</strong>
             <small>
               {mode === "create"
-                ? "Se asignara automaticamente al guardar, segun el organizador y el centro."
+                ? "Se asignara automáticamente al guardar según el tipo de actividad y el equipo."
                 : "El consecutivo es de solo lectura. Usa la correccion administrativa si aplica."}
             </small>
           </div>
@@ -298,7 +311,7 @@ export function ActividadGrupalForm({
               <strong>Consecutivo automatico</strong>
               <span>
                 {mode === "create"
-                  ? "El numero se asignara automaticamente al guardar."
+                  ? "El número se asignará automáticamente al guardar."
                   : "El numero actual no se modifica en la edicion ordinaria."}
               </span>
             </div>
@@ -314,14 +327,19 @@ export function ActividadGrupalForm({
               />
             </ActividadGrupalFieldGroup>
 
-            <ActividadGrupalFieldGroup label="Tipo de actividad" error={getError("activityTypeId")}>
+            <ActividadGrupalFieldGroup
+              label="Tipo de actividad"
+              error={getError("activityTypeId")}
+              hint={requiresTeamAssignment ? "Debes tener un equipo asignado." : undefined}
+            >
               <select
+                aria-label="Tipo de actividad"
                 aria-invalid={getError("activityTypeId") === undefined ? "false" : "true"}
-                disabled={!isTenantSelected || isFormOptionsLoading}
+                disabled={!isTenantSelected || isFormOptionsLoading || requiresTeamAssignment}
                 {...form.register("activityTypeId")}
               >
                 <option value="">Seleccionar</option>
-                {activityTypeOptions.length === 0 ? (
+                {!requiresTeamAssignment && activityTypeOptions.length === 0 ? (
                   <option value="" disabled>
                     No hay tipos disponibles para tu usuario
                   </option>

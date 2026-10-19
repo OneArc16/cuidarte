@@ -25,6 +25,7 @@ import {
   actividadGrupalDiligenciamientos,
   actividadGrupalEmpleados,
   actividadGrupalGlobalSeriesCounters,
+  actividadGrupalTipoTeamCounters,
   actividadGrupalTipos,
   actividadesGrupales,
   adultosMayores,
@@ -414,12 +415,15 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     return await this.database.db.transaction(async (tx) => {
       const now = new Date();
       const actaOrganizer = resolveActividadGrupalActaOrganizer(command.organizer);
-      const isGlobalSeries = command.customConsecutive?.scope === "global";
-      const actaSeriesKey = isGlobalSeries
-        ? "global"
-        : command.customConsecutive === null
-          ? `legacy:${actaOrganizer}`
-          : `activity-type:${command.activityTypeId}`;
+      const isIndividualSeries = command.consecutiveMode === "individual";
+      const isGlobalSeries = !isIndividualSeries && command.customConsecutive?.scope === "global";
+      const actaSeriesKey = isIndividualSeries
+        ? `activity-type:${command.activityTypeId}:team:${command.teamId}`
+        : isGlobalSeries
+          ? "global"
+          : command.customConsecutive === null
+            ? `legacy:${actaOrganizer}`
+            : `activity-type:${command.activityTypeId}`;
       await tx.execute(
         sql`select pg_advisory_xact_lock(hashtext(${`actividades-grupales-acta:${command.tenantId}`}))`,
       );
@@ -443,15 +447,45 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
             .from(actividadGrupalGlobalSeriesCounters)
             .where(eq(actividadGrupalGlobalSeriesCounters.tenantId, command.tenantId))
         : [];
-      const nextSequence = isGlobalSeries
-        ? Math.max((globalCounter?.lastValue ?? 0) + 1, highestActiveSequence + 1)
-        : (command.customConsecutive?.nextValue ??
-          findNextAvailableActividadGrupalActaSequence(
-            activeActaSequences.map((row) => row.actaSequence),
-          ));
+      const [individualCounter] = isIndividualSeries
+        ? await tx
+            .insert(actividadGrupalTipoTeamCounters)
+            .values({
+              activityTypeId: command.activityTypeId,
+              teamId: command.teamId,
+              lastValue: Math.max(
+                command.customConsecutive?.nextValue ?? 1,
+                highestActiveSequence + 1,
+              ),
+              updatedAt: now,
+            })
+            .onConflictDoUpdate({
+              target: [
+                actividadGrupalTipoTeamCounters.activityTypeId,
+                actividadGrupalTipoTeamCounters.teamId,
+              ],
+              set: {
+                lastValue: sql`greatest(${actividadGrupalTipoTeamCounters.lastValue} + 1, ${highestActiveSequence + 1})`,
+                updatedAt: now,
+              },
+            })
+            .returning({ lastValue: actividadGrupalTipoTeamCounters.lastValue })
+        : [];
+      const nextSequence = isIndividualSeries
+        ? individualCounter?.lastValue
+        : isGlobalSeries
+          ? Math.max((globalCounter?.lastValue ?? 0) + 1, highestActiveSequence + 1)
+          : (command.customConsecutive?.nextValue ??
+            findNextAvailableActividadGrupalActaSequence(
+              activeActaSequences.map((row) => row.actaSequence),
+            ));
+
+      if (nextSequence === undefined) {
+        throw new Error("No fue posible generar el consecutivo individual del equipo.");
+      }
       const counterFloor = Math.max(nextSequence, highestActiveSequence);
 
-      if (!isGlobalSeries) {
+      if (!isGlobalSeries && !isIndividualSeries) {
         await tx
           .insert(actividadGrupalActaOrganizerCounters)
           .values({
@@ -517,7 +551,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
               updatedAt: now,
             },
           });
-      } else if (command.customConsecutive !== null) {
+      } else if (command.customConsecutive !== null && !isIndividualSeries) {
         await tx
           .update(actividadGrupalTipos)
           .set({ consecutiveNextValue: nextSequence + 1, updatedAt: now })
@@ -540,6 +574,8 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           actaNumber,
           actaOrganizer,
           actaSequence: nextSequence,
+          consecutiveMode: command.consecutiveMode,
+          teamId: isIndividualSeries ? command.teamId : null,
           activityType: command.activityType,
           organizer: command.organizer,
           involvedEmployeesCount: command.employeeIds.length,

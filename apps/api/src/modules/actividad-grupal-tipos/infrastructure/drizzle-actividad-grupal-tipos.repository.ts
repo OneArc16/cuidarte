@@ -175,6 +175,7 @@ export class DrizzleActividadGrupalTiposRepository implements ActividadGrupalTip
       const [updated] = await tx
         .update(actividadGrupalTipos)
         .set({
+          consecutiveMode: command.consecutiveMode,
           consecutivePrefix: command.prefix,
           consecutiveNextValue: command.nextValue,
           consecutiveCreatorUserIds:
@@ -195,6 +196,7 @@ export class DrizzleActividadGrupalTiposRepository implements ActividadGrupalTip
         summary: "Consecutivo configurado para actividad grupal",
         metadata: {
           activityTypeId: updated.id,
+          consecutiveMode: command.consecutiveMode,
           prefix: command.prefix,
           nextValue: command.nextValue,
           creatorUserIds: command.creatorUserIds,
@@ -231,6 +233,7 @@ export class DrizzleActividadGrupalTiposRepository implements ActividadGrupalTip
       tenantId: actividadGrupalTipos.tenantId,
       name: actividadGrupalTipos.name,
       normalizedName: actividadGrupalTipos.normalizedName,
+      consecutiveMode: actividadGrupalTipos.consecutiveMode,
       consecutivePrefix: actividadGrupalTipos.consecutivePrefix,
       consecutiveNextValue: actividadGrupalTipos.consecutiveNextValue,
       consecutiveCreatorUserIds: actividadGrupalTipos.consecutiveCreatorUserIds,

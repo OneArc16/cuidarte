@@ -3221,6 +3221,72 @@
   background: #fff;
 }
 
+.ajustes-consecutive-dialog__mode-selector {
+  margin: 0 0 20px;
+  padding: 0;
+  border: 0;
+}
+
+.ajustes-consecutive-dialog__mode-selector legend {
+  margin-bottom: 4px;
+  color: #1b2c2a;
+  font-size: 1rem;
+  font-weight: 760;
+}
+
+.ajustes-consecutive-dialog__mode-selector > p {
+  margin: 0 0 12px;
+  color: #687a75;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.ajustes-consecutive-dialog__mode-selector > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ajustes-consecutive-dialog__mode-selector button {
+  display: grid;
+  gap: 2px;
+  min-height: 66px;
+  padding: 11px 13px;
+  border: 1px solid #d6e0dc;
+  border-radius: 12px;
+  color: #52645e;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ajustes-consecutive-dialog__mode-selector button strong {
+  color: #29403a;
+  font-size: 0.9rem;
+}
+
+.ajustes-consecutive-dialog__mode-selector button span {
+  font-size: 0.78rem;
+}
+
+.ajustes-consecutive-dialog__mode-selector button:hover:not(:disabled),
+.ajustes-consecutive-dialog__mode-selector button:focus-visible {
+  border-color: #6ebca6;
+  outline: 3px solid rgb(110 188 166 / 16%);
+}
+
+.ajustes-consecutive-dialog__mode-selector button.is-selected {
+  border-color: #188166;
+  color: #135d4b;
+  background: #e8f6f1;
+  box-shadow: inset 0 0 0 1px rgb(24 129 102 / 12%);
+}
+
+.ajustes-consecutive-dialog__mode-selector button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .ajustes-consecutive-dialog__series-header {
   display: flex;
   align-items: flex-start;

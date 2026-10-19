@@ -1,6 +1,7 @@
 import {
   type AdultoMayorStatus,
   type ActividadGrupalOrganizer,
+  type ActividadGrupalConsecutiveMode,
   type ActividadGrupalResponsibleDepartment,
   type ActividadGrupalSupportFileKind,
   type ActividadGrupalType,
@@ -82,8 +83,14 @@ export type CreateActividadGrupalRecordCommand = {
   startTime: string;
   endTime: string;
   organizer: ActividadGrupalOrganizer;
+  teamId: string;
+  consecutiveMode: ActividadGrupalConsecutiveMode;
   employeeIds: string[];
-  customConsecutive: { prefix: string; nextValue: number; scope?: "global" | "activity-type" } | null;
+  customConsecutive: {
+    prefix: string;
+    nextValue: number;
+    scope?: "global" | "activity-type";
+  } | null;
 };
 
 export type UpdateActividadGrupalRecordCommand = {

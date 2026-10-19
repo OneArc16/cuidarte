@@ -118,6 +118,7 @@ export class ActividadesGrupalesService {
           tenantId,
           name: "Actividad",
           normalizedName: "actividad",
+          consecutiveMode: "group",
           consecutiveConfig: null,
           isActive: true,
           createdAt: new Date().toISOString(),
@@ -131,6 +132,7 @@ export class ActividadesGrupalesService {
           tenantId,
           name: "Actividad",
           normalizedName: "actividad",
+          consecutiveMode: "group",
           consecutiveConfig: null,
           isActive: true,
           createdAt: new Date().toISOString(),
@@ -183,7 +185,9 @@ export class ActividadesGrupalesService {
     const tenantId = this.resolveTenantIdForForm(actor, query.tenantId);
     const [empleados, activityTypes] = await Promise.all([
       this.actividadesGrupalesRepository.findActiveEmpleadoOptions(tenantId),
-      this.actividadGrupalTiposService.listForSessionForm(tenantId, actor),
+      actor.teamId === null || actor.teamId === undefined
+        ? Promise.resolve([])
+        : this.actividadGrupalTiposService.listForSessionForm(tenantId, actor),
     ]);
 
     return {
@@ -206,6 +210,11 @@ export class ActividadesGrupalesService {
     }
 
     const tenantId = this.resolveTenantIdForCreate(actor, command.tenantId);
+
+    if (actor.teamId === null || actor.teamId === undefined) {
+      throw new BadRequestException("Debes tener un equipo asignado para crear una actividad.");
+    }
+
     const activityType = await this.actividadGrupalTiposService.resolveForSessionCreate(
       command.activityTypeId,
       tenantId,
@@ -244,6 +253,8 @@ export class ActividadesGrupalesService {
       startTime: command.startTime,
       endTime: command.endTime,
       organizer: command.organizer,
+      teamId: actor.teamId,
+      consecutiveMode: activityType.consecutiveMode,
       employeeIds: command.employeeIds,
       customConsecutive,
     });

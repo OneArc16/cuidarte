@@ -1,4 +1,5 @@
 import {
+  type ActividadGrupalConsecutiveMode,
   type ActividadGrupalTipo,
   type ActividadGrupalTipoCreatorOption,
   type AuthUser,
@@ -208,24 +209,24 @@ export function AjustesPage({ user }: AjustesPageProps) {
           ) : null}
           {canManageEmpleadoPermissions(user) ? (
             <>
-            <button
-              className="ajustes-page__icon-button ajustes-page__icon-button--permissions"
-              type="button"
-              aria-label="Administrar permisos por persona"
-              data-tooltip="Permisos por persona"
-              onClick={() => setPermissionsDialogOpen(true)}
-            >
-              <ShieldCheck aria-hidden="true" />
-            </button>
-            <button
-              className="ajustes-page__icon-button ajustes-page__icon-button--organizers"
-              type="button"
-              aria-label="Administrar alcance de organizadores"
-              data-tooltip="Crear para otros organizadores"
-              onClick={() => setOrganizerPermissionsDialogOpen(true)}
-            >
-              <Waypoints aria-hidden="true" />
-            </button>
+              <button
+                className="ajustes-page__icon-button ajustes-page__icon-button--permissions"
+                type="button"
+                aria-label="Administrar permisos por persona"
+                data-tooltip="Permisos por persona"
+                onClick={() => setPermissionsDialogOpen(true)}
+              >
+                <ShieldCheck aria-hidden="true" />
+              </button>
+              <button
+                className="ajustes-page__icon-button ajustes-page__icon-button--organizers"
+                type="button"
+                aria-label="Administrar alcance de organizadores"
+                data-tooltip="Crear para otros organizadores"
+                onClick={() => setOrganizerPermissionsDialogOpen(true)}
+              >
+                <Waypoints aria-hidden="true" />
+              </button>
             </>
           ) : null}
         </div>
@@ -560,6 +561,7 @@ export function AjustesPage({ user }: AjustesPageProps) {
               id: activityTypePendingConsecutiveConfig.id,
               payload: {
                 enabled: payload.enabled,
+                consecutiveMode: payload.consecutiveMode,
                 prefix: payload.prefix,
                 nextValue: payload.nextValue,
                 creatorUserIds: payload.creatorUserIds,
@@ -576,18 +578,20 @@ export function AjustesPage({ user }: AjustesPageProps) {
           key={globalSeriesActivity.id}
           activityName={globalSeriesActivity.name}
           initialConfig={globalSeriesActivity.activityTypes[0]?.consecutiveConfig ?? null}
+          initialConsecutiveMode={globalSeriesActivity.activityTypes[0]?.consecutiveMode ?? "group"}
           tenantCount={globalSeriesActivity.totalCount}
           activityTypes={globalSeriesActivity.activityTypes}
           tenants={tenantOptionsQuery.data?.tenants ?? []}
           seriesPending={globalConsecutiveConfigMutation.isPending}
           peoplePending={consecutiveConfigMutation.isPending}
           onClose={() => setGlobalSeriesActivity(null)}
-          onSaveSeries={async ({ enabled, prefix }) => {
+          onSaveSeries={async ({ enabled, consecutiveMode, prefix }) => {
             const response = await globalConsecutiveConfigMutation.mutateAsync({
               activityTypeIds: globalSeriesActivity.activityTypes.map(
                 (activityType) => activityType.id,
               ),
               enabled,
+              consecutiveMode,
               prefix: enabled ? prefix : undefined,
             });
             const updatedActivityTypesById = new Map(
@@ -617,6 +621,7 @@ export function AjustesPage({ user }: AjustesPageProps) {
               id: activityTypeId,
               payload: {
                 enabled: true,
+                consecutiveMode: activityType.consecutiveMode,
                 prefix: activityType.consecutiveConfig.prefix,
                 nextValue: activityType.consecutiveConfig.nextValue,
                 creatorUserIds,
@@ -639,7 +644,9 @@ export function AjustesPage({ user }: AjustesPageProps) {
       {permissionsDialogOpen ? (
         <AjustesPermissionsDialog onClose={() => setPermissionsDialogOpen(false)} />
       ) : null}
-      {equiposDialogOpen ? <AjustesEquiposDialog onClose={() => setEquiposDialogOpen(false)} /> : null}
+      {equiposDialogOpen ? (
+        <AjustesEquiposDialog onClose={() => setEquiposDialogOpen(false)} />
+      ) : null}
       {organizerPermissionsDialogOpen ? (
         <AjustesActivityOrganizerPermissionsDialog
           onClose={() => setOrganizerPermissionsDialogOpen(false)}
@@ -730,6 +737,7 @@ function ActivityConsecutiveConfigDialog({
   onSave: (payload: {
     name: string;
     enabled: boolean;
+    consecutiveMode: ActividadGrupalConsecutiveMode;
     prefix: string | undefined;
     nextValue: number | undefined;
     creatorUserIds: string[];
@@ -740,6 +748,9 @@ function ActivityConsecutiveConfigDialog({
   const [name, setName] = useState(activityType.name);
   const [specialSeriesEnabled, setSpecialSeriesEnabled] = useState(
     activityType.consecutiveConfig !== null,
+  );
+  const [consecutiveMode, setConsecutiveMode] = useState<ActividadGrupalConsecutiveMode>(
+    activityType.consecutiveMode,
   );
   const [prefix, setPrefix] = useState(activityType.consecutiveConfig?.prefix ?? "");
   const nextValue = activityType.consecutiveConfig?.nextValue ?? 1;
@@ -821,6 +832,37 @@ function ActivityConsecutiveConfigDialog({
           ) : null}
 
           {!isPeopleMode ? (
+            <fieldset className="ajustes-consecutive-dialog__mode-selector">
+              <legend>Tipo de consecutivo</legend>
+              <p>Define si todos comparten una serie o si cada equipo conserva la suya.</p>
+              <div role="radiogroup" aria-label="Tipo de consecutivo">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={consecutiveMode === "group"}
+                  className={consecutiveMode === "group" ? "is-selected" : ""}
+                  disabled={pending}
+                  onClick={() => setConsecutiveMode("group")}
+                >
+                  <strong>Grupal</strong>
+                  <span>Una serie compartida</span>
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={consecutiveMode === "individual"}
+                  className={consecutiveMode === "individual" ? "is-selected" : ""}
+                  disabled={pending}
+                  onClick={() => setConsecutiveMode("individual")}
+                >
+                  <strong>Individual</strong>
+                  <span>Una serie por equipo</span>
+                </button>
+              </div>
+            </fieldset>
+          ) : null}
+
+          {!isPeopleMode ? (
             <section
               className={
                 specialSeriesEnabled
@@ -834,7 +876,9 @@ function ActivityConsecutiveConfigDialog({
                   <h3 id="actividad-series-title">Serie especial</h3>
                   <p>
                     {specialSeriesEnabled
-                      ? "Las actas de esta actividad usan su propio prefijo."
+                      ? consecutiveMode === "individual"
+                        ? "Cada equipo usa este prefijo con su propio consecutivo."
+                        : "Las actas de esta actividad usan su propio prefijo."
                       : "Las actas usan la serie general."}
                   </p>
                 </div>
@@ -866,7 +910,11 @@ function ActivityConsecutiveConfigDialog({
                       />
                     </label>
                     <div className="ajustes-consecutive-dialog__readonly-field">
-                      <span>Próximo consecutivo</span>
+                      <span>
+                        {consecutiveMode === "individual"
+                          ? "Primer consecutivo por equipo"
+                          : "Próximo consecutivo"}
+                      </span>
                       <div className="ajustes-consecutive-dialog__stepper">
                         <button type="button" disabled aria-label="Disminuir consecutivo">
                           −
@@ -881,7 +929,9 @@ function ActivityConsecutiveConfigDialog({
 
                   <div className="ajustes-consecutive-dialog__series-footer">
                     <p>
-                      Próxima acta:{" "}
+                      {consecutiveMode === "individual"
+                        ? "Próxima acta por equipo: "
+                        : "Próxima acta: "}
                       <code>
                         {specialSeriesEnabled
                           ? (prefix.trim() === "" ? "PREFIJO" : prefix.trim()) +
@@ -1028,6 +1078,7 @@ function ActivityConsecutiveConfigDialog({
               void onSave({
                 name: isPeopleMode ? activityType.name : name.trim(),
                 enabled: specialSeriesEnabled,
+                consecutiveMode,
                 prefix: specialSeriesEnabled ? prefix : undefined,
                 nextValue: specialSeriesEnabled ? nextValue : undefined,
                 creatorUserIds: specialSeriesEnabled ? creatorUserIds : [],
@@ -1045,6 +1096,7 @@ function ActivityConsecutiveConfigDialog({
 function ActivityGlobalConsecutiveConfigDialog({
   activityName,
   initialConfig,
+  initialConsecutiveMode,
   tenantCount,
   activityTypes,
   tenants,
@@ -1056,13 +1108,18 @@ function ActivityGlobalConsecutiveConfigDialog({
 }: {
   activityName: string;
   initialConfig: ActividadGrupalTipo["consecutiveConfig"];
+  initialConsecutiveMode: ActividadGrupalConsecutiveMode;
   tenantCount: number;
   activityTypes: ActividadGrupalTipo[];
   tenants: Array<{ id: string; name: string }>;
   seriesPending: boolean;
   peoplePending: boolean;
   onClose: () => void;
-  onSaveSeries: (payload: { enabled: boolean; prefix: string }) => void | Promise<void>;
+  onSaveSeries: (payload: {
+    enabled: boolean;
+    consecutiveMode: ActividadGrupalConsecutiveMode;
+    prefix: string;
+  }) => void | Promise<void>;
   onSavePeople: (payload: {
     activityTypeId: string;
     creatorUserIds: string[];
@@ -1070,6 +1127,8 @@ function ActivityGlobalConsecutiveConfigDialog({
 }) {
   const [step, setStep] = useState<"series" | "people">("series");
   const [enabled, setEnabled] = useState(initialConfig !== null);
+  const [consecutiveMode, setConsecutiveMode] =
+    useState<ActividadGrupalConsecutiveMode>(initialConsecutiveMode);
   const [prefix, setPrefix] = useState(initialConfig?.prefix ?? "");
   const [selectedActivityTypeId, setSelectedActivityTypeId] = useState(activityTypes[0]?.id ?? "");
   const [personSearch, setPersonSearch] = useState("");
@@ -1091,7 +1150,8 @@ function ActivityGlobalConsecutiveConfigDialog({
   useEffect(() => {
     setEnabled(initialConfig !== null);
     setPrefix(initialConfig?.prefix ?? "");
-  }, [initialConfig]);
+    setConsecutiveMode(initialConsecutiveMode);
+  }, [initialConfig, initialConsecutiveMode]);
 
   useEffect(() => {
     setCreatorUserIds(selectedActivityType?.consecutiveConfig?.creatorUserIds ?? []);
@@ -1105,7 +1165,8 @@ function ActivityGlobalConsecutiveConfigDialog({
     normalizedPrefix.replace(/[A-Z0-9]/g, "") === "";
   const seriesHasUnsavedChanges =
     enabled !== (initialConfig !== null) ||
-    (enabled && normalizedPrefix !== (initialConfig?.prefix ?? ""));
+    (enabled && normalizedPrefix !== (initialConfig?.prefix ?? "")) ||
+    consecutiveMode !== initialConsecutiveMode;
   const canConfigurePeople =
     !seriesHasUnsavedChanges &&
     selectedActivityType?.consecutiveConfig !== null &&
@@ -1142,7 +1203,7 @@ function ActivityGlobalConsecutiveConfigDialog({
   }
 
   async function saveSeriesAndContinue() {
-    await onSaveSeries({ enabled, prefix: normalizedPrefix });
+    await onSaveSeries({ enabled, consecutiveMode, prefix: normalizedPrefix });
     setStep("people");
   }
 
@@ -1261,13 +1322,54 @@ function ActivityGlobalConsecutiveConfigDialog({
                 ) : null}
               </section>
 
+              <fieldset className="ajustes-consecutive-dialog__mode-selector ajustes-global-series-dialog__mode-selector">
+                <legend>Tipo de consecutivo</legend>
+                <p>
+                  {consecutiveMode === "individual"
+                    ? "Cada equipo de un centro tendrá una serie independiente."
+                    : "Todos los equipos de un centro compartirán la misma serie."}
+                </p>
+                <div role="radiogroup" aria-label="Tipo de consecutivo">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={consecutiveMode === "group"}
+                    className={consecutiveMode === "group" ? "is-selected" : ""}
+                    disabled={seriesPending}
+                    onClick={() => setConsecutiveMode("group")}
+                  >
+                    <strong>Grupal</strong>
+                    <span>Serie compartida</span>
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={consecutiveMode === "individual"}
+                    className={consecutiveMode === "individual" ? "is-selected" : ""}
+                    disabled={seriesPending}
+                    onClick={() => setConsecutiveMode("individual")}
+                  >
+                    <strong>Individual</strong>
+                    <span>Serie por equipo</span>
+                  </button>
+                </div>
+              </fieldset>
+
               <section
                 className="ajustes-global-series-dialog__preview"
                 aria-label="Próximas actas"
               >
                 <header>
-                  <strong>Próxima acta por centro</strong>
-                  <span>Consecutivo independiente</span>
+                  <strong>
+                    {consecutiveMode === "individual"
+                      ? "Primera acta por equipo"
+                      : "Próxima acta por centro"}
+                  </strong>
+                  <span>
+                    {consecutiveMode === "individual"
+                      ? "Cada equipo inicia su serie"
+                      : "Consecutivo independiente"}
+                  </span>
                 </header>
                 <div>
                   {activityTypes.map((activityType) => {
@@ -1429,20 +1531,26 @@ function getPersonInitials(fullName: string): string {
 function formatActivityConsecutive(row: ActivityCatalogRow): string {
   const configs = row.activityTypes.map((activityType) => activityType.consecutiveConfig);
 
-  if (configs.every((config) => config === null)) return "Serie general";
+  const modes = new Set(row.activityTypes.map((activityType) => activityType.consecutiveMode));
+  const modeSuffix = modes.size === 1 && modes.has("individual") ? " · Por equipo" : "";
+
+  if (configs.every((config) => config === null)) return "Serie general" + modeSuffix;
 
   const prefixes = new Set(configs.flatMap((config) => (config === null ? [] : [config.prefix])));
 
   if (row.isUnified) {
     return prefixes.size === 1 && configs.every((config) => config !== null)
-      ? Array.from(prefixes)[0] + " · " + row.totalCount + " centros"
+      ? Array.from(prefixes)[0] + " · " + row.totalCount + " centros" + modeSuffix
       : "Por centro";
   }
 
   const config = configs[0];
   return config === null || config === undefined
     ? "Serie general"
-    : config.prefix + "-" + String(config.nextValue).padStart(3, "0");
+    : config.prefix +
+        (row.activityTypes[0]?.consecutiveMode === "individual"
+          ? " · Por equipo"
+          : "-" + String(config.nextValue).padStart(3, "0"));
 }
 function formatUserRole(role: string): string {
   return role.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());

@@ -333,6 +333,7 @@ export function hasUserPermission(
 export const authUserSchema = z.object({
   id: z.uuid(),
   tenantId: z.uuid().nullable(),
+  teamId: z.uuid().nullable().optional(),
   tenantMunicipality: z.string().min(1).nullable().optional(),
   tenantDepartment: z.string().min(1).nullable().optional(),
   email: z.email(),

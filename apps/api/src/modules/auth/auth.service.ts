@@ -221,6 +221,7 @@ export class AuthService {
     return authUserSchema.parse({
       id: user.id,
       tenantId: user.tenantId,
+      teamId: user.teamId,
       tenantMunicipality: tenant?.city ?? null,
       tenantDepartment: tenant?.department ?? null,
       email: user.email,

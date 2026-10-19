@@ -808,6 +808,10 @@ export const actividadGrupalTipos = pgTable(
       .references(() => tenants.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 120 }).notNull(),
     normalizedName: varchar("normalized_name", { length: 120 }).notNull(),
+    consecutiveMode: varchar("consecutive_mode", { length: 16 })
+      .$type<"group" | "individual">()
+      .notNull()
+      .default("group"),
     consecutivePrefix: varchar("consecutive_prefix", { length: 24 }),
     consecutiveNextValue: integer("consecutive_next_value"),
     consecutiveCreatorUserIds: jsonb("consecutive_creator_user_ids")
@@ -838,6 +842,28 @@ export const actividadGrupalTipos = pgTable(
       "actividad_grupal_tipos_consecutive_config_complete",
       sql`(${table.consecutivePrefix} is null and ${table.consecutiveNextValue} is null) or (${table.consecutivePrefix} is not null and ${table.consecutiveNextValue} > 0)`,
     ),
+    check(
+      "actividad_grupal_tipos_consecutive_mode_valid",
+      sql`${table.consecutiveMode} in ('group', 'individual')`,
+    ),
+  ],
+);
+
+export const actividadGrupalTipoTeamCounters = pgTable(
+  "actividad_grupal_tipo_team_counters",
+  {
+    activityTypeId: uuid("activity_type_id")
+      .notNull()
+      .references(() => actividadGrupalTipos.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id")
+      .notNull()
+      .references(() => employeeTeams.id, { onDelete: "restrict" }),
+    lastValue: integer("last_value").notNull().default(0),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.activityTypeId, table.teamId] }),
+    index("actividad_grupal_tipo_team_counters_updated_at_idx").on(table.updatedAt),
   ],
 );
 
@@ -879,9 +905,6 @@ export const actividadesGrupales = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("actividades_grupales_tenant_acta_unique")
-      .on(table.tenantId, table.actaNumber)
-      .where(sql`${table.deletedAt} is null`),
     uniqueIndex("actividades_grupales_tenant_acta_series_unique")
       .on(table.tenantId, table.actaSeriesKey, table.actaSequence)
       .where(sql`${table.deletedAt} is null`),

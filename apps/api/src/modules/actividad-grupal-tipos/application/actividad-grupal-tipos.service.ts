@@ -147,6 +147,11 @@ export class ActividadGrupalTiposService {
     }
 
     const creatorUserIds = enabled ? [...new Set(command.creatorUserIds)] : [];
+    const nextValue = !enabled
+      ? null
+      : current.consecutiveMode === "group" && command.consecutiveMode === "individual"
+        ? 1
+        : (command.nextValue ?? null);
     const creatorOptions = enabled
       ? await this.actividadGrupalTiposRepository.findCreatorOptions(current.tenantId)
       : [];
@@ -163,8 +168,9 @@ export class ActividadGrupalTiposService {
     const record = await this.actividadGrupalTiposRepository.updateConsecutiveConfig({
       id: current.id,
       actorUserId: actor.id,
+      consecutiveMode: command.consecutiveMode,
       prefix,
-      nextValue: enabled ? (command.nextValue ?? null) : null,
+      nextValue,
       creatorUserIds,
     });
 
@@ -226,8 +232,13 @@ export class ActividadGrupalTiposService {
         return await this.actividadGrupalTiposRepository.updateConsecutiveConfig({
           id: activityType.id,
           actorUserId: actor.id,
+          consecutiveMode: command.consecutiveMode,
           prefix,
-          nextValue: command.enabled ? (activityType.consecutiveNextValue ?? 1) : null,
+          nextValue: !command.enabled
+            ? null
+            : activityType.consecutiveMode === "group" && command.consecutiveMode === "individual"
+              ? 1
+              : (activityType.consecutiveNextValue ?? 1),
           creatorUserIds,
         });
       }),
@@ -375,6 +386,7 @@ export class ActividadGrupalTiposService {
   private toResponse(record: ActividadGrupalTipoRecord): ActividadGrupalTipo {
     return actividadGrupalTipoSchema.parse({
       ...record,
+      consecutiveMode: record.consecutiveMode,
       consecutiveConfig:
         record.consecutivePrefix === null || record.consecutiveNextValue === null
           ? null
