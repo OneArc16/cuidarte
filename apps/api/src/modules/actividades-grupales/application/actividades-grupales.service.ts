@@ -359,6 +359,7 @@ export class ActividadesGrupalesService {
     return actividadGrupalActaCorrectionPreviewResponseSchema.parse({
       operationToken: preview.operationToken,
       tenantId: preview.tenantId,
+      consecutiveMode: preview.consecutiveMode,
       previewExpiresAt: preview.previewExpiresAt.toISOString(),
       totalCount: preview.totalCount,
       changedCount: preview.changedCount,
@@ -394,6 +395,7 @@ export class ActividadesGrupalesService {
     return actividadGrupalActaCorrectionPreviewResponseSchema.parse({
       operationToken: preview.operationToken,
       tenantId: preview.tenantId,
+      consecutiveMode: preview.consecutiveMode,
       previewExpiresAt: preview.previewExpiresAt.toISOString(),
       totalCount: preview.totalCount,
       changedCount: preview.changedCount,

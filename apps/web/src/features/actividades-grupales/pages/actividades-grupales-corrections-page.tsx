@@ -241,6 +241,9 @@ export function ActividadesGrupalesCorrectionsPage({ navigate, user }: Props) {
           </select>
           <small>
             Prefijo actual {currentPrefix}
+            {selectedActivityType?.consecutiveMode === "individual"
+              ? " · consecutivos independientes por equipo"
+              : ""}
             {preview === null ? "" : " · " + preview.totalCount + " sesiones"}
           </small>
         </label>
@@ -274,7 +277,12 @@ export function ActividadesGrupalesCorrectionsPage({ navigate, user }: Props) {
           <header className="actividades-corrections__preview-header">
             <div>
               <h1>Vista previa</h1>
-              <p>Generada a las {previewTimeLabel} · ordenada por fecha y hora</p>
+              <p>
+                Generada a las {previewTimeLabel} · ordenada por fecha y hora
+                {preview.consecutiveMode === "individual"
+                  ? " · cada equipo conserva su propia serie"
+                  : ""}
+              </p>
             </div>
             <div className="actividades-corrections__preview-tools">
               <span className="actividades-corrections__expiry">
@@ -430,6 +438,9 @@ export function ActividadesGrupalesCorrectionsPage({ navigate, user }: Props) {
             <p>
               Se reasignarán {preview?.totalCount ?? 0} actas de {selectedActivityName} en{" "}
               {selectedTenantName}, en orden de fecha y hora.
+              {preview?.consecutiveMode === "individual"
+                ? " Cada equipo conservará su consecutivo independiente."
+                : ""}
             </p>
             <div className="actividades-corrections__prefix-change" aria-label="Cambio de prefijo">
               <strong>{currentPrefix}</strong>

@@ -125,6 +125,7 @@ export type ActaCorrectionPreviewRow = {
   startTime: string;
   endTime: string;
   organizer: ActividadGrupalOrganizer;
+  seriesKey: string;
   currentActaNumber: string;
   proposedActaNumber: string;
   sequence: number;
@@ -135,6 +136,7 @@ export type ActaCorrectionPreview = {
   operationToken: string;
   operationId: string;
   tenantId: string;
+  consecutiveMode: ActividadGrupalConsecutiveMode;
   previewExpiresAt: Date;
   totalCount: number;
   changedCount: number;

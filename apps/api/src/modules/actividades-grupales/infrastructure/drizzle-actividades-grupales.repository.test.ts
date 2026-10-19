@@ -6,6 +6,7 @@ import { ActaCorrectionConflictError } from "../domain/actividad-grupal.types";
 import {
   assertCorrectionFinalStateIsUnique,
   buildCorrectionPreviewRows,
+  buildPrefixCorrectionPreviewRows,
   buildTemporaryCorrectionRows,
   DrizzleActividadesGrupalesRepository,
   hashCorrectionSnapshot,
@@ -155,24 +156,70 @@ describe("DrizzleActividadesGrupalesRepository correction planning", () => {
     ];
 
     assert.doesNotThrow(() =>
-      assertCorrectionFinalStateIsUnique(
-        activeRows,
-        [target("activity-001", "SALU-001", 1)],
-        "activity-type:health",
-      ),
+      assertCorrectionFinalStateIsUnique(activeRows, [
+        target("activity-001", "SALU-001", 1, "activity-type:health"),
+      ]),
     );
   });
 
-  it("rejects a final acta-number collision with an active acta outside the organizer filter", () => {
+  it("rejects a duplicate sequence inside the same final series", () => {
     const activeRows = [
       active("psico-003", "PSICO-003", 3),
-      active("other-organizer", "PSICO-002", 9, "director"),
+      active("other-organizer", "PSICO-002", 2, "director"),
     ];
 
     assert.throws(
-      () => assertCorrectionFinalStateIsUnique(activeRows, [target("psico-003", "PSICO-002", 2)]),
+      () =>
+        assertCorrectionFinalStateIsUnique(activeRows, [
+          target("psico-003", "PSICO-002", 2, "legacy:director"),
+        ]),
       ActaCorrectionConflictError,
     );
+  });
+
+  it("normalizes an individual activity independently for every team", () => {
+    const activityTypeId = "22222222-2222-4222-8222-222222222222";
+    const healthTeamId = "33333333-3333-4333-8333-333333333333";
+    const psychosocialTeamId = "44444444-4444-4444-8444-444444444444";
+    const healthSeries = `activity-type:${activityTypeId}:team:${healthTeamId}`;
+    const psychosocialSeries = `activity-type:${activityTypeId}:team:${psychosocialTeamId}`;
+    const rows = [
+      {
+        ...correctionSource("health-001", "MANU-018", 18, "2026-09-17"),
+        actaSeriesKey: healthSeries,
+      },
+      {
+        ...correctionSource("psico-001", "MANU-006", 6, "2026-09-18"),
+        actaSeriesKey: psychosocialSeries,
+      },
+      {
+        ...correctionSource("health-002", "MANU-019", 19, "2026-09-19"),
+        actaSeriesKey: healthSeries,
+      },
+    ];
+
+    const preview = buildPrefixCorrectionPreviewRows(rows, "MANU", {
+      activityTypeId,
+      consecutiveMode: "individual",
+    });
+
+    assert.deepEqual(
+      preview.map((row) => row.proposedActaNumber),
+      ["MANU-001", "MANU-001", "MANU-002"],
+    );
+    assert.doesNotThrow(() => assertCorrectionFinalStateIsUnique(rows, preview));
+  });
+
+  it("migrates historical individual actas using their creator's assigned team", () => {
+    const activityTypeId = "22222222-2222-4222-8222-222222222222";
+    const teamId = "33333333-3333-4333-8333-333333333333";
+    const [preview] = buildPrefixCorrectionPreviewRows(
+      [{ ...correctionSource("legacy", "MANU-009", 9, "2026-09-17"), creatorTeamId: teamId }],
+      "MANU",
+      { activityTypeId, consecutiveMode: "individual" },
+    );
+
+    assert.equal(preview?.seriesKey, `activity-type:${activityTypeId}:team:${teamId}`);
   });
 
   it("fails before writing temporary values when their positive sequence would overflow", () => {
@@ -255,6 +302,7 @@ function target(
   id: string,
   proposedActaNumber: string,
   sequence: number,
+  seriesKey = "legacy:psicologa",
 ): ActaCorrectionPreviewRow {
   return {
     activityId: id,
@@ -262,6 +310,7 @@ function target(
     startTime: "08:00",
     endTime: "09:00",
     organizer: "psicologa",
+    seriesKey,
     currentActaNumber: `CURRENT-${id}`,
     proposedActaNumber,
     sequence,

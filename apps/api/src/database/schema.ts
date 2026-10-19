@@ -755,6 +755,7 @@ export const actividadGrupalActaCorrectionOperations = pgTable(
     activityTypeId: uuid("activity_type_id").references(() => actividadGrupalTipos.id, {
       onDelete: "restrict",
     }),
+    consecutiveMode: varchar("consecutive_mode", { length: 16 }).$type<"group" | "individual">(),
     targetPrefix: varchar("target_prefix", { length: 24 }),
     snapshotHash: varchar("snapshot_hash", { length: 64 }).notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),

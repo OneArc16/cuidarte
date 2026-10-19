@@ -228,6 +228,7 @@ function createRepository(
         operationToken: "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
         operationId: "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
         tenantId,
+        consecutiveMode: "group" as const,
         previewExpiresAt: new Date("2026-04-23T12:15:00.000Z"),
         totalCount: 0,
         changedCount: 0,

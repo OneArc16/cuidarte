@@ -472,6 +472,7 @@ export const actividadGrupalActaCorrectionPreviewRowSchema = z.object({
   startTime: timeSchema,
   endTime: timeSchema,
   organizer: actividadGrupalOrganizerSchema,
+  seriesKey: z.string().min(1).max(120),
   currentActaNumber: actaNumberSchema,
   proposedActaNumber: actaNumberSchema,
   sequence: z.number().int().min(1),
@@ -481,6 +482,7 @@ export const actividadGrupalActaCorrectionPreviewRowSchema = z.object({
 export const actividadGrupalActaCorrectionPreviewResponseSchema = z.object({
   operationToken: z.string().min(1),
   tenantId: z.uuid(),
+  consecutiveMode: z.enum(["group", "individual"]),
   previewExpiresAt: z.string().min(1),
   totalCount: z.number().int().min(0),
   changedCount: z.number().int().min(0),

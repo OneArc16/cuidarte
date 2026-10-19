@@ -1,0 +1,1 @@
+ALTER TABLE "actividad_grupal_acta_correction_operations" ADD COLUMN "consecutive_mode" varchar(16);
