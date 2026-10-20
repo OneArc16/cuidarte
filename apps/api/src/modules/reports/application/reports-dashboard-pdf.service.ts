@@ -31,9 +31,12 @@ export class ReportsDashboardPdfService {
 
     try {
       const page = await browser.newPage();
-      await page.setContent(buildPdfHtml(dashboard, await getPdfLetterheadDataUrl()), {
-        waitUntil: "load",
-      });
+      await page.setContent(
+        buildPdfHtml(dashboard, await getPdfLetterheadDataUrl(), {
+          includeMonthlyAttendanceChart: actor.role !== "auditor",
+        }),
+        { waitUntil: "load" },
+      );
       const buffer = await page.pdf({
         format: "Letter",
         landscape: false,
@@ -61,6 +64,7 @@ export class ReportsDashboardPdfService {
 export function buildPdfHtml(
   dashboard: ReportsDashboardResponse,
   membreteDataUrl: string | null,
+  options: { includeMonthlyAttendanceChart?: boolean } = {},
 ): string {
   const monthlySeries = buildMonthlySeries(dashboard.dailySeries);
   const scope = dashboard.scope.isConsolidated
@@ -100,7 +104,11 @@ export function buildPdfHtml(
     <div class="metrics">${cards}</div>
     <section class="charts">
       <article class="chart-panel"><h3>Personas por sexo</h3><p>Distribución de personas registradas.</p>${buildSexChart(dashboard)}</article>
-      <article class="chart-panel"><h3>Atenciones por mes</h3><p>Comparación mensual de enfermería y medicina.</p>${buildAttendanceChart(monthlySeries)}</article>
+      ${
+        options.includeMonthlyAttendanceChart !== false
+          ? `<article class="chart-panel"><h3>Atenciones por mes</h3><p>Comparación mensual de enfermería y medicina.</p>${buildAttendanceChart(monthlySeries)}</article>`
+          : ""
+      }
       <article class="chart-panel"><h3>Actividades por tipo</h3><p>Sesiones grupales registradas en el periodo.</p>${buildActivityChart(dashboard)}</article>
       <article class="chart-panel"><h3>Entregas por mes</h3><p>Transporte, refrigerios y almuerzos entregados.</p>${buildDeliveryChart(monthlySeries)}</article>
       <article class="chart-panel"><h3>Almuerzos y refrigerios entregados por mes</h3>${buildMonthlyMetricChart(monthlySeries, "Raciones", "#70549a", (point) => point.snacksDelivered + point.lunchesDelivered)}</article>

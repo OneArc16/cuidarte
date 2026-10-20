@@ -72,6 +72,15 @@ describe("buildPdfHtml", () => {
       /\.report-content \{ position: relative; z-index: 1; width: 215\.9mm; min-height: 279\.4mm; padding: 45mm 24mm 32mm;/,
     );
   });
+
+  it("omits the monthly attendance chart when it is disabled for the auditor PDF", () => {
+    const html = buildPdfHtml(createDashboard(), null, {
+      includeMonthlyAttendanceChart: false,
+    });
+
+    assert.doesNotMatch(html, /Atenciones por mes/);
+    assert.doesNotMatch(html, /Comparación mensual de enfermería y medicina/);
+  });
 });
 
 function createDashboard(): ReportsDashboardResponse {
