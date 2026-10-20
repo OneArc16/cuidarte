@@ -68,6 +68,24 @@ export class AdultosMayoresService {
     query: AdultoMayorListQuery,
     actor: AuthUser,
   ): Promise<AdultoMayorListItem[]> {
+    const records = await this.findAdultosMayores(query, actor);
+
+    return records.map((record) => this.toListItem(record));
+  }
+
+  async listAdultosMayoresForExport(
+    query: AdultoMayorListQuery,
+    actor: AuthUser,
+  ): Promise<AdultoMayorDetail[]> {
+    const records = await this.findAdultosMayores(query, actor);
+
+    return records.map((record) => this.toDetail(record));
+  }
+
+  private async findAdultosMayores(
+    query: AdultoMayorListQuery,
+    actor: AuthUser,
+  ): Promise<AdultoMayorRecord[]> {
     const scope = resolveAdultosMayoresScope(actor);
 
     if (scope === null) {
@@ -80,7 +98,7 @@ export class AdultosMayoresService {
       ...(query.attentionType === undefined ? {} : { attentionType: query.attentionType }),
     });
 
-    return records.map((record) => this.toListItem(record));
+    return records;
   }
 
   async listTenantOptions(actor: AuthUser): Promise<AdultoMayorTenantOption[]> {

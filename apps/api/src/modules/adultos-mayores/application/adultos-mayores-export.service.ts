@@ -1,4 +1,5 @@
 import {
+  type AdultoMayorDetail,
   type AdultoMayorListItem,
   type AdultoMayorListQuery,
   type AuthUser,
@@ -24,7 +25,10 @@ export class AdultosMayoresExportService {
     query: AdultoMayorListQuery,
     actor: AuthUser,
   ): Promise<ExportedAdultosMayoresFile> {
-    const adultosMayores = await this.adultosMayoresService.listAdultosMayores(query, actor);
+    const adultosMayores = await this.adultosMayoresService.listAdultosMayoresForExport(
+      query,
+      actor,
+    );
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Adultos mayores");
     const includeTenant = actor.role === "super_admin";
@@ -120,6 +124,33 @@ export class AdultosMayoresExportService {
       { header: "Sexo", key: "sexo", width: 14 },
       { header: "Estado", key: "estado", width: 14 },
       { header: "Fecha de defunción", key: "fechaDefuncion", width: 20 },
+      { header: "Datos personales · Primer nombre", key: "primerNombre", width: 20 },
+      { header: "Datos personales · Segundo nombre", key: "segundoNombre", width: 20 },
+      { header: "Datos personales · Primer apellido", key: "primerApellido", width: 20 },
+      { header: "Datos personales · Segundo apellido", key: "segundoApellido", width: 20 },
+      { header: "Datos personales · Fecha de nacimiento", key: "fechaNacimiento", width: 22 },
+      { header: "Datos personales · Nivel académico", key: "nivelAcademico", width: 24 },
+      { header: "Datos personales · Discapacidad", key: "discapacidad", width: 24 },
+      { header: "Datos personales · Grupo poblacional", key: "grupoPoblacional", width: 34 },
+      { header: "Residencia · Dirección", key: "direccion", width: 34 },
+      { header: "Residencia · Departamento", key: "departamento", width: 22 },
+      { header: "Residencia · Municipio", key: "municipio", width: 22 },
+      { header: "Residencia · Zona", key: "zona", width: 14 },
+      { header: "Residencia · País", key: "pais", width: 18 },
+      { header: "Contacto · Teléfono 2", key: "telefonoSecundario", width: 18 },
+      { header: "Contacto · Correo", key: "correo", width: 30 },
+      { header: "Contacto de emergencia · Nombre completo", key: "contactoEmergencia", width: 30 },
+      { header: "Contacto de emergencia · Parentesco", key: "parentescoEmergencia", width: 22 },
+      { header: "Contacto de emergencia · Teléfono", key: "telefonoEmergencia", width: 20 },
+      { header: "Contacto de emergencia · Dirección", key: "direccionEmergencia", width: 34 },
+      { header: "Salud · Tipo de sangre", key: "tipoSangre", width: 20 },
+      { header: "Salud · Sisbén", key: "sisben", width: 16 },
+      { header: "Salud · Régimen", key: "regimenSalud", width: 38 },
+      { header: "Salud · EPS", key: "eps", width: 28 },
+      { header: "Salud · Convive con alguien", key: "conviveConAlguien", width: 24 },
+      { header: "Salud · Acompañante", key: "acompanante", width: 28 },
+      { header: "Salud · Ingreso económico", key: "ingresoEconomico", width: 22 },
+      { header: "Salud · Beneficiario programa social", key: "beneficiarioProgramaSocial", width: 30 },
     ];
 
     if (includeTenant) {
@@ -130,7 +161,7 @@ export class AdultosMayoresExportService {
   }
 
   private toExportRow(
-    adultoMayor: AdultoMayorListItem,
+    adultoMayor: AdultoMayorDetail,
     includeTenant: boolean,
   ): Record<string, string | number> {
     const row = {
@@ -143,6 +174,33 @@ export class AdultosMayoresExportService {
       sexo: formatSex(adultoMayor.sex),
       estado: formatStatus(adultoMayor.status),
       fechaDefuncion: formatDeathDate(adultoMayor.deathDate),
+      primerNombre: adultoMayor.firstName,
+      segundoNombre: adultoMayor.middleName ?? "",
+      primerApellido: adultoMayor.firstSurname,
+      segundoApellido: adultoMayor.secondSurname ?? "",
+      fechaNacimiento: formatDate(adultoMayor.birthDate),
+      nivelAcademico: adultoMayor.educationLevel ?? "",
+      discapacidad: adultoMayor.disability ?? "",
+      grupoPoblacional: adultoMayor.populationGroup ?? "",
+      direccion: adultoMayor.address,
+      departamento: adultoMayor.department,
+      municipio: adultoMayor.municipality,
+      zona: formatZone(adultoMayor.zone),
+      pais: adultoMayor.country,
+      telefonoSecundario: adultoMayor.phoneSecondary ?? "",
+      correo: adultoMayor.email ?? "",
+      contactoEmergencia: adultoMayor.emergencyContactFullName ?? "",
+      parentescoEmergencia: adultoMayor.emergencyContactRelationship ?? "",
+      telefonoEmergencia: adultoMayor.emergencyContactPhone ?? "",
+      direccionEmergencia: adultoMayor.emergencyContactAddress ?? "",
+      tipoSangre: formatBloodType(adultoMayor.bloodType),
+      sisben: adultoMayor.sisben ?? "",
+      regimenSalud: formatHealthRegime(adultoMayor.healthRegime),
+      eps: adultoMayor.epsName ?? adultoMayor.eps ?? "",
+      conviveConAlguien: formatBoolean(adultoMayor.livesWithSomeone),
+      acompanante: adultoMayor.companion ?? "",
+      ingresoEconomico: adultoMayor.economicIncome ?? "",
+      beneficiarioProgramaSocial: formatBoolean(adultoMayor.socialProgramBeneficiary),
     };
 
     if (!includeTenant) {
@@ -286,12 +344,65 @@ function formatStatus(status: AdultoMayorListItem["status"]): string {
 }
 
 function formatDeathDate(deathDate: AdultoMayorListItem["deathDate"]): string {
-  if (deathDate === null) {
+  return deathDate === null ? "" : formatDate(deathDate);
+}
+
+function formatDate(value: string): string {
+  const [year, month, day] = value.split("-");
+  return `${day}/${month}/${year}`;
+}
+
+function formatZone(zone: AdultoMayorDetail["zone"]): string {
+  return zone === "urban" ? "Urbana" : "Rural";
+}
+
+function formatBloodType(bloodType: AdultoMayorDetail["bloodType"]): string {
+  if (bloodType === null) {
     return "";
   }
 
-  const [year, month, day] = deathDate.split("-");
-  return `${day}/${month}/${year}`;
+  const labels: Record<NonNullable<AdultoMayorDetail["bloodType"]>, string> = {
+    a_positive: "A+",
+    a_negative: "A-",
+    b_positive: "B+",
+    b_negative: "B-",
+    ab_positive: "AB+",
+    ab_negative: "AB-",
+    o_positive: "O+",
+    o_negative: "O-",
+    unknown: "No sabe",
+  };
+
+  return labels[bloodType];
+}
+
+function formatHealthRegime(healthRegime: AdultoMayorDetail["healthRegime"]): string {
+  if (healthRegime === null) {
+    return "";
+  }
+
+  const labels: Record<string, string> = {
+    contributory: "Contributivo cotizante",
+    subsidized: "Subsidiado",
+    special: "Especial o Excepción cotizante",
+    exception: "Especial o Excepción beneficiario",
+    uninsured: "No afiliado",
+    unknown: "Ninguno",
+    "contributory-additional": "Contributivo adicional",
+    "contributory-beneficiary": "Contributivo beneficiario",
+    "arl-protected": "Tomador / Amparado ARL",
+    "soat-protected": "Tomador / Amparado SOAT",
+    "voluntary-health-plans": "Tomador / Amparado Planes voluntarios de salud",
+    particular: "Particular",
+    "prisoners-covered-by-national-health-fund":
+      "Personas privadas de la libertad a cargo del Fondo Nacional de Salud",
+  };
+
+  return labels[healthRegime] ?? healthRegime;
+}
+
+function formatBoolean(value: boolean): string {
+  return value ? "Sí" : "No";
 }
 
 function escapeHtml(value: string): string {
