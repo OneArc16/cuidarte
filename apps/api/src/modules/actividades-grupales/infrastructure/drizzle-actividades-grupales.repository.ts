@@ -536,26 +536,147 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         throw new Error("No fue posible crear la actividad grupal.");
       }
 
+      const activeSeriesRows = await tx
+        .select({
+          id: actividadesGrupales.id,
+          activityDate: actividadesGrupales.activityDate,
+          startTime: actividadesGrupales.startTime,
+          endTime: actividadesGrupales.endTime,
+          organizer: actividadesGrupales.organizer,
+          actaNumber: actividadesGrupales.actaNumber,
+          actaSeriesKey: actividadesGrupales.actaSeriesKey,
+          actaOrganizer: actividadesGrupales.actaOrganizer,
+          actaSequence: actividadesGrupales.actaSequence,
+          createdAt: actividadesGrupales.createdAt,
+          updatedAt: actividadesGrupales.updatedAt,
+          deletedAt: actividadesGrupales.deletedAt,
+        })
+        .from(actividadesGrupales)
+        .where(
+          and(
+            eq(actividadesGrupales.tenantId, command.tenantId),
+            eq(actividadesGrupales.actaSeriesKey, actaSeriesKey),
+            isNull(actividadesGrupales.deletedAt),
+          ),
+        );
+      const normalizationRows = buildAutomaticActaNormalizationRows(activeSeriesRows, {
+        prefix: command.customConsecutive?.prefix ?? null,
+      });
+      const sourceRowsById = new Map(activeSeriesRows.map((row) => [row.id, row]));
+      const changedRows = normalizationRows.filter((row) => {
+        const source = sourceRowsById.get(row.activityId);
+        return (
+          source?.actaNumber !== row.proposedActaNumber ||
+          source?.actaOrganizer !== resolveActividadGrupalActaOrganizer(row.organizer) ||
+          source?.actaSequence !== row.sequence ||
+          source?.actaSeriesKey !== row.seriesKey
+        );
+      });
+
+      if (changedRows.length > 0) {
+        const temporaryRows = buildTemporaryCorrectionRows({
+          operationId: created.id,
+          activeRows: activeSeriesRows,
+          changedRows,
+        });
+
+        for (const row of temporaryRows) {
+          await tx
+            .update(actividadesGrupales)
+            .set({
+              actaNumber: row.temporaryActaNumber,
+              actaSeriesKey: row.actaSeriesKey,
+              actaOrganizer: row.actaOrganizer,
+              actaSequence: row.temporaryActaSequence,
+              updatedAt: now,
+            })
+            .where(eq(actividadesGrupales.id, row.id));
+        }
+
+        for (const row of changedRows) {
+          const source = sourceRowsById.get(row.activityId);
+          if (source === undefined) {
+            throw new Error("No fue posible normalizar el consecutivo de la actividad.");
+          }
+
+          await tx
+            .update(actividadesGrupales)
+            .set({
+              actaNumber: row.proposedActaNumber,
+              actaSeriesKey: row.seriesKey,
+              actaOrganizer: resolveActividadGrupalActaOrganizer(row.organizer),
+              actaSequence: row.sequence,
+              previousActaNumber: source.actaNumber,
+              actaNumberCorrectedAt: now,
+              actaNumberCorrectedByUserId: command.actorUserId,
+              updatedAt: now,
+            })
+            .where(eq(actividadesGrupales.id, row.activityId));
+
+          await tx.insert(auditLogs).values({
+            actorUserId: command.actorUserId,
+            action: "actividades-grupales.acta-normalized",
+            targetTenantId: command.tenantId,
+            summary: `Acta normalizada automáticamente de ${source.actaNumber} a ${row.proposedActaNumber}.`,
+            metadata: {
+              activityId: row.activityId,
+              previousActaNumber: source.actaNumber,
+              newActaNumber: row.proposedActaNumber,
+              previousSequence: source.actaSequence,
+              newSequence: row.sequence,
+              reason: "automatic-on-create",
+            },
+          });
+        }
+      }
+
+      const normalizedLastValue = normalizationRows.length;
       if (isGlobalSeries) {
         await tx
           .insert(actividadGrupalGlobalSeriesCounters)
           .values({
             tenantId: command.tenantId,
-            lastValue: nextSequence,
+            lastValue: normalizedLastValue,
             updatedAt: now,
           })
           .onConflictDoUpdate({
             target: actividadGrupalGlobalSeriesCounters.tenantId,
             set: {
-              lastValue: nextSequence,
+              lastValue: normalizedLastValue,
               updatedAt: now,
             },
           });
-      } else if (command.customConsecutive !== null && !isIndividualSeries) {
+      } else if (isIndividualSeries) {
+        await tx
+          .insert(actividadGrupalTipoTeamCounters)
+          .values({
+            activityTypeId: command.activityTypeId,
+            teamId: command.teamId,
+            lastValue: normalizedLastValue,
+            updatedAt: now,
+          })
+          .onConflictDoUpdate({
+            target: [
+              actividadGrupalTipoTeamCounters.activityTypeId,
+              actividadGrupalTipoTeamCounters.teamId,
+            ],
+            set: { lastValue: normalizedLastValue, updatedAt: now },
+          });
+      } else if (command.customConsecutive !== null) {
         await tx
           .update(actividadGrupalTipos)
-          .set({ consecutiveNextValue: nextSequence + 1, updatedAt: now })
+          .set({ consecutiveNextValue: normalizedLastValue + 1, updatedAt: now })
           .where(eq(actividadGrupalTipos.id, command.activityTypeId));
+      } else {
+        await tx
+          .update(actividadGrupalActaOrganizerCounters)
+          .set({ lastValue: normalizedLastValue, updatedAt: now })
+          .where(
+            and(
+              eq(actividadGrupalActaOrganizerCounters.tenantId, command.tenantId),
+              eq(actividadGrupalActaOrganizerCounters.organizer, actaOrganizer),
+            ),
+          );
       }
 
       await tx.insert(actividadGrupalEmpleados).values(
@@ -569,11 +690,15 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         actorUserId: command.actorUserId,
         action: "actividades-grupales.created",
         targetTenantId: command.tenantId,
-        summary: `Actividad grupal creada #${actaNumber}: ${command.activityName}`,
+        summary: `Actividad grupal creada #${normalizationRows.find((row) => row.activityId === created.id)?.proposedActaNumber ?? actaNumber}: ${command.activityName}`,
         metadata: {
-          actaNumber,
+          actaNumber:
+            normalizationRows.find((row) => row.activityId === created.id)?.proposedActaNumber ??
+            actaNumber,
           actaOrganizer,
-          actaSequence: nextSequence,
+          actaSequence:
+            normalizationRows.find((row) => row.activityId === created.id)?.sequence ??
+            nextSequence,
           consecutiveMode: command.consecutiveMode,
           teamId: isIndividualSeries ? command.teamId : null,
           activityType: command.activityType,
@@ -2067,6 +2192,47 @@ export function buildPrefixCorrectionPreviewRows(
       isDeleted: row.deletedAt !== null,
     };
   });
+}
+
+/**
+ * Reassigns a single active series when a new activity is created. The order is
+ * deliberately based on the activity schedule rather than creation time, so a
+ * late registration for an earlier date is inserted in the correct position.
+ */
+export function buildAutomaticActaNormalizationRows(
+  rows: ActaCorrectionSourceRow[],
+  { prefix }: { prefix: string | null },
+): ActaCorrectionPreviewRow[] {
+  return [...rows]
+    .sort(
+      (left, right) =>
+        left.activityDate.localeCompare(right.activityDate) ||
+        left.startTime.localeCompare(right.startTime) ||
+        left.endTime.localeCompare(right.endTime) ||
+        left.createdAt.getTime() - right.createdAt.getTime() ||
+        left.id.localeCompare(right.id),
+    )
+    .map((row, index) => {
+      const sequence = index + 1;
+      const actaOrganizer = resolveActividadGrupalActaOrganizer(row.organizer);
+      const seriesKey = row.actaSeriesKey ?? `legacy:${actaOrganizer}`;
+
+      return {
+        activityId: row.id,
+        activityDate: row.activityDate,
+        startTime: row.startTime,
+        endTime: row.endTime,
+        organizer: row.organizer,
+        seriesKey,
+        currentActaNumber: row.actaNumber,
+        proposedActaNumber:
+          prefix === null
+            ? formatActividadGrupalActaNumber(actaOrganizer, sequence)
+            : `${prefix}-${String(sequence).padStart(3, "0")}`,
+        sequence,
+        isDeleted: false,
+      };
+    });
 }
 
 export function countScheduleWarnings(rows: readonly ActaCorrectionPreviewRow[]): number {

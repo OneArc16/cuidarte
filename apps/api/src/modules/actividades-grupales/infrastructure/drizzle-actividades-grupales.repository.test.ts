@@ -5,6 +5,7 @@ import type { ActaCorrectionPreviewRow } from "../domain/actividad-grupal.types"
 import { ActaCorrectionConflictError } from "../domain/actividad-grupal.types";
 import {
   assertCorrectionFinalStateIsUnique,
+  buildAutomaticActaNormalizationRows,
   buildCorrectionPreviewRows,
   buildPrefixCorrectionPreviewRows,
   buildTemporaryCorrectionRows,
@@ -20,6 +21,40 @@ type ActiveRow = {
 };
 
 describe("DrizzleActividadesGrupalesRepository correction planning", () => {
+  it("automatically inserts an earlier activity into its chronological consecutive", () => {
+    const rows = [
+      correctionSource("later", "MANU-001", 1, "2026-07-02"),
+      correctionSource("earlier", "MANU-002", 2, "2026-07-01"),
+    ];
+
+    const normalized = buildAutomaticActaNormalizationRows(rows, { prefix: "MANU" });
+
+    assert.deepEqual(
+      normalized.map((row) => [row.activityId, row.proposedActaNumber]),
+      [
+        ["earlier", "MANU-001"],
+        ["later", "MANU-002"],
+      ],
+    );
+  });
+
+  it("uses the start time to order activities on the same date", () => {
+    const rows = [
+      correctionSource("afternoon", "MANU-001", 1, "2026-07-01", "14:00"),
+      correctionSource("morning", "MANU-002", 2, "2026-07-01", "08:00"),
+    ];
+
+    const normalized = buildAutomaticActaNormalizationRows(rows, { prefix: "MANU" });
+
+    assert.deepEqual(
+      normalized.map((row) => [row.activityId, row.sequence]),
+      [
+        ["morning", 1],
+        ["afternoon", 2],
+      ],
+    );
+  });
+
   it("normalizes health and psychosocial teams in their shared series", () => {
     const rows = [
       {
@@ -372,11 +407,12 @@ function correctionSource(
   actaNumber: string,
   actaSequence: number,
   activityDate: string,
+  startTime = "08:00",
 ) {
   return {
     id,
     activityDate,
-    startTime: "08:00",
+    startTime,
     endTime: "09:00",
     organizer: "psicologa" as const,
     actaNumber,
