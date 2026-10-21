@@ -50,9 +50,24 @@ export class ReportsDashboardPptxService {
     const monthlySeries = buildMonthlySeries(dashboard.dailySeries);
     addCoverSlide(presentation, dashboard, branding);
     addSummarySlide(presentation, dashboard);
-    addMonthlyAttendanceSlide(presentation, monthlySeries);
+    if (actor.role !== "auditor") {
+      addMonthlyAttendanceSlide(presentation, monthlySeries);
+    }
     addActivitiesSlide(presentation, dashboard);
     addDeliverySlide(presentation, monthlySeries);
+    addSexDistributionSlide(presentation, dashboard);
+    addMonthlyMetricSlide(presentation, monthlySeries, {
+      title: "Almuerzos y refrigerios entregados por mes",
+      seriesName: "Raciones",
+      color: "70549A",
+      values: (point) => point.snacksDelivered + point.lunchesDelivered,
+    });
+    addMonthlyMetricSlide(presentation, monthlySeries, {
+      title: "Auxilios de transporte por mes",
+      seriesName: "Auxilios",
+      color: "A24B48",
+      values: (point) => point.transportAllowancesDelivered,
+    });
 
     const output = await presentation.write({ outputType: "nodebuffer" });
     return {
@@ -264,6 +279,82 @@ function addDeliverySlide(presentation: PptxGenJS, monthlySeries: MonthlyChartPo
     ],
     { ...chartOptions(), catAxisLabelRotate: 0 },
   );
+}
+
+function addSexDistributionSlide(
+  presentation: PptxGenJS,
+  dashboard: ReportsDashboardResponse,
+): void {
+  const slide = baseSlide(presentation, "Personas por sexo");
+  const distribution = [
+    { label: "Hombres", value: dashboard.sexDistribution.male },
+    { label: "Mujeres", value: dashboard.sexDistribution.female },
+    { label: "Otro", value: dashboard.sexDistribution.other },
+  ].filter((item) => item.value > 0);
+
+  if (distribution.length === 0) {
+    addEmptyChartMessage(slide, "Sin personas registradas en el periodo.");
+    return;
+  }
+
+  slide.addChart(
+    presentation.ChartType.doughnut,
+    [
+      {
+        name: "Personas",
+        labels: distribution.map((item) => item.label),
+        values: distribution.map((item) => item.value),
+      },
+    ],
+    {
+      ...chartOptions(),
+      chartColors: ["2B6B99", "168362", "70549A"],
+      holeSize: 60,
+      showPercent: true,
+      showValue: true,
+    },
+  );
+}
+
+function addMonthlyMetricSlide(
+  presentation: PptxGenJS,
+  monthlySeries: MonthlyChartPoint[],
+  {
+    title,
+    seriesName,
+    color,
+    values,
+  }: {
+    title: string;
+    seriesName: string;
+    color: string;
+    values: (point: MonthlyChartPoint) => number;
+  },
+): void {
+  const slide = baseSlide(presentation, title);
+  slide.addChart(
+    presentation.ChartType.bar,
+    [
+      {
+        name: seriesName,
+        labels: monthlySeries.map((point) => formatChartMonth(point.month)),
+        values: monthlySeries.map(values),
+      },
+    ],
+    { ...chartOptions(), chartColors: [color], catAxisLabelRotate: 0 },
+  );
+}
+
+function addEmptyChartMessage(slide: PptxGenJS.Slide, message: string): void {
+  slide.addText(message, {
+    x: 1.25,
+    y: 3.05,
+    w: 10.83,
+    h: 0.42,
+    fontSize: 17,
+    color: "657A72",
+    align: "center",
+  });
 }
 
 function baseSlide(presentation: PptxGenJS, title: string): PptxGenJS.Slide {

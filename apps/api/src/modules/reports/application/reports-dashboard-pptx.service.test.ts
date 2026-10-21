@@ -7,7 +7,7 @@ import JSZip from "jszip";
 import { buildMonthlySeries, ReportsDashboardPptxService } from "./reports-dashboard-pptx.service";
 
 describe("ReportsDashboardPptxService", () => {
-  it("generates an OOXML presentation with editable monthly chart slides", async () => {
+  it("generates an OOXML presentation with all dashboard charts", async () => {
     const service = new ReportsDashboardPptxService({
       getDashboard: async () => dashboard,
     } as never);
@@ -25,11 +25,21 @@ describe("ReportsDashboardPptxService", () => {
     const slideNames = Object.keys(zip.files).filter((name) =>
       /^ppt\/slides\/slide\d+\.xml$/.test(name),
     );
+    const chartNames = Object.keys(zip.files).filter((name) =>
+      /^ppt\/charts\/chart\d+\.xml$/.test(name),
+    );
     const coverXml = await zip.file("ppt/slides/slide1.xml")?.async("string");
+    const slideXml = await Promise.all(
+      slideNames.map(async (name) => (await zip.file(name)?.async("string")) ?? ""),
+    );
 
-    assert.equal(slideNames.length, 5);
+    assert.equal(slideNames.length, 8);
+    assert.equal(chartNames.length, 6);
     assert.ok(coverXml?.includes("Sede:"));
     assert.ok(!coverXml?.includes("Metodolog"));
+    assert.match(slideXml.join("\n"), /Personas por sexo/);
+    assert.match(slideXml.join("\n"), /Almuerzos y refrigerios entregados por mes/);
+    assert.match(slideXml.join("\n"), /Auxilios de transporte por mes/);
 
     assert.deepEqual(buildMonthlySeries(dashboard.dailySeries), [
       {
@@ -99,5 +109,5 @@ const dashboard: ReportsDashboardResponse = {
       count: 1,
     },
   ],
-  sexDistribution: { male: 0, female: 0, other: 0 },
+  sexDistribution: { male: 3, female: 5, other: 1 },
 };
