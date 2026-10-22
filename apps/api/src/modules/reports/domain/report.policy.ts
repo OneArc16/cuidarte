@@ -1,5 +1,6 @@
 import {
   hasUserPermission,
+  reportDashboardChartPermissionValues,
   type AuthUser,
   type ReportDashboardChartPermission,
 } from "@cuidarte/contracts";
@@ -37,11 +38,15 @@ export function canViewReportDashboardChart(
   actor: Pick<AuthUser, "role" | "permissions">,
   chart: ReportDashboardChartPermission,
 ): boolean {
-  if (actor.permissions === undefined) {
-    return chart !== "reportes.chart.monthly_attendances" || actor.role !== "auditor";
-  }
-
   return hasUserPermission(actor, chart);
+}
+
+export function visibleReportDashboardCharts(
+  actor: Pick<AuthUser, "role" | "permissions">,
+): ReportDashboardChartPermission[] {
+  return reportDashboardChartPermissionValues.filter((chart) =>
+    canViewReportDashboardChart(actor, chart),
+  );
 }
 
 export function resolveReportTenantId(actor: AuthUser, requestedTenantId: string | null): string {

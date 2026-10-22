@@ -10,7 +10,7 @@ import { chromium } from "playwright";
 import playwrightEnv from "../../../common/playwright-env";
 import { getPdfLetterheadDataUrl } from "../../../common/pdf-letterhead";
 import { ReportsDashboardService } from "./reports-dashboard.service";
-import { assertCanExportReports, canViewReportDashboardChart } from "../domain/report.policy";
+import { assertCanExportReports, visibleReportDashboardCharts } from "../domain/report.policy";
 
 export type ReportsDashboardPdfFile = {
   buffer: Buffer;
@@ -34,7 +34,7 @@ export class ReportsDashboardPdfService {
       const page = await browser.newPage();
       await page.setContent(
         buildPdfHtml(dashboard, await getPdfLetterheadDataUrl(), {
-          visibleCharts: visibleChartsFor(actor),
+          visibleCharts: visibleReportDashboardCharts(actor),
         }),
         { waitUntil: "load" },
       );
@@ -120,18 +120,6 @@ export function buildPdfHtml(
     </section>
     </main>
   </body></html>`;
-}
-
-function visibleChartsFor(actor: AuthUser): ReportDashboardChartPermission[] {
-  const charts: ReportDashboardChartPermission[] = [
-    "reportes.chart.monthly_attendances",
-    "reportes.chart.activities_by_type",
-    "reportes.chart.monthly_deliveries",
-    "reportes.chart.sex_distribution",
-    "reportes.chart.rations_by_month",
-    "reportes.chart.transport_by_month",
-  ];
-  return charts.filter((chart) => canViewReportDashboardChart(actor, chart));
 }
 
 function includesChart(

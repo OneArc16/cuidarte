@@ -1,5 +1,6 @@
 import {
   type AuthUser,
+  type ReportDashboardChartPermission,
   type ReportsDashboardQuery,
   type ReportsDashboardResponse,
 } from "@cuidarte/contracts";
@@ -8,7 +9,7 @@ import ExcelJS from "exceljs";
 import JSZip from "jszip";
 
 import { ReportsDashboardService } from "./reports-dashboard.service";
-import { assertCanExportReports } from "../domain/report.policy";
+import { assertCanExportReports, visibleReportDashboardCharts } from "../domain/report.policy";
 
 export type ReportsDashboardExcelFile = {
   buffer: Buffer;
@@ -48,6 +49,7 @@ export class ReportsDashboardExcelService {
   ): Promise<ReportsDashboardExcelFile> {
     assertCanExportReports(actor);
     const dashboard = await this.dashboardService.getDashboard(query, actor);
+    const visibleCharts = visibleReportDashboardCharts(actor);
     const workbook = new ExcelJS.Workbook();
 
     workbook.creator = "CuidarTe";
@@ -56,8 +58,8 @@ export class ReportsDashboardExcelService {
 
     const chartSpecs = [
       ...this.buildSummarySheet(workbook, dashboard),
-      ...this.buildMonthlySheets(workbook, dashboard),
-      this.buildActivitiesSheet(workbook, dashboard),
+      ...this.buildMonthlySheets(workbook, dashboard, visibleCharts),
+      ...this.buildActivitiesSheet(workbook, dashboard, visibleCharts),
     ];
     const workbookBuffer = Buffer.from(await workbook.xlsx.writeBuffer());
 
@@ -144,19 +146,23 @@ export class ReportsDashboardExcelService {
   private buildMonthlySheets(
     workbook: ExcelJS.Workbook,
     dashboard: ReportsDashboardResponse,
+    visibleCharts: readonly ReportDashboardChartPermission[],
   ): NativeChartSpec[] {
     const monthlySeries = buildMonthlySeries(dashboard.dailySeries);
     const scope = dashboard.scope.isConsolidated
       ? "Todos los centros activos"
       : (dashboard.scope.tenantName ?? "Centro");
 
-    return monthlySeries.flatMap((point) => this.buildMonthlySheet(workbook, point, scope));
+    return monthlySeries.flatMap((point) =>
+      this.buildMonthlySheet(workbook, point, scope, visibleCharts),
+    );
   }
 
   private buildMonthlySheet(
     workbook: ExcelJS.Workbook,
     point: MonthlyReportPoint,
     scope: string,
+    visibleCharts: readonly ReportDashboardChartPermission[],
   ): NativeChartSpec[] {
     const sheet = workbook.addWorksheet(formatMonthSheetName(point.month));
     sheet.columns = [
@@ -197,38 +203,51 @@ export class ReportsDashboardExcelService {
     sheet.getCell("A13").alignment = { wrapText: true };
     sheet.views = [{ state: "frozen", ySplit: 4 }];
 
-    return [
-      chartSpec({
-        sheet,
-        title: "Atenciones y actividades",
-        seriesName: "Cantidad",
-        categoryRange: "$A$5:$A$7",
-        valueRange: "$B$5:$B$7",
-        categories: ["Enfermería", "Medicina", "Actividades"],
-        values: [point.nursingAttendances, point.medicalAttendances, point.activities],
-        color: "168362",
-        chartType: "bar",
-        anchor: { fromCol: 3, fromRow: 3, toCol: 10, toRow: 18 },
-      }),
-      chartSpec({
-        sheet,
-        title: "Entregas por tipo de apoyo",
-        seriesName: "Cantidad",
-        categoryRange: "$A$8:$A$10",
-        valueRange: "$B$8:$B$10",
-        categories: ["Transporte", "Refrigerios", "Almuerzos"],
-        values: [point.transportAllowancesDelivered, point.snacksDelivered, point.lunchesDelivered],
-        color: "70549A",
-        chartType: "bar",
-        anchor: { fromCol: 11, fromRow: 3, toCol: 18, toRow: 18 },
-      }),
-    ];
+    const chartSpecs: NativeChartSpec[] = [];
+    if (visibleCharts.includes("reportes.chart.monthly_attendances")) {
+      chartSpecs.push(
+        chartSpec({
+          sheet,
+          title: "Atenciones y actividades",
+          seriesName: "Cantidad",
+          categoryRange: "$A$5:$A$7",
+          valueRange: "$B$5:$B$7",
+          categories: ["Enfermería", "Medicina", "Actividades"],
+          values: [point.nursingAttendances, point.medicalAttendances, point.activities],
+          color: "168362",
+          chartType: "bar",
+          anchor: { fromCol: 3, fromRow: 3, toCol: 10, toRow: 18 },
+        }),
+      );
+    }
+    if (visibleCharts.includes("reportes.chart.monthly_deliveries")) {
+      chartSpecs.push(
+        chartSpec({
+          sheet,
+          title: "Entregas por tipo de apoyo",
+          seriesName: "Cantidad",
+          categoryRange: "$A$8:$A$10",
+          valueRange: "$B$8:$B$10",
+          categories: ["Transporte", "Refrigerios", "Almuerzos"],
+          values: [
+            point.transportAllowancesDelivered,
+            point.snacksDelivered,
+            point.lunchesDelivered,
+          ],
+          color: "70549A",
+          chartType: "bar",
+          anchor: { fromCol: 11, fromRow: 3, toCol: 18, toRow: 18 },
+        }),
+      );
+    }
+    return chartSpecs;
   }
 
   private buildActivitiesSheet(
     workbook: ExcelJS.Workbook,
     dashboard: ReportsDashboardResponse,
-  ): NativeChartSpec {
+    visibleCharts: readonly ReportDashboardChartPermission[],
+  ): NativeChartSpec[] {
     const sheet = workbook.addWorksheet("Actividades por tipo");
     sheet.columns = [
       { header: "Tipo de actividad", key: "type", width: 42 },
@@ -243,18 +262,21 @@ export class ReportsDashboardExcelService {
       sheet.getColumn(column).width = 11;
     }
     styleWorksheet(sheet);
-    return chartSpec({
-      sheet,
-      title: "Actividades realizadas por tipo",
-      seriesName: "Cantidad",
-      categoryRange: `$A$2:$A$${activities.length + 1}`,
-      valueRange: `$B$2:$B$${activities.length + 1}`,
-      categories: activities.map(([name]) => String(name)),
-      values: activities.map(([, count]) => Number(count)),
-      color: "B47A25",
-      chartType: "bar",
-      anchor: { fromCol: 3, fromRow: 1, toCol: 11, toRow: 18 },
-    });
+    if (!visibleCharts.includes("reportes.chart.activities_by_type")) return [];
+    return [
+      chartSpec({
+        sheet,
+        title: "Actividades realizadas por tipo",
+        seriesName: "Cantidad",
+        categoryRange: `$A$2:$A$${activities.length + 1}`,
+        valueRange: `$B$2:$B$${activities.length + 1}`,
+        categories: activities.map(([name]) => String(name)),
+        values: activities.map(([, count]) => Number(count)),
+        color: "B47A25",
+        chartType: "bar",
+        anchor: { fromCol: 3, fromRow: 1, toCol: 11, toRow: 18 },
+      }),
+    ];
   }
 }
 

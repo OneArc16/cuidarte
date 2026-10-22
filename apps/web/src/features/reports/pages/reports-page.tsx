@@ -1,4 +1,4 @@
-import { reportDashboardChartPermissionValues, type AuthUser } from "@cuidarte/contracts";
+import { type AuthUser } from "@cuidarte/contracts";
 import { FileSpreadsheet, FileText, Presentation } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -7,7 +7,7 @@ import { useReportsDashboardQuery } from "../model/reports-queries";
 import { ReportDashboard } from "../components/report-dashboard";
 import { ReportDateRangePicker } from "../components/report-date-range-picker";
 import { loadReportsDateRange, saveReportsDateRange } from "../lib/reports-date-range-state";
-import { canExportReports, canViewReportChart } from "../lib/reports-permissions";
+import { canExportReports } from "../lib/reports-permissions";
 import { useReportDownloads } from "../model/report-downloads-context";
 import "../reports.css";
 
@@ -23,9 +23,7 @@ export function ReportsPage({ user }: ReportsPageProps) {
   const dashboardQuery = useReportsDashboardQuery(dateRange);
   const { startAnalyticsExport } = useReportDownloads();
   const canExport = canExportReports(user);
-  const visibleCharts = reportDashboardChartPermissionValues.filter((chart) =>
-    canViewReportChart(user, chart),
-  );
+  const visibleCharts = dashboardQuery.data?.visibleCharts ?? [];
 
   const handleDateRangeApply = (nextDateRange: { from: string; to: string }) => {
     setDateRange(nextDateRange);

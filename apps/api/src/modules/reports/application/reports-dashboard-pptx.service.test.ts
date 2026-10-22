@@ -52,6 +52,56 @@ describe("ReportsDashboardPptxService", () => {
       },
     ]);
   });
+
+  it("includes the monthly attendance slide only when the auditor is granted that permission", async () => {
+    const service = new ReportsDashboardPptxService({
+      getDashboard: async () => dashboard,
+    } as never);
+    const auditor: AuthUser = {
+      ...actor,
+      role: "auditor",
+      permissions: [
+        "reportes.view",
+        "reportes.export",
+        "reportes.chart.activities_by_type",
+        "reportes.chart.monthly_deliveries",
+        "reportes.chart.sex_distribution",
+        "reportes.chart.rations_by_month",
+        "reportes.chart.transport_by_month",
+      ],
+    };
+
+    const withoutMonthlyAttendance = await service.exportPptx(
+      { from: "2026-09-01", to: "2026-09-02" },
+      auditor,
+    );
+    const withoutMonthlyZip = await JSZip.loadAsync(
+      Uint8Array.from(withoutMonthlyAttendance.buffer),
+    );
+    const withoutMonthlySlides = await Promise.all(
+      Object.keys(withoutMonthlyZip.files)
+        .filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name))
+        .map(async (name) => (await withoutMonthlyZip.file(name)?.async("string")) ?? ""),
+    );
+
+    assert.equal(withoutMonthlySlides.length, 7);
+    assert.doesNotMatch(withoutMonthlySlides.join("\n"), /Atenciones por mes/);
+
+    auditor.permissions!.push("reportes.chart.monthly_attendances");
+    const withMonthlyAttendance = await service.exportPptx(
+      { from: "2026-09-01", to: "2026-09-02" },
+      auditor,
+    );
+    const withMonthlyZip = await JSZip.loadAsync(Uint8Array.from(withMonthlyAttendance.buffer));
+    const withMonthlySlides = await Promise.all(
+      Object.keys(withMonthlyZip.files)
+        .filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name))
+        .map(async (name) => (await withMonthlyZip.file(name)?.async("string")) ?? ""),
+    );
+
+    assert.equal(withMonthlySlides.length, 8);
+    assert.match(withMonthlySlides.join("\n"), /Atenciones por mes/);
+  });
 });
 
 const actor: AuthUser = {
@@ -110,4 +160,5 @@ const dashboard: ReportsDashboardResponse = {
     },
   ],
   sexDistribution: { male: 3, female: 5, other: 1 },
+  visibleCharts: [],
 };

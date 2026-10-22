@@ -6,7 +6,11 @@ import {
 } from "@cuidarte/contracts";
 import { Inject, Injectable } from "@nestjs/common";
 
-import { assertCanUseReports, resolveReportTenantId } from "../domain/report.policy";
+import {
+  assertCanUseReports,
+  resolveReportTenantId,
+  visibleReportDashboardCharts,
+} from "../domain/report.policy";
 import {
   REPORTS_DASHBOARD_REPOSITORY,
   type ReportsDashboardRepository,
@@ -72,6 +76,7 @@ export class ReportsDashboardService {
       dailySeries,
       activitiesByType,
       sexDistribution: aggregate.sexDistribution,
+      visibleCharts: visibleReportDashboardCharts(actor),
     };
   }
 }

@@ -65,13 +65,22 @@ describe("report.policy", () => {
     );
   });
 
-  it("uses each chart permission independently", () => {
+  it("uses each chart permission independently for an auditor, including later changes", () => {
     const actor: AuthUser = {
       ...tenantUser,
+      role: "auditor",
       permissions: ["reportes.view", "reportes.chart.sex_distribution"],
     };
 
     assert.equal(canViewReportDashboardChart(actor, "reportes.chart.sex_distribution"), true);
+    assert.equal(canViewReportDashboardChart(actor, "reportes.chart.monthly_attendances"), false);
+
+    actor.permissions = [...actor.permissions!, "reportes.chart.monthly_attendances"];
+    assert.equal(canViewReportDashboardChart(actor, "reportes.chart.monthly_attendances"), true);
+
+    actor.permissions = actor.permissions.filter(
+      (permission) => permission !== "reportes.chart.monthly_attendances",
+    );
     assert.equal(canViewReportDashboardChart(actor, "reportes.chart.monthly_attendances"), false);
   });
 

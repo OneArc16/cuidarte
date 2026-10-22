@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { type ReportsDashboardResponse } from "@cuidarte/contracts";
+import { type AuthUser, type ReportsDashboardResponse } from "@cuidarte/contracts";
 
 import { buildMonthlySeries, buildPdfHtml } from "./reports-dashboard-pdf.service";
+import { visibleReportDashboardCharts } from "../domain/report.policy";
 
 describe("buildMonthlySeries", () => {
   it("groups daily dashboard points by month and sums chart metrics", () => {
@@ -73,13 +74,29 @@ describe("buildPdfHtml", () => {
     );
   });
 
-  it("omits the monthly attendance chart when it is disabled for the auditor PDF", () => {
+  it("uses the auditor's current monthly attendance permission", () => {
+    const auditor: AuthUser = {
+      id: "11111111-1111-4111-8111-111111111111",
+      tenantId: "22222222-2222-4222-8222-222222222222",
+      email: "auditor@centro.test",
+      fullName: "Auditor Centro",
+      role: "auditor",
+      passwordSetByAdmin: false,
+      permissions: ["reportes.view", "reportes.export"],
+    };
     const html = buildPdfHtml(createDashboard(), null, {
-      includeMonthlyAttendanceChart: false,
+      visibleCharts: visibleReportDashboardCharts(auditor),
     });
 
     assert.doesNotMatch(html, /Atenciones por mes/);
     assert.doesNotMatch(html, /Comparación mensual de enfermería y medicina/);
+
+    auditor.permissions!.push("reportes.chart.monthly_attendances");
+    const updatedHtml = buildPdfHtml(createDashboard(), null, {
+      visibleCharts: visibleReportDashboardCharts(auditor),
+    });
+
+    assert.match(updatedHtml, /Atenciones por mes/);
   });
 });
 
@@ -100,5 +117,6 @@ function createDashboard(): ReportsDashboardResponse {
     dailySeries: [],
     activitiesByType: [],
     sexDistribution: { male: 0, female: 0, other: 0 },
+    visibleCharts: [],
   };
 }

@@ -23,9 +23,5 @@ export function canViewReportChart(
   user: Pick<AuthUser, "role" | "permissions">,
   chart: ReportDashboardChartPermission,
 ): boolean {
-  if (user.permissions === undefined) {
-    return chart !== "reportes.chart.monthly_attendances" || user.role !== "auditor";
-  }
-
   return hasUserPermission(user, chart);
 }

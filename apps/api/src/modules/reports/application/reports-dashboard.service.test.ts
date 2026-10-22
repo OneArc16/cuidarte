@@ -22,6 +22,7 @@ const tenantAdmin: AuthUser = {
   fullName: "Admin Centro",
   role: "admin",
   passwordSetByAdmin: false,
+  permissions: ["reportes.view"],
 };
 
 const superAdmin: AuthUser = {
@@ -94,6 +95,7 @@ describe("ReportsDashboardService", () => {
       lunchesDelivered: 6,
     });
     assert.deepEqual(response.sexDistribution, { male: 4, female: 6, other: 2 });
+    assert.deepEqual(response.visibleCharts, []);
   });
 
   it("uses consolidated scope for super admins", async () => {
@@ -146,12 +148,34 @@ describe("ReportsDashboardService", () => {
 
   it("rejects actors without report access", async () => {
     const repository = new InMemoryReportsDashboardRepository(emptyAggregate);
-    const actor = { ...tenantAdmin, role: "medico" } as AuthUser;
+    const actor = { ...tenantAdmin, role: "medico", permissions: [] } as AuthUser;
 
     await assert.rejects(new ReportsDashboardService(repository).getDashboard(query, actor), {
       constructor: ForbiddenException,
     });
     assert.equal(repository.lastScope, undefined);
+  });
+
+  it("returns only the charts explicitly enabled for the dashboard actor", async () => {
+    const repository = new InMemoryReportsDashboardRepository(emptyAggregate);
+    const auditor: AuthUser = {
+      ...tenantAdmin,
+      role: "auditor",
+      permissions: ["reportes.view"],
+    };
+
+    const withoutMonthlyAttendance = await new ReportsDashboardService(repository).getDashboard(
+      query,
+      auditor,
+    );
+    assert.deepEqual(withoutMonthlyAttendance.visibleCharts, []);
+
+    auditor.permissions!.push("reportes.chart.monthly_attendances");
+    const withMonthlyAttendance = await new ReportsDashboardService(repository).getDashboard(
+      query,
+      auditor,
+    );
+    assert.deepEqual(withMonthlyAttendance.visibleCharts, ["reportes.chart.monthly_attendances"]);
   });
 });
 

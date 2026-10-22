@@ -60,6 +60,53 @@ describe("ReportsDashboardExcelService", () => {
     const pieChart = await zip.file("xl/charts/chart2.xml")?.async("string");
     assert.match(pieChart ?? "", /<c:pieChart>/);
   });
+
+  it("omits the monthly attendance chart until it is enabled for the auditor", async () => {
+    const service = new ReportsDashboardExcelService({
+      getDashboard: async () => dashboard,
+    } as never);
+    const auditor: AuthUser = {
+      ...actor,
+      role: "auditor",
+      permissions: [
+        "reportes.view",
+        "reportes.export",
+        "reportes.chart.activities_by_type",
+        "reportes.chart.monthly_deliveries",
+      ],
+    };
+
+    const withoutMonthlyAttendance = await service.exportExcel(
+      { from: "2026-09-01", to: "2026-09-02" },
+      auditor,
+    );
+    const withoutMonthlyZip = await JSZip.loadAsync(
+      Uint8Array.from(withoutMonthlyAttendance.buffer),
+    );
+    const withoutMonthlyCharts = await Promise.all(
+      Object.keys(withoutMonthlyZip.files)
+        .filter((name) => /^xl\/charts\/chart\d+\.xml$/.test(name))
+        .map(async (name) => (await withoutMonthlyZip.file(name)?.async("string")) ?? ""),
+    );
+
+    assert.equal(withoutMonthlyCharts.length, 4);
+    assert.doesNotMatch(withoutMonthlyCharts.join("\n"), /Atenciones y actividades/);
+
+    auditor.permissions!.push("reportes.chart.monthly_attendances");
+    const withMonthlyAttendance = await service.exportExcel(
+      { from: "2026-09-01", to: "2026-09-02" },
+      auditor,
+    );
+    const withMonthlyZip = await JSZip.loadAsync(Uint8Array.from(withMonthlyAttendance.buffer));
+    const withMonthlyCharts = await Promise.all(
+      Object.keys(withMonthlyZip.files)
+        .filter((name) => /^xl\/charts\/chart\d+\.xml$/.test(name))
+        .map(async (name) => (await withMonthlyZip.file(name)?.async("string")) ?? ""),
+    );
+
+    assert.equal(withMonthlyCharts.length, 5);
+    assert.match(withMonthlyCharts.join("\n"), /Atenciones y actividades/);
+  });
 });
 
 const dashboard: ReportsDashboardResponse = {
@@ -101,4 +148,5 @@ const dashboard: ReportsDashboardResponse = {
   ],
   activitiesByType: [],
   sexDistribution: { male: 0, female: 0, other: 0 },
+  visibleCharts: [],
 };

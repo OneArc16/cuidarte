@@ -117,27 +117,7 @@ export class ReportsAnalyticsExportService implements OnModuleInit {
     if (!item || item.status !== "processing") return;
     try {
       await this.repository.updateProgress(id, 10);
-      const actor: AuthUser = {
-        id: item.requestedByUserId,
-        tenantId: item.tenantId,
-        email: "report-worker@cuidarte.local",
-        fullName: "Worker de reportes",
-        role: item.requestedByRole,
-        passwordSetByAdmin: false,
-        permissions:
-          item.requestedByPermissions.length > 0
-            ? item.requestedByPermissions
-            : [
-                "reportes.view",
-                "reportes.export",
-                "reportes.chart.monthly_attendances",
-                "reportes.chart.activities_by_type",
-                "reportes.chart.monthly_deliveries",
-                "reportes.chart.sex_distribution",
-                "reportes.chart.rations_by_month",
-                "reportes.chart.transport_by_month",
-              ],
-      };
+      const actor = queuedExportActor(item);
       const query = { from: item.from, to: item.to };
       const result =
         item.format === "xlsx"
@@ -200,4 +180,25 @@ export class ReportsAnalyticsExportService implements OnModuleInit {
       updatedAt: item.updatedAt.toISOString(),
     };
   }
+}
+
+export function queuedExportActor(
+  item: Pick<
+    ReportsAnalyticsExportRecord,
+    "requestedByUserId" | "tenantId" | "requestedByRole" | "requestedByPermissions"
+  >,
+): AuthUser {
+  return {
+    id: item.requestedByUserId,
+    tenantId: item.tenantId,
+    email: "report-worker@cuidarte.local",
+    fullName: "Worker de reportes",
+    role: item.requestedByRole,
+    passwordSetByAdmin: false,
+    // Los permisos son la instantánea de la solicitud: la cola nunca concede gráficos por rol.
+    permissions:
+      item.requestedByPermissions.length > 0
+        ? item.requestedByPermissions
+        : ["reportes.view", "reportes.export"],
+  };
 }

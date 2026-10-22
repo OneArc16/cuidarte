@@ -22,13 +22,21 @@ describe("report export permissions", () => {
     expect(canExportReports({ role: "director", permissions: ["reportes.view"] })).toBe(false);
   });
 
-  it("uses the chart permission selected for the person", () => {
+  it("uses the chart permission selected for an auditor, including later changes", () => {
     const user = {
-      role: "director" as const,
+      role: "auditor" as const,
       permissions: ["reportes.view", "reportes.chart.activities_by_type"] as UserPermission[],
     };
 
     expect(canViewReportChart(user, "reportes.chart.activities_by_type")).toBe(true);
-    expect(canViewReportChart(user, "reportes.chart.sex_distribution")).toBe(false);
+    expect(canViewReportChart(user, "reportes.chart.monthly_attendances")).toBe(false);
+
+    user.permissions.push("reportes.chart.monthly_attendances");
+    expect(canViewReportChart(user, "reportes.chart.monthly_attendances")).toBe(true);
+
+    user.permissions = user.permissions.filter(
+      (permission) => permission !== "reportes.chart.monthly_attendances",
+    );
+    expect(canViewReportChart(user, "reportes.chart.monthly_attendances")).toBe(false);
   });
 });

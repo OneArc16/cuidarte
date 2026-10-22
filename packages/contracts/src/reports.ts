@@ -154,21 +154,6 @@ export const reportsDashboardSexDistributionSchema = z.object({
   other: z.number().int().min(0),
 });
 
-export const reportsDashboardResponseSchema = z.object({
-  range: z.object({ from: reportDashboardDateSchema, to: reportDashboardDateSchema }),
-  scope: z.object({
-    tenantId: z.uuid().nullable(),
-    tenantName: z.string().min(1).nullable(),
-    isConsolidated: z.boolean(),
-    municipality: z.string().min(1).nullable().optional(),
-    department: z.string().min(1).nullable().optional(),
-  }),
-  summary: reportsDashboardSummarySchema,
-  dailySeries: z.array(reportsDashboardDailyPointSchema),
-  activitiesByType: z.array(reportsDashboardActivityTypeSchema),
-  sexDistribution: reportsDashboardSexDistributionSchema,
-});
-
 export const reportAnalyticsExportFormatValues = ["xlsx", "pdf", "pptx"] as const;
 export const reportDashboardChartPermissionValues = [
   "reportes.chart.monthly_attendances",
@@ -215,6 +200,21 @@ export const reportDashboardChartCatalog = [
   label: string;
   description: string;
 }>;
+export const reportsDashboardResponseSchema = z.object({
+  range: z.object({ from: reportDashboardDateSchema, to: reportDashboardDateSchema }),
+  scope: z.object({
+    tenantId: z.uuid().nullable(),
+    tenantName: z.string().min(1).nullable(),
+    isConsolidated: z.boolean(),
+    municipality: z.string().min(1).nullable().optional(),
+    department: z.string().min(1).nullable().optional(),
+  }),
+  summary: reportsDashboardSummarySchema,
+  dailySeries: z.array(reportsDashboardDailyPointSchema),
+  activitiesByType: z.array(reportsDashboardActivityTypeSchema),
+  sexDistribution: reportsDashboardSexDistributionSchema,
+  visibleCharts: z.array(reportDashboardChartPermissionSchema),
+});
 export const reportAnalyticsExportStatusValues = [
   "pending",
   "processing",

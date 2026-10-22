@@ -2,6 +2,7 @@
 INSERT INTO "user_permissions" ("user_id", "permission")
 SELECT DISTINCT existing."user_id", chart."permission"
 FROM "user_permissions" AS existing
+INNER JOIN "users" AS "user" ON "user"."id" = existing."user_id"
 CROSS JOIN (
   VALUES
     ('reportes.chart.monthly_attendances'),
@@ -12,6 +13,12 @@ CROSS JOIN (
     ('reportes.chart.transport_by_month')
 ) AS chart("permission")
 WHERE existing."permission" = 'reportes.view'
+  -- Los auditores existentes conservan inicialmente la restricción del gráfico mensual.
+  -- El permiso sigue siendo administrable por persona desde Gestión de empleados.
+  AND (
+    "user"."role" <> 'auditor'
+    OR chart."permission" <> 'reportes.chart.monthly_attendances'
+  )
 ON CONFLICT ("user_id", "permission") DO NOTHING;
 --> statement-breakpoint
 
