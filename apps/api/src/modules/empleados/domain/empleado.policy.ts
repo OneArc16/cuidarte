@@ -10,6 +10,14 @@ import { type EmpleadosScope } from "./empleado.types";
 
 const CREATOR_ROLES: readonly UserRole[] = ["super_admin", "admin", "director"];
 const MANAGER_ROLES: readonly UserRole[] = ["super_admin", "admin", "director"];
+const REPORT_CHART_PERMISSIONS: readonly UserPermission[] = [
+  "reportes.chart.monthly_attendances",
+  "reportes.chart.activities_by_type",
+  "reportes.chart.monthly_deliveries",
+  "reportes.chart.sex_distribution",
+  "reportes.chart.rations_by_month",
+  "reportes.chart.transport_by_month",
+];
 
 export function canViewEmpleados(user: AuthUser): boolean {
   return user.permissions === undefined
@@ -36,6 +44,7 @@ export function defaultEmpleadoPermissions(role: UserRole): UserPermission[] {
       "atenciones_enfermeria.view",
       "atenciones_enfermeria.nursing_history",
       "reportes.view",
+      ...REPORT_CHART_PERMISSIONS,
     ],
     director: [
       "dashboard.view",
@@ -68,6 +77,7 @@ export function defaultEmpleadoPermissions(role: UserRole): UserPermission[] {
       "atenciones_enfermeria.delete",
       "reportes.view",
       "reportes.export",
+      ...REPORT_CHART_PERMISSIONS,
     ],
     enfermeria: [
       "actividades_grupales.view",

@@ -1,4 +1,7 @@
-import { type ReportsDashboardResponse } from "@cuidarte/contracts";
+import {
+  type ReportDashboardChartPermission,
+  type ReportsDashboardResponse,
+} from "@cuidarte/contracts";
 import { type ReactNode } from "react";
 import {
   Bar,
@@ -17,7 +20,7 @@ import {
 
 type ReportDashboardChartsProps = {
   data: ReportsDashboardResponse;
-  showMonthlyAttentionChart: boolean;
+  visibleCharts: readonly ReportDashboardChartPermission[];
 };
 
 type MonthlyDelivery = {
@@ -55,10 +58,8 @@ const chartGridColor = "#e6eee9";
 const chartTickStyle = { fill: "#657a72", fontSize: 10 };
 const wholeNumberFormatter = new Intl.NumberFormat("es-CO");
 
-export function ReportDashboardCharts({
-  data,
-  showMonthlyAttentionChart,
-}: ReportDashboardChartsProps) {
+export function ReportDashboardCharts({ data, visibleCharts }: ReportDashboardChartsProps) {
+  const canView = (chart: ReportDashboardChartPermission) => visibleCharts.includes(chart);
   const sexData = [
     { label: "Hombres", total: data.sexDistribution.male, color: "#2b6b99" },
     { label: "Mujeres", total: data.sexDistribution.female, color: "#168362" },
@@ -72,6 +73,8 @@ export function ReportDashboardCharts({
   const monthlyAttentionData = buildMonthlyAttendances(data.dailySeries);
   const monthlyDeliveryBreakdownData = buildMonthlyDeliveryBreakdown(data.dailySeries);
 
+  if (visibleCharts.length === 0) return null;
+
   return (
     <section className="reports-charts" aria-labelledby="reports-charts-title">
       <div className="reports-dashboard__heading">
@@ -81,7 +84,7 @@ export function ReportDashboardCharts({
         </div>
       </div>
       <div className="reports-chart-grid">
-        {showMonthlyAttentionChart ? (
+        {canView("reportes.chart.monthly_attendances") ? (
           <ChartPanel
             title="Atenciones por mes"
             description="Comparación mensual de enfermería y medicina."
@@ -143,7 +146,7 @@ export function ReportDashboardCharts({
           </ChartPanel>
         ) : null}
 
-        {activityData.length > 0 ? (
+        {canView("reportes.chart.activities_by_type") && activityData.length > 0 ? (
           <ChartPanel
             title="Actividades por tipo"
             description="Sesiones grupales registradas en el periodo."
@@ -193,197 +196,205 @@ export function ReportDashboardCharts({
           </ChartPanel>
         ) : null}
 
-        <ChartPanel
-          title="Entregas por mes"
-          description="Transporte, refrigerios y almuerzos entregados."
-          className="reports-chart-panel--deliveries reports-chart-panel--bar-hover"
-        >
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart
-              data={monthlyDeliveryBreakdownData}
-              margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
-              barGap={6}
-            >
-              <CartesianGrid stroke={chartGridColor} vertical={false} />
-              <XAxis
-                dataKey="label"
-                tick={chartTickStyle}
-                tickLine={false}
-                axisLine={{ stroke: chartGridColor }}
-              />
-              <YAxis
-                allowDecimals={false}
-                tick={chartTickStyle}
-                tickLine={false}
-                axisLine={false}
-                width={40}
-              />
-              <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgb(22 131 98 / 7%)" }} />
-              <Legend
-                align="left"
-                verticalAlign="top"
-                iconType="square"
-                iconSize={10}
-                wrapperStyle={{ paddingLeft: 4, paddingBottom: 8, fontSize: 12 }}
-              />
-              <Bar
-                dataKey="transportAllowancesDelivered"
-                name="Transporte"
-                fill="#a24b48"
-                maxBarSize={32}
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="snacksDelivered"
-                name="Refrigerios"
-                fill="#70549a"
-                maxBarSize={32}
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="lunchesDelivered"
-                name="Almuerzos"
-                fill="#4d7b38"
-                maxBarSize={32}
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-          <AccessibleTable
-            caption="Entregas por mes"
-            headers={["Mes", "Transporte", "Refrigerios", "Almuerzos"]}
-            rows={monthlyDeliveryBreakdownData.map((point) => [
-              point.month,
-              point.transportAllowancesDelivered,
-              point.snacksDelivered,
-              point.lunchesDelivered,
-            ])}
-          />
-        </ChartPanel>
-
-        <ChartPanel
-          title="Personas por sexo"
-          description="Distribución de personas registradas."
-          className="reports-analytics-chart reports-chart-panel--compact"
-        >
-          <ResponsiveContainer width="100%" height={210}>
-            <PieChart>
-              <Pie
-                data={sexData}
-                dataKey="total"
-                nameKey="label"
-                innerRadius={52}
-                outerRadius={80}
-                paddingAngle={3}
+        {canView("reportes.chart.monthly_deliveries") ? (
+          <ChartPanel
+            title="Entregas por mes"
+            description="Transporte, refrigerios y almuerzos entregados."
+            className="reports-chart-panel--deliveries reports-chart-panel--bar-hover"
+          >
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart
+                data={monthlyDeliveryBreakdownData}
+                margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
+                barGap={6}
               >
-                {sexData.map((item) => (
-                  <Cell key={item.label} fill={item.color} />
-                ))}
-              </Pie>
-              <Tooltip content={<SexTooltip totalPeople={totalPeople} />} cursor={false} />
-            </PieChart>
-          </ResponsiveContainer>
-          <SexLegend data={sexData} />
-          <AccessibleTable
-            caption="Personas por sexo"
-            headers={["Sexo", "Personas"]}
-            rows={sexData.map((item) => [item.label, item.total])}
-          />
-        </ChartPanel>
-
-        <ChartPanel
-          title="Almuerzos y refrigerios entregados mes"
-          description="Total de refrigerios y almuerzos entregados."
-          className="reports-analytics-chart reports-chart-panel--compact"
-        >
-          <ResponsiveContainer width="100%" height={205}>
-            <BarChart data={monthlyData} margin={{ top: 22, right: 2, left: 4, bottom: 0 }}>
-              <CartesianGrid stroke={chartGridColor} vertical={false} />
-              <XAxis
-                dataKey="label"
-                tick={chartTickStyle}
-                tickLine={false}
-                axisLine={{ stroke: chartGridColor }}
-              />
-              <YAxis
-                allowDecimals={false}
-                tick={chartTickStyle}
-                tickFormatter={formatCompactValue}
-                tickLine={false}
-                axisLine={false}
-                width={42}
-              />
-              <Tooltip contentStyle={tooltipStyle} cursor={false} />
-              <Bar
-                dataKey="rationsDelivered"
-                name="Raciones"
-                fill="#70549a"
-                maxBarSize={24}
-                radius={[4, 4, 0, 0]}
-              >
-                <LabelList
-                  dataKey="rationsDelivered"
-                  position="top"
-                  fill="#70549a"
-                  fontSize={10}
-                  formatter={formatNonZeroCompactValue}
+                <CartesianGrid stroke={chartGridColor} vertical={false} />
+                <XAxis
+                  dataKey="label"
+                  tick={chartTickStyle}
+                  tickLine={false}
+                  axisLine={{ stroke: chartGridColor }}
                 />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          <AccessibleTable
-            caption="Raciones entregadas por mes"
-            headers={["Mes", "Raciones"]}
-            rows={monthlyData.map((point) => [point.month, point.rationsDelivered])}
-          />
-        </ChartPanel>
-
-        <ChartPanel
-          title="Auxilios de transporte por mes"
-          description="Auxilios entregados durante el periodo."
-          className="reports-analytics-chart reports-chart-panel--compact"
-        >
-          <ResponsiveContainer width="100%" height={205}>
-            <BarChart data={monthlyData} margin={{ top: 22, right: 2, left: 4, bottom: 0 }}>
-              <CartesianGrid stroke={chartGridColor} vertical={false} />
-              <XAxis
-                dataKey="label"
-                tick={chartTickStyle}
-                tickLine={false}
-                axisLine={{ stroke: chartGridColor }}
-              />
-              <YAxis
-                allowDecimals={false}
-                tick={chartTickStyle}
-                tickFormatter={formatCompactValue}
-                tickLine={false}
-                axisLine={false}
-                width={42}
-              />
-              <Tooltip contentStyle={tooltipStyle} cursor={false} />
-              <Bar
-                dataKey="transportAllowancesDelivered"
-                name="Auxilios"
-                fill="#a24b48"
-                maxBarSize={24}
-                radius={[4, 4, 0, 0]}
-              >
-                <LabelList
+                <YAxis
+                  allowDecimals={false}
+                  tick={chartTickStyle}
+                  tickLine={false}
+                  axisLine={false}
+                  width={40}
+                />
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "rgb(22 131 98 / 7%)" }} />
+                <Legend
+                  align="left"
+                  verticalAlign="top"
+                  iconType="square"
+                  iconSize={10}
+                  wrapperStyle={{ paddingLeft: 4, paddingBottom: 8, fontSize: 12 }}
+                />
+                <Bar
                   dataKey="transportAllowancesDelivered"
-                  position="top"
+                  name="Transporte"
                   fill="#a24b48"
-                  fontSize={10}
-                  formatter={formatNonZeroCompactValue}
+                  maxBarSize={32}
+                  radius={[4, 4, 0, 0]}
                 />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-          <AccessibleTable
-            caption="Auxilios de transporte por mes"
-            headers={["Mes", "Auxilios"]}
-            rows={monthlyData.map((point) => [point.month, point.transportAllowancesDelivered])}
-          />
-        </ChartPanel>
+                <Bar
+                  dataKey="snacksDelivered"
+                  name="Refrigerios"
+                  fill="#70549a"
+                  maxBarSize={32}
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar
+                  dataKey="lunchesDelivered"
+                  name="Almuerzos"
+                  fill="#4d7b38"
+                  maxBarSize={32}
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+            <AccessibleTable
+              caption="Entregas por mes"
+              headers={["Mes", "Transporte", "Refrigerios", "Almuerzos"]}
+              rows={monthlyDeliveryBreakdownData.map((point) => [
+                point.month,
+                point.transportAllowancesDelivered,
+                point.snacksDelivered,
+                point.lunchesDelivered,
+              ])}
+            />
+          </ChartPanel>
+        ) : null}
+
+        {canView("reportes.chart.sex_distribution") ? (
+          <ChartPanel
+            title="Personas por sexo"
+            description="Distribución de personas registradas."
+            className="reports-analytics-chart reports-chart-panel--compact"
+          >
+            <ResponsiveContainer width="100%" height={210}>
+              <PieChart>
+                <Pie
+                  data={sexData}
+                  dataKey="total"
+                  nameKey="label"
+                  innerRadius={52}
+                  outerRadius={80}
+                  paddingAngle={3}
+                >
+                  {sexData.map((item) => (
+                    <Cell key={item.label} fill={item.color} />
+                  ))}
+                </Pie>
+                <Tooltip content={<SexTooltip totalPeople={totalPeople} />} cursor={false} />
+              </PieChart>
+            </ResponsiveContainer>
+            <SexLegend data={sexData} />
+            <AccessibleTable
+              caption="Personas por sexo"
+              headers={["Sexo", "Personas"]}
+              rows={sexData.map((item) => [item.label, item.total])}
+            />
+          </ChartPanel>
+        ) : null}
+
+        {canView("reportes.chart.rations_by_month") ? (
+          <ChartPanel
+            title="Almuerzos y refrigerios entregados mes"
+            description="Total de refrigerios y almuerzos entregados."
+            className="reports-analytics-chart reports-chart-panel--compact"
+          >
+            <ResponsiveContainer width="100%" height={205}>
+              <BarChart data={monthlyData} margin={{ top: 22, right: 2, left: 4, bottom: 0 }}>
+                <CartesianGrid stroke={chartGridColor} vertical={false} />
+                <XAxis
+                  dataKey="label"
+                  tick={chartTickStyle}
+                  tickLine={false}
+                  axisLine={{ stroke: chartGridColor }}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={chartTickStyle}
+                  tickFormatter={formatCompactValue}
+                  tickLine={false}
+                  axisLine={false}
+                  width={42}
+                />
+                <Tooltip contentStyle={tooltipStyle} cursor={false} />
+                <Bar
+                  dataKey="rationsDelivered"
+                  name="Raciones"
+                  fill="#70549a"
+                  maxBarSize={24}
+                  radius={[4, 4, 0, 0]}
+                >
+                  <LabelList
+                    dataKey="rationsDelivered"
+                    position="top"
+                    fill="#70549a"
+                    fontSize={10}
+                    formatter={formatNonZeroCompactValue}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <AccessibleTable
+              caption="Raciones entregadas por mes"
+              headers={["Mes", "Raciones"]}
+              rows={monthlyData.map((point) => [point.month, point.rationsDelivered])}
+            />
+          </ChartPanel>
+        ) : null}
+
+        {canView("reportes.chart.transport_by_month") ? (
+          <ChartPanel
+            title="Auxilios de transporte por mes"
+            description="Auxilios entregados durante el periodo."
+            className="reports-analytics-chart reports-chart-panel--compact"
+          >
+            <ResponsiveContainer width="100%" height={205}>
+              <BarChart data={monthlyData} margin={{ top: 22, right: 2, left: 4, bottom: 0 }}>
+                <CartesianGrid stroke={chartGridColor} vertical={false} />
+                <XAxis
+                  dataKey="label"
+                  tick={chartTickStyle}
+                  tickLine={false}
+                  axisLine={{ stroke: chartGridColor }}
+                />
+                <YAxis
+                  allowDecimals={false}
+                  tick={chartTickStyle}
+                  tickFormatter={formatCompactValue}
+                  tickLine={false}
+                  axisLine={false}
+                  width={42}
+                />
+                <Tooltip contentStyle={tooltipStyle} cursor={false} />
+                <Bar
+                  dataKey="transportAllowancesDelivered"
+                  name="Auxilios"
+                  fill="#a24b48"
+                  maxBarSize={24}
+                  radius={[4, 4, 0, 0]}
+                >
+                  <LabelList
+                    dataKey="transportAllowancesDelivered"
+                    position="top"
+                    fill="#a24b48"
+                    fontSize={10}
+                    formatter={formatNonZeroCompactValue}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <AccessibleTable
+              caption="Auxilios de transporte por mes"
+              headers={["Mes", "Auxilios"]}
+              rows={monthlyData.map((point) => [point.month, point.transportAllowancesDelivered])}
+            />
+          </ChartPanel>
+        ) : null}
       </div>
     </section>
   );

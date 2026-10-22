@@ -51,6 +51,12 @@ export const userPermissionValues = [
   "atenciones_enfermeria.delete",
   "reportes.view",
   "reportes.export",
+  "reportes.chart.monthly_attendances",
+  "reportes.chart.activities_by_type",
+  "reportes.chart.monthly_deliveries",
+  "reportes.chart.sex_distribution",
+  "reportes.chart.rations_by_month",
+  "reportes.chart.transport_by_month",
   "ajustes.actividades.manage",
 ] as const;
 
@@ -74,6 +80,42 @@ export const userPermissionCatalog = [
     group: "Reportes",
     label: "Descargar reportes",
     description: "Generar y descargar reportes.",
+  },
+  {
+    key: "reportes.chart.monthly_attendances",
+    group: "Reportes",
+    label: "Gráfico de atenciones por mes",
+    description: "Ver el gráfico mensual de enfermería y medicina.",
+  },
+  {
+    key: "reportes.chart.activities_by_type",
+    group: "Reportes",
+    label: "Gráfico de actividades por tipo",
+    description: "Ver el gráfico de sesiones grupales por tipo.",
+  },
+  {
+    key: "reportes.chart.monthly_deliveries",
+    group: "Reportes",
+    label: "Gráfico de entregas por mes",
+    description: "Ver el gráfico mensual de transporte y alimentación.",
+  },
+  {
+    key: "reportes.chart.sex_distribution",
+    group: "Reportes",
+    label: "Gráfico de personas por sexo",
+    description: "Ver la distribución de personas registradas.",
+  },
+  {
+    key: "reportes.chart.rations_by_month",
+    group: "Reportes",
+    label: "Gráfico de raciones por mes",
+    description: "Ver el gráfico mensual de refrigerios y almuerzos.",
+  },
+  {
+    key: "reportes.chart.transport_by_month",
+    group: "Reportes",
+    label: "Gráfico de auxilios por mes",
+    description: "Ver el gráfico mensual de auxilios de transporte.",
   },
   {
     key: "empleados.view",

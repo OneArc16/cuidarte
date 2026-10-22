@@ -6,6 +6,7 @@ import {
 } from "@cuidarte/contracts";
 import {
   AlertTriangle,
+  BarChart3,
   Check,
   Info,
   Pencil,
@@ -27,6 +28,7 @@ import { resolveActividadesGrupalesApiError } from "@/features/actividades-grupa
 import { canManageEmpleadoPermissions } from "@/features/empleados/lib/empleados-permissions";
 import { canManageAjustes } from "../lib/ajustes-permissions";
 import { AjustesPermissionsDialog } from "../components/ajustes-permissions-dialog";
+import { AjustesReportChartPermissionsDialog } from "../components/ajustes-report-chart-permissions-dialog";
 import { AjustesEquiposDialog } from "../components/ajustes-equipos-dialog";
 import { AjustesActivityOrganizerPermissionsDialog } from "../components/ajustes-activity-organizer-permissions-dialog";
 import {
@@ -67,6 +69,7 @@ export function AjustesPage({ user }: AjustesPageProps) {
     useState<ActividadGrupalTipo | null>(null);
   const [globalSeriesActivity, setGlobalSeriesActivity] = useState<ActivityCatalogRow | null>(null);
   const [permissionsDialogOpen, setPermissionsDialogOpen] = useState(false);
+  const [reportChartPermissionsDialogOpen, setReportChartPermissionsDialogOpen] = useState(false);
   const [equiposDialogOpen, setEquiposDialogOpen] = useState(false);
   const [organizerPermissionsDialogOpen, setOrganizerPermissionsDialogOpen] = useState(false);
   const isAllTenantsSelected = shouldSelectTenant && selectedTenantId === ALL_TENANTS_VALUE;
@@ -217,6 +220,15 @@ export function AjustesPage({ user }: AjustesPageProps) {
                 onClick={() => setPermissionsDialogOpen(true)}
               >
                 <ShieldCheck aria-hidden="true" />
+              </button>
+              <button
+                className="ajustes-page__icon-button ajustes-page__icon-button--report-charts"
+                type="button"
+                aria-label="Administrar permisos de gráficos de reportes"
+                data-tooltip="Gráficos de reportes"
+                onClick={() => setReportChartPermissionsDialogOpen(true)}
+              >
+                <BarChart3 aria-hidden="true" />
               </button>
               <button
                 className="ajustes-page__icon-button ajustes-page__icon-button--organizers"
@@ -643,6 +655,11 @@ export function AjustesPage({ user }: AjustesPageProps) {
       ) : null}
       {permissionsDialogOpen ? (
         <AjustesPermissionsDialog onClose={() => setPermissionsDialogOpen(false)} />
+      ) : null}
+      {reportChartPermissionsDialogOpen ? (
+        <AjustesReportChartPermissionsDialog
+          onClose={() => setReportChartPermissionsDialogOpen(false)}
+        />
       ) : null}
       {equiposDialogOpen ? (
         <AjustesEquiposDialog onClose={() => setEquiposDialogOpen(false)} />

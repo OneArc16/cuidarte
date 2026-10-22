@@ -8,6 +8,7 @@ import {
   assertCanAccessReportJob,
   assertCanExportReports,
   assertCanUseReports,
+  canViewReportDashboardChart,
   resolveReportTenantId,
 } from "./report.policy";
 
@@ -62,6 +63,16 @@ describe("report.policy", () => {
         }),
       ForbiddenException,
     );
+  });
+
+  it("uses each chart permission independently", () => {
+    const actor: AuthUser = {
+      ...tenantUser,
+      permissions: ["reportes.view", "reportes.chart.sex_distribution"],
+    };
+
+    assert.equal(canViewReportDashboardChart(actor, "reportes.chart.sex_distribution"), true);
+    assert.equal(canViewReportDashboardChart(actor, "reportes.chart.monthly_attendances"), false);
   });
 
   it("requires tenant selection for super_admin", () => {

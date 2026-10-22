@@ -64,6 +64,7 @@ export class ReportsAnalyticsExportService implements OnModuleInit {
       tenantName,
       requestedByUserId: actor.id,
       requestedByRole: actor.role,
+      requestedByPermissions: actor.permissions ?? [],
       downloadFilename: `estadisticas-reportes-${command.from}-${command.to}.${command.format}`,
     });
     await this.queue.enqueue(record.id);
@@ -123,7 +124,19 @@ export class ReportsAnalyticsExportService implements OnModuleInit {
         fullName: "Worker de reportes",
         role: item.requestedByRole,
         passwordSetByAdmin: false,
-        permissions: ["reportes.view", "reportes.export"],
+        permissions:
+          item.requestedByPermissions.length > 0
+            ? item.requestedByPermissions
+            : [
+                "reportes.view",
+                "reportes.export",
+                "reportes.chart.monthly_attendances",
+                "reportes.chart.activities_by_type",
+                "reportes.chart.monthly_deliveries",
+                "reportes.chart.sex_distribution",
+                "reportes.chart.rations_by_month",
+                "reportes.chart.transport_by_month",
+              ],
       };
       const query = { from: item.from, to: item.to };
       const result =

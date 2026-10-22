@@ -1,6 +1,6 @@
 import { type ActividadGrupalOrganizer, type UserPermission } from "@cuidarte/contracts";
 import { Injectable } from "@nestjs/common";
-import { and, asc, desc, eq, ilike, isNull, ne, or, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, isNull, ne, or, sql, type SQL } from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
 import {
@@ -628,12 +628,14 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
 
     if (query.search !== null) {
       const searchPattern = `%${escapeLikePattern(query.search)}%`;
+      const roleSearchPattern = `%${escapeLikePattern(normalizeSearchText(query.search))}%`;
       const searchCondition = or(
         ilike(users.documentNumber, searchPattern),
         ilike(users.fullName, searchPattern),
         ilike(users.email, searchPattern),
         ilike(users.phone, searchPattern),
         ilike(tenants.name, searchPattern),
+        ilike(sql<string>`replace(${users.role}::text, '_', ' ')`, roleSearchPattern),
       );
 
       if (searchCondition !== undefined) {
@@ -817,6 +819,10 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
       directorSignatureAssignmentHistory: relations?.directorSignatureAssignmentHistory ?? [],
     };
   }
+}
+
+function normalizeSearchText(value: string): string {
+  return value.normalize("NFD").replace(/\p{Diacritic}/gu, "");
 }
 
 function escapeLikePattern(value: string): string {

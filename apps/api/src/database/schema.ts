@@ -1489,6 +1489,10 @@ export const reportAnalyticsExports = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
     requestedByRole: userRole("requested_by_role").notNull(),
+    requestedByPermissions: jsonb("requested_by_permissions")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
     format: reportAnalyticsExportFormat("format").notNull(),
     from: date("from").notNull(),
     to: date("to").notNull(),

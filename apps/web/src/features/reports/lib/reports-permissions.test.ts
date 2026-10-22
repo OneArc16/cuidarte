@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { type UserPermission } from "@cuidarte/contracts";
 
-import { canExportReports } from "./reports-permissions";
+import { canExportReports, canViewReportChart } from "./reports-permissions";
 
 describe("report export permissions", () => {
   it("allows exports by default only to super admin, admin, and director", () => {
@@ -19,5 +20,15 @@ describe("report export permissions", () => {
       }),
     ).toBe(true);
     expect(canExportReports({ role: "director", permissions: ["reportes.view"] })).toBe(false);
+  });
+
+  it("uses the chart permission selected for the person", () => {
+    const user = {
+      role: "director" as const,
+      permissions: ["reportes.view", "reportes.chart.activities_by_type"] as UserPermission[],
+    };
+
+    expect(canViewReportChart(user, "reportes.chart.activities_by_type")).toBe(true);
+    expect(canViewReportChart(user, "reportes.chart.sex_distribution")).toBe(false);
   });
 });

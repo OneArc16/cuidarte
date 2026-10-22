@@ -1,4 +1,9 @@
-import { type AuthUser, type ReportAnalyticsExportFormat, type ReportAnalyticsExportStatus } from "@cuidarte/contracts";
+import {
+  type AuthUser,
+  type ReportAnalyticsExportFormat,
+  type ReportAnalyticsExportStatus,
+  type UserPermission,
+} from "@cuidarte/contracts";
 
 export type ReportsAnalyticsExportRecord = {
   id: string;
@@ -6,6 +11,7 @@ export type ReportsAnalyticsExportRecord = {
   tenantName: string | null;
   requestedByUserId: string;
   requestedByRole: AuthUser["role"];
+  requestedByPermissions: UserPermission[];
   format: ReportAnalyticsExportFormat;
   from: string;
   to: string;
@@ -23,12 +29,30 @@ export type ReportsAnalyticsExportRecord = {
 
 export const REPORTS_ANALYTICS_EXPORTS_REPOSITORY = Symbol("REPORTS_ANALYTICS_EXPORTS_REPOSITORY");
 export type ReportsAnalyticsExportsRepository = {
-  create(command: Pick<ReportsAnalyticsExportRecord, "tenantId" | "tenantName" | "requestedByUserId" | "requestedByRole" | "format" | "from" | "to" | "downloadFilename">): Promise<ReportsAnalyticsExportRecord>;
+  create(
+    command: Pick<
+      ReportsAnalyticsExportRecord,
+      | "tenantId"
+      | "tenantName"
+      | "requestedByUserId"
+      | "requestedByRole"
+      | "requestedByPermissions"
+      | "format"
+      | "from"
+      | "to"
+      | "downloadFilename"
+    >,
+  ): Promise<ReportsAnalyticsExportRecord>;
   findById(id: string): Promise<ReportsAnalyticsExportRecord | null>;
   list(): Promise<ReportsAnalyticsExportRecord[]>;
   markProcessing(id: string, startedAt: Date): Promise<ReportsAnalyticsExportRecord | null>;
   updateProgress(id: string, progress: number): Promise<void>;
-  markReady(id: string, storageKey: string, expiresAt: Date, completedAt: Date): Promise<ReportsAnalyticsExportRecord | null>;
+  markReady(
+    id: string,
+    storageKey: string,
+    expiresAt: Date,
+    completedAt: Date,
+  ): Promise<ReportsAnalyticsExportRecord | null>;
   markFailed(id: string, errorMessage: string): Promise<void>;
   cancel(id: string): Promise<ReportsAnalyticsExportRecord | null>;
 };

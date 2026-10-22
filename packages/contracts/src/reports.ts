@@ -170,6 +170,51 @@ export const reportsDashboardResponseSchema = z.object({
 });
 
 export const reportAnalyticsExportFormatValues = ["xlsx", "pdf", "pptx"] as const;
+export const reportDashboardChartPermissionValues = [
+  "reportes.chart.monthly_attendances",
+  "reportes.chart.activities_by_type",
+  "reportes.chart.monthly_deliveries",
+  "reportes.chart.sex_distribution",
+  "reportes.chart.rations_by_month",
+  "reportes.chart.transport_by_month",
+] as const;
+export const reportDashboardChartPermissionSchema = z.enum(reportDashboardChartPermissionValues);
+export const reportDashboardChartCatalog = [
+  {
+    key: "reportes.chart.monthly_attendances",
+    label: "Atenciones por mes",
+    description: "Comparación mensual de atenciones de enfermería y medicina.",
+  },
+  {
+    key: "reportes.chart.activities_by_type",
+    label: "Actividades por tipo",
+    description: "Sesiones grupales registradas en el periodo.",
+  },
+  {
+    key: "reportes.chart.monthly_deliveries",
+    label: "Entregas por mes",
+    description: "Transporte, refrigerios y almuerzos entregados.",
+  },
+  {
+    key: "reportes.chart.sex_distribution",
+    label: "Personas por sexo",
+    description: "Distribución de personas registradas.",
+  },
+  {
+    key: "reportes.chart.rations_by_month",
+    label: "Almuerzos y refrigerios por mes",
+    description: "Total mensual de raciones entregadas.",
+  },
+  {
+    key: "reportes.chart.transport_by_month",
+    label: "Auxilios de transporte por mes",
+    description: "Total mensual de auxilios entregados.",
+  },
+] as const satisfies ReadonlyArray<{
+  key: (typeof reportDashboardChartPermissionValues)[number];
+  label: string;
+  description: string;
+}>;
 export const reportAnalyticsExportStatusValues = [
   "pending",
   "processing",
@@ -233,6 +278,7 @@ export type ReportsDashboardActivityType = z.infer<typeof reportsDashboardActivi
 export type ReportsDashboardSexDistribution = z.infer<typeof reportsDashboardSexDistributionSchema>;
 export type ReportsDashboardResponse = z.infer<typeof reportsDashboardResponseSchema>;
 export type ReportAnalyticsExportFormat = z.infer<typeof reportAnalyticsExportFormatSchema>;
+export type ReportDashboardChartPermission = z.infer<typeof reportDashboardChartPermissionSchema>;
 export type ReportAnalyticsExportStatus = z.infer<typeof reportAnalyticsExportStatusSchema>;
 export type CreateReportsDashboardExportRequest = z.infer<
   typeof createReportsDashboardExportRequestSchema

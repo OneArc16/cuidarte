@@ -1,4 +1,8 @@
-import { hasUserPermission, type AuthUser } from "@cuidarte/contracts";
+import {
+  hasUserPermission,
+  type AuthUser,
+  type ReportDashboardChartPermission,
+} from "@cuidarte/contracts";
 import { ForbiddenException, BadRequestException } from "@nestjs/common";
 
 export function assertCanUseReports(actor: AuthUser): void {
@@ -27,6 +31,17 @@ export function assertCanExportReports(actor: AuthUser): void {
   if (!canExport) {
     throw new ForbiddenException("No tienes permisos para descargar reportes.");
   }
+}
+
+export function canViewReportDashboardChart(
+  actor: Pick<AuthUser, "role" | "permissions">,
+  chart: ReportDashboardChartPermission,
+): boolean {
+  if (actor.permissions === undefined) {
+    return chart !== "reportes.chart.monthly_attendances" || actor.role !== "auditor";
+  }
+
+  return hasUserPermission(actor, chart);
 }
 
 export function resolveReportTenantId(actor: AuthUser, requestedTenantId: string | null): string {

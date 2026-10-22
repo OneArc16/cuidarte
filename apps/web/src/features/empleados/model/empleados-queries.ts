@@ -23,6 +23,7 @@ export function useEmpleadosQuery(params: { search: string }) {
   return useQuery({
     queryKey: empleadosQueryKeys.list(params),
     queryFn: () => empleadosApi.listEmpleados(params),
+    placeholderData: (previousData) => previousData,
     retry: false,
   });
 }

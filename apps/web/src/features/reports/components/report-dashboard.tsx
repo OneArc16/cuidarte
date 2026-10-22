@@ -9,7 +9,10 @@ import {
   Utensils,
 } from "lucide-react";
 import { type ReactNode } from "react";
-import { type ReportsDashboardResponse } from "@cuidarte/contracts";
+import {
+  type ReportDashboardChartPermission,
+  type ReportsDashboardResponse,
+} from "@cuidarte/contracts";
 
 import { AnimatedNumber } from "@/components/animated-number";
 
@@ -19,7 +22,7 @@ type ReportDashboardProps = {
   data: ReportsDashboardResponse | undefined;
   isLoading: boolean;
   isError: boolean;
-  showMonthlyAttentionChart: boolean;
+  visibleCharts: readonly ReportDashboardChartPermission[];
 };
 
 const METRICS = [
@@ -38,12 +41,7 @@ const METRICS = [
   { key: "lunchesDelivered", label: "Almuerzos entregados", icon: Utensils, tone: "green" },
 ] as const;
 
-export function ReportDashboard({
-  data,
-  isLoading,
-  isError,
-  showMonthlyAttentionChart,
-}: ReportDashboardProps) {
+export function ReportDashboard({ data, isLoading, isError, visibleCharts }: ReportDashboardProps) {
   return (
     <>
       <section className="reports-dashboard" aria-labelledby="reports-dashboard-title">
@@ -88,10 +86,7 @@ export function ReportDashboard({
           </>
         ) : null}
         {data && !isLoading && !isError ? (
-          <ReportDashboardCharts
-            data={data}
-            showMonthlyAttentionChart={showMonthlyAttentionChart}
-          />
+          <ReportDashboardCharts data={data} visibleCharts={visibleCharts} />
         ) : null}
       </section>
     </>

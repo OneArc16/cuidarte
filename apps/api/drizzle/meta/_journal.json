@@ -484,6 +484,13 @@
       "when": 1792440003110,
       "tag": "0068_employee_team_role_assignments",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1792613165798,
+      "tag": "0069_report_dashboard_chart_permissions",
+      "breakpoints": true
     }
   ]
 }

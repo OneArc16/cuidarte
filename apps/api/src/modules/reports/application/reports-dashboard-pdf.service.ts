@@ -1,5 +1,6 @@
 import {
   type AuthUser,
+  type ReportDashboardChartPermission,
   type ReportsDashboardQuery,
   type ReportsDashboardResponse,
 } from "@cuidarte/contracts";
@@ -9,7 +10,7 @@ import { chromium } from "playwright";
 import playwrightEnv from "../../../common/playwright-env";
 import { getPdfLetterheadDataUrl } from "../../../common/pdf-letterhead";
 import { ReportsDashboardService } from "./reports-dashboard.service";
-import { assertCanExportReports } from "../domain/report.policy";
+import { assertCanExportReports, canViewReportDashboardChart } from "../domain/report.policy";
 
 export type ReportsDashboardPdfFile = {
   buffer: Buffer;
@@ -33,7 +34,7 @@ export class ReportsDashboardPdfService {
       const page = await browser.newPage();
       await page.setContent(
         buildPdfHtml(dashboard, await getPdfLetterheadDataUrl(), {
-          includeMonthlyAttendanceChart: actor.role !== "auditor",
+          visibleCharts: visibleChartsFor(actor),
         }),
         { waitUntil: "load" },
       );
@@ -64,7 +65,10 @@ export class ReportsDashboardPdfService {
 export function buildPdfHtml(
   dashboard: ReportsDashboardResponse,
   membreteDataUrl: string | null,
-  options: { includeMonthlyAttendanceChart?: boolean } = {},
+  options: {
+    includeMonthlyAttendanceChart?: boolean;
+    visibleCharts?: readonly ReportDashboardChartPermission[];
+  } = {},
 ): string {
   const monthlySeries = buildMonthlySeries(dashboard.dailySeries);
   const scope = dashboard.scope.isConsolidated
@@ -103,19 +107,45 @@ export function buildPdfHtml(
     <h1>Reporte ejecutivo de estadísticas</h1><div class="meta">${escapeHtml(scope)} · ${dashboard.range.from} a ${dashboard.range.to}</div>
     <div class="metrics">${cards}</div>
     <section class="charts">
-      <article class="chart-panel"><h3>Personas por sexo</h3><p>Distribución de personas registradas.</p>${buildSexChart(dashboard)}</article>
+      ${includesChart(options, "reportes.chart.sex_distribution") ? `<article class="chart-panel"><h3>Personas por sexo</h3><p>Distribución de personas registradas.</p>${buildSexChart(dashboard)}</article>` : ""}
       ${
-        options.includeMonthlyAttendanceChart !== false
+        includesChart(options, "reportes.chart.monthly_attendances")
           ? `<article class="chart-panel"><h3>Atenciones por mes</h3><p>Comparación mensual de enfermería y medicina.</p>${buildAttendanceChart(monthlySeries)}</article>`
           : ""
       }
-      <article class="chart-panel"><h3>Actividades por tipo</h3><p>Sesiones grupales registradas en el periodo.</p>${buildActivityChart(dashboard)}</article>
-      <article class="chart-panel"><h3>Entregas por mes</h3><p>Transporte, refrigerios y almuerzos entregados.</p>${buildDeliveryChart(monthlySeries)}</article>
-      <article class="chart-panel"><h3>Almuerzos y refrigerios entregados por mes</h3>${buildMonthlyMetricChart(monthlySeries, "Raciones", "#70549a", (point) => point.snacksDelivered + point.lunchesDelivered)}</article>
-      <article class="chart-panel"><h3>Auxilios de transporte por mes</h3>${buildMonthlyMetricChart(monthlySeries, "Auxilios", "#a24b48", (point) => point.transportAllowancesDelivered)}</article>
+      ${includesChart(options, "reportes.chart.activities_by_type") ? `<article class="chart-panel"><h3>Actividades por tipo</h3><p>Sesiones grupales registradas en el periodo.</p>${buildActivityChart(dashboard)}</article>` : ""}
+      ${includesChart(options, "reportes.chart.monthly_deliveries") ? `<article class="chart-panel"><h3>Entregas por mes</h3><p>Transporte, refrigerios y almuerzos entregados.</p>${buildDeliveryChart(monthlySeries)}</article>` : ""}
+      ${includesChart(options, "reportes.chart.rations_by_month") ? `<article class="chart-panel"><h3>Almuerzos y refrigerios entregados por mes</h3>${buildMonthlyMetricChart(monthlySeries, "Raciones", "#70549a", (point) => point.snacksDelivered + point.lunchesDelivered)}</article>` : ""}
+      ${includesChart(options, "reportes.chart.transport_by_month") ? `<article class="chart-panel"><h3>Auxilios de transporte por mes</h3>${buildMonthlyMetricChart(monthlySeries, "Auxilios", "#a24b48", (point) => point.transportAllowancesDelivered)}</article>` : ""}
     </section>
     </main>
   </body></html>`;
+}
+
+function visibleChartsFor(actor: AuthUser): ReportDashboardChartPermission[] {
+  const charts: ReportDashboardChartPermission[] = [
+    "reportes.chart.monthly_attendances",
+    "reportes.chart.activities_by_type",
+    "reportes.chart.monthly_deliveries",
+    "reportes.chart.sex_distribution",
+    "reportes.chart.rations_by_month",
+    "reportes.chart.transport_by_month",
+  ];
+  return charts.filter((chart) => canViewReportDashboardChart(actor, chart));
+}
+
+function includesChart(
+  options: {
+    includeMonthlyAttendanceChart?: boolean;
+    visibleCharts?: readonly ReportDashboardChartPermission[];
+  },
+  chart: ReportDashboardChartPermission,
+): boolean {
+  if (options.visibleCharts !== undefined) return options.visibleCharts.includes(chart);
+  return (
+    chart !== "reportes.chart.monthly_attendances" ||
+    options.includeMonthlyAttendanceChart !== false
+  );
 }
 
 function renderLetterhead(membreteDataUrl: string | null): string {

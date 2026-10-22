@@ -11,7 +11,7 @@ import PptxGenJS from "pptxgenjs";
 
 import { TenantBrandingService } from "../../tenant-branding/application/tenant-branding.service";
 import { ReportsDashboardService } from "./reports-dashboard.service";
-import { assertCanExportReports } from "../domain/report.policy";
+import { assertCanExportReports, canViewReportDashboardChart } from "../domain/report.policy";
 
 export type ReportsDashboardPptxFile = {
   buffer: Buffer;
@@ -50,24 +50,29 @@ export class ReportsDashboardPptxService {
     const monthlySeries = buildMonthlySeries(dashboard.dailySeries);
     addCoverSlide(presentation, dashboard, branding);
     addSummarySlide(presentation, dashboard);
-    if (actor.role !== "auditor") {
+    if (canViewReportDashboardChart(actor, "reportes.chart.monthly_attendances")) {
       addMonthlyAttendanceSlide(presentation, monthlySeries);
     }
-    addActivitiesSlide(presentation, dashboard);
-    addDeliverySlide(presentation, monthlySeries);
-    addSexDistributionSlide(presentation, dashboard);
-    addMonthlyMetricSlide(presentation, monthlySeries, {
-      title: "Almuerzos y refrigerios entregados por mes",
-      seriesName: "Raciones",
-      color: "70549A",
-      values: (point) => point.snacksDelivered + point.lunchesDelivered,
-    });
-    addMonthlyMetricSlide(presentation, monthlySeries, {
-      title: "Auxilios de transporte por mes",
-      seriesName: "Auxilios",
-      color: "A24B48",
-      values: (point) => point.transportAllowancesDelivered,
-    });
+    if (canViewReportDashboardChart(actor, "reportes.chart.activities_by_type"))
+      addActivitiesSlide(presentation, dashboard);
+    if (canViewReportDashboardChart(actor, "reportes.chart.monthly_deliveries"))
+      addDeliverySlide(presentation, monthlySeries);
+    if (canViewReportDashboardChart(actor, "reportes.chart.sex_distribution"))
+      addSexDistributionSlide(presentation, dashboard);
+    if (canViewReportDashboardChart(actor, "reportes.chart.rations_by_month"))
+      addMonthlyMetricSlide(presentation, monthlySeries, {
+        title: "Almuerzos y refrigerios entregados por mes",
+        seriesName: "Raciones",
+        color: "70549A",
+        values: (point) => point.snacksDelivered + point.lunchesDelivered,
+      });
+    if (canViewReportDashboardChart(actor, "reportes.chart.transport_by_month"))
+      addMonthlyMetricSlide(presentation, monthlySeries, {
+        title: "Auxilios de transporte por mes",
+        seriesName: "Auxilios",
+        color: "A24B48",
+        values: (point) => point.transportAllowancesDelivered,
+      });
 
     const output = await presentation.write({ outputType: "nodebuffer" });
     return {
