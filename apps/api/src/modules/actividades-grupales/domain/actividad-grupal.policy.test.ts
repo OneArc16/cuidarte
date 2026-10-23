@@ -5,6 +5,7 @@ import { type AuthUser } from "@cuidarte/contracts";
 
 import {
   canEditActividadGrupal,
+  canViewActividadGrupalCreationDetails,
   canListTrashActividadesGrupales,
   canManageActividadesGrupales,
   canCreateActividadGrupalWithOrganizer,
@@ -39,6 +40,18 @@ describe("actividad-grupal.policy", () => {
   it("blocks auditors from managing activities", () => {
     assert.equal(canManageActividadesGrupales(auditorUser), false);
     assert.equal(canManageActividadesGrupales(adminUser), true);
+  });
+
+  it("controls creation details through an individual permission", () => {
+    assert.equal(canViewActividadGrupalCreationDetails({ role: "super_admin" }), true);
+    assert.equal(canViewActividadGrupalCreationDetails(adminUser), false);
+    assert.equal(
+      canViewActividadGrupalCreationDetails({
+        ...adminUser,
+        permissions: ["actividades_grupales.view_creation_details"],
+      }),
+      true,
+    );
   });
 
   it("limits professional teams to their own organizers and their paired team", () => {

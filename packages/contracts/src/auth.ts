@@ -22,6 +22,7 @@ export const userPermissionValues = [
   "empleados.create",
   "empleados.edit",
   "actividades_grupales.view",
+  "actividades_grupales.view_creation_details",
   "actividades_grupales.create",
   "actividades_grupales.edit",
   "actividades_grupales.delete",
@@ -140,6 +141,12 @@ export const userPermissionCatalog = [
     group: "Actividades grupales",
     label: "Ver actividades",
     description: "Consultar actas y sesiones grupales.",
+  },
+  {
+    key: "actividades_grupales.view_creation_details",
+    group: "Actividades grupales",
+    label: "Ver fecha y creador",
+    description: "Consultar cuándo y qué usuario creó cada actividad.",
   },
   {
     key: "actividades_grupales.create",

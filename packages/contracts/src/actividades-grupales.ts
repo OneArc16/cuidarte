@@ -365,6 +365,7 @@ export const actividadGrupalListItemSchema = z.object({
   involvedEmployeesCount: z.number().int().min(1),
   canEdit: z.boolean(),
   canDelete: z.boolean(),
+  createdByUserFullName: z.string().min(1).max(180).nullable().optional(),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
 });

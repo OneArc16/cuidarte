@@ -326,44 +326,88 @@
   width: 9.5%;
 }
 
-.actividades-table--with-created-at {
-  min-width: 1200px;
+.actividades-table--with-creation-details {
+  min-width: 1360px;
 }
 
-.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-acta {
-  width: 7%;
+.actividades-table--with-tenant.actividades-table--with-creation-details .actividades-col-acta {
+  width: 6.5%;
 }
 
-.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-actividad {
-  width: 21%;
+.actividades-table--with-tenant.actividades-table--with-creation-details
+  .actividades-col-actividad {
+  width: 17%;
 }
 
-.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-tipo {
+.actividades-table--with-tenant.actividades-table--with-creation-details .actividades-col-tipo {
+  width: 10%;
+}
+
+.actividades-table--with-tenant.actividades-table--with-creation-details .actividades-col-fecha {
+  width: 7.5%;
+}
+
+.actividades-table--with-tenant.actividades-table--with-creation-details .actividades-col-horario {
+  width: 7.5%;
+}
+
+.actividades-table--with-tenant.actividades-table--with-creation-details
+  .actividades-col-organizador {
+  width: 9%;
+}
+
+.actividades-table--with-tenant.actividades-table--with-creation-details .actividades-col-centro {
   width: 11.5%;
 }
 
-.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-fecha {
-  width: 8%;
-}
-
-.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-horario {
-  width: 8%;
-}
-
-.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-organizador {
+.actividades-table--with-tenant.actividades-table--with-creation-details
+  .actividades-col-creada-por {
   width: 10.5%;
 }
 
-.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-centro {
-  width: 12.5%;
+.actividades-table--with-tenant.actividades-table--with-creation-details
+  .actividades-col-creada-el {
+  width: 11.5%;
 }
 
-.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-creada-el {
+.actividades-table--with-tenant.actividades-table--with-creation-details .actividades-col-acciones {
+  width: 9%;
+}
+
+.actividades-table--without-tenant.actividades-table--with-creation-details .actividades-col-acta {
+  width: 7%;
+}
+
+.actividades-table--without-tenant.actividades-table--with-creation-details
+  .actividades-col-actividad {
+  width: 26%;
+}
+
+.actividades-table--without-tenant.actividades-table--with-creation-details .actividades-col-tipo {
   width: 13%;
 }
 
-.actividades-table--with-tenant.actividades-table--with-created-at .actividades-col-acciones {
-  width: 8.5%;
+.actividades-table--without-tenant.actividades-table--with-creation-details .actividades-col-fecha,
+.actividades-table--without-tenant.actividades-table--with-creation-details
+  .actividades-col-horario {
+  width: 9%;
+}
+
+.actividades-table--without-tenant.actividades-table--with-creation-details
+  .actividades-col-organizador {
+  width: 13%;
+}
+
+.actividades-table--without-tenant.actividades-table--with-creation-details
+  .actividades-col-creada-por,
+.actividades-table--without-tenant.actividades-table--with-creation-details
+  .actividades-col-creada-el {
+  width: 12%;
+}
+
+.actividades-table--without-tenant.actividades-table--with-creation-details
+  .actividades-col-acciones {
+  width: 9%;
 }
 
 .actividades-trash-table {
@@ -2237,8 +2281,8 @@
     font-size: 0.79rem;
   }
 
-  .actividades-table--with-created-at {
-    min-width: 1180px;
+  .actividades-table--with-creation-details {
+    min-width: 1320px;
   }
 
   .actividades-table th,

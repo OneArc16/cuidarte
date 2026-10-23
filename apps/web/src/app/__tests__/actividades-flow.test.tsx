@@ -65,6 +65,7 @@ describe("App actividades flow", () => {
 
     expect(await screen.findByRole("table")).toBeInTheDocument();
     expect(screen.queryByRole("columnheader", { name: "Creada el" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Creada por" })).not.toBeInTheDocument();
     expect(
       await screen.findByRole("button", { name: actividadGrupalFixture.activityName }),
     ).toBeInTheDocument();
@@ -81,14 +82,29 @@ describe("App actividades flow", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the real creation timestamp only to super admins", async () => {
+  it("shows the creation date and creator to super admins", async () => {
     server.use(mockAuthMe(superAdminUserFixture));
     renderAppAtPath("/creacion-actividades");
 
     expect(await screen.findByRole("columnheader", { name: "Creada el" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Creada por" })).toBeInTheDocument();
+    expect(screen.getByText(actividadGrupalFixture.createdByUserFullName)).toBeInTheDocument();
     expect(
       document.querySelector(`time[datetime="${actividadGrupalFixture.createdAt}"]`),
     ).toBeInTheDocument();
+  });
+
+  it("shows creation details when the person's permission is enabled", async () => {
+    server.use(
+      mockAuthMe({
+        ...authUserFixture,
+        permissions: ["actividades_grupales.view", "actividades_grupales.view_creation_details"],
+      }),
+    );
+    renderAppAtPath("/creacion-actividades");
+
+    expect(await screen.findByRole("columnheader", { name: "Creada por" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Creada el" })).toBeInTheDocument();
   });
 
   it("opens the diligenciamiento page from the activities list", async () => {
@@ -351,8 +367,16 @@ describe("App actividades flow", () => {
           ...actividadGrupalFormOptionsFixture,
           empleados: [
             empleadoFixture,
-            { id: authUserFixture.id, fullName: authUserFixture.fullName, role: authUserFixture.role },
-            { id: auditorUserFixture.id, fullName: auditorUserFixture.fullName, role: auditorUserFixture.role },
+            {
+              id: authUserFixture.id,
+              fullName: authUserFixture.fullName,
+              role: authUserFixture.role,
+            },
+            {
+              id: auditorUserFixture.id,
+              fullName: auditorUserFixture.fullName,
+              role: auditorUserFixture.role,
+            },
           ],
           nextActaNumber: 5,
         }),
@@ -383,7 +407,9 @@ describe("App actividades flow", () => {
       expect(screen.getByLabelText(/Numero de acta/i)).toHaveValue("0005");
     });
     expect(screen.queryByRole("checkbox", { name: /Admin Centro Demo/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole("checkbox", { name: /Auditor Centro Demo/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("checkbox", { name: /Auditor Centro Demo/i }),
+    ).not.toBeInTheDocument();
 
     await user.type(screen.getByLabelText("Nombre de la actividad"), "Actividad creada desde test");
     await user.selectOptions(screen.getByLabelText("Tipo de actividad"), "salud_preventiva");

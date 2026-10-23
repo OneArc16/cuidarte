@@ -22,6 +22,7 @@ export const actividadGrupalFixture = {
   involvedEmployeesCount: 1,
   canEdit: true,
   canDelete: true,
+  createdByUserFullName: empleadoFixture.fullName,
   createdAt: "2026-04-23T12:00:00.000Z",
   updatedAt: "2026-04-23T12:00:00.000Z",
 } as const;

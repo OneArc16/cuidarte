@@ -51,6 +51,7 @@ import {
   canViewActividadGrupal,
   canTrashActividadGrupal,
   canCreateActividadGrupalWithOrganizer,
+  canViewActividadGrupalCreationDetails,
   resolvePermittedActividadGrupalOrganizers,
   resolveActividadesGrupalesScope,
 } from "../domain/actividad-grupal.policy";
@@ -920,6 +921,9 @@ export class ActividadesGrupalesService {
         record.assignedEmployeeIds?.includes(actor.id) ?? false,
       ),
       canDelete: canTrashActividadGrupal(record, actor),
+      createdByUserFullName: canViewActividadGrupalCreationDetails(actor)
+        ? (record.createdByUserFullName ?? null)
+        : null,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
     });

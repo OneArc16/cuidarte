@@ -21,6 +21,7 @@ import {
 } from "../lib/actividades-grupales-paths";
 import {
   canManageActividadesGrupales,
+  canViewActividadGrupalCreationDetails,
   canViewActividadesGrupalesTrash,
 } from "../lib/actividades-grupales-permissions";
 import { resolveActividadesGrupalesApiError } from "../lib/actividades-grupales-formatters";
@@ -198,7 +199,7 @@ export function ActividadesGrupalesIndexPage({
         }
         onOpenActaPdf={(actividad) => openActividadGrupalActaPdf(actividad.id)}
         showTenantColumn={showTenantFilter}
-        showCreationTimestampColumn={user.role === "super_admin"}
+        showCreationDetailsColumns={canViewActividadGrupalCreationDetails(user)}
       />
 
       {activityPendingDelete !== null ? (

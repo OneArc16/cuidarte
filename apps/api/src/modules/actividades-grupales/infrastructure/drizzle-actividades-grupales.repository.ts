@@ -15,6 +15,7 @@ import {
   sql,
   type SQL,
 } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 
 import { DatabaseService } from "../../../database/database.service";
 import {
@@ -68,11 +69,14 @@ import {
 } from "../domain/actividad-grupal-acta-number";
 import { type ActividadesGrupalesRepository } from "../domain/actividades-grupales.repository";
 
+const activityCreators = alias(users, "activity_creators");
+
 type ActividadGrupalSelectionRow = {
   id: string;
   tenantId: string;
   tenantName: string;
   createdByUserId: string;
+  createdByUserFullName: string;
   actaNumber: string;
   actaOrganizer: ActividadGrupalRecord["actaOrganizer"];
   actaSequence: number;
@@ -104,6 +108,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         actividadGrupalTipos,
         eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
       )
+      .innerJoin(activityCreators, eq(activityCreators.id, actividadesGrupales.createdByUserId))
       .where(this.buildWhere(query))
       .orderBy(desc(actividadesGrupales.activityDate), desc(actividadesGrupales.startTime));
 
@@ -131,6 +136,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         actividadGrupalTipos,
         eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
       )
+      .innerJoin(activityCreators, eq(activityCreators.id, actividadesGrupales.createdByUserId))
       .innerJoin(users, eq(users.id, actividadesGrupales.deletedByUserId))
       .where(this.buildTrashWhere(query))
       .orderBy(desc(actividadesGrupales.deletedAt), desc(actividadesGrupales.activityDate));
@@ -176,6 +182,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         actividadGrupalTipos,
         eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
       )
+      .innerJoin(activityCreators, eq(activityCreators.id, actividadesGrupales.createdByUserId))
       .where(this.buildActivityScopedWhere(query, [eq(actividadesGrupales.id, query.activityId)]))
       .limit(1);
 
@@ -715,6 +722,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           actividadGrupalTipos,
           eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
         )
+        .innerJoin(activityCreators, eq(activityCreators.id, actividadesGrupales.createdByUserId))
         .where(eq(actividadesGrupales.id, created.id))
         .limit(1);
 
@@ -784,6 +792,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           actividadGrupalTipos,
           eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
         )
+        .innerJoin(activityCreators, eq(activityCreators.id, actividadesGrupales.createdByUserId))
         .where(eq(actividadesGrupales.id, command.activityId))
         .limit(1);
 
@@ -886,6 +895,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           actividadGrupalTipos,
           eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
         )
+        .innerJoin(activityCreators, eq(activityCreators.id, actividadesGrupales.createdByUserId))
         .where(eq(actividadesGrupales.id, command.activityId))
         .limit(1);
 
@@ -1844,6 +1854,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       tenantId: actividadesGrupales.tenantId,
       tenantName: tenants.name,
       createdByUserId: actividadesGrupales.createdByUserId,
+      createdByUserFullName: activityCreators.fullName,
       actaNumber: actividadesGrupales.actaNumber,
       actaOrganizer: actividadesGrupales.actaOrganizer,
       actaSequence: actividadesGrupales.actaSequence,

@@ -209,6 +209,7 @@ export type ActividadGrupalRecord = {
   tenantId: string;
   tenantName: string;
   createdByUserId: string;
+  createdByUserFullName?: string;
   actaNumber: string;
   actaOrganizer: ActividadGrupalOrganizer;
   actaSequence: number;

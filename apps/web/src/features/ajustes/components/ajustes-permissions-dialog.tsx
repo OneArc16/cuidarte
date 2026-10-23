@@ -23,6 +23,7 @@ type AjustesPermissionsDialogProps = {
 
 const PERMISSION_COLUMNS = [
   { key: "view", label: "VER" },
+  { key: "view_creation_details", label: "CREACIÓN" },
   { key: "medical_history", label: "HISTORIAL MÉDICO" },
   { key: "nursing_history", label: "HISTORIAL ENFERMERÍA" },
   { key: "view_delivery_days", label: "DÍAS ENTREGADOS" },
@@ -40,6 +41,7 @@ const PERMISSION_COLUMNS = [
 const MATRIX_GRID_TEMPLATE_COLUMNS = [
   "minmax(250px, 1fr)",
   "minmax(82px, 96px)",
+  "minmax(96px, 112px)",
   "minmax(132px, 148px)",
   "minmax(132px, 148px)",
   "minmax(100px, 116px)",
