@@ -114,7 +114,13 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       )
       .innerJoin(activityCreators, eq(activityCreators.id, actividadesGrupales.createdByUserId))
       .where(this.buildWhere(query))
-      .orderBy(desc(actividadesGrupales.activityDate), desc(actividadesGrupales.startTime));
+      .orderBy(
+        desc(actividadesGrupales.activityDate),
+        desc(actividadesGrupales.startTime),
+        desc(actividadesGrupales.endTime),
+        desc(actividadesGrupales.createdAt),
+        desc(actividadesGrupales.id),
+      );
 
     const activityIds = rows.map((row) => row.id);
     const [countByActivityId, assignedEmployeeIdsByActivityId] = await Promise.all([
