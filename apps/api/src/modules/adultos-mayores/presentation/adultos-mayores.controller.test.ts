@@ -36,6 +36,8 @@ describe("AdultosMayoresController exports", () => {
         ...body,
         email: null,
         tenantId: null,
+        deathDate: null,
+        statusChangeReason: null,
       },
       actor: currentUser,
     });
@@ -59,6 +61,8 @@ describe("AdultosMayoresController exports", () => {
       command: {
         ...body,
         email: null,
+        deathDate: null,
+        statusChangeReason: null,
       },
       actor: currentUser,
     });
@@ -66,7 +70,10 @@ describe("AdultosMayoresController exports", () => {
 
   it("passes a required trash reason and current user to the service", async () => {
     const service = createAdultosMayoresService();
-    const controller = new AdultosMayoresController(service as never, createExportService() as never);
+    const controller = new AdultosMayoresController(
+      service as never,
+      createExportService() as never,
+    );
 
     await controller.sendAdultoMayorToTrash(
       "0b17e370-8f81-48c0-b707-c7046f497855",
@@ -89,7 +96,7 @@ describe("AdultosMayoresController exports", () => {
     await controller.exportExcel({ search: "  Rosa  " }, { currentUser } as never, reply);
 
     assert.deepEqual(exportService.excelCalls[0], {
-      query: { search: "Rosa" },
+      query: { search: "Rosa", page: 1, pageSize: 20 },
       actor: currentUser,
     });
     assert.equal(reply.headers["Content-Type"], "application/octet-stream");
@@ -108,7 +115,7 @@ describe("AdultosMayoresController exports", () => {
     await controller.exportPdf({ search: "1020" }, { currentUser } as never, reply);
 
     assert.deepEqual(exportService.pdfCalls[0], {
-      query: { search: "1020" },
+      query: { search: "1020", page: 1, pageSize: 20 },
       actor: currentUser,
     });
     assert.equal(

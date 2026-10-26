@@ -157,13 +157,18 @@ describe("AdultosMayoresService", () => {
     const repository = createRepository();
     const service = createService(repository);
 
-    const result = await service.listAdultosMayores({ search: "rosa" }, tenantAdminUser);
+    const result = await service.listAdultosMayores(
+      { search: "rosa", page: 1, pageSize: 20 },
+      tenantAdminUser,
+    );
 
-    assert.equal(result.length, 1);
-    assert.equal(result[0]?.tenantId, tenantId);
+    assert.equal(result.adultosMayores.length, 1);
+    assert.equal(result.adultosMayores[0]?.tenantId, tenantId);
     assert.deepEqual(repository.queries[0], {
       search: "rosa",
       scope: { type: "tenant", tenantId },
+      page: 1,
+      pageSize: 20,
     });
   });
 
@@ -171,12 +176,17 @@ describe("AdultosMayoresService", () => {
     const repository = createRepository();
     const service = createService(repository);
 
-    await service.listAdultosMayores({ search: null, attentionType: "nursing" }, tenantAdminUser);
+    await service.listAdultosMayores(
+      { search: null, attentionType: "nursing", page: 1, pageSize: 20 },
+      tenantAdminUser,
+    );
 
     assert.deepEqual(repository.queries[0], {
       search: null,
       attentionType: "nursing",
       scope: { type: "tenant", tenantId },
+      page: 1,
+      pageSize: 20,
     });
   });
 
@@ -184,12 +194,17 @@ describe("AdultosMayoresService", () => {
     const repository = createRepository();
     const service = createService(repository);
 
-    const result = await service.listAdultosMayores({ search: null }, superAdminUser);
+    const result = await service.listAdultosMayores(
+      { search: null, page: 1, pageSize: 20 },
+      superAdminUser,
+    );
 
-    assert.equal(result.length, 2);
+    assert.equal(result.adultosMayores.length, 2);
     assert.deepEqual(repository.queries[0], {
       search: null,
       scope: { type: "all" },
+      page: 1,
+      pageSize: 20,
     });
   });
 
@@ -197,12 +212,17 @@ describe("AdultosMayoresService", () => {
     const repository = createRepository();
     const service = createService(repository);
 
-    const result = await service.listAdultosMayores({ search: null }, tenantAuditorUser);
+    const result = await service.listAdultosMayores(
+      { search: null, page: 1, pageSize: 20 },
+      tenantAuditorUser,
+    );
 
-    assert.equal(result.length, 1);
+    assert.equal(result.adultosMayores.length, 1);
     assert.deepEqual(repository.queries[0], {
       search: null,
       scope: { type: "tenant", tenantId },
+      page: 1,
+      pageSize: 20,
     });
   });
 
@@ -213,7 +233,7 @@ describe("AdultosMayoresService", () => {
     await assert.rejects(
       () =>
         service.listAdultosMayores(
-          { search: null },
+          { search: null, page: 1, pageSize: 20 },
           {
             ...tenantAdminUser,
             tenantId: null,
@@ -331,7 +351,10 @@ describe("AdultosMayoresService", () => {
     const service = createService(repository);
     const currentRecord = records[0]!;
 
-    await service.listTrashAdultosMayores({ search: null }, tenantDeleteUser);
+    await service.listTrashAdultosMayores(
+      { search: null, page: 1, pageSize: 20 },
+      tenantDeleteUser,
+    );
     assert.deepEqual(repository.trashQueries[0], {
       search: null,
       scope: { type: "tenant", tenantId },
@@ -444,6 +467,20 @@ function createRepository(): AdultosMayoresRepository & {
       }
 
       return storedRecords;
+    },
+    async findPage(query) {
+      queries.push(query);
+      const scope = query.scope;
+      const matchingRecords =
+        scope.type === "tenant"
+          ? storedRecords.filter((record) => record.tenantId === scope.tenantId)
+          : storedRecords;
+      const start = (query.page - 1) * query.pageSize;
+
+      return {
+        records: matchingRecords.slice(start, start + query.pageSize),
+        total: matchingRecords.length,
+      };
     },
     async findTrashMany(query) {
       trashQueries.push(query);

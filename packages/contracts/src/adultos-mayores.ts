@@ -246,6 +246,8 @@ export const adultoMayorImportHistoryItemSchema = z.object({
 export const adultoMayorListQuerySchema = z.object({
   search: nullableSearchSchema.optional().default(null),
   attentionType: adultoMayorAttentionFilterSchema.optional(),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
 });
 
 export const sendAdultoMayorToTrashRequestSchema = z.object({
@@ -391,6 +393,9 @@ export const updateAdultoMayorRequestSchema = adultoMayorCommandSchema;
 
 export const adultoMayorListResponseSchema = z.object({
   adultosMayores: z.array(adultoMayorListItemSchema),
+  page: z.number().int().min(1).optional().default(1),
+  pageSize: z.number().int().min(1).optional().default(20),
+  total: z.number().int().min(0).optional().default(0),
 });
 
 export const adultoMayorTrashListItemSchema = adultoMayorListItemSchema.extend({

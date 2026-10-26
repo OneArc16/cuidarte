@@ -6,6 +6,7 @@ import {
   type FindAdultoMayorByDocumentQuery,
   type FindAdultoMayorByIdQuery,
   type FindAdultosMayoresQuery,
+  type FindAdultosMayoresPageQuery,
   type FindAdultosMayoresTrashQuery,
   type AdultoMayorTrashRecord,
   type SendAdultoMayorToTrashCommand,
@@ -13,12 +14,14 @@ import {
   type UpdateAdultoMayorRecordCommand,
   type AdultoMayorDocumentRecord,
   type AdultoMayorStatusHistoryRecord,
+  type AdultosMayoresPageRecord,
 } from "./adulto-mayor.types";
 
 export const ADULTOS_MAYORES_REPOSITORY = Symbol("ADULTOS_MAYORES_REPOSITORY");
 
 export type AdultosMayoresRepository = {
   findMany(query: FindAdultosMayoresQuery): Promise<AdultoMayorRecord[]>;
+  findPage(query: FindAdultosMayoresPageQuery): Promise<AdultosMayoresPageRecord>;
   findTrashMany(query: FindAdultosMayoresTrashQuery): Promise<AdultoMayorTrashRecord[]>;
   findById(query: FindAdultoMayorByIdQuery): Promise<AdultoMayorRecord | null>;
   findByDocument(query: FindAdultoMayorByDocumentQuery): Promise<AdultoMayorRecord | null>;

@@ -25,6 +25,8 @@ import { fetchJson } from "@/shared/api/fetch-json";
 type ListAdultosMayoresParams = {
   search: string;
   attentionType?: AdultoMayorAttentionFilter;
+  page?: number;
+  pageSize?: number;
 };
 
 export function listAdultosMayores(
@@ -146,7 +148,12 @@ export function exportAdultosMayoresPdf(params: ListAdultosMayoresParams): Promi
 }
 
 function buildAdultosMayoresUrl(
-  params: { search: string; attentionType?: AdultoMayorAttentionFilter },
+  params: {
+    search: string;
+    attentionType?: AdultoMayorAttentionFilter;
+    page?: number;
+    pageSize?: number;
+  },
   suffix = "",
 ): string {
   const searchParams = new URLSearchParams();
@@ -157,6 +164,14 @@ function buildAdultosMayoresUrl(
 
   if (params.attentionType !== undefined && params.attentionType !== "all") {
     searchParams.set("attentionType", params.attentionType);
+  }
+
+  if (params.page !== undefined) {
+    searchParams.set("page", String(params.page));
+  }
+
+  if (params.pageSize !== undefined) {
+    searchParams.set("pageSize", String(params.pageSize));
   }
 
   const queryString = searchParams.toString();

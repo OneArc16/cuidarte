@@ -36,6 +36,10 @@ export type FindAdultoMayorByDocumentQuery = {
 };
 
 export type FindAdultosMayoresTrashQuery = FindAdultosMayoresQuery;
+export type FindAdultosMayoresPageQuery = FindAdultosMayoresQuery & {
+  page: number;
+  pageSize: number;
+};
 
 export type AdultoMayorTenantOptionRecord = {
   id: string;
@@ -149,6 +153,11 @@ export type AdultoMayorRecord = {
   updatedAt: Date;
   documentFile: AdultoMayorDocumentRecord | null;
   deletedAt?: Date | null;
+};
+
+export type AdultosMayoresPageRecord = {
+  records: AdultoMayorRecord[];
+  total: number;
 };
 
 export type AdultoMayorTrashRecord = Pick<

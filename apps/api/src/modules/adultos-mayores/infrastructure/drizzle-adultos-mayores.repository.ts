@@ -7,6 +7,7 @@ import {
 import {
   and,
   asc,
+  count,
   desc,
   eq,
   ilike,
@@ -40,11 +41,13 @@ import {
   type FindAdultoMayorByDocumentQuery,
   type FindAdultoMayorByIdQuery,
   type FindAdultosMayoresQuery,
+  type FindAdultosMayoresPageQuery,
   type FindAdultosMayoresTrashQuery,
   type UpdateAdultoMayorRecordCommand,
   type AdultoMayorDocumentRecord,
   type AdultoMayorTrashRecord,
   type AdultoMayorStatusHistoryRecord,
+  type AdultosMayoresPageRecord,
   type RestoreAdultoMayorCommand,
   type SendAdultoMayorToTrashCommand,
 } from "../domain/adulto-mayor.types";
@@ -112,6 +115,32 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       .orderBy(asc(adultosMayores.surnames), asc(adultosMayores.names));
 
     return rows.map((row) => this.toRecord(row));
+  }
+
+  async findPage(query: FindAdultosMayoresPageQuery): Promise<AdultosMayoresPageRecord> {
+    const where = this.buildWhere(query);
+    const offset = (query.page - 1) * query.pageSize;
+    const [rows, summaries] = await Promise.all([
+      this.database.db
+        .select(this.getAdultoMayorSelection())
+        .from(adultosMayores)
+        .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
+        .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))
+        .where(where)
+        .orderBy(asc(adultosMayores.surnames), asc(adultosMayores.names), asc(adultosMayores.id))
+        .limit(query.pageSize)
+        .offset(offset),
+      this.database.db
+        .select({ total: count() })
+        .from(adultosMayores)
+        .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
+        .where(where),
+    ]);
+
+    return {
+      records: rows.map((row) => this.toRecord(row)),
+      total: summaries[0]?.total ?? 0,
+    };
   }
 
   async findTrashMany(query: FindAdultosMayoresTrashQuery): Promise<AdultoMayorTrashRecord[]> {

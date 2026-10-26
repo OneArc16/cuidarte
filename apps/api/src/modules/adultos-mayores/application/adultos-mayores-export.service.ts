@@ -64,7 +64,10 @@ export class AdultosMayoresExportService {
     query: AdultoMayorListQuery,
     actor: AuthUser,
   ): Promise<ExportedAdultosMayoresFile> {
-    const adultosMayores = await this.adultosMayoresService.listAdultosMayores(query, actor);
+    const adultosMayores = await this.adultosMayoresService.listAdultosMayoresForExport(
+      query,
+      actor,
+    );
     const includeTenant = actor.role === "super_admin";
 
     try {
@@ -150,7 +153,11 @@ export class AdultosMayoresExportService {
       { header: "Salud · Convive con alguien", key: "conviveConAlguien", width: 24 },
       { header: "Salud · Acompañante", key: "acompanante", width: 28 },
       { header: "Salud · Ingreso económico", key: "ingresoEconomico", width: 22 },
-      { header: "Salud · Beneficiario programa social", key: "beneficiarioProgramaSocial", width: 30 },
+      {
+        header: "Salud · Beneficiario programa social",
+        key: "beneficiarioProgramaSocial",
+        width: 30,
+      },
     ];
 
     if (includeTenant) {

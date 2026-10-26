@@ -65,12 +65,12 @@ export class AdultosMayoresController {
   @ApiUnauthorizedResponse({ description: "Sesion requerida." })
   async listAdultosMayores(@Query() query: unknown, @Req() request: AuthenticatedRequest) {
     const parsedQuery = parseZodSchema(adultoMayorListQuerySchema, query);
-    const adultosMayores = await this.adultosMayoresService.listAdultosMayores(
+    const result = await this.adultosMayoresService.listAdultosMayores(
       parsedQuery,
       request.currentUser,
     );
 
-    return adultoMayorListResponseSchema.parse({ adultosMayores });
+    return adultoMayorListResponseSchema.parse(result);
   }
 
   @Get("tenant-options")

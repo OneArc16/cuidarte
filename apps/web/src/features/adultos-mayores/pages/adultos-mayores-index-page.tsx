@@ -3,8 +3,8 @@ import {
   type AdultoMayorListItem,
   type AuthUser,
 } from "@cuidarte/contracts";
-import { Plus } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 import { useSessionStorageState } from "@/shared/hooks/use-session-storage-state";
@@ -52,6 +52,7 @@ type AdultosMayoresIndexPageProps = {
 };
 
 type ExportTarget = "excel" | "pdf" | null;
+const ADULTOS_MAYORES_PAGE_SIZE = 20;
 
 export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexPageProps) {
   const [search, setSearch] = useSessionStorageState(`cuidarte:adultos-mayores:search:${user.id}`);
@@ -59,12 +60,38 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
     `cuidarte:adultos-mayores:attention-type:${user.id}`,
     "all",
   );
+  const [storedCurrentPage, setStoredCurrentPage] = useSessionStorageState<string>(
+    `cuidarte:adultos-mayores:page:${user.id}`,
+    "1",
+  );
+  const parsedCurrentPage = Number.parseInt(storedCurrentPage, 10);
+  const currentPage =
+    Number.isSafeInteger(parsedCurrentPage) && parsedCurrentPage > 0 ? parsedCurrentPage : 1;
   const [exportTarget, setExportTarget] = useState<ExportTarget>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [adultoMayorPendingTrash, setAdultoMayorPendingTrash] =
     useState<AdultoMayorListItem | null>(null);
-  const adultosMayoresQuery = useAdultosMayoresQuery({ search, attentionType });
+  const adultosMayoresQuery = useAdultosMayoresQuery({
+    search,
+    attentionType,
+    page: currentPage,
+    pageSize: ADULTOS_MAYORES_PAGE_SIZE,
+  });
   const adultosMayores = adultosMayoresQuery.data?.adultosMayores ?? [];
+  const totalPages = Math.max(
+    1,
+    Math.ceil((adultosMayoresQuery.data?.total ?? 0) / ADULTOS_MAYORES_PAGE_SIZE),
+  );
+
+  function setCurrentPage(page: number) {
+    setStoredCurrentPage(String(Math.max(1, page)));
+  }
+
+  useEffect(() => {
+    if (adultosMayoresQuery.data !== undefined && currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [adultosMayoresQuery.data, currentPage, totalPages]);
   const showTenantColumn = user.role === "super_admin";
   const canManageRecords = canManageAdultosMayores(user);
   const canCreateClinicalAttention = canCreateAtencionIndividual(user);
@@ -119,8 +146,14 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
         search={search}
         attentionType={attentionType}
         isExporting={exportTarget !== null}
-        onSearchChange={setSearch}
-        onAttentionTypeChange={setAttentionType}
+        onSearchChange={(value) => {
+          setSearch(value);
+          setCurrentPage(1);
+        }}
+        onAttentionTypeChange={(value) => {
+          setAttentionType(value);
+          setCurrentPage(1);
+        }}
         onImportAdultosMayores={() => navigate(ADULTOS_MAYORES_IMPORT_PATH)}
         onExportExcel={handleExportExcel}
         onExportPdf={handleExportPdf}
@@ -145,6 +178,7 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
         attentionType={attentionType}
         canManageAlimentacion={canCreateFeedingRecord}
         isLoading={adultosMayoresQuery.isLoading}
+        isUpdating={adultosMayoresQuery.isPlaceholderData}
         showTenantColumn={showTenantColumn}
         canCreateAtencionIndividual={canCreateClinicalAttention}
         canManageAdultosMayores={canManageRecords}
@@ -170,6 +204,35 @@ export function AdultosMayoresIndexPage({ navigate, user }: AdultosMayoresIndexP
           setAdultoMayorPendingTrash(adultoMayor);
         }}
       />
+
+      {adultosMayoresQuery.data !== undefined && totalPages > 1 ? (
+        <nav className="adultos-pagination" aria-label="Paginación de adultos mayores">
+          <button
+            className="outline-action adultos-pagination__button"
+            type="button"
+            aria-label="Página anterior"
+            data-tooltip="Página anterior"
+            disabled={currentPage === 1 || adultosMayoresQuery.isFetching}
+            onClick={() => setCurrentPage(currentPage - 1)}
+          >
+            <ChevronLeft aria-hidden="true" />
+          </button>
+          <span className="adultos-pagination__page" aria-live="polite">
+            <span className="visually-hidden">Página </span>
+            {currentPage}
+          </span>
+          <button
+            className="outline-action adultos-pagination__button"
+            type="button"
+            aria-label="Página siguiente"
+            data-tooltip="Página siguiente"
+            disabled={currentPage === totalPages || adultosMayoresQuery.isFetching}
+            onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+          >
+            <ChevronRight aria-hidden="true" />
+          </button>
+        </nav>
+      ) : null}
 
       {canManageRecords ? (
         <button

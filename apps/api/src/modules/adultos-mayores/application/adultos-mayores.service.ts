@@ -2,6 +2,7 @@ import {
   type AdultoMayorDetail,
   type AdultoMayorListItem,
   type AdultoMayorListQuery,
+  type AdultoMayorListResponse,
   type AdultoMayorTenantOption,
   type AdultoMayorTrashListItem,
   type AdultoMayorStatusHistoryQuery,
@@ -11,6 +12,7 @@ import {
   type UpdateAdultoMayorRequest,
   adultoMayorDetailSchema,
   adultoMayorListItemSchema,
+  adultoMayorListResponseSchema,
   adultoMayorTenantOptionSchema,
   adultoMayorTrashListItemSchema,
   adultoMayorStatusHistoryResponseSchema,
@@ -67,10 +69,15 @@ export class AdultosMayoresService {
   async listAdultosMayores(
     query: AdultoMayorListQuery,
     actor: AuthUser,
-  ): Promise<AdultoMayorListItem[]> {
-    const records = await this.findAdultosMayores(query, actor);
+  ): Promise<AdultoMayorListResponse> {
+    const page = await this.findAdultosMayoresPage(query, actor);
 
-    return records.map((record) => this.toListItem(record));
+    return adultoMayorListResponseSchema.parse({
+      adultosMayores: page.records.map((record) => this.toListItem(record)),
+      page: query.page,
+      pageSize: query.pageSize,
+      total: page.total,
+    });
   }
 
   async listAdultosMayoresForExport(
@@ -99,6 +106,22 @@ export class AdultosMayoresService {
     });
 
     return records;
+  }
+
+  private async findAdultosMayoresPage(query: AdultoMayorListQuery, actor: AuthUser) {
+    const scope = resolveAdultosMayoresScope(actor);
+
+    if (scope === null) {
+      throw new ForbiddenException("No tienes un centro asociado para consultar adultos mayores.");
+    }
+
+    return await this.adultosMayoresRepository.findPage({
+      search: query.search,
+      scope,
+      ...(query.attentionType === undefined ? {} : { attentionType: query.attentionType }),
+      page: query.page,
+      pageSize: query.pageSize,
+    });
   }
 
   async listTenantOptions(actor: AuthUser): Promise<AdultoMayorTenantOption[]> {

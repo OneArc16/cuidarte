@@ -7,10 +7,15 @@ export const adultosMayoresHandlers = [
     const search = new URL(request.url).searchParams.get("search");
 
     if (search === "sin-resultados") {
-      return HttpResponse.json({ adultosMayores: [] });
+      return HttpResponse.json({ adultosMayores: [], page: 1, pageSize: 20, total: 0 });
     }
 
-    return HttpResponse.json({ adultosMayores: [adultoMayorFixture] });
+    return HttpResponse.json({
+      adultosMayores: [adultoMayorFixture],
+      page: 1,
+      pageSize: 20,
+      total: 1,
+    });
   }),
   http.get("http://localhost:3001/api/adultos-mayores/tenant-options", () =>
     HttpResponse.json({ tenants: [backofficeTenantDetailFixture.tenant] }),

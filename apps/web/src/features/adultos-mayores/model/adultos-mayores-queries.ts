@@ -8,8 +8,12 @@ import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tansta
 import * as adultosMayoresApi from "../api/adultos-mayores-api";
 
 export const adultosMayoresQueryKeys = {
-  list: (params: { search: string; attentionType: AdultoMayorAttentionFilter }) =>
-    ["adultos-mayores", params] as const,
+  list: (params: {
+    search: string;
+    attentionType: AdultoMayorAttentionFilter;
+    page: number;
+    pageSize: number;
+  }) => ["adultos-mayores", params] as const,
   detail: (adultoMayorId: string) => ["adultos-mayores", adultoMayorId] as const,
   tenantOptions: () => ["adultos-mayores", "tenant-options"] as const,
   trashList: (params: { search: string }) => ["adultos-mayores", "papelera", params] as const,
@@ -32,10 +36,13 @@ async function invalidateAdultoMayorDependencies(queryClient: QueryClient) {
 export function useAdultosMayoresQuery(params: {
   search: string;
   attentionType: AdultoMayorAttentionFilter;
+  page: number;
+  pageSize: number;
 }) {
   return useQuery({
     queryKey: adultosMayoresQueryKeys.list(params),
     queryFn: () => adultosMayoresApi.listAdultosMayores(params),
+    placeholderData: (previousData) => previousData,
     retry: false,
   });
 }

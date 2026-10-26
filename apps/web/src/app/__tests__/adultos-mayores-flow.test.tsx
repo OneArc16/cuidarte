@@ -89,6 +89,51 @@ describe("App adultos mayores flow", () => {
     );
   });
 
+  it("loads adults one page at a time", async () => {
+    const requestedPages: string[] = [];
+    const secondAdulto = {
+      ...adultoMayorFixture,
+      id: "11111111-2222-4333-8444-555555555555",
+      documentNumber: "9900000001",
+      names: "Gloria",
+      surnames: "Pérez",
+      firstName: "Gloria",
+      middleName: null,
+      firstSurname: "Pérez",
+      secondSurname: null,
+    };
+
+    server.use(
+      mockAuthMe(authUserFixture),
+      http.get("http://localhost:3001/api/adultos-mayores", ({ request }) => {
+        const page = new URL(request.url).searchParams.get("page") ?? "1";
+        requestedPages.push(page);
+
+        return HttpResponse.json({
+          adultosMayores: page === "1" ? [adultoMayorFixture] : [secondAdulto],
+          page: Number(page),
+          pageSize: 20,
+          total: 40,
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    const firstRender = renderAppAtPath("/adultos-mayores");
+
+    expect(await screen.findByText(adultoMayorFixture.names)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Página siguiente" }));
+
+    expect(await screen.findByText(secondAdulto.names)).toBeInTheDocument();
+    expect(screen.queryByText(adultoMayorFixture.names)).not.toBeInTheDocument();
+
+    firstRender.unmount();
+    renderAppAtPath("/adultos-mayores");
+
+    expect(await screen.findByText(secondAdulto.names)).toBeInTheDocument();
+    expect(requestedPages).toEqual(["1", "2", "2"]);
+  });
+
   it("filters adults by registered attention type", async () => {
     let attentionType: string | null = null;
     server.use(

@@ -26,7 +26,7 @@ describe("AdultosMayoresExportService", () => {
       },
     } as never);
 
-    const file = await service.exportExcel({ search: null }, actor);
+    const file = await service.exportExcel({ search: null, page: 1, pageSize: 20 }, actor);
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(Uint8Array.from(file.buffer).buffer);
 

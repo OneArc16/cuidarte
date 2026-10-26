@@ -19,6 +19,7 @@ type AdultosMayoresTableProps = {
   canManageTrash: boolean;
   hideAtencionIndividualAction: boolean;
   isLoading: boolean;
+  isUpdating: boolean;
   showTenantColumn: boolean;
   onOpenAlimentacion: (adultoMayorId: string) => void;
   onOpenAtencionIndividual: (adultoMayorId: string) => void;
@@ -41,6 +42,7 @@ export function AdultosMayoresTable({
   canManageTrash,
   hideAtencionIndividualAction,
   isLoading,
+  isUpdating,
   onOpenAlimentacion,
   onOpenAtencionIndividual,
   onOpenHistoriaClinica,
@@ -53,7 +55,16 @@ export function AdultosMayoresTable({
   const columnCount = showTenantColumn ? 8 : 7;
 
   return (
-    <section className="adultos-table-wrap" aria-label="Adultos mayores registrados">
+    <section
+      className={`adultos-table-wrap${isUpdating ? " adultos-table-wrap--updating" : ""}`}
+      aria-label="Adultos mayores registrados"
+      aria-busy={isLoading || isUpdating}
+    >
+      {isUpdating ? (
+        <span className="visually-hidden" role="status">
+          Actualizando página...
+        </span>
+      ) : null}
       <table className="adultos-table">
         <thead>
           <tr>
