@@ -441,6 +441,9 @@ export const actividadGrupalListResponseSchema = z.object({
 });
 
 export const actividadGrupalTrashListItemSchema = actividadGrupalListItemSchema.extend({
+  lastEditedAt: z.string().min(1).nullable(),
+  lastEditedByUserId: z.uuid().nullable(),
+  lastEditedByUserFullName: z.string().min(1).max(180).nullable(),
   deletedAt: z.string().min(1),
   deletedByUserId: z.uuid(),
   deletedByUserFullName: z.string().min(1).max(180),
@@ -451,6 +454,36 @@ export const actividadGrupalTrashListQuerySchema = actividadGrupalListQuerySchem
 
 export const actividadGrupalTrashListResponseSchema = z.object({
   actividadesGrupales: z.array(actividadGrupalTrashListItemSchema),
+});
+
+export const actividadGrupalChangeLogEntrySchema = z.object({
+  id: z.uuid(),
+  activityId: z.uuid(),
+  tenantId: z.uuid(),
+  tenantName: z.string().min(1).max(180),
+  actaNumber: actaNumberSchema,
+  activityName: z.string().min(1).max(160),
+  action: z.enum(["updated", "deleted"]),
+  actorUserId: z.uuid(),
+  actorUserFullName: z.string().min(1).max(180),
+  occurredAt: z.string().min(1),
+  changes: z.array(
+    z.object({
+      field: z.string().min(1).max(120),
+      before: z.string().nullable(),
+      after: z.string().nullable(),
+    }),
+  ),
+});
+
+export const actividadGrupalChangeLogListQuerySchema = actividadGrupalListQuerySchema.extend({
+  cursor: z.string().trim().min(1).max(500).nullable().optional().default(null),
+  limit: z.coerce.number().int().min(1).max(50).optional().default(20),
+});
+
+export const actividadGrupalChangeLogListResponseSchema = z.object({
+  entries: z.array(actividadGrupalChangeLogEntrySchema),
+  nextCursor: z.string().nullable(),
 });
 
 export const actividadGrupalFormOptionsResponseSchema = z.object({
@@ -580,6 +613,13 @@ export type UpdateActividadGrupalGlobalSeriesRequest = z.infer<
   typeof updateActividadGrupalGlobalSeriesRequestSchema
 >;
 export type ActividadGrupalTrashListItem = z.infer<typeof actividadGrupalTrashListItemSchema>;
+export type ActividadGrupalChangeLogEntry = z.infer<typeof actividadGrupalChangeLogEntrySchema>;
+export type ActividadGrupalChangeLogListQuery = z.infer<
+  typeof actividadGrupalChangeLogListQuerySchema
+>;
+export type ActividadGrupalChangeLogListResponse = z.infer<
+  typeof actividadGrupalChangeLogListResponseSchema
+>;
 export type ActividadGrupalTrashListResponse = z.infer<
   typeof actividadGrupalTrashListResponseSchema
 >;

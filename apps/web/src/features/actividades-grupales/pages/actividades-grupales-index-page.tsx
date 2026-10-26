@@ -15,7 +15,7 @@ import { ActividadesGrupalesToolbar } from "../components/actividades-grupales-t
 import {
   buildActividadGrupalEditPath,
   buildActividadGrupalDiligenciamientoPath,
-  CREACION_ACTIVIDADES_TRASH_PATH,
+  CREACION_ACTIVIDADES_CHANGE_LOG_PATH,
   CREACION_ACTIVIDADES_NEW_PATH,
   CREACION_ACTIVIDADES_CORRECTIONS_PATH,
 } from "../lib/actividades-grupales-paths";
@@ -129,12 +129,12 @@ export function ActividadesGrupalesIndexPage({
           <button
             className="outline-action actividades-back-action actividades-trash-action"
             type="button"
-            aria-label="Ver log de eliminaciones"
-            data-tooltip="Ver log de eliminaciones"
-            onClick={() => navigate(CREACION_ACTIVIDADES_TRASH_PATH)}
+            aria-label="Ver historial de cambios"
+            data-tooltip="Ver historial de cambios"
+            onClick={() => navigate(CREACION_ACTIVIDADES_CHANGE_LOG_PATH)}
           >
             <History aria-hidden="true" />
-            <span className="visually-hidden">Ver log de eliminaciones</span>
+            <span className="visually-hidden">Ver historial de cambios</span>
           </button>
         ) : null}
         <span className="actividades-form-nav__context">Listado activo</span>

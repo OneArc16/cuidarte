@@ -36,6 +36,7 @@ import {
 } from "../../../database/schema";
 import {
   type ActividadGrupalDiligenciamientoDetailRecord,
+  type ActividadGrupalChangeLogRecord,
   type ActividadGrupalEmpleadoOptionRecord,
   type ActividadGrupalIntegranteOptionRecord,
   type ActividadGrupalRecord,
@@ -55,6 +56,7 @@ import {
   type FindActividadesGrupalesQuery,
   type FindActividadesGrupalesTrashQuery,
   type FindActividadGrupalByIdQuery,
+  type FindActividadGrupalChangeLogQuery,
   type SaveActividadGrupalDiligenciamientoRecordCommand,
   type SavedActividadGrupalDiligenciamientoRecord,
   type SearchActividadGrupalIntegrantesOptionsQuery,
@@ -70,6 +72,8 @@ import {
 import { type ActividadesGrupalesRepository } from "../domain/actividades-grupales.repository";
 
 const activityCreators = alias(users, "activity_creators");
+const activityEditors = alias(users, "activity_editors");
+const auditActors = alias(users, "audit_actors");
 
 type ActividadGrupalSelectionRow = {
   id: string;
@@ -138,6 +142,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       )
       .innerJoin(activityCreators, eq(activityCreators.id, actividadesGrupales.createdByUserId))
       .innerJoin(users, eq(users.id, actividadesGrupales.deletedByUserId))
+      .leftJoin(activityEditors, eq(activityEditors.id, actividadesGrupales.lastEditedByUserId))
       .where(this.buildTrashWhere(query))
       .orderBy(desc(actividadesGrupales.deletedAt), desc(actividadesGrupales.activityDate));
 
@@ -163,12 +168,101 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       organizer: row.organizer,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      lastEditedAt: row.lastEditedAt,
+      lastEditedByUserId: row.lastEditedByUserId,
+      lastEditedByUserFullName: row.lastEditedByUserFullName,
       deletedAt: row.deletedAt!,
       deletedByUserId: row.deletedByUserId!,
       deletedByUserFullName: row.deletedByUserFullName,
       deletionReason: row.deletionReason,
       involvedEmployeesCount: countByActivityId.get(row.id) ?? 0,
     }));
+  }
+
+  async findChangeLogMany(
+    query: FindActividadGrupalChangeLogQuery,
+  ): Promise<{ entries: ActividadGrupalChangeLogRecord[]; nextCursor: string | null }> {
+    const conditions: SQL[] = [
+      inArray(auditLogs.action, [
+        "actividades-grupales.updated",
+        "actividades-grupales.deleted",
+        "actividades-grupales.diligenciamiento.saved",
+      ]),
+    ];
+    const changeLogWhere = this.buildChangeLogWhere(query);
+
+    if (changeLogWhere !== undefined) {
+      conditions.push(changeLogWhere);
+    }
+
+    if (query.cursor !== null) {
+      const cursor = decodeChangeLogCursor(query.cursor);
+      const cursorDate = new Date(cursor.occurredAt);
+
+      conditions.push(
+        or(
+          lt(auditLogs.createdAt, cursorDate),
+          and(eq(auditLogs.createdAt, cursorDate), lt(auditLogs.id, cursor.id)),
+        )!,
+      );
+    }
+
+    const rows = await this.database.db
+      .select({
+        auditId: auditLogs.id,
+        action: auditLogs.action,
+        actorUserId: auditLogs.actorUserId,
+        actorUserFullName: auditActors.fullName,
+        occurredAt: auditLogs.createdAt,
+        metadata: auditLogs.metadata,
+        id: actividadesGrupales.id,
+        tenantId: actividadesGrupales.tenantId,
+        tenantName: tenants.name,
+        actaNumber: actividadesGrupales.actaNumber,
+        activityName: actividadesGrupales.activityName,
+        organizer: actividadesGrupales.organizer,
+        activityTypeCreatorUserIds: actividadGrupalTipos.consecutiveCreatorUserIds,
+      })
+      .from(auditLogs)
+      .innerJoin(
+        actividadesGrupales,
+        sql`${auditLogs.metadata} ->> 'activityId' = ${actividadesGrupales.id}::text`,
+      )
+      .innerJoin(tenants, eq(tenants.id, actividadesGrupales.tenantId))
+      .innerJoin(
+        actividadGrupalTipos,
+        eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
+      )
+      .innerJoin(auditActors, eq(auditActors.id, auditLogs.actorUserId))
+      .where(and(...conditions))
+      .orderBy(desc(auditLogs.createdAt), desc(auditLogs.id))
+      .limit(query.limit + 1);
+
+    const hasNextPage = rows.length > query.limit;
+    const pageRows = hasNextPage ? rows.slice(0, query.limit) : rows;
+    const lastRow = pageRows.at(-1);
+
+    return {
+      entries: pageRows.map((row) => ({
+        auditId: row.auditId,
+        id: row.id,
+        tenantId: row.tenantId,
+        tenantName: row.tenantName,
+        actaNumber: row.actaNumber,
+        activityName: row.activityName,
+        organizer: row.organizer,
+        activityTypeCreatorUserIds: row.activityTypeCreatorUserIds,
+        action: row.action === "actividades-grupales.deleted" ? "deleted" : "updated",
+        actorUserId: row.actorUserId,
+        actorUserFullName: row.actorUserFullName,
+        occurredAt: row.occurredAt,
+        changes: readAuditChanges(row.metadata),
+      })),
+      nextCursor:
+        hasNextPage && lastRow !== undefined
+          ? encodeChangeLogCursor(lastRow.occurredAt, lastRow.auditId)
+          : null,
+    };
   }
 
   async findById(
@@ -740,6 +834,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
   async update(command: UpdateActividadGrupalRecordCommand): Promise<ActividadGrupalRecord> {
     return await this.database.db.transaction(async (tx) => {
       const now = new Date();
+      const before = await this.findActivityAuditSnapshot(tx, command.activityId);
 
       const [updated] = await tx
         .update(actividadesGrupales)
@@ -751,6 +846,8 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           startTime: command.startTime,
           endTime: command.endTime,
           organizer: command.organizer,
+          lastEditedAt: now,
+          lastEditedByUserId: command.actorUserId,
           updatedAt: now,
         })
         .where(eq(actividadesGrupales.id, command.activityId))
@@ -771,19 +868,6 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         })),
       );
 
-      await tx.insert(auditLogs).values({
-        actorUserId: command.actorUserId,
-        action: "actividades-grupales.updated",
-        targetTenantId: updated.tenantId,
-        summary: `Actividad grupal actualizada #${updated.id}: ${command.activityName}`,
-        metadata: {
-          activityId: command.activityId,
-          activityType: command.activityType,
-          organizer: command.organizer,
-          involvedEmployeesCount: command.employeeIds.length,
-        },
-      });
-
       const [row] = await tx
         .select(this.getActivitySelection())
         .from(actividadesGrupales)
@@ -799,6 +883,29 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       if (row === undefined) {
         throw new Error("No fue posible consultar la actividad actualizada.");
       }
+
+      const after = {
+        activityName: row.activityName,
+        activityTypeName: row.activityTypeName,
+        activityDate: row.activityDate,
+        startTime: row.startTime,
+        endTime: row.endTime,
+        organizer: row.organizer,
+        employeeIds: [...command.employeeIds].sort(),
+      };
+
+      await tx.insert(auditLogs).values({
+        actorUserId: command.actorUserId,
+        action: "actividades-grupales.updated",
+        targetTenantId: updated.tenantId,
+        summary: `Actividad grupal actualizada #${updated.id}: ${command.activityName}`,
+        metadata: {
+          activityId: command.activityId,
+          before,
+          after,
+          changes: buildActivityAuditChanges(before, after),
+        },
+      });
 
       return {
         ...row,
@@ -868,6 +975,8 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           previousActaNumber: current.actaNumber,
           actaNumberCorrectedAt: now,
           actaNumberCorrectedByUserId: command.actorUserId,
+          lastEditedAt: now,
+          lastEditedByUserId: command.actorUserId,
           updatedAt: now,
         })
         .where(eq(actividadesGrupales.id, command.activityId));
@@ -1276,6 +1385,8 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
               source.actaNumber === row.proposedActaNumber ? undefined : source.actaNumber,
             actaNumberCorrectedAt: new Date(),
             actaNumberCorrectedByUserId: command.actorUserId,
+            lastEditedAt: new Date(),
+            lastEditedByUserId: command.actorUserId,
             updatedAt: new Date(),
           })
           .where(eq(actividadesGrupales.id, row.activityId));
@@ -1519,6 +1630,8 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
               row.currentActaNumber === row.proposedActaNumber ? undefined : new Date(),
             actaNumberCorrectedByUserId:
               row.currentActaNumber === row.proposedActaNumber ? undefined : command.actorUserId,
+            lastEditedAt: new Date(),
+            lastEditedByUserId: command.actorUserId,
             updatedAt: new Date(),
           })
           .where(eq(actividadesGrupales.id, row.activityId));
@@ -1613,6 +1726,8 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         throw new Error("No fue posible eliminar la actividad grupal.");
       }
 
+      const before = await this.findActivityAuditSnapshot(tx, command.activityId);
+
       await tx.insert(auditLogs).values({
         actorUserId: command.actorUserId,
         action: "actividades-grupales.deleted",
@@ -1622,6 +1737,12 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           activityId: command.activityId,
           actaNumber: activity.actaNumber,
           reason: command.reason,
+          before,
+          after: null,
+          changes: [
+            { field: "Estado", before: "Activa", after: "Eliminada" },
+            { field: "Motivo de eliminación", before: null, after: command.reason },
+          ],
         },
       });
 
@@ -1660,6 +1781,32 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         })
         .from(actividadGrupalDiligenciamientoFiles)
         .where(eq(actividadGrupalDiligenciamientoFiles.activityId, command.activityId));
+      const [existingDiligenciamiento] = await tx
+        .select({
+          objectives: actividadGrupalDiligenciamientos.objectives,
+          development: actividadGrupalDiligenciamientos.development,
+          conclusion: actividadGrupalDiligenciamientos.conclusion,
+          responsibleDepartment: actividadGrupalDiligenciamientos.responsibleDepartment,
+        })
+        .from(actividadGrupalDiligenciamientos)
+        .where(eq(actividadGrupalDiligenciamientos.activityId, command.activityId));
+      const existingIntegrantes = await tx
+        .select({ adultoMayorId: actividadGrupalDiligenciamientoIntegrantes.adultoMayorId })
+        .from(actividadGrupalDiligenciamientoIntegrantes)
+        .where(eq(actividadGrupalDiligenciamientoIntegrantes.activityId, command.activityId));
+
+      const before = {
+        objectives: existingDiligenciamiento?.objectives ?? null,
+        development: existingDiligenciamiento?.development ?? null,
+        conclusion: existingDiligenciamiento?.conclusion ?? null,
+        responsibleDepartment: existingDiligenciamiento?.responsibleDepartment ?? null,
+        integrantesCount: existingIntegrantes.length,
+        photoNames: existingFiles
+          .filter((file) => file.kind === "support_photo")
+          .map((file) => file.originalName)
+          .sort(),
+        pdfName: existingFiles.find((file) => file.kind === "support_pdf")?.originalName ?? null,
+      };
 
       const newPdfProvided = command.newFiles.some((file) => file.kind === "support_pdf");
       const removedPhotoFiles = existingFiles.filter(
@@ -1669,6 +1816,26 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         (file) => file.kind === "support_pdf" && (command.removePdfFile || newPdfProvided),
       );
       const removedFileIds = [...removedPhotoFiles, ...removedPdfFiles].map((file) => file.id);
+      const after = {
+        objectives: command.objectives,
+        development: command.development,
+        conclusion: command.conclusion,
+        responsibleDepartment: command.responsibleDepartment,
+        integrantesCount: command.integranteIds.length,
+        photoNames: [
+          ...existingFiles
+            .filter((file) => file.kind === "support_photo" && !removedFileIds.includes(file.id))
+            .map((file) => file.originalName),
+          ...command.newFiles
+            .filter((file) => file.kind === "support_photo")
+            .map((file) => file.originalName),
+        ].sort(),
+        pdfName:
+          command.newFiles.find((file) => file.kind === "support_pdf")?.originalName ??
+          (command.removePdfFile
+            ? null
+            : (existingFiles.find((file) => file.kind === "support_pdf")?.originalName ?? null)),
+      };
 
       await tx
         .insert(actividadGrupalDiligenciamientos)
@@ -1740,6 +1907,15 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .limit(1);
 
       if (activity !== undefined) {
+        await tx
+          .update(actividadesGrupales)
+          .set({
+            lastEditedAt: now,
+            lastEditedByUserId: command.actorUserId,
+            updatedAt: now,
+          })
+          .where(eq(actividadesGrupales.id, command.activityId));
+
         await tx.insert(auditLogs).values({
           actorUserId: command.actorUserId,
           action: "actividades-grupales.diligenciamiento.saved",
@@ -1751,6 +1927,9 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
             photoFilesAdded: command.newFiles.filter((file) => file.kind === "support_photo")
               .length,
             pdfUpdated: newPdfProvided,
+            before,
+            after,
+            changes: buildDiligenciamientoAuditChanges(before, after),
           },
         });
       }
@@ -1869,6 +2048,8 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       startTime: actividadesGrupales.startTime,
       endTime: actividadesGrupales.endTime,
       organizer: actividadesGrupales.organizer,
+      lastEditedAt: actividadesGrupales.lastEditedAt,
+      lastEditedByUserId: actividadesGrupales.lastEditedByUserId,
       createdAt: actividadesGrupales.createdAt,
       updatedAt: actividadesGrupales.updatedAt,
     };
@@ -1879,6 +2060,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       ...this.getActivitySelection(),
       deletedAt: actividadesGrupales.deletedAt,
       deletedByUserId: actividadesGrupales.deletedByUserId,
+      lastEditedByUserFullName: activityEditors.fullName,
       deletionReason: actividadesGrupales.deletionReason,
       deletedByUserFullName: users.fullName,
     };
@@ -1993,6 +2175,96 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     }
 
     return conditions.length === 0 ? undefined : and(...conditions);
+  }
+
+  private buildChangeLogWhere(query: FindActividadGrupalChangeLogQuery): SQL | undefined {
+    const conditions: SQL[] = [];
+
+    if (query.scope.type === "tenant") {
+      conditions.push(eq(actividadesGrupales.tenantId, query.scope.tenantId));
+    } else if (query.tenantId !== null) {
+      conditions.push(eq(actividadesGrupales.tenantId, query.tenantId));
+    }
+
+    if (query.activityType !== null) {
+      conditions.push(eq(actividadesGrupales.activityType, query.activityType));
+    }
+    if (query.activityTypeId !== null) {
+      conditions.push(eq(actividadesGrupales.activityTypeId, query.activityTypeId));
+    }
+    if (query.organizer !== null) {
+      conditions.push(this.buildOrganizerFilterCondition(query.organizer));
+    }
+    if (query.permittedOrganizers !== null) {
+      const organizerCondition = inArray(actividadesGrupales.organizer, [
+        ...query.permittedOrganizers,
+      ]);
+
+      if (query.permittedCreatorUserId === undefined || query.permittedCreatorUserId === null) {
+        conditions.push(organizerCondition);
+      } else {
+        conditions.push(
+          or(
+            organizerCondition,
+            sql`${actividadGrupalTipos.consecutiveCreatorUserIds} @> ${JSON.stringify([query.permittedCreatorUserId])}::jsonb`,
+          )!,
+        );
+      }
+    }
+    if (query.activityMonth !== null) {
+      const monthRange = resolveMonthRange(query.activityMonth);
+      conditions.push(
+        gte(actividadesGrupales.activityDate, monthRange.startDate),
+        lt(actividadesGrupales.activityDate, monthRange.endDateExclusive),
+      );
+    }
+    if (query.search !== null) {
+      const searchPattern = `%${escapeLikePattern(query.search)}%`;
+      conditions.push(
+        or(
+          ilike(actividadesGrupales.activityName, searchPattern),
+          ilike(actividadGrupalTipos.name, searchPattern),
+          ilike(tenants.name, searchPattern),
+          ilike(auditActors.fullName, searchPattern),
+          sql`${actividadesGrupales.actaNumber}::text ilike ${searchPattern}`,
+        )!,
+      );
+    }
+
+    return conditions.length === 0 ? undefined : and(...conditions);
+  }
+
+  private async findActivityAuditSnapshot(
+    tx: Parameters<Parameters<DatabaseService["db"]["transaction"]>[0]>[0],
+    activityId: string,
+  ) {
+    const [activity] = await tx
+      .select({
+        activityName: actividadesGrupales.activityName,
+        activityTypeName: actividadGrupalTipos.name,
+        activityDate: actividadesGrupales.activityDate,
+        startTime: actividadesGrupales.startTime,
+        endTime: actividadesGrupales.endTime,
+        organizer: actividadesGrupales.organizer,
+      })
+      .from(actividadesGrupales)
+      .innerJoin(
+        actividadGrupalTipos,
+        eq(actividadGrupalTipos.id, actividadesGrupales.activityTypeId),
+      )
+      .where(eq(actividadesGrupales.id, activityId))
+      .limit(1);
+
+    if (activity === undefined) {
+      throw new Error("No fue posible consultar el estado anterior de la actividad grupal.");
+    }
+
+    const employeeIds = await tx
+      .select({ employeeId: actividadGrupalEmpleados.employeeId })
+      .from(actividadGrupalEmpleados)
+      .where(eq(actividadGrupalEmpleados.activityId, activityId));
+
+    return { ...activity, employeeIds: employeeIds.map((row) => row.employeeId).sort() };
   }
 
   private buildTrashWhere(query: FindActividadesGrupalesTrashQuery): SQL | undefined {
@@ -2456,6 +2728,148 @@ function buildUniqueTemporaryActaNumber({
       return candidate;
     }
   }
+}
+
+type ActivityAuditSnapshot = {
+  activityName: string;
+  activityTypeName: string;
+  activityDate: string;
+  startTime: string;
+  endTime: string;
+  organizer: string;
+  employeeIds: string[];
+};
+
+function buildActivityAuditChanges(
+  before: ActivityAuditSnapshot,
+  after: ActivityAuditSnapshot,
+): Array<{ field: string; before: string | null; after: string | null }> {
+  const fields: Array<{ key: Exclude<keyof ActivityAuditSnapshot, "employeeIds">; label: string }> =
+    [
+      { key: "activityName", label: "Actividad" },
+      { key: "activityTypeName", label: "Tipo de actividad" },
+      { key: "activityDate", label: "Fecha" },
+      { key: "startTime", label: "Hora de inicio" },
+      { key: "endTime", label: "Hora de finalización" },
+      { key: "organizer", label: "Organizador" },
+    ];
+  const changes = fields.flatMap(({ key, label }) =>
+    before[key] === after[key] ? [] : [{ field: label, before: before[key], after: after[key] }],
+  );
+
+  return sameStringValues(before.employeeIds, after.employeeIds)
+    ? changes
+    : [
+        ...changes,
+        {
+          field: "Profesionales asignados",
+          before: `${before.employeeIds.length} asignado(s)`,
+          after: `${after.employeeIds.length} asignado(s)`,
+        },
+      ];
+}
+
+function sameStringValues(left: string[], right: string[]) {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
+}
+
+type DiligenciamientoAuditSnapshot = {
+  objectives: string | null;
+  development: string | null;
+  conclusion: string | null;
+  responsibleDepartment: string | null;
+  integrantesCount: number;
+  photoNames: string[];
+  pdfName: string | null;
+};
+
+function buildDiligenciamientoAuditChanges(
+  before: DiligenciamientoAuditSnapshot,
+  after: DiligenciamientoAuditSnapshot,
+): Array<{ field: string; before: string | null; after: string | null }> {
+  const fields: Array<{
+    key: "objectives" | "development" | "conclusion" | "responsibleDepartment" | "pdfName";
+    label: string;
+  }> = [
+    { key: "objectives", label: "Objetivos" },
+    { key: "development", label: "Desarrollo" },
+    { key: "conclusion", label: "Conclusión" },
+    { key: "responsibleDepartment", label: "Departamento responsable" },
+    { key: "pdfName", label: "Soporte PDF" },
+  ];
+  const changes = fields.flatMap(({ key, label }) =>
+    before[key] === after[key] ? [] : [{ field: label, before: before[key], after: after[key] }],
+  );
+
+  if (before.integrantesCount !== after.integrantesCount) {
+    changes.push({
+      field: "Participantes",
+      before: `${before.integrantesCount} participante(s)`,
+      after: `${after.integrantesCount} participante(s)`,
+    });
+  }
+
+  if (!sameStringValues(before.photoNames, after.photoNames)) {
+    changes.push({
+      field: "Fotos de soporte",
+      before: before.photoNames.join(", ") || null,
+      after: after.photoNames.join(", ") || null,
+    });
+  }
+
+  return changes;
+}
+
+function encodeChangeLogCursor(occurredAt: Date, id: string) {
+  return Buffer.from(JSON.stringify({ occurredAt: occurredAt.toISOString(), id })).toString(
+    "base64url",
+  );
+}
+
+function decodeChangeLogCursor(value: string): { occurredAt: string; id: string } {
+  try {
+    const parsed: unknown = JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
+
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "occurredAt" in parsed &&
+      "id" in parsed &&
+      typeof parsed.occurredAt === "string" &&
+      !Number.isNaN(Date.parse(parsed.occurredAt)) &&
+      typeof parsed.id === "string"
+    ) {
+      return { occurredAt: parsed.occurredAt, id: parsed.id };
+    }
+  } catch {
+    // Se traduce a un error de cursor para no exponer detalles de parsing.
+  }
+
+  throw new Error("El cursor del historial de cambios no es valido.");
+}
+
+function readAuditChanges(metadata: Record<string, unknown>) {
+  const changes = metadata.changes;
+  if (!Array.isArray(changes)) {
+    return [];
+  }
+
+  return changes.flatMap((change) => {
+    if (typeof change !== "object" || change === null) {
+      return [];
+    }
+
+    const { field, before, after } = change as Record<string, unknown>;
+    if (
+      typeof field !== "string" ||
+      (before !== null && typeof before !== "string") ||
+      (after !== null && typeof after !== "string")
+    ) {
+      return [];
+    }
+
+    return [{ field, before: before as string | null, after: after as string | null }];
+  });
 }
 
 function escapeLikePattern(value: string): string {

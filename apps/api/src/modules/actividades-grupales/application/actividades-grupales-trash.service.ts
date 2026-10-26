@@ -1,5 +1,8 @@
 import {
+  type ActividadGrupalChangeLogListQuery,
   type ActividadGrupalListQuery,
+  actividadGrupalChangeLogEntrySchema,
+  actividadGrupalChangeLogListResponseSchema,
   actividadGrupalListItemSchema,
   actividadGrupalTrashListItemSchema,
   type AuthUser,
@@ -18,7 +21,10 @@ import {
   ACTIVIDADES_GRUPALES_REPOSITORY,
   type ActividadesGrupalesRepository,
 } from "../domain/actividades-grupales.repository";
-import { type ActividadGrupalTrashRecord } from "../domain/actividad-grupal.types";
+import {
+  type ActividadGrupalChangeLogRecord,
+  type ActividadGrupalTrashRecord,
+} from "../domain/actividad-grupal.types";
 
 @Injectable()
 export class ActividadesGrupalesTrashService {
@@ -69,6 +75,32 @@ export class ActividadesGrupalesTrashService {
     return records
       .filter((record) => canViewActividadGrupal(record, actor))
       .map((record) => this.toTrashListItem(record));
+  }
+
+  async listChangeLog(query: ActividadGrupalChangeLogListQuery, actor: AuthUser) {
+    this.ensureCanListTrash(actor);
+    const scope = this.resolveScopeOrThrow(actor);
+    const effectiveTenantId = this.resolveListTenantId(scope, query.tenantId);
+    const history = await this.actividadesGrupalesRepository.findChangeLogMany({
+      search: query.search,
+      activityType: query.activityType,
+      activityTypeId: query.activityTypeId,
+      organizer: query.organizer,
+      activityMonth: query.activityMonth,
+      tenantId: effectiveTenantId,
+      scope,
+      permittedOrganizers: resolvePermittedActividadGrupalOrganizers(actor),
+      permittedCreatorUserId: actor.id,
+      cursor: query.cursor,
+      limit: query.limit,
+    });
+
+    return actividadGrupalChangeLogListResponseSchema.parse({
+      entries: history.entries
+        .filter((record) => canViewActividadGrupal(record, actor))
+        .map((record) => this.toChangeLogEntry(record)),
+      nextCursor: history.nextCursor,
+    });
   }
 
   private ensureCanManageActivities(actor: Pick<AuthUser, "role">) {
@@ -135,10 +167,29 @@ export class ActividadesGrupalesTrashService {
         createdAt: record.createdAt.toISOString(),
         updatedAt: record.updatedAt.toISOString(),
       }),
+      lastEditedAt: record.lastEditedAt?.toISOString() ?? null,
+      lastEditedByUserId: record.lastEditedByUserId,
+      lastEditedByUserFullName: record.lastEditedByUserFullName,
       deletedAt: record.deletedAt.toISOString(),
       deletedByUserId: record.deletedByUserId,
       deletedByUserFullName: record.deletedByUserFullName,
       deletionReason: record.deletionReason,
+    });
+  }
+
+  private toChangeLogEntry(record: ActividadGrupalChangeLogRecord) {
+    return actividadGrupalChangeLogEntrySchema.parse({
+      id: record.auditId,
+      activityId: record.id,
+      tenantId: record.tenantId,
+      tenantName: record.tenantName,
+      actaNumber: record.actaNumber,
+      activityName: record.activityName,
+      action: record.action,
+      actorUserId: record.actorUserId,
+      actorUserFullName: record.actorUserFullName,
+      occurredAt: record.occurredAt.toISOString(),
+      changes: record.changes,
     });
   }
 }

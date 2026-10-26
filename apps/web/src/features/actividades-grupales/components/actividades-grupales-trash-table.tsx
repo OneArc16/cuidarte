@@ -46,6 +46,7 @@ export function ActividadesGrupalesTrashTable({
           <col className="actividades-trash-col-organizador" />
           {showTenantColumn ? <col className="actividades-trash-col-centro" /> : null}
           <col className="actividades-trash-col-motivo" />
+          <col className="actividades-trash-col-editada-por" />
           <col className="actividades-trash-col-eliminada-por" />
           <col className="actividades-trash-col-eliminada-el" />
         </colgroup>
@@ -59,6 +60,7 @@ export function ActividadesGrupalesTrashTable({
             <th scope="col">Organizador</th>
             {showTenantColumn ? <th scope="col">Centro</th> : null}
             <th scope="col">Motivo</th>
+            <th scope="col">Última edición</th>
             <th scope="col">Eliminada por</th>
             <th scope="col">Eliminada el</th>
           </tr>
@@ -66,7 +68,7 @@ export function ActividadesGrupalesTrashTable({
         <tbody>
           {actividadesGrupales.length === 0 ? (
             <tr>
-              <td colSpan={showTenantColumn ? 10 : 9}>No hay eliminaciones registradas.</td>
+              <td colSpan={showTenantColumn ? 11 : 10}>No hay eliminaciones registradas.</td>
             </tr>
           ) : (
             actividadesGrupales.map((actividad) => (
@@ -91,6 +93,19 @@ export function ActividadesGrupalesTrashTable({
                 ) : null}
                 <td className="actividades-cell-reason">
                   {actividad.deletionReason ?? "Sin motivo registrado"}
+                </td>
+                <td>
+                  {actividad.lastEditedByUserFullName === null ||
+                  actividad.lastEditedAt === null ? (
+                    <span className="muted-copy">Sin ediciones registradas</span>
+                  ) : (
+                    <>
+                      <strong>{actividad.lastEditedByUserFullName}</strong>
+                      <small className="muted-copy">
+                        {formatActividadGrupalTrashTimestamp(actividad.lastEditedAt)}
+                      </small>
+                    </>
+                  )}
                 </td>
                 <td>
                   <strong>{actividad.deletedByUserFullName}</strong>

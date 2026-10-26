@@ -1,20 +1,17 @@
-import {
-  type ActividadGrupalOrganizer,
-  type AuthUser,
-} from "@cuidarte/contracts";
-import { ChevronLeft } from "lucide-react";
+import { type ActividadGrupalOrganizer, type AuthUser } from "@cuidarte/contracts";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
-import { ActividadesGrupalesTrashTable } from "../components/actividades-grupales-trash-table";
+import { ActividadesGrupalesChangeLogTable } from "../components/actividades-grupales-change-log-table";
 import { ActividadesGrupalesToolbar } from "../components/actividades-grupales-toolbar";
 import { CREACION_ACTIVIDADES_PATH } from "../lib/actividades-grupales-paths";
 import { canViewActividadesGrupalesTrash } from "../lib/actividades-grupales-permissions";
 import { resolveActividadesGrupalesApiError } from "../lib/actividades-grupales-formatters";
 import {
   useActividadGrupalTenantOptionsQuery,
-  useActividadesGrupalesTrashQuery,
+  useActividadGrupalChangeLogQuery,
 } from "../model/actividades-grupales-queries";
 import { useActividadGrupalTiposQuery } from "@/features/actividad-grupal-tipos/model/actividad-grupal-tipos-queries";
 
@@ -22,6 +19,8 @@ type ActividadesGrupalesTrashPageProps = {
   navigate: Navigate;
   user: AuthUser;
 };
+
+const CHANGE_LOG_PAGE_SIZE = 20;
 
 export function ActividadesGrupalesTrashPage({
   navigate,
@@ -31,6 +30,8 @@ export function ActividadesGrupalesTrashPage({
   const [selectedActivityTypeId, setSelectedActivityTypeId] = useState("");
   const [selectedOrganizer, setSelectedOrganizer] = useState<ActividadGrupalOrganizer | "">("");
   const [selectedTenantId, setSelectedTenantId] = useState("");
+  const [pageCursors, setPageCursors] = useState<Array<string | null>>([null]);
+  const [currentPage, setCurrentPage] = useState(0);
   const showTenantFilter = user.role === "super_admin";
   const canViewTrash = canViewActividadesGrupalesTrash(user);
   const effectiveTenantId = showTenantFilter
@@ -43,7 +44,7 @@ export function ActividadesGrupalesTrashPage({
     { tenantId: effectiveTenantId, includeInactive: true },
     canViewTrash && (!showTenantFilter || effectiveTenantId !== null),
   );
-  const trashQuery = useActividadesGrupalesTrashQuery(
+  const changeLogQuery = useActividadGrupalChangeLogQuery(
     {
       search,
       activityType: null,
@@ -51,15 +52,33 @@ export function ActividadesGrupalesTrashPage({
       organizer: selectedOrganizer === "" ? null : selectedOrganizer,
       activityMonth: null,
       tenantId: effectiveTenantId,
+      cursor: pageCursors[currentPage] ?? null,
+      limit: CHANGE_LOG_PAGE_SIZE,
     },
     canViewTrash,
   );
 
+  function resetPagination() {
+    setPageCursors([null]);
+    setCurrentPage(0);
+  }
+
+  function goToNextPage() {
+    const nextCursor = changeLogQuery.data?.nextCursor;
+
+    if (nextCursor === null || nextCursor === undefined) {
+      return;
+    }
+
+    setPageCursors((cursors) => [...cursors.slice(0, currentPage + 1), nextCursor]);
+    setCurrentPage((page) => page + 1);
+  }
+
   if (!canViewTrash) {
     return (
       <section className="actividades-empty" aria-labelledby="actividades-trash-denied-title">
-        <p className="eyebrow">Log de eliminaciones</p>
-        <h2 id="actividades-trash-denied-title">No tienes acceso al log</h2>
+        <p className="eyebrow">Historial de cambios</p>
+        <h2 id="actividades-trash-denied-title">No tienes acceso al historial</h2>
         <button
           className="outline-action actividades-trash-back-action"
           type="button"
@@ -77,7 +96,7 @@ export function ActividadesGrupalesTrashPage({
   return (
     <section className="actividades-stack" aria-labelledby="actividades-trash-title">
       <h1 className="visually-hidden" id="actividades-trash-title">
-        Log de eliminaciones
+        Historial de cambios
       </h1>
 
       <div className="actividades-form-nav">
@@ -91,7 +110,7 @@ export function ActividadesGrupalesTrashPage({
           <ChevronLeft aria-hidden="true" />
           <span className="visually-hidden">Volver al listado</span>
         </button>
-        <span className="actividades-form-nav__context">Log de eliminaciones</span>
+        <span className="actividades-form-nav__context">Historial de cambios</span>
       </div>
 
       <ActividadesGrupalesToolbar
@@ -106,23 +125,65 @@ export function ActividadesGrupalesTrashPage({
         activityTypeOptions={activityTypesQuery.data?.activityTypes ?? []}
         onActivityMonthChange={() => undefined}
         isTenantOptionsLoading={tenantOptionsQuery.isLoading}
-        onActivityTypeIdChange={setSelectedActivityTypeId}
-        onOrganizerChange={setSelectedOrganizer}
-        onSearchChange={setSearch}
-        onTenantChange={setSelectedTenantId}
+        onActivityTypeIdChange={(value) => {
+          setSelectedActivityTypeId(value);
+          resetPagination();
+        }}
+        onOrganizerChange={(value) => {
+          setSelectedOrganizer(value);
+          resetPagination();
+        }}
+        onSearchChange={(value) => {
+          setSearch(value);
+          resetPagination();
+        }}
+        onTenantChange={(value) => {
+          setSelectedTenantId(value);
+          resetPagination();
+        }}
       />
 
-      {trashQuery.isError ? (
+      {changeLogQuery.isError ? (
         <p className="form-error" role="alert">
-          {resolveActividadesGrupalesApiError(trashQuery.error)}
+          {resolveActividadesGrupalesApiError(changeLogQuery.error)}
         </p>
       ) : null}
 
-      <ActividadesGrupalesTrashTable
-        actividadesGrupales={trashQuery.data?.actividadesGrupales ?? []}
-        isLoading={trashQuery.isLoading}
+      <ActividadesGrupalesChangeLogTable
+        entries={changeLogQuery.data?.entries ?? []}
+        isLoading={changeLogQuery.isLoading}
         showTenantColumn={showTenantFilter}
       />
+
+      {changeLogQuery.data !== undefined &&
+      (changeLogQuery.data.entries.length > 0 || currentPage > 0) ? (
+        <nav className="actividades-change-log-pagination" aria-label="Paginación del historial">
+          <button
+            className="outline-action actividades-change-log-pagination__button"
+            type="button"
+            aria-label="Página anterior"
+            data-tooltip="Página anterior"
+            disabled={currentPage === 0 || changeLogQuery.isFetching}
+            onClick={() => setCurrentPage((page) => Math.max(0, page - 1))}
+          >
+            <ChevronLeft aria-hidden="true" />
+          </button>
+          <span className="actividades-change-log-pagination__page" aria-live="polite">
+            <span className="visually-hidden">Página </span>
+            {currentPage + 1}
+          </span>
+          <button
+            className="outline-action actividades-change-log-pagination__button"
+            type="button"
+            aria-label="Página siguiente"
+            data-tooltip="Página siguiente"
+            disabled={changeLogQuery.data.nextCursor === null || changeLogQuery.isFetching}
+            onClick={goToNextPage}
+          >
+            <ChevronRight aria-hidden="true" />
+          </button>
+        </nav>
+      ) : null}
     </section>
   );
 }

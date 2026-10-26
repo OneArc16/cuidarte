@@ -8,6 +8,7 @@ import {
   CREACION_ACTIVIDADES_PATH,
   getActividadGrupalEditIdFromPath,
   getActividadGrupalDiligenciamientoIdFromPath,
+  CREACION_ACTIVIDADES_CHANGE_LOG_PATH,
   CREACION_ACTIVIDADES_TRASH_PATH,
   CREACION_ACTIVIDADES_CORRECTIONS_PATH,
 } from "../lib/actividades-grupales-paths";
@@ -29,7 +30,7 @@ export function ActividadesGrupalesPage({ navigate, path, user }: ActividadesGru
     return <ActividadesGrupalesIndexPage navigate={navigate} user={user} />;
   }
 
-  if (path === CREACION_ACTIVIDADES_TRASH_PATH) {
+  if (path === CREACION_ACTIVIDADES_CHANGE_LOG_PATH || path === CREACION_ACTIVIDADES_TRASH_PATH) {
     return <ActividadesGrupalesTrashPage navigate={navigate} user={user} />;
   }
 

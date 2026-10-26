@@ -897,6 +897,10 @@ export const actividadesGrupales = pgTable(
     createdByUserId: uuid("created_by_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),
+    lastEditedAt: timestamp("last_edited_at", { withTimezone: true }),
+    lastEditedByUserId: uuid("last_edited_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedByUserId: uuid("deleted_by_user_id").references(() => users.id, {
       onDelete: "restrict",
@@ -919,6 +923,7 @@ export const actividadesGrupales = pgTable(
     index("actividades_grupales_activity_type_id_idx").on(table.activityTypeId),
     index("actividades_grupales_tenant_deleted_at_idx").on(table.tenantId, table.deletedAt),
     index("actividades_grupales_created_by_user_idx").on(table.createdByUserId),
+    index("actividades_grupales_last_edited_by_user_idx").on(table.lastEditedByUserId),
   ],
 );
 

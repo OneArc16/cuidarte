@@ -1,6 +1,7 @@
 export const CREACION_ACTIVIDADES_PATH = "/creacion-actividades";
 export const CREACION_ACTIVIDADES_NEW_PATH = `${CREACION_ACTIVIDADES_PATH}/new`;
 export const CREACION_ACTIVIDADES_EDIT_PATH_PATTERN = `${CREACION_ACTIVIDADES_PATH}/:id/editar`;
+export const CREACION_ACTIVIDADES_CHANGE_LOG_PATH = `${CREACION_ACTIVIDADES_PATH}/log-cambios`;
 export const CREACION_ACTIVIDADES_TRASH_PATH = `${CREACION_ACTIVIDADES_PATH}/log-eliminaciones`;
 export const CREACION_ACTIVIDADES_CORRECTIONS_PATH = `${CREACION_ACTIVIDADES_PATH}/corregir-consecutivos`;
 
@@ -13,7 +14,7 @@ export function isActividadesGrupalesPath(path: string): boolean {
 }
 
 export function isActividadesGrupalesTrashPath(path: string): boolean {
-  return path === CREACION_ACTIVIDADES_TRASH_PATH;
+  return path === CREACION_ACTIVIDADES_CHANGE_LOG_PATH || path === CREACION_ACTIVIDADES_TRASH_PATH;
 }
 
 export function isActividadesGrupalesCorrectionsPath(path: string): boolean {

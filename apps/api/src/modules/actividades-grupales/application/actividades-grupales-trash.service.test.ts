@@ -84,6 +84,32 @@ describe("ActividadesGrupalesTrashService", () => {
     assert.equal(result.length, 1);
     assert.equal(result[0]?.id, "bd962778-117e-4275-aa07-1ea2f7a1d6f8");
     assert.equal(result[0]?.deletedByUserFullName, "Admin Centro Demo");
+    assert.equal(result[0]?.lastEditedByUserFullName, "Director Centro Demo");
+  });
+
+  it("lists session edits with their before and after values", async () => {
+    const service = new ActividadesGrupalesTrashService(createRepository());
+
+    const result = await service.listChangeLog(
+      {
+        search: null,
+        activityType: null,
+        activityTypeId: null,
+        organizer: null,
+        activityMonth: null,
+        tenantId: null,
+        cursor: null,
+        limit: 20,
+      },
+      adminUser,
+    );
+
+    assert.deepEqual(result.entries[0]?.changes, [
+      { field: "Hora de finalización", before: "09:30", after: "10:00" },
+    ]);
+    assert.equal(result.entries[0]?.action, "updated");
+    assert.equal(result.entries[0]?.actorUserFullName, adminUser.fullName);
+    assert.equal(result.nextCursor, null);
   });
 
   it("rejects auditors", async () => {
@@ -196,6 +222,27 @@ function createRepository(
     async findTrashMany() {
       return [trashActivity];
     },
+    async findChangeLogMany() {
+      return {
+        entries: [
+          {
+            auditId: "0d962778-117e-4275-aa07-1ea2f7a1d6f8",
+            id: activity.id,
+            tenantId: activity.tenantId,
+            tenantName: activity.tenantName,
+            actaNumber: activity.actaNumber,
+            activityName: activity.activityName,
+            organizer: activity.organizer,
+            action: "updated" as const,
+            actorUserId: adminUser.id,
+            actorUserFullName: adminUser.fullName,
+            occurredAt: new Date("2026-04-23T12:00:00.000Z"),
+            changes: [{ field: "Hora de finalización", before: "09:30", after: "10:00" }],
+          },
+        ],
+        nextCursor: null,
+      };
+    },
     async findById() {
       return detail;
     },
@@ -286,6 +333,9 @@ function createActivityRecord(): ActividadGrupalRecord {
 function createTrashActivityRecord(): ActividadGrupalTrashRecord {
   return {
     ...createActivityRecord(),
+    lastEditedAt: new Date("2026-04-23T13:00:00.000Z"),
+    lastEditedByUserId: directorUser.id,
+    lastEditedByUserFullName: directorUser.fullName,
     deletedAt: new Date("2026-04-24T12:00:00.000Z"),
     deletedByUserId: adminUser.id,
     deletedByUserFullName: adminUser.fullName,

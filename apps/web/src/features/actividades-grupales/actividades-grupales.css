@@ -411,43 +411,132 @@
 }
 
 .actividades-trash-table {
-  min-width: 1180px;
+  min-width: 1320px;
+}
+
+.actividades-change-log-table {
+  min-width: 1120px;
+}
+
+.actividades-change-log-action {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.actividades-change-log-action--updated {
+  background: rgb(233 249 242 / 78%);
+  color: var(--color-deep);
+}
+
+.actividades-change-log-action--deleted {
+  background: rgb(255 235 235 / 88%);
+  color: #9d2736;
+}
+
+.actividades-change-log-changes {
+  min-width: 280px;
+}
+
+.actividades-change-log-change + .actividades-change-log-change {
+  margin-top: 10px;
+}
+
+.actividades-change-log-change span {
+  display: block;
+  color: var(--color-muted);
+  font-size: 0.76rem;
+}
+
+.actividades-change-log-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.actividades-change-log-pagination__button.outline-action {
+  display: grid;
+  width: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 0;
+  place-items: center;
+  border-color: rgb(8 80 65 / 14%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 86%);
+  color: var(--color-deep);
+  box-shadow: 0 5px 14px rgb(8 80 65 / 5%);
+}
+
+.actividades-change-log-pagination__button.outline-action:not(:disabled):hover,
+.actividades-change-log-pagination__button.outline-action:not(:disabled):focus-visible {
+  border-color: rgb(8 80 65 / 32%);
+  background: #eaf7f1;
+  color: #075944;
+  transform: translateY(-1px);
+}
+
+.actividades-change-log-pagination__button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.actividades-change-log-pagination__page {
+  display: grid;
+  width: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  place-items: center;
+  border: 1px solid rgb(8 80 65 / 8%);
+  border-radius: 10px;
+  background: rgb(8 80 65 / 5%);
+  color: var(--color-deep);
 }
 
 .actividades-trash-table--without-tenant .actividades-trash-col-acta {
-  width: 7%;
+  width: 6%;
 }
 
 .actividades-trash-table--without-tenant .actividades-trash-col-actividad {
-  width: 20%;
+  width: 16%;
 }
 
 .actividades-trash-table--without-tenant .actividades-trash-col-tipo {
-  width: 10%;
-}
-
-.actividades-trash-table--without-tenant .actividades-trash-col-fecha {
-  width: 9%;
-}
-
-.actividades-trash-table--without-tenant .actividades-trash-col-horario {
   width: 8%;
 }
 
+.actividades-trash-table--without-tenant .actividades-trash-col-fecha {
+  width: 8%;
+}
+
+.actividades-trash-table--without-tenant .actividades-trash-col-horario {
+  width: 7%;
+}
+
 .actividades-trash-table--without-tenant .actividades-trash-col-organizador {
-  width: 11%;
+  width: 9%;
 }
 
 .actividades-trash-table--without-tenant .actividades-trash-col-motivo {
-  width: 14%;
+  width: 12%;
+}
+
+.actividades-trash-table--without-tenant .actividades-trash-col-editada-por {
+  width: 12%;
 }
 
 .actividades-trash-table--without-tenant .actividades-trash-col-eliminada-por {
-  width: 14%;
+  width: 12%;
 }
 
 .actividades-trash-table--without-tenant .actividades-trash-col-eliminada-el {
-  width: 13%;
+  width: 10%;
 }
 
 .actividades-trash-table--without-tenant .actividades-trash-col-acciones {
@@ -455,43 +544,47 @@
 }
 
 .actividades-trash-table--with-tenant .actividades-trash-col-acta {
-  width: 6%;
+  width: 5%;
 }
 
 .actividades-trash-table--with-tenant .actividades-trash-col-actividad {
-  width: 17%;
+  width: 14%;
 }
 
 .actividades-trash-table--with-tenant .actividades-trash-col-tipo {
-  width: 10%;
+  width: 7%;
 }
 
 .actividades-trash-table--with-tenant .actividades-trash-col-fecha {
-  width: 8%;
+  width: 7%;
 }
 
 .actividades-trash-table--with-tenant .actividades-trash-col-horario {
-  width: 8%;
+  width: 7%;
 }
 
 .actividades-trash-table--with-tenant .actividades-trash-col-organizador {
-  width: 10%;
+  width: 8%;
 }
 
 .actividades-trash-table--with-tenant .actividades-trash-col-centro {
-  width: 13%;
+  width: 10%;
 }
 
 .actividades-trash-table--with-tenant .actividades-trash-col-motivo {
-  width: 12%;
+  width: 10%;
+}
+
+.actividades-trash-table--with-tenant .actividades-trash-col-editada-por {
+  width: 11%;
 }
 
 .actividades-trash-table--with-tenant .actividades-trash-col-eliminada-por {
-  width: 12%;
+  width: 11%;
 }
 
 .actividades-trash-table--with-tenant .actividades-trash-col-eliminada-el {
-  width: 8%;
+  width: 10%;
 }
 
 .actividades-trash-table--with-tenant .actividades-trash-col-acciones {

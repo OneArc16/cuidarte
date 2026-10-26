@@ -29,12 +29,35 @@ export const actividadGrupalFixture = {
 
 export const actividadGrupalTrashFixture = {
   ...actividadGrupalFixture,
+  lastEditedAt: "2026-04-24T08:30:00.000Z",
+  lastEditedByUserId: empleadoFixture.id,
+  lastEditedByUserFullName: empleadoFixture.fullName,
   deletedAt: "2026-04-25T09:15:00.000Z",
   deletedByUserId: empleadoFixture.id,
   deletedByUserFullName: empleadoFixture.fullName,
   deletionReason: "Registro duplicado",
   canEdit: false,
   canDelete: false,
+} as const;
+
+export const actividadGrupalChangeLogFixture = {
+  id: "6f0361fb-ff51-43d7-a6e8-83c58df345b6",
+  activityId: actividadGrupalFixture.id,
+  tenantId: actividadGrupalFixture.tenantId,
+  tenantName: actividadGrupalFixture.tenantName,
+  actaNumber: actividadGrupalFixture.actaNumber,
+  activityName: actividadGrupalFixture.activityName,
+  action: "updated",
+  actorUserId: empleadoFixture.id,
+  actorUserFullName: empleadoFixture.fullName,
+  occurredAt: "2026-04-24T08:30:00.000Z",
+  changes: [
+    {
+      field: "Hora de finalización",
+      before: "09:30",
+      after: "10:00",
+    },
+  ],
 } as const;
 
 export const actividadGrupalFormOptionsFixture = {

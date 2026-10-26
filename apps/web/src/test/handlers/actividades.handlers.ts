@@ -3,6 +3,7 @@ import { http, HttpResponse } from "msw";
 import {
   actividadGrupalDiligenciamientoFixture,
   actividadGrupalFixture,
+  actividadGrupalChangeLogFixture,
   actividadGrupalFormOptionsFixture,
   actividadGrupalIntegranteFixture,
   actividadGrupalTrashFixture,
@@ -59,6 +60,9 @@ export const actividadesHandlers = [
 
     return HttpResponse.json({ actividadesGrupales: actividades });
   }),
+  http.get("http://localhost:3001/api/actividades-grupales/log-cambios", () =>
+    HttpResponse.json({ entries: [actividadGrupalChangeLogFixture], nextCursor: null }),
+  ),
   http.get("http://localhost:3001/api/actividades-grupales/tenant-options", () =>
     HttpResponse.json({ tenants: [backofficeTenantDetailFixture.tenant] }),
   ),

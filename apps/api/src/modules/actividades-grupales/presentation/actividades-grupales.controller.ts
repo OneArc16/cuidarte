@@ -29,6 +29,8 @@ import {
   actividadGrupalListItemSchema,
   actividadGrupalListQuerySchema,
   actividadGrupalListResponseSchema,
+  actividadGrupalChangeLogListQuerySchema,
+  actividadGrupalChangeLogListResponseSchema,
   actividadGrupalTrashListQuerySchema,
   actividadGrupalTrashListResponseSchema,
   actividadGrupalTenantOptionsResponseSchema,
@@ -109,6 +111,25 @@ export class ActividadesGrupalesController {
     return actividadGrupalTrashListResponseSchema.parse({ actividadesGrupales });
   }
 
+  @Get("log-cambios")
+  @ApiOkResponse({ description: "Historial de ediciones y eliminaciones de actas." })
+  @ApiUnauthorizedResponse({ description: "Sesion requerida." })
+  @ApiForbiddenResponse({
+    description: "No tienes permisos para consultar el historial de cambios.",
+  })
+  async listActividadesGrupalesChangeLog(
+    @Query() query: unknown,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const parsedQuery = parseZodSchema(actividadGrupalChangeLogListQuerySchema, query);
+    const history = await this.actividadesGrupalesTrashService.listChangeLog(
+      parsedQuery,
+      request.currentUser,
+    );
+
+    return actividadGrupalChangeLogListResponseSchema.parse(history);
+  }
+
   @Get("tenant-options")
   @ApiOkResponse({ description: "Centros activos disponibles para super admin." })
   @ApiUnauthorizedResponse({ description: "Sesion requerida." })
@@ -156,10 +177,11 @@ export class ActividadesGrupalesController {
   @ApiForbiddenResponse({ description: "Solo super administradores pueden migrar prefijos." })
   async previewActaPrefixCorrection(@Body() body: unknown, @Req() request: AuthenticatedRequest) {
     const command = parseZodSchema(actividadGrupalActaPrefixCorrectionPreviewRequestSchema, body);
-    const preview = await this.actividadesGrupalesService.previewActividadGrupalActaPrefixCorrection(
-      command,
-      request.currentUser,
-    );
+    const preview =
+      await this.actividadesGrupalesService.previewActividadGrupalActaPrefixCorrection(
+        command,
+        request.currentUser,
+      );
 
     return actividadGrupalActaCorrectionPreviewResponseSchema.parse(preview);
   }

@@ -498,6 +498,13 @@
       "when": 1792713600000,
       "tag": "0070_actividades_grupales_creation_details_permission",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1793017736252,
+      "tag": "0071_shocking_roxanne_simpson",
+      "breakpoints": true
     }
   ]
 }

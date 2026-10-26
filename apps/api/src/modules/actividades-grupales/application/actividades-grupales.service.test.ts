@@ -656,6 +656,9 @@ function createRepository(): ActividadesGrupalesRepository & {
     async findTrashMany() {
       return [];
     },
+    async findChangeLogMany() {
+      return { entries: [], nextCursor: null };
+    },
     async findTenantOptions() {
       return [
         { id: tenantId, name: "Centro de Vida Demo" },

@@ -7,6 +7,7 @@ import {
   type ActividadGrupalListResponse,
   type ActividadGrupalOrganizer,
   type ActividadGrupalTrashListResponse,
+  type ActividadGrupalChangeLogListResponse,
   type ActividadGrupalTenantOptionsResponse,
   type ActividadGrupalActaCorrectionPreviewResponse,
   type ApplyActividadGrupalActaCorrectionRequest,
@@ -25,6 +26,7 @@ import {
   actividadGrupalListItemSchema,
   actividadGrupalListResponseSchema,
   actividadGrupalTrashListResponseSchema,
+  actividadGrupalChangeLogListResponseSchema,
   actividadGrupalTenantOptionsResponseSchema,
   actividadGrupalActaCorrectionPreviewResponseSchema,
   actividadGrupalActaPrefixCorrectionPreviewRequestSchema,
@@ -47,6 +49,11 @@ type ListActividadesGrupalesParams = {
 
 type TrashActividadesGrupalesParams = ListActividadesGrupalesParams;
 
+type ActividadGrupalChangeLogParams = TrashActividadesGrupalesParams & {
+  cursor: string | null;
+  limit: number;
+};
+
 type SaveActividadGrupalDiligenciamientoRequest = {
   payload: SaveActividadGrupalDiligenciamiento;
   newPhotos: File[];
@@ -65,6 +72,15 @@ export function listActividadesGrupalesTrash(
   return fetchJson(
     buildActividadesGrupalesTrashUrl(params),
     actividadGrupalTrashListResponseSchema,
+  );
+}
+
+export function listActividadGrupalChangeLog(
+  params: ActividadGrupalChangeLogParams,
+): Promise<ActividadGrupalChangeLogListResponse> {
+  return fetchJson(
+    buildActividadGrupalChangeLogUrl(params),
+    actividadGrupalChangeLogListResponseSchema,
   );
 }
 
@@ -286,6 +302,24 @@ function buildActividadesGrupalesUrl(params: ListActividadesGrupalesParams): str
 }
 
 function buildActividadesGrupalesTrashUrl(params: TrashActividadesGrupalesParams): string {
+  const queryString = buildActividadesGrupalesQueryString(params);
+
+  return `${getApiBaseUrl()}/actividades-grupales/log-eliminaciones${queryString === "" ? "" : `?${queryString}`}`;
+}
+
+function buildActividadGrupalChangeLogUrl(params: ActividadGrupalChangeLogParams): string {
+  const queryString = buildActividadesGrupalesQueryString(params);
+  const searchParams = new URLSearchParams(queryString);
+
+  searchParams.set("limit", String(params.limit));
+  if (params.cursor !== null) {
+    searchParams.set("cursor", params.cursor);
+  }
+
+  return `${getApiBaseUrl()}/actividades-grupales/log-cambios?${searchParams.toString()}`;
+}
+
+function buildActividadesGrupalesQueryString(params: TrashActividadesGrupalesParams): string {
   const searchParams = new URLSearchParams();
 
   if (params.search.trim() !== "") {
@@ -312,7 +346,5 @@ function buildActividadesGrupalesTrashUrl(params: TrashActividadesGrupalesParams
     searchParams.set("tenantId", params.tenantId);
   }
 
-  const queryString = searchParams.toString();
-
-  return `${getApiBaseUrl()}/actividades-grupales/log-eliminaciones${queryString === "" ? "" : `?${queryString}`}`;
+  return searchParams.toString();
 }

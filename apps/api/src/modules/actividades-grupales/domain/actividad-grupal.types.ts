@@ -37,6 +37,10 @@ export type FindActividadGrupalByIdQuery = {
 };
 
 export type FindActividadesGrupalesTrashQuery = FindActividadesGrupalesQuery;
+export type FindActividadGrupalChangeLogQuery = FindActividadesGrupalesQuery & {
+  cursor: string | null;
+  limit: number;
+};
 
 export type SearchActividadGrupalIntegrantesOptionsQuery = {
   tenantId: string;
@@ -231,10 +235,35 @@ export type ActividadGrupalRecord = {
 };
 
 export type ActividadGrupalTrashRecord = ActividadGrupalRecord & {
+  lastEditedAt: Date | null;
+  lastEditedByUserId: string | null;
+  lastEditedByUserFullName: string | null;
   deletedAt: Date;
   deletedByUserId: string;
   deletedByUserFullName: string;
   deletionReason: string | null;
+};
+
+export type ActividadGrupalChangeLogRecord = Pick<
+  ActividadGrupalRecord,
+  | "id"
+  | "tenantId"
+  | "tenantName"
+  | "actaNumber"
+  | "activityName"
+  | "organizer"
+  | "activityTypeCreatorUserIds"
+> & {
+  auditId: string;
+  action: "updated" | "deleted";
+  actorUserId: string;
+  actorUserFullName: string;
+  occurredAt: Date;
+  changes: Array<{
+    field: string;
+    before: string | null;
+    after: string | null;
+  }>;
 };
 
 export type ActividadGrupalDiligenciamientoDetailRecord = {

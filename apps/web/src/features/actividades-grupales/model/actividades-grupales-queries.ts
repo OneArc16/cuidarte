@@ -35,6 +35,11 @@ type TrashActividadesGrupalesParams = {
   tenantId: string | null;
 };
 
+type ActividadGrupalChangeLogParams = TrashActividadesGrupalesParams & {
+  cursor: string | null;
+  limit: number;
+};
+
 type DeleteActividadGrupalMutationRequest = {
   activityId: string;
   reason: string;
@@ -58,6 +63,8 @@ export const actividadesGrupalesQueryKeys = {
   editDetail: (activityId: string) => ["actividades-grupales", activityId, "edit"] as const,
   trashList: (params: TrashActividadesGrupalesParams) =>
     ["actividades-grupales", "log-eliminaciones", params] as const,
+  changeLog: (params: ActividadGrupalChangeLogParams) =>
+    ["actividades-grupales", "log-cambios", params] as const,
 };
 
 export function useActividadesGrupalesQuery(params: {
@@ -122,6 +129,18 @@ export function useActividadesGrupalesTrashQuery(
   return useQuery({
     queryKey: actividadesGrupalesQueryKeys.trashList(params),
     queryFn: () => actividadesGrupalesApi.listActividadesGrupalesTrash(params),
+    enabled,
+    retry: false,
+  });
+}
+
+export function useActividadGrupalChangeLogQuery(
+  params: ActividadGrupalChangeLogParams,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: actividadesGrupalesQueryKeys.changeLog(params),
+    queryFn: () => actividadesGrupalesApi.listActividadGrupalChangeLog(params),
     enabled,
     retry: false,
   });

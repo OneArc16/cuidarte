@@ -3,6 +3,7 @@ import {
   type ActividadGrupalEmpleadoOptionRecord,
   type ActividadGrupalIntegranteOptionRecord,
   type ActividadGrupalRecord,
+  type ActividadGrupalChangeLogRecord,
   type ActividadGrupalReportCandidateRecord,
   type ActividadGrupalTrashRecord,
   type ActividadGrupalSupportFileRecord,
@@ -18,6 +19,7 @@ import {
   type FindActividadesGrupalesQuery,
   type FindActividadesGrupalesTrashQuery,
   type FindActividadGrupalByIdQuery,
+  type FindActividadGrupalChangeLogQuery,
   type SaveActividadGrupalDiligenciamientoRecordCommand,
   type SavedActividadGrupalDiligenciamientoRecord,
   type SearchActividadGrupalIntegrantesOptionsQuery,
@@ -29,6 +31,9 @@ export const ACTIVIDADES_GRUPALES_REPOSITORY = Symbol("ACTIVIDADES_GRUPALES_REPO
 export type ActividadesGrupalesRepository = {
   findMany(query: FindActividadesGrupalesQuery): Promise<ActividadGrupalRecord[]>;
   findTrashMany(query: FindActividadesGrupalesTrashQuery): Promise<ActividadGrupalTrashRecord[]>;
+  findChangeLogMany(
+    query: FindActividadGrupalChangeLogQuery,
+  ): Promise<{ entries: ActividadGrupalChangeLogRecord[]; nextCursor: string | null }>;
   findById(
     query: FindActividadGrupalByIdQuery,
   ): Promise<ActividadGrupalDiligenciamientoDetailRecord | null>;
