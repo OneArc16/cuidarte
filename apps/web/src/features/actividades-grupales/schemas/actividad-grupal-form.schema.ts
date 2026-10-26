@@ -42,11 +42,16 @@ export type ActividadGrupalFormValues = Omit<CreateActividadGrupalRequest, "tena
 };
 
 export function createDefaultActividadGrupalFormValues(): ActividadGrupalFormValues {
+  const today = new Date();
+  const activityDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(
+    today.getDate(),
+  ).padStart(2, "0")}`;
+
   return {
     tenantId: "",
     activityName: "",
     activityTypeId: "",
-    activityDate: "",
+    activityDate,
     startTime: "",
     endTime: "",
     organizer: "director",

@@ -17,6 +17,7 @@ import {
   getCreatableActividadGrupalOrganizerOptions,
   getActividadGrupalOrganizerOptions,
 } from "../lib/actividades-grupales-formatters";
+import { canEditActividadGrupalYear } from "../lib/actividades-grupales-permissions";
 import {
   type ActividadGrupalFormValues,
   actividadGrupalFormSchema,
@@ -75,6 +76,12 @@ export function ActividadGrupalForm({
   const { getValues, reset, resetField, setError, setValue, watch } = form;
   const employeeIds = watch("employeeIds");
   const organizerValue = watch("organizer");
+  const canEditActivityYear = canEditActividadGrupalYear(user);
+  const currentYear = String(new Date().getFullYear());
+  const lockedActivityYear =
+    mode === "edit" && initialValues?.activityDate !== undefined
+      ? initialValues.activityDate.slice(0, 4)
+      : currentYear;
   const requiresTeamAssignment = mode === "create" && user.teamId == null;
   const isTenantSelected = !shouldSelectTenant || selectedTenantId.trim() !== "";
   const availableEmployees = useMemo(
@@ -254,6 +261,13 @@ export function ActividadGrupalForm({
             return;
           }
 
+          if (!canEditActivityYear && values.activityDate.slice(0, 4) !== lockedActivityYear) {
+            toast.error("No tienes permiso para modificar el año de la actividad.", {
+              id: "actividad-year-permission",
+            });
+            return;
+          }
+
           onSubmit(values);
         }, handleInvalidSubmit)(event);
       }}
@@ -360,7 +374,10 @@ export function ActividadGrupalForm({
             >
               <input
                 type="date"
+                aria-label="Fecha de la actividad"
                 aria-invalid={getError("activityDate") === undefined ? "false" : "true"}
+                min={canEditActivityYear ? undefined : `${lockedActivityYear}-01-01`}
+                max={canEditActivityYear ? undefined : `${lockedActivityYear}-12-31`}
                 {...form.register("activityDate")}
               />
             </ActividadGrupalFieldGroup>

@@ -327,6 +327,88 @@ describe("ActividadesGrupalesService", () => {
     assert.deepEqual(repository.created[0]?.employeeIds, [medicoUserId, enfermeriaUserId]);
   });
 
+  it("forbids changing the current year when creating an activity without the individual permission", async () => {
+    const repository = createRepository();
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+
+    await assert.rejects(
+      () =>
+        service.createActividadGrupal(
+          {
+            tenantId: null,
+            activityName: "Jornada psicomotriz",
+            activityType: "fisioterapia",
+            activityTypeId,
+            activityDate: "2060-04-23",
+            startTime: "08:30",
+            endTime: "10:00",
+            organizer: "medico",
+            employeeIds: [medicoUserId],
+          },
+          {
+            ...medicoUser,
+            permissions: ["actividades_grupales.create", "actividades_grupales.edit"],
+          },
+        ),
+      { constructor: ForbiddenException },
+    );
+
+    assert.equal(repository.created.length, 0);
+  });
+
+  it("allows changing the year when creating an activity with the individual permission", async () => {
+    const repository = createRepository();
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+
+    const result = await service.createActividadGrupal(
+      {
+        tenantId: null,
+        activityName: "Jornada psicomotriz",
+        activityType: "fisioterapia",
+        activityTypeId,
+        activityDate: "2060-04-23",
+        startTime: "08:30",
+        endTime: "10:00",
+        organizer: "medico",
+        employeeIds: [medicoUserId],
+      },
+      {
+        ...medicoUser,
+        permissions: [
+          "actividades_grupales.create",
+          "actividades_grupales.edit",
+          "actividades_grupales.edit_year",
+        ],
+      },
+    );
+
+    assert.equal(result.activityDate, "2060-04-23");
+  });
+
+  it("forbids changing an activity to another year without the individual permission", async () => {
+    const repository = createRepository();
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+
+    await assert.rejects(
+      () =>
+        service.updateActividadGrupal(
+          records[0]!.id,
+          {
+            activityName: records[0]!.activityName,
+            activityType: "centro_vida",
+            activityTypeId,
+            activityDate: "2060-04-22",
+            startTime: records[0]!.startTime,
+            endTime: records[0]!.endTime,
+            organizer: records[0]!.organizer,
+            employeeIds: [medicoUserId],
+          },
+          { ...medicoUser, permissions: ["actividades_grupales.edit"] },
+        ),
+      { constructor: ForbiddenException },
+    );
+  });
+
   it("requires a team assignment before creating an activity", async () => {
     const repository = createRepository();
     const service = new ActividadesGrupalesService(repository, createFilesStorage());

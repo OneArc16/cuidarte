@@ -68,4 +68,30 @@ describe("ActividadGrupalForm", () => {
     expect(screen.getByText("Debes tener un equipo asignado.")).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Actividades de Manualidad" })).toBeNull();
   });
+
+  it("limits the date to the current year without the permission to modify it", () => {
+    renderWithProviders(
+      <ActividadGrupalForm
+        mode="create"
+        user={userWithoutTeam}
+        error={null}
+        formOptions={formOptions}
+        isFormOptionsLoading={false}
+        isPending={false}
+        isTenantOptionsLoading={false}
+        selectedTenantId={userWithoutTeam.tenantId ?? ""}
+        shouldSelectTenant={false}
+        tenantOptions={[]}
+        onCancel={vi.fn()}
+        onSubmit={vi.fn()}
+        onTenantChange={vi.fn()}
+      />,
+    );
+
+    const year = new Date().getFullYear();
+    const activityDate = screen.getByLabelText("Fecha de la actividad");
+
+    expect(activityDate).toHaveAttribute("min", `${year}-01-01`);
+    expect(activityDate).toHaveAttribute("max", `${year}-12-31`);
+  });
 });

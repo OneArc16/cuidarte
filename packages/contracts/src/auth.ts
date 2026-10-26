@@ -25,6 +25,7 @@ export const userPermissionValues = [
   "actividades_grupales.view_creation_details",
   "actividades_grupales.create",
   "actividades_grupales.edit",
+  "actividades_grupales.edit_year",
   "actividades_grupales.delete",
   "actividades_grupales.correct",
   "adultos_mayores.view",
@@ -159,6 +160,12 @@ export const userPermissionCatalog = [
     group: "Actividades grupales",
     label: "Editar actividades",
     description: "Editar actas cuando el empleado está vinculado o tiene alcance administrativo.",
+  },
+  {
+    key: "actividades_grupales.edit_year",
+    group: "Actividades grupales",
+    label: "Modificar año de la actividad",
+    description: "Cambiar el año de la fecha de una actividad grupal.",
   },
   {
     key: "actividades_grupales.delete",

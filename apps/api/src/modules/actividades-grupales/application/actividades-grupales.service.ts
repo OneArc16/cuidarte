@@ -45,6 +45,7 @@ import {
 import {
   resolveActividadGrupalTenantForCreate,
   canEditActividadGrupal,
+  canEditActividadGrupalYear,
   canManageActividadesGrupales,
   canCorrectActividadGrupalActaNumber,
   canBulkCorrectActividadGrupalActaNumbers,
@@ -205,6 +206,7 @@ export class ActividadesGrupalesService {
   ): Promise<ActividadGrupalListItem> {
     this.ensureCanCreateActivities(actor);
     this.resolveScopeOrThrow(actor);
+    this.assertActivityYearCanBeChanged(command.activityDate, actor);
 
     if (!canCreateActividadGrupalWithOrganizer(actor, command.organizer)) {
       throw new ForbiddenException("No tienes permiso para crear actividades de otro organizador.");
@@ -286,6 +288,7 @@ export class ActividadesGrupalesService {
   ): Promise<ActividadGrupalListItem> {
     this.ensureCanEditActivities(actor);
     const detail = await this.getEditableActivityOrThrow(activityId, actor);
+    this.assertActivityYearCanBeChanged(command.activityDate, actor, detail.activity.activityDate);
     const activityType = await this.actividadGrupalTiposService.resolveForSessionUpdate(
       command.activityTypeId,
       detail.activity.tenantId,
@@ -895,6 +898,19 @@ export class ActividadesGrupalesService {
         deathDate: integrante.deathDate,
         recordDate: activityDate,
       });
+    }
+  }
+
+  private assertActivityYearCanBeChanged(
+    activityDate: string,
+    actor: Pick<AuthUser, "role" | "permissions">,
+    originalActivityDate?: string,
+  ): void {
+    const requestedYear = activityDate.slice(0, 4);
+    const allowedYear = originalActivityDate?.slice(0, 4) ?? String(new Date().getFullYear());
+
+    if (requestedYear !== allowedYear && !canEditActividadGrupalYear(actor)) {
+      throw new ForbiddenException("No tienes permiso para modificar el año de la actividad.");
     }
   }
 

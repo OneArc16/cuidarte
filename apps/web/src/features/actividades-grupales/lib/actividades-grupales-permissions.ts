@@ -17,6 +17,12 @@ export function canViewActividadGrupalCreationDetails(
     : hasUserPermission(user, "actividades_grupales.view_creation_details");
 }
 
+export function canEditActividadGrupalYear(user: Pick<AuthUser, "role" | "permissions">): boolean {
+  return user.permissions === undefined
+    ? user.role === "super_admin"
+    : hasUserPermission(user, "actividades_grupales.edit_year");
+}
+
 export function canViewActividadesGrupalesTrash(
   user: Pick<AuthUser, "role" | "tenantId" | "permissions">,
 ): boolean {

@@ -196,6 +196,12 @@ export function canEditActividadGrupal(
   );
 }
 
+export function canEditActividadGrupalYear(user: Pick<AuthUser, "role" | "permissions">): boolean {
+  return user.permissions === undefined
+    ? user.role === "super_admin"
+    : hasUserPermission(user, "actividades_grupales.edit_year");
+}
+
 export function resolveActividadGrupalTenantForCreate(
   user: AuthUser,
   requestedTenantId: string | null,
