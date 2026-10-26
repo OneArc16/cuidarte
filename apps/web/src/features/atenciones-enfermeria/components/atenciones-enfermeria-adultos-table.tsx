@@ -11,6 +11,7 @@ type AtencionesEnfermeriaAdultosTableProps = {
   adultosMayores: AdultoMayorListItem[];
   canCreateAtencion: boolean;
   isLoading: boolean;
+  isUpdating: boolean;
   showTenantColumn: boolean;
   onOpenAtencion: (adultoMayorId: string) => void;
   onOpenHistory: (adultoMayorId: string) => void;
@@ -20,6 +21,7 @@ export function AtencionesEnfermeriaAdultosTable({
   adultosMayores,
   canCreateAtencion,
   isLoading,
+  isUpdating,
   onOpenAtencion,
   onOpenHistory,
   showTenantColumn,
@@ -27,7 +29,16 @@ export function AtencionesEnfermeriaAdultosTable({
   const columnCount = showTenantColumn ? 8 : 7;
 
   return (
-    <section className="atenciones-enfermeria-table-wrap" aria-label="Adultos mayores disponibles">
+    <section
+      className={`atenciones-enfermeria-table-wrap${isUpdating ? " atenciones-enfermeria-table-wrap--updating" : ""}`}
+      aria-label="Adultos mayores disponibles"
+      aria-busy={isLoading || isUpdating}
+    >
+      {isUpdating ? (
+        <span className="visually-hidden" role="status">
+          Actualizando página...
+        </span>
+      ) : null}
       <table className="atenciones-enfermeria-table">
         <thead>
           <tr>

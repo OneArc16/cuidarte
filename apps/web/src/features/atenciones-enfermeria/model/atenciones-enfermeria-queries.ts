@@ -6,7 +6,8 @@ import * as atencionesEnfermeriaApi from "../api/atenciones-enfermeria-api";
 
 export const atencionesEnfermeriaQueryKeys = {
   list: (params: AtencionEnfermeriaListQuery) => ["atenciones-enfermeria", params] as const,
-  adults: (search: string) => ["atenciones-enfermeria", "adultos-mayores", search] as const,
+  adults: (params: { search: string; page: number; pageSize: number }) =>
+    ["atenciones-enfermeria", "adultos-mayores", params] as const,
   detail: (atencionId: string) => ["atenciones-enfermeria", atencionId] as const,
   adultoLookup: (adultoMayorId: string) =>
     ["atenciones-enfermeria", "adulto-lookup", adultoMayorId] as const,
@@ -31,10 +32,15 @@ export function useAtencionesEnfermeriaTrashQuery(adultoMayorId: string, enabled
   });
 }
 
-export function useAtencionesEnfermeriaAdultosMayoresQuery(search: string) {
+export function useAtencionesEnfermeriaAdultosMayoresQuery(params: {
+  search: string;
+  page: number;
+  pageSize: number;
+}) {
   return useQuery({
-    queryKey: atencionesEnfermeriaQueryKeys.adults(search),
-    queryFn: () => adultosMayoresApi.listAdultosMayores({ search }),
+    queryKey: atencionesEnfermeriaQueryKeys.adults(params),
+    queryFn: () => adultosMayoresApi.listAdultosMayores(params),
+    placeholderData: (previousData) => previousData,
     retry: false,
   });
 }

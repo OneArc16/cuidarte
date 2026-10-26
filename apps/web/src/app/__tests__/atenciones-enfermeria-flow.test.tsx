@@ -1,8 +1,9 @@
+import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { enfermeriaUserFixture } from "../../test/fixtures";
+import { adultoMayorFixture, enfermeriaUserFixture } from "../../test/fixtures";
 import { server } from "../../test/test-server";
 import { mockAuthMe } from "../../test/helpers/msw-auth.helpers";
 import { renderAppAtPath, resetAppTestState } from "../../test/helpers/app-test.helpers";
@@ -66,16 +67,58 @@ describe("App atenciones de enfermería flow", () => {
     ).toBeInTheDocument();
   });
 
+  it("paginates the adults available for nursing", async () => {
+    const requestedPages: string[] = [];
+    const secondAdulto = {
+      ...adultoMayorFixture,
+      id: "77777777-2222-4333-8444-555555555555",
+      documentNumber: "9900000011",
+      names: "Teresa",
+      surnames: "Gómez",
+      firstName: "Teresa",
+      middleName: null,
+      firstSurname: "Gómez",
+      secondSurname: null,
+    };
+
+    server.use(
+      mockAuthMe(enfermeriaUserFixture),
+      http.get("http://localhost:3001/api/adultos-mayores", ({ request }) => {
+        const page = new URL(request.url).searchParams.get("page") ?? "1";
+        requestedPages.push(page);
+
+        return HttpResponse.json({
+          adultosMayores: page === "1" ? [adultoMayorFixture] : [secondAdulto],
+          page: Number(page),
+          pageSize: 20,
+          total: 40,
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderAppAtPath("/atenciones-enfermeria");
+
+    expect(await screen.findByText(adultoMayorFixture.names)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Página siguiente" }));
+
+    expect(await screen.findByText(secondAdulto.names)).toBeInTheDocument();
+    expect(screen.queryByText(adultoMayorFixture.names)).not.toBeInTheDocument();
+    expect(requestedPages).toEqual(["1", "2"]);
+  });
+
   it("loads the shared nursing history for an adult and marks own and foreign records", async () => {
     server.use(mockAuthMe(enfermeriaUserFixture));
 
-    renderAppAtPath(`/atenciones-enfermeria/adultos-mayores/0b17e370-8f81-48c0-b707-c7046f497855/history`);
+    renderAppAtPath(
+      `/atenciones-enfermeria/adultos-mayores/0b17e370-8f81-48c0-b707-c7046f497855/history`,
+    );
 
     expect(
       await screen.findByRole("heading", { name: "Rosa Elena Martinez Rojas" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Historia compartida")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Acceso Editar" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Acceso Ver" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Editar atención" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ver atención" })).toBeInTheDocument();
   });
 });
