@@ -11,6 +11,7 @@ import {
   buildTemporaryCorrectionRows,
   DrizzleActividadesGrupalesRepository,
   hashCorrectionSnapshot,
+  resolveAutomaticActaSeries,
 } from "./drizzle-actividades-grupales.repository";
 
 type ActiveRow = {
@@ -52,6 +53,41 @@ describe("DrizzleActividadesGrupalesRepository correction planning", () => {
         ["morning", 1],
         ["afternoon", 2],
       ],
+    );
+  });
+
+  it("closes the sequence gap left by a deleted activity", () => {
+    const normalized = buildAutomaticActaNormalizationRows(
+      [
+        correctionSource("first", "MANU-001", 1, "2026-07-01"),
+        correctionSource("third", "MANU-003", 3, "2026-07-03"),
+      ],
+      { prefix: "MANU" },
+    );
+
+    assert.deepEqual(
+      normalized.map((row) => [row.activityId, row.proposedActaNumber]),
+      [
+        ["first", "MANU-001"],
+        ["third", "MANU-002"],
+      ],
+    );
+  });
+
+  it("moves an edited activity to the consecutive series of its new type", () => {
+    assert.deepEqual(
+      resolveAutomaticActaSeries({
+        activityTypeId: "22222222-2222-4222-8222-222222222222",
+        organizer: "psicologa",
+        creatorTeamId: "33333333-3333-4333-8333-333333333333",
+        consecutiveMode: "individual",
+        customConsecutive: { prefix: "MANU", nextValue: 1 },
+      }),
+      {
+        key: "activity-type:22222222-2222-4222-8222-222222222222:team:33333333-3333-4333-8333-333333333333",
+        prefix: "MANU",
+        actaOrganizer: "psicologa",
+      },
     );
   });
 

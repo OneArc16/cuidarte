@@ -107,6 +107,12 @@ export type UpdateActividadGrupalRecordCommand = {
   startTime: string;
   endTime: string;
   organizer: ActividadGrupalOrganizer;
+  consecutiveMode: ActividadGrupalConsecutiveMode;
+  customConsecutive: {
+    prefix: string;
+    nextValue: number;
+    scope?: "global" | "activity-type";
+  } | null;
   employeeIds: string[];
 };
 

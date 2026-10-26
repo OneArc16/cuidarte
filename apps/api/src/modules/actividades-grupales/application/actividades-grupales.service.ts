@@ -286,7 +286,7 @@ export class ActividadesGrupalesService {
   ): Promise<ActividadGrupalListItem> {
     this.ensureCanEditActivities(actor);
     const detail = await this.getEditableActivityOrThrow(activityId, actor);
-    await this.actividadGrupalTiposService.resolveForSessionUpdate(
+    const activityType = await this.actividadGrupalTiposService.resolveForSessionUpdate(
       command.activityTypeId,
       detail.activity.tenantId,
       detail.activity.activityTypeId,
@@ -317,6 +317,8 @@ export class ActividadesGrupalesService {
       startTime: command.startTime,
       endTime: command.endTime,
       organizer: detail.activity.organizer,
+      consecutiveMode: activityType.consecutiveMode,
+      customConsecutive: activityType.consecutiveConfig,
       employeeIds: command.employeeIds,
     });
 

@@ -576,10 +576,11 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         ? individualCounter?.lastValue
         : isGlobalSeries
           ? Math.max((globalCounter?.lastValue ?? 0) + 1, highestActiveSequence + 1)
-          : (command.customConsecutive?.nextValue ??
-            findNextAvailableActividadGrupalActaSequence(
-              activeActaSequences.map((row) => row.actaSequence),
-            ));
+          : command.customConsecutive === null
+            ? findNextAvailableActividadGrupalActaSequence(
+                activeActaSequences.map((row) => row.actaSequence),
+              )
+            : Math.max(command.customConsecutive.nextValue, highestActiveSequence + 1);
 
       if (nextSequence === undefined) {
         throw new Error("No fue posible generar el consecutivo individual del equipo.");
@@ -835,6 +836,58 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     return await this.database.db.transaction(async (tx) => {
       const now = new Date();
       const before = await this.findActivityAuditSnapshot(tx, command.activityId);
+      const [current] = await tx
+        .select({
+          tenantId: actividadesGrupales.tenantId,
+          actaNumber: actividadesGrupales.actaNumber,
+          actaSeriesKey: actividadesGrupales.actaSeriesKey,
+          actaOrganizer: actividadesGrupales.actaOrganizer,
+          creatorTeamId: activityCreators.teamId,
+        })
+        .from(actividadesGrupales)
+        .innerJoin(activityCreators, eq(activityCreators.id, actividadesGrupales.createdByUserId))
+        .where(
+          and(
+            eq(actividadesGrupales.id, command.activityId),
+            isNull(actividadesGrupales.deletedAt),
+          ),
+        )
+        .limit(1);
+
+      if (current === undefined) {
+        throw new Error("No fue posible consultar la actividad grupal a actualizar.");
+      }
+
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`actividades-grupales-acta:${current.tenantId}`}))`,
+      );
+
+      const targetSeries = resolveAutomaticActaSeries({
+        activityTypeId: command.activityTypeId,
+        organizer: command.organizer,
+        creatorTeamId: current.creatorTeamId,
+        consecutiveMode: command.consecutiveMode,
+        customConsecutive: command.customConsecutive,
+      });
+      const changesSeries = current.actaSeriesKey !== targetSeries.key;
+      const [targetSeriesMaximum] = changesSeries
+        ? await tx
+            .select({ maximum: sql<number>`coalesce(max(${actividadesGrupales.actaSequence}), 0)` })
+            .from(actividadesGrupales)
+            .where(
+              and(
+                eq(actividadesGrupales.tenantId, current.tenantId),
+                eq(actividadesGrupales.actaSeriesKey, targetSeries.key),
+                isNull(actividadesGrupales.deletedAt),
+              ),
+            )
+        : [];
+      const temporarySequence = (targetSeriesMaximum?.maximum ?? 0) + 1;
+      const temporaryActaNumber = formatAutomaticActaNumber({
+        prefix: targetSeries.prefix,
+        actaOrganizer: targetSeries.actaOrganizer,
+        sequence: temporarySequence,
+      });
 
       const [updated] = await tx
         .update(actividadesGrupales)
@@ -846,15 +899,49 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           startTime: command.startTime,
           endTime: command.endTime,
           organizer: command.organizer,
+          ...(changesSeries
+            ? {
+                actaNumber: temporaryActaNumber,
+                actaSeriesKey: targetSeries.key,
+                actaOrganizer: targetSeries.actaOrganizer,
+                actaSequence: temporarySequence,
+              }
+            : {}),
           lastEditedAt: now,
           lastEditedByUserId: command.actorUserId,
           updatedAt: now,
         })
-        .where(eq(actividadesGrupales.id, command.activityId))
+        .where(
+          and(
+            eq(actividadesGrupales.id, command.activityId),
+            isNull(actividadesGrupales.deletedAt),
+          ),
+        )
         .returning({ id: actividadesGrupales.id, tenantId: actividadesGrupales.tenantId });
 
       if (updated === undefined) {
         throw new Error("No fue posible actualizar la actividad grupal.");
+      }
+
+      const previousActaNumbers = new Map([[command.activityId, current.actaNumber]]);
+      await this.normalizeAutomaticActaSeries(tx, {
+        tenantId: current.tenantId,
+        actaSeriesKey: targetSeries.key,
+        prefix: targetSeries.prefix,
+        actorUserId: command.actorUserId,
+        operationId: command.activityId,
+        reason: "automatic-on-update",
+        previousActaNumbers,
+      });
+      if (changesSeries) {
+        await this.normalizeAutomaticActaSeries(tx, {
+          tenantId: current.tenantId,
+          actaSeriesKey: current.actaSeriesKey,
+          prefix: getActaNumberPrefix(current.actaNumber),
+          actorUserId: command.actorUserId,
+          operationId: command.activityId,
+          reason: "automatic-on-type-change",
+        });
       }
 
       await tx
@@ -1711,6 +1798,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
           id: actividadesGrupales.id,
           tenantId: actividadesGrupales.tenantId,
           actaNumber: actividadesGrupales.actaNumber,
+          actaSeriesKey: actividadesGrupales.actaSeriesKey,
           activityName: actividadesGrupales.activityName,
         })
         .from(actividadesGrupales)
@@ -1725,6 +1813,10 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       if (activity === undefined) {
         throw new Error("No fue posible eliminar la actividad grupal.");
       }
+
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`actividades-grupales-acta:${activity.tenantId}`}))`,
+      );
 
       const before = await this.findActivityAuditSnapshot(tx, command.activityId);
 
@@ -1760,6 +1852,15 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
             isNull(actividadesGrupales.deletedAt),
           ),
         );
+
+      await this.normalizeAutomaticActaSeries(tx, {
+        tenantId: activity.tenantId,
+        actaSeriesKey: activity.actaSeriesKey,
+        prefix: getActaNumberPrefix(activity.actaNumber),
+        actorUserId: command.actorUserId,
+        operationId: command.activityId,
+        reason: "automatic-on-delete",
+      });
     });
   }
 
@@ -2025,6 +2126,123 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       .from(actividadGrupalDiligenciamientoFiles)
       .where(eq(actividadGrupalDiligenciamientoFiles.activityId, activityId))
       .orderBy(asc(actividadGrupalDiligenciamientoFiles.createdAt));
+  }
+
+  private async normalizeAutomaticActaSeries(
+    tx: Parameters<Parameters<DatabaseService["db"]["transaction"]>[0]>[0],
+    {
+      tenantId,
+      actaSeriesKey,
+      prefix,
+      actorUserId,
+      operationId,
+      reason,
+      previousActaNumbers = new Map<string, string>(),
+    }: {
+      tenantId: string;
+      actaSeriesKey: string;
+      prefix: string;
+      actorUserId: string;
+      operationId: string;
+      reason: "automatic-on-update" | "automatic-on-type-change" | "automatic-on-delete";
+      previousActaNumbers?: ReadonlyMap<string, string>;
+    },
+  ): Promise<void> {
+    const activeSeriesRows = await tx
+      .select({
+        id: actividadesGrupales.id,
+        activityDate: actividadesGrupales.activityDate,
+        startTime: actividadesGrupales.startTime,
+        endTime: actividadesGrupales.endTime,
+        organizer: actividadesGrupales.organizer,
+        actaNumber: actividadesGrupales.actaNumber,
+        actaSeriesKey: actividadesGrupales.actaSeriesKey,
+        actaOrganizer: actividadesGrupales.actaOrganizer,
+        actaSequence: actividadesGrupales.actaSequence,
+        createdAt: actividadesGrupales.createdAt,
+        updatedAt: actividadesGrupales.updatedAt,
+        deletedAt: actividadesGrupales.deletedAt,
+      })
+      .from(actividadesGrupales)
+      .where(
+        and(
+          eq(actividadesGrupales.tenantId, tenantId),
+          eq(actividadesGrupales.actaSeriesKey, actaSeriesKey),
+          isNull(actividadesGrupales.deletedAt),
+        ),
+      );
+    const normalizationRows = buildAutomaticActaNormalizationRows(activeSeriesRows, { prefix });
+    const sourceRowsById = new Map(activeSeriesRows.map((row) => [row.id, row]));
+    const changedRows = normalizationRows.filter((row) => {
+      const source = sourceRowsById.get(row.activityId);
+      return (
+        source?.actaNumber !== row.proposedActaNumber ||
+        source?.actaOrganizer !== resolveActividadGrupalActaOrganizer(row.organizer) ||
+        source?.actaSequence !== row.sequence ||
+        source?.actaSeriesKey !== row.seriesKey
+      );
+    });
+
+    if (changedRows.length === 0) {
+      return;
+    }
+
+    const temporaryRows = buildTemporaryCorrectionRows({
+      operationId,
+      activeRows: activeSeriesRows,
+      changedRows,
+    });
+    const now = new Date();
+
+    for (const row of temporaryRows) {
+      await tx
+        .update(actividadesGrupales)
+        .set({
+          actaNumber: row.temporaryActaNumber,
+          actaSeriesKey: row.actaSeriesKey,
+          actaOrganizer: row.actaOrganizer,
+          actaSequence: row.temporaryActaSequence,
+          updatedAt: now,
+        })
+        .where(eq(actividadesGrupales.id, row.id));
+    }
+
+    for (const row of changedRows) {
+      const source = sourceRowsById.get(row.activityId);
+      if (source === undefined) {
+        throw new Error("No fue posible normalizar el consecutivo de la actividad.");
+      }
+
+      const previousActaNumber = previousActaNumbers.get(row.activityId) ?? source.actaNumber;
+      await tx
+        .update(actividadesGrupales)
+        .set({
+          actaNumber: row.proposedActaNumber,
+          actaSeriesKey: row.seriesKey,
+          actaOrganizer: resolveActividadGrupalActaOrganizer(row.organizer),
+          actaSequence: row.sequence,
+          previousActaNumber,
+          actaNumberCorrectedAt: now,
+          actaNumberCorrectedByUserId: actorUserId,
+          updatedAt: now,
+        })
+        .where(eq(actividadesGrupales.id, row.activityId));
+
+      await tx.insert(auditLogs).values({
+        actorUserId,
+        action: "actividades-grupales.acta-normalized",
+        targetTenantId: tenantId,
+        summary: `Acta normalizada automáticamente de ${previousActaNumber} a ${row.proposedActaNumber}.`,
+        metadata: {
+          activityId: row.activityId,
+          previousActaNumber,
+          newActaNumber: row.proposedActaNumber,
+          previousSequence: source.actaSequence,
+          newSequence: row.sequence,
+          reason,
+        },
+      });
+    }
   }
 
   private getActivitySelection() {
@@ -2414,6 +2632,73 @@ type TemporaryCorrectionRow = {
 };
 
 const POSTGRES_INTEGER_MAX = 2_147_483_647;
+
+type AutomaticActaSeries = {
+  key: string;
+  prefix: string;
+  actaOrganizer: ActividadGrupalRecord["actaOrganizer"];
+};
+
+export function resolveAutomaticActaSeries({
+  activityTypeId,
+  organizer,
+  creatorTeamId,
+  consecutiveMode,
+  customConsecutive,
+}: {
+  activityTypeId: string;
+  organizer: ActividadGrupalRecord["organizer"];
+  creatorTeamId: string | null;
+  consecutiveMode: "group" | "individual";
+  customConsecutive: CreateActividadGrupalRecordCommand["customConsecutive"];
+}): AutomaticActaSeries {
+  const actaOrganizer = resolveActividadGrupalActaOrganizer(organizer);
+  const isIndividualSeries = consecutiveMode === "individual";
+  const isGlobalSeries = !isIndividualSeries && customConsecutive?.scope === "global";
+
+  if (isIndividualSeries && creatorTeamId === null) {
+    throw new Error("No se puede asignar una serie individual sin equipo del creador.");
+  }
+
+  return {
+    key: isIndividualSeries
+      ? `activity-type:${activityTypeId}:team:${creatorTeamId}`
+      : isGlobalSeries
+        ? "global"
+        : customConsecutive === null
+          ? `legacy:${actaOrganizer}`
+          : `activity-type:${activityTypeId}`,
+    prefix:
+      customConsecutive?.prefix ?? formatActividadGrupalActaNumber(actaOrganizer, 1).split("-")[0]!,
+    actaOrganizer,
+  };
+}
+
+function formatAutomaticActaNumber({
+  prefix,
+  actaOrganizer,
+  sequence,
+}: {
+  prefix: string;
+  actaOrganizer: ActividadGrupalRecord["actaOrganizer"];
+  sequence: number;
+}): string {
+  const defaultPrefix = formatActividadGrupalActaNumber(actaOrganizer, 1).split("-")[0]!;
+
+  return prefix === defaultPrefix
+    ? formatActividadGrupalActaNumber(actaOrganizer, sequence)
+    : `${prefix}-${String(sequence).padStart(3, "0")}`;
+}
+
+function getActaNumberPrefix(actaNumber: string): string {
+  const separatorIndex = actaNumber.lastIndexOf("-");
+
+  if (separatorIndex <= 0) {
+    throw new Error("El consecutivo de acta no tiene un prefijo válido.");
+  }
+
+  return actaNumber.slice(0, separatorIndex);
+}
 
 export function buildCorrectionPreviewRows(
   rows: ActaCorrectionSourceRow[],
