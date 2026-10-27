@@ -46,7 +46,7 @@ export function ActividadesGrupalesTable({
   return (
     <div className="actividades-table-wrap">
       <table
-        className={`actividades-table ${showTenantColumn ? "actividades-table--with-tenant" : "actividades-table--without-tenant"} ${showCreationDetailsColumns ? "actividades-table--with-creation-details" : ""}`}
+        className={`actividades-table actividades-table--actions-pinned ${showTenantColumn ? "actividades-table--with-tenant" : "actividades-table--without-tenant"} ${showCreationDetailsColumns ? "actividades-table--with-creation-details" : ""}`}
       >
         <colgroup>
           <col className="actividades-col-acta" />

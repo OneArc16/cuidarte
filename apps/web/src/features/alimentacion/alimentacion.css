@@ -214,7 +214,7 @@
 }
 
 .alimentacion-table {
-  min-width: 1140px;
+  min-width: 1320px;
   table-layout: fixed;
 }
 
@@ -243,7 +243,7 @@
 }
 
 .alimentacion-table--without-tenant .alimentacion-col-acciones {
-  width: 13%;
+  width: 296px;
 }
 
 .alimentacion-table--with-tenant .alimentacion-col-documento {
@@ -271,7 +271,7 @@
 }
 
 .alimentacion-table--with-tenant .alimentacion-col-acciones {
-  width: 13%;
+  width: 296px;
 }
 
 .alimentacion-table th,
@@ -283,6 +283,23 @@
   color: var(--color-ink);
   text-align: left;
   vertical-align: middle;
+}
+
+.alimentacion-table th:last-child,
+.alimentacion-table td:last-child {
+  position: sticky;
+  right: 0;
+  min-width: 296px;
+}
+
+.alimentacion-table th:last-child {
+  z-index: 3;
+  box-shadow: -12px 0 18px rgb(8 80 65 / 6%);
+}
+
+.alimentacion-table td:last-child {
+  z-index: 1;
+  box-shadow: -12px 0 18px rgb(8 80 65 / 4%);
 }
 
 .alimentacion-table th,
@@ -310,13 +327,25 @@
     border-color 180ms ease;
 }
 
+.alimentacion-group-row td:last-child {
+  background: rgb(255 255 255 / 98%);
+}
+
 .alimentacion-group-row.is-expanded td {
   background: rgb(236 249 243 / 88%);
   border-bottom-color: rgb(29 158 117 / 22%);
 }
 
+.alimentacion-group-row.is-expanded td:last-child {
+  background: rgb(236 249 243 / 98%);
+}
+
 .alimentacion-detail-row td {
   background: rgb(248 252 250 / 94%);
+}
+
+.alimentacion-detail-row td:last-child {
+  background: rgb(248 252 250 / 99%);
 }
 
 .alimentacion-detail-row--first td {
