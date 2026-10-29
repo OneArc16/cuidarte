@@ -68,6 +68,8 @@ import {
 } from "@/features/atenciones-enfermeria/lib/atenciones-enfermeria-permissions";
 import { isReportsPath } from "@/features/reports/lib/reports-paths";
 import { canOpenReports } from "@/features/reports/lib/reports-permissions";
+import { isNutricionPath } from "@/features/nutricion/lib/nutricion-paths";
+import { canOpenNutricion } from "@/features/nutricion/lib/nutricion-permissions";
 
 export function App() {
   const currentUserQuery = useCurrentUserQuery();
@@ -152,6 +154,11 @@ export function App() {
       }
     }
 
+    if (isNutricionPath(path) && !canOpenNutricion(user)) {
+      navigate(HOME_PATH, { replace: true });
+      return;
+    }
+
     if (isReportsPath(path) && !canOpenReports(user)) {
       navigate(HOME_PATH, { replace: true });
       return;
@@ -223,6 +230,7 @@ export function App() {
       !isAdultosMayoresPath(path) &&
       !isAlimentacionPath(path) &&
       !isAtencionesEnfermeriaPath(path) &&
+      !isNutricionPath(path) &&
       !isActividadesGrupalesPath(path) &&
       !isReportsPath(path) &&
       !isAjustesPath(path) &&
@@ -250,19 +258,21 @@ export function App() {
                 ? getAtencionesEnfermeriaHistoryAdultoIdFromPath(path) !== null
                   ? "Historia de enfermeria | CuidarTe"
                   : "Atenciones de enfermeria | CuidarTe"
-                : isActividadesGrupalesTrashPath(path)
-                  ? "Historial de cambios | CuidarTe"
-                  : isActividadesGrupalesCorrectionsPath(path)
-                    ? "Correccion de consecutivos | CuidarTe"
-                    : isActividadesGrupalesPath(path)
-                      ? "Sesiones grupales | CuidarTe"
-                      : isAjustesPath(path)
-                        ? "Ajustes | CuidarTe"
-                        : isReportsPath(path)
-                          ? "Reportes | CuidarTe"
-                          : isEmpleadosPath(path)
-                            ? "Gestion de empleados | CuidarTe"
-                            : "Inicio | CuidarTe";
+                : isNutricionPath(path)
+                  ? "Nutrición | CuidarTe"
+                  : isActividadesGrupalesTrashPath(path)
+                    ? "Historial de cambios | CuidarTe"
+                    : isActividadesGrupalesCorrectionsPath(path)
+                      ? "Correccion de consecutivos | CuidarTe"
+                      : isActividadesGrupalesPath(path)
+                        ? "Sesiones grupales | CuidarTe"
+                        : isAjustesPath(path)
+                          ? "Ajustes | CuidarTe"
+                          : isReportsPath(path)
+                            ? "Reportes | CuidarTe"
+                            : isEmpleadosPath(path)
+                              ? "Gestion de empleados | CuidarTe"
+                              : "Inicio | CuidarTe";
   }, [path, user]);
 
   if (currentUserQuery.isLoading) {

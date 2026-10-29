@@ -148,6 +148,25 @@ export const atencionEnfermeriaGlucometriaContext = pgEnum(
   "atencion_enfermeria_glucometria_context",
   ["ayunas", "antes_de_comida", "despues_de_comida", "aleatoria"],
 );
+export const nutricionPlanStatus = pgEnum("nutricion_plan_status", [
+  "active",
+  "completed",
+  "archived",
+]);
+export const nutricionMealSlot = pgEnum("nutricion_meal_slot", [
+  "desayuno",
+  "media_manana",
+  "almuerzo",
+  "media_tarde",
+  "cena",
+  "colacion_nocturna",
+]);
+export const nutricionFollowupAdherence = pgEnum("nutricion_followup_adherence", [
+  "alta",
+  "media",
+  "baja",
+  "sin_dato",
+]);
 
 export const cie10Catalog = pgTable(
   "cie10_catalog",
@@ -1379,6 +1398,146 @@ export const atencionesEnfermeria = pgTable(
       sql`char_length(btrim(${table.nursingNote})) between 1 and 4000`,
     ),
     check("atenciones_enfermeria_version_positive", sql`${table.version} > 0`),
+  ],
+);
+
+export const nutricionPlans = pgTable(
+  "nutricion_plans",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    adultoMayorId: uuid("adulto_mayor_id")
+      .notNull()
+      .references(() => adultosMayores.id, { onDelete: "restrict" }),
+    startDate: date("start_date", { mode: "string" }).notNull(),
+    nextFollowUpDate: date("next_follow_up_date", { mode: "string" }),
+    status: nutricionPlanStatus("status").notNull().default("active"),
+    assessment: text("assessment").notNull(),
+    goal: text("goal").notNull(),
+    recommendations: text("recommendations").notNull(),
+    restrictions: text("restrictions"),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    updatedByUserId: uuid("updated_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    version: integer("version").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("nutricion_plans_one_active_per_adulto_unique")
+      .on(table.adultoMayorId)
+      .where(sql`${table.status} = 'active'`),
+    index("nutricion_plans_tenant_status_idx").on(table.tenantId, table.status),
+    index("nutricion_plans_adulto_start_date_idx").on(table.adultoMayorId, table.startDate),
+    index("nutricion_plans_created_by_user_idx").on(table.createdByUserId),
+    check(
+      "nutricion_plans_next_follow_up_after_start",
+      sql`${table.nextFollowUpDate} is null or ${table.nextFollowUpDate} >= ${table.startDate}`,
+    ),
+    check(
+      "nutricion_plans_assessment_length",
+      sql`char_length(btrim(${table.assessment})) between 1 and 4000`,
+    ),
+    check("nutricion_plans_goal_length", sql`char_length(btrim(${table.goal})) between 1 and 1500`),
+    check(
+      "nutricion_plans_recommendations_length",
+      sql`char_length(btrim(${table.recommendations})) between 1 and 4000`,
+    ),
+    check(
+      "nutricion_plans_restrictions_length",
+      sql`${table.restrictions} is null or char_length(${table.restrictions}) <= 2000`,
+    ),
+    check("nutricion_plans_version_positive", sql`${table.version} > 0`),
+  ],
+);
+
+export const nutricionPlanMeals = pgTable(
+  "nutricion_plan_meals",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    planId: uuid("plan_id")
+      .notNull()
+      .references(() => nutricionPlans.id, { onDelete: "cascade" }),
+    slot: nutricionMealSlot("slot").notNull(),
+    instruction: text("instruction").notNull(),
+    portion: varchar("portion", { length: 300 }),
+    frequency: varchar("frequency", { length: 300 }),
+    sortOrder: integer("sort_order").notNull(),
+  },
+  (table) => [
+    uniqueIndex("nutricion_plan_meals_plan_slot_unique").on(table.planId, table.slot),
+    index("nutricion_plan_meals_plan_sort_idx").on(table.planId, table.sortOrder),
+    check(
+      "nutricion_plan_meals_instruction_length",
+      sql`char_length(btrim(${table.instruction})) between 1 and 2000`,
+    ),
+    check("nutricion_plan_meals_sort_order_non_negative", sql`${table.sortOrder} >= 0`),
+  ],
+);
+
+export const nutricionFollowUps = pgTable(
+  "nutricion_followups",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    planId: uuid("plan_id")
+      .notNull()
+      .references(() => nutricionPlans.id, { onDelete: "restrict" }),
+    followUpDate: date("follow_up_date", { mode: "string" }).notNull(),
+    weightKg: doublePrecision("weight_kg"),
+    heightCm: doublePrecision("height_cm"),
+    bodyMassIndex: doublePrecision("body_mass_index"),
+    abdominalPerimeterCm: doublePrecision("abdominal_perimeter_cm"),
+    adherence: nutricionFollowupAdherence("adherence").notNull().default("sin_dato"),
+    progressNote: text("progress_note").notNull(),
+    adjustments: text("adjustments"),
+    nextFollowUpDate: date("next_follow_up_date", { mode: "string" }),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    updatedByUserId: uuid("updated_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    version: integer("version").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("nutricion_followups_tenant_date_idx").on(table.tenantId, table.followUpDate),
+    index("nutricion_followups_plan_date_idx").on(table.planId, table.followUpDate),
+    index("nutricion_followups_created_by_user_idx").on(table.createdByUserId),
+    check(
+      "nutricion_followups_weight_range",
+      sql`${table.weightKg} is null or ${table.weightKg} between 10 and 400`,
+    ),
+    check(
+      "nutricion_followups_height_range",
+      sql`${table.heightCm} is null or ${table.heightCm} between 50 and 260`,
+    ),
+    check(
+      "nutricion_followups_bmi_range",
+      sql`${table.bodyMassIndex} is null or ${table.bodyMassIndex} between 1 and 200`,
+    ),
+    check(
+      "nutricion_followups_abdominal_perimeter_range",
+      sql`${table.abdominalPerimeterCm} is null or ${table.abdominalPerimeterCm} between 20 and 250`,
+    ),
+    check(
+      "nutricion_followups_progress_note_length",
+      sql`char_length(btrim(${table.progressNote})) between 1 and 4000`,
+    ),
+    check(
+      "nutricion_followups_adjustments_length",
+      sql`${table.adjustments} is null or char_length(${table.adjustments}) <= 4000`,
+    ),
+    check("nutricion_followups_version_positive", sql`${table.version} > 0`),
   ],
 );
 

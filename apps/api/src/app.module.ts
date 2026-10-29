@@ -6,6 +6,7 @@ import { ActividadGrupalTiposModule } from "./modules/actividad-grupal-tipos/act
 import { ActividadesGrupalesModule } from "./modules/actividades-grupales/actividades-grupales.module";
 import { AtencionesIndividualesModule } from "./modules/atenciones-individuales/atenciones-individuales.module";
 import { AtencionesEnfermeriaModule } from "./modules/atenciones-enfermeria/atenciones-enfermeria.module";
+import { NutricionModule } from "./modules/nutricion/nutricion.module";
 import { Cie10Module } from "./modules/cie10/cie10.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { BackofficeModule } from "./modules/backoffice/backoffice.module";
@@ -25,6 +26,7 @@ import { UbicacionesModule } from "./modules/ubicaciones/ubicaciones.module";
     ActividadesGrupalesModule,
     AtencionesIndividualesModule,
     AtencionesEnfermeriaModule,
+    NutricionModule,
     Cie10Module,
     AuthModule,
     BackofficeModule,

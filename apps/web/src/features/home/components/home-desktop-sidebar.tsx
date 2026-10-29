@@ -41,6 +41,7 @@ export function HomeDesktopSidebar({
       "adultos-mayores",
       "sesiones-grupales",
       "atenciones-enfermeria",
+      "nutricion",
       "registro-alimentacion",
     ].includes(module.id),
   );

@@ -1,6 +1,4 @@
-import {
-  type HomeDashboardIndicatorId,
-} from "@cuidarte/contracts";
+import { type HomeDashboardIndicatorId } from "@cuidarte/contracts";
 import { type HomeModuleId } from "./home-modules";
 import {
   Activity,
@@ -83,7 +81,7 @@ export const HOME_DASHBOARD_INDICATORS = [
     label: "Nutrición",
     icon: Apple,
     tone: "emerald",
-    targetModuleId: "sesiones-grupales",
+    targetModuleId: "nutricion",
   },
   {
     id: "actividades_manualidad",

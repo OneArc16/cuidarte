@@ -1,6 +1,7 @@
 import {
   alimentacionAccessRoleValues,
   atencionEnfermeriaModuleRoleValues,
+  nutricionModuleRoleValues,
   hasUserPermission,
   type AuthUser,
   type HomeDashboardShortcutModuleId,
@@ -12,6 +13,7 @@ import {
   BarChart3,
   HeartPulse,
   Home,
+  Apple,
   Settings,
   Upload,
   type LucideIcon,
@@ -30,11 +32,13 @@ import { AJUSTES_PATH } from "@/features/ajustes/lib/ajustes-paths";
 import { BACKOFFICE_PATH } from "@/features/backoffice/lib/backoffice-paths";
 import { EMPLEADOS_PATH } from "@/features/empleados/lib/empleados-paths";
 import { REPORTS_PATH } from "@/features/reports/lib/reports-paths";
+import { NUTRICION_PATH } from "@/features/nutricion/lib/nutricion-paths";
 
 export type HomeModuleId =
   | "inicio"
   | HomeDashboardShortcutModuleId
   | "atenciones-enfermeria"
+  | "nutricion"
   | "reportes"
   | "ajustes";
 
@@ -101,6 +105,16 @@ export const HOME_MODULES = [
     summaryLabel: "Atenciones de enfermería",
     directAccessDescription: "Signos vitales, glucometría y notas",
     permission: "atenciones_enfermeria.view",
+  },
+  {
+    id: "nutricion",
+    label: "Nutrición",
+    icon: Apple,
+    path: NUTRICION_PATH,
+    roles: nutricionModuleRoleValues,
+    summaryLabel: "Planes nutricionales",
+    directAccessDescription: "Planes y seguimiento personalizado",
+    permission: "nutricion.view",
   },
   {
     id: "registro-alimentacion",
@@ -172,5 +186,7 @@ export function isMobilePrimaryModule(module: HomeModule): boolean {
 }
 
 export function isShortcutModule(module: HomeModule): module is ShortcutHomeModule {
-  return module.id !== "inicio" && module.id !== "atenciones-enfermeria";
+  return (
+    module.id !== "inicio" && module.id !== "atenciones-enfermeria" && module.id !== "nutricion"
+  );
 }

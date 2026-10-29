@@ -19,6 +19,8 @@ import { EmpleadosPage } from "@/features/empleados/pages/empleados-page";
 import { isEmpleadosPath } from "@/features/empleados/lib/empleados-paths";
 import { isReportsPath } from "@/features/reports/lib/reports-paths";
 import { ReportsPage } from "@/features/reports/pages/reports-page";
+import { isNutricionPath } from "@/features/nutricion/lib/nutricion-paths";
+import { NutricionPage } from "@/features/nutricion/pages/nutricion-page";
 
 import { HomeDashboard } from "../components/home-dashboard";
 import { HomeDirectAccess } from "../components/home-direct-access";
@@ -50,15 +52,17 @@ export function HomePage({ goBack, navigate, onLogoutSuccess, path, user }: Home
         ? "registro-alimentacion"
         : isAtencionesEnfermeriaPath(path)
           ? "atenciones-enfermeria"
-          : isActividadesGrupalesPath(path)
-            ? "sesiones-grupales"
-            : isEmpleadosPath(path)
-              ? "gestion-empleados"
-              : isReportsPath(path)
-                ? "reportes"
-                : isAjustesPath(path)
-                  ? "ajustes"
-                  : "inicio";
+          : isNutricionPath(path)
+            ? "nutricion"
+            : isActividadesGrupalesPath(path)
+              ? "sesiones-grupales"
+              : isEmpleadosPath(path)
+                ? "gestion-empleados"
+                : isReportsPath(path)
+                  ? "reportes"
+                  : isAjustesPath(path)
+                    ? "ajustes"
+                    : "inicio";
 
   return (
     <main
@@ -85,15 +89,17 @@ export function HomePage({ goBack, navigate, onLogoutSuccess, path, user }: Home
                 ? "alimentacion-title"
                 : isAtencionesEnfermeriaPath(path)
                   ? "atenciones-enfermeria-title"
-                  : isActividadesGrupalesPath(path)
-                    ? "actividades-title"
-                    : isEmpleadosPath(path)
-                      ? "empleados-title"
-                      : isReportsPath(path)
-                        ? "reports-title"
-                        : isAjustesPath(path)
-                          ? "ajustes-title"
-                          : "home-title"
+                  : isNutricionPath(path)
+                    ? "nutricion-title"
+                    : isActividadesGrupalesPath(path)
+                      ? "actividades-title"
+                      : isEmpleadosPath(path)
+                        ? "empleados-title"
+                        : isReportsPath(path)
+                          ? "reports-title"
+                          : isAjustesPath(path)
+                            ? "ajustes-title"
+                            : "home-title"
         }
       >
         {isBackofficePath(path) ? (
@@ -104,6 +110,8 @@ export function HomePage({ goBack, navigate, onLogoutSuccess, path, user }: Home
           <AlimentacionPage path={path} navigate={navigate} user={user} />
         ) : isAtencionesEnfermeriaPath(path) ? (
           <AtencionesEnfermeriaPage path={path} goBack={goBack} navigate={navigate} user={user} />
+        ) : isNutricionPath(path) ? (
+          <NutricionPage path={path} navigate={navigate} user={user} />
         ) : isActividadesGrupalesPath(path) ? (
           <ActividadesGrupalesPage path={path} navigate={navigate} user={user} />
         ) : isEmpleadosPath(path) ? (
