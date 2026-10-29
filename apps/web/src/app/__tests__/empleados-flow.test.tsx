@@ -114,21 +114,20 @@ describe("App empleados flow", () => {
     const user = userEvent.setup();
     renderAppAtPath("/gestion-empleados/new");
 
-    expect(await screen.findByRole("heading", { name: "Nuevo usuario" })).toHaveClass(
-      "visually-hidden",
-    );
-    await user.type(screen.getByLabelText("Primer nombre"), "Carlos");
+    const firstNameInput = await screen.findByLabelText("Primer nombre");
+    expect(firstNameInput).toBeVisible();
+    await user.type(firstNameInput, "Carlos");
     await user.type(screen.getByLabelText("Segundo nombre"), "Andres");
     await user.type(screen.getByLabelText("Primer apellido"), "Mora");
     await user.type(screen.getByLabelText("Segundo apellido"), "Diaz");
-    await user.type(screen.getByLabelText("Correo electronico"), "carlos.mora@centro-demo.test");
-    await user.type(screen.getByLabelText("Numero de documento"), "2020202020");
-    await user.type(screen.getByLabelText("Telefono"), "3115552020");
+    await user.type(screen.getByLabelText("Correo electrónico"), "carlos.mora@centro-demo.test");
+    await user.type(screen.getByLabelText("Número de documento"), "2020202020");
+    await user.type(screen.getByLabelText("Teléfono"), "3115552020");
     await user.selectOptions(screen.getByLabelText("Tipo de usuario"), "admin");
     await user.selectOptions(screen.getByLabelText("Equipo asignado"), equiposFixture[0].id);
-    await user.click(screen.getByRole("button", { name: /Inactivar usuario/i }));
-    await user.type(screen.getByLabelText("Contrasena"), "Cuidarte123!");
-    await user.click(screen.getByRole("button", { name: "Guardar" }));
+    await user.click(screen.getByRole("switch", { name: /Inactivar usuario/i }));
+    await user.type(screen.getByLabelText("Contraseña"), "Cuidarte123!");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
     await waitFor(() => {
       expect(window.location.pathname).toBe(
@@ -181,7 +180,7 @@ describe("App empleados flow", () => {
     ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Crear usuario" }));
-    await screen.findByRole("heading", { name: "Nuevo usuario" });
+    await screen.findByLabelText("Primer nombre");
 
     expect(screen.queryByLabelText("Centro")).not.toBeInTheDocument();
     expect(screen.queryByRole("option", { name: "Admin" })).not.toBeInTheDocument();
@@ -190,12 +189,12 @@ describe("App empleados flow", () => {
     await user.type(screen.getByLabelText("Primer nombre"), "Paola");
     await user.type(screen.getByLabelText("Primer apellido"), "Ruiz");
     await user.type(screen.getByLabelText("Segundo apellido"), "Gomez");
-    await user.type(screen.getByLabelText("Correo electronico"), "paola.ruiz@centro-demo.test");
-    await user.type(screen.getByLabelText("Numero de documento"), "3030303030");
+    await user.type(screen.getByLabelText("Correo electrónico"), "paola.ruiz@centro-demo.test");
+    await user.type(screen.getByLabelText("Número de documento"), "3030303030");
     await user.selectOptions(screen.getByLabelText("Tipo de usuario"), "medico");
     await user.selectOptions(screen.getByLabelText("Equipo asignado"), equiposFixture[1].id);
-    await user.type(screen.getByLabelText("Contrasena"), "Cuidarte123!");
-    await user.click(screen.getByRole("button", { name: "Guardar" }));
+    await user.type(screen.getByLabelText("Contraseña"), "Cuidarte123!");
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
     await waitFor(() => {
       expect(window.location.pathname).toBe(
@@ -227,15 +226,15 @@ describe("App empleados flow", () => {
     const user = userEvent.setup();
     renderAppAtPath(`/gestion-empleados/${empleadoFixture.id}/edit`);
 
-    const phoneInput = await screen.findByLabelText("Telefono");
+    const phoneInput = await screen.findByLabelText("Teléfono");
 
     await user.clear(phoneInput);
     await user.type(phoneInput, "3125553030");
     await user.selectOptions(screen.getByLabelText("Equipo asignado"), equiposFixture[4].id);
-    await user.click(screen.getByRole("button", { name: /Inactivar usuario/i }));
-    await user.click(screen.getByRole("button", { name: "Guardar" }));
+    await user.click(screen.getByRole("switch", { name: /Inactivar usuario/i }));
+    await user.click(screen.getByRole("button", { name: "Guardar cambios" }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent("Cambios guardados.");
+    await waitFor(() => expect(updatePayload).not.toBeNull());
     expect(updatePayload).toMatchObject({
       firstName: empleadoFixture.firstName,
       middleName: empleadoFixture.middleName,
@@ -251,15 +250,15 @@ describe("App empleados flow", () => {
     expect(updatePayload).not.toHaveProperty("password");
   });
 
-  it("shows the optional signature panel for tenant employees that are not directors", async () => {
+  it("shows optional signature upload for tenant employees that are not directors", async () => {
     server.use(mockAuthMe(authUserFixture));
     renderAppAtPath(`/gestion-empleados/${empleadoFixture.id}/edit`);
 
-    expect(await screen.findByRole("heading", { name: "Firma opcional" })).toBeInTheDocument();
-    expect(screen.getByText(/Este paso es opcional\./i)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Activar firmante" })).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Seleccionar archivo")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Subir" })).toBeDisabled();
+    expect(await screen.findByLabelText("Primer nombre")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Firma" })).toBeInTheDocument();
+    expect(screen.getByText("Sin firma")).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "Activar firmante" })).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Seleccionar firma")).toBeInTheDocument();
   });
 
   it("shows the active signer state and lets a director deactivate their signature", async () => {
@@ -312,14 +311,14 @@ describe("App empleados flow", () => {
     const user = userEvent.setup();
     renderAppAtPath(`/gestion-empleados/${empleadoFixture.id}/edit`);
 
-    expect(await screen.findByText("Firmante activo del centro")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Desactivar firmante" })).toBeEnabled();
-    await user.click(screen.getByRole("button", { name: "Desactivar firmante" }));
+    expect(await screen.findByText("Firmante activo")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Desactivar firmante" })).toBeEnabled();
+    await user.click(screen.getByRole("switch", { name: "Desactivar firmante" }));
     await waitFor(() => expect(clearSignerCalled).toBe(true));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Activar firmante" })).toBeInTheDocument(),
+      expect(screen.getByRole("switch", { name: "Activar firmante" })).toBeInTheDocument(),
     );
-    expect(screen.getByText("firma-vigente.jpeg")).toBeInTheDocument();
+    expect(screen.getByText(/firma-vigente\.jpeg/)).toBeInTheDocument();
   });
 
   it("lets a director activate their latest signature when the center has no firmante activo", async () => {
@@ -372,9 +371,9 @@ describe("App empleados flow", () => {
     const user = userEvent.setup();
     renderAppAtPath(`/gestion-empleados/${empleadoFixture.id}/edit`);
 
-    expect(await screen.findByText("Firmante activo del centro")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Activar firmante" })).toBeEnabled();
-    await user.click(screen.getByRole("button", { name: "Activar firmante" }));
+    expect(await screen.findByText("Firmante activo")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Activar firmante" })).toBeEnabled();
+    await user.click(screen.getByRole("switch", { name: "Activar firmante" }));
     await waitFor(() =>
       expect(activeSignerPayload).toEqual({
         employeeId: empleadoFixture.id,
@@ -382,7 +381,7 @@ describe("App empleados flow", () => {
       }),
     );
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Desactivar firmante" })).toBeInTheDocument(),
+      expect(screen.getByRole("switch", { name: "Desactivar firmante" })).toBeInTheDocument(),
     );
   });
 
@@ -439,7 +438,7 @@ describe("App empleados flow", () => {
     const user = userEvent.setup();
     renderAppAtPath(`/gestion-empleados/${empleadoFixture.id}/edit`);
 
-    const updateSignatureButton = await screen.findByRole("button", {
+    const updateSignatureButton = await screen.findByRole("switch", {
       name: "Actualizar firma activa",
     });
     expect(updateSignatureButton).toBeEnabled();
@@ -452,7 +451,7 @@ describe("App empleados flow", () => {
       }),
     );
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Desactivar firmante" })).toBeInTheDocument(),
+      expect(screen.getByRole("switch", { name: "Desactivar firmante" })).toBeInTheDocument(),
     );
   });
 

@@ -1,6 +1,6 @@
 import { loginRequestSchema, type LoginRequest } from "@cuidarte/contracts";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff } from "lucide-react";
+import { ArrowRight, CircleAlert, Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import { useId, useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -51,15 +51,25 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
     >
       <div className="field-group">
         <label htmlFor="email">Correo</label>
-        <input
-          id="email"
-          autoComplete="email"
-          inputMode="email"
-          type="email"
-          aria-invalid={form.formState.errors.email === undefined ? "false" : "true"}
-          aria-describedby={form.formState.errors.email === undefined ? undefined : "email-error"}
-          {...form.register("email")}
-        />
+        <div
+          className={
+            form.formState.errors.email === undefined
+              ? "auth-input"
+              : "auth-input auth-input--invalid"
+          }
+        >
+          <Mail aria-hidden="true" />
+          <input
+            id="email"
+            autoComplete="email"
+            inputMode="email"
+            type="email"
+            placeholder="nombre@correo.com"
+            aria-invalid={form.formState.errors.email === undefined ? "false" : "true"}
+            aria-describedby={form.formState.errors.email === undefined ? undefined : "email-error"}
+            {...form.register("email")}
+          />
+        </div>
         {form.formState.errors.email !== undefined ? (
           <p className="field-error" id="email-error">
             {form.formState.errors.email.message}
@@ -69,11 +79,19 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
 
       <div className="field-group">
         <label htmlFor="password">Contrasena</label>
-        <div className="password-field">
+        <div
+          className={
+            form.formState.errors.password === undefined
+              ? "auth-input password-field"
+              : "auth-input auth-input--invalid password-field"
+          }
+        >
+          <LockKeyhole aria-hidden="true" />
           <input
             id="password"
             autoComplete="current-password"
             type={isPasswordVisible ? "text" : "password"}
+            placeholder="Tu contrasena"
             aria-invalid={form.formState.errors.password === undefined ? "false" : "true"}
             aria-describedby={
               form.formState.errors.password === undefined ? undefined : "password-error"
@@ -99,6 +117,13 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
         ) : null}
       </div>
 
+      {rootError !== null ? (
+        <p className="form-error" role="alert">
+          <CircleAlert aria-hidden="true" />
+          <span>{rootError}</span>
+        </p>
+      ) : null}
+
       <label className="remember-option" htmlFor={rememberMeId}>
         <input
           id={rememberMeId}
@@ -118,15 +143,11 @@ export function LoginForm({ onAuthenticated }: LoginFormProps) {
         <span>Recordar contrasena</span>
       </label>
 
-      {rootError !== null ? (
-        <p className="form-error" role="alert">
-          {rootError}
-        </p>
-      ) : null}
-
       <button className="primary-action" disabled={loginMutation.isPending} type="submit">
-        {loginMutation.isPending ? "Ingresando..." : "Iniciar sesion"}
+        <span>{loginMutation.isPending ? "Ingresando..." : "Iniciar sesion"}</span>
+        {loginMutation.isPending ? null : <ArrowRight aria-hidden="true" />}
       </button>
+      <p className="login-form__help">¿Problemas para ingresar? Habla con tu administrador.</p>
     </form>
   );
 }

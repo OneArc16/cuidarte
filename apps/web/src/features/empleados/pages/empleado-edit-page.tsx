@@ -4,7 +4,10 @@ import { toast } from "sonner";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
-import { EmpleadoDirectorSignaturePanel } from "../components/empleado-director-signature-panel";
+import {
+  canShowEmpleadoSignature,
+  EmpleadoDirectorSignaturePanel,
+} from "../components/empleado-director-signature-panel";
 import { useEquiposQuery } from "@/features/equipos/model/equipos-queries";
 import { EmpleadoForm } from "../components/empleado-form";
 import { EMPLEADOS_PATH } from "../lib/empleados-paths";
@@ -48,23 +51,7 @@ export function EmpleadoEditPage({ empleadoId, navigate, user }: EmpleadoEditPag
   }
 
   return (
-    <section className="empleados-form-stack" aria-labelledby="empleado-edit-title">
-      <h1 className="visually-hidden" id="empleado-edit-title">
-        Editar usuario
-      </h1>
-
-      <div className="empleados-form-nav">
-        <button
-          className="outline-action empleados-back-action"
-          type="button"
-          onClick={() => navigate(EMPLEADOS_PATH)}
-        >
-          <ChevronLeft aria-hidden="true" />
-          <span>Volver</span>
-        </button>
-        <span className="empleados-form-nav__context">{empleadoQuery.data.fullName}</span>
-      </div>
-
+    <section className="empleados-form-stack" aria-label="Formulario de empleado">
       <EmpleadoForm
         mode="edit"
         currentUserRole={user.role}
@@ -72,6 +59,11 @@ export function EmpleadoEditPage({ empleadoId, navigate, user }: EmpleadoEditPag
         isPending={updateMutation.isPending}
         error={resolveEmpleadosApiError(updateMutation.error)}
         teamOptions={equiposQuery.data?.equipos ?? []}
+        sidePanel={
+          canShowEmpleadoSignature(empleadoQuery.data) ? (
+            <EmpleadoDirectorSignaturePanel detail={empleadoQuery.data} />
+          ) : null
+        }
         onCancel={() => navigate(EMPLEADOS_PATH)}
         onSubmit={(values) => {
           updateMutation.mutate(values, {
@@ -81,8 +73,6 @@ export function EmpleadoEditPage({ empleadoId, navigate, user }: EmpleadoEditPag
           });
         }}
       />
-
-      <EmpleadoDirectorSignaturePanel detail={empleadoQuery.data} />
     </section>
   );
 }

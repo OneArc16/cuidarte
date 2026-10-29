@@ -49,7 +49,7 @@ describe("App smoke routing", () => {
 
     expect(loggedUser).toHaveTextContent(authUserFixture.fullName);
     expect(loggedUser).toHaveTextContent("Admin");
-    expect(loggedUser).toHaveTextContent("Sede · Bogota, Cundinamarca");
+    expect(loggedUser).not.toHaveTextContent("Sede · Bogota, Cundinamarca");
     expect(screen.getAllByText("CuidarTe")).not.toHaveLength(0);
 
     const navigation = screen.getByRole("navigation", { name: "Modulos principales" });
@@ -62,6 +62,12 @@ describe("App smoke routing", () => {
     expect(
       within(navigation).queryByRole("button", { name: "BackOffice" }),
     ).not.toBeInTheDocument();
+
+    const profileMenuButton = screen.getByRole("button", { name: "Abrir menú de perfil" });
+
+    expect(profileMenuButton).toHaveAttribute("aria-expanded", "false");
+    await user.click(profileMenuButton);
+    expect(profileMenuButton).toHaveAttribute("aria-expanded", "true");
 
     await user.click(screen.getByRole("button", { name: "Cerrar sesion" }));
 

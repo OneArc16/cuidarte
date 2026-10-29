@@ -1,5 +1,4 @@
 import { type AuthUser } from "@cuidarte/contracts";
-import { ChevronLeft } from "lucide-react";
 
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
@@ -28,23 +27,7 @@ export function EmpleadoCreatePage({ navigate, user }: EmpleadoCreatePageProps) 
   const mutationError = resolveEmpleadosApiError(createMutation.error);
 
   return (
-    <section className="empleados-form-stack" aria-labelledby="empleado-create-title">
-      <h1 className="visually-hidden" id="empleado-create-title">
-        Nuevo usuario
-      </h1>
-
-      <div className="empleados-form-nav">
-        <button
-          className="outline-action empleados-back-action"
-          type="button"
-          onClick={() => navigate(EMPLEADOS_PATH)}
-        >
-          <ChevronLeft aria-hidden="true" />
-          <span>Volver</span>
-        </button>
-        <span className="empleados-form-nav__context">Nuevo usuario</span>
-      </div>
-
+    <section className="empleados-form-stack" aria-label="Formulario de empleado">
       <EmpleadoForm
         mode="create"
         areTenantOptionsLoading={tenantOptionsQuery.isLoading}

@@ -35,7 +35,7 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
           <div className="login-card__header">
             <p className="eyebrow">Ingreso</p>
             <h2>Bienvenido</h2>
-            <p>Usa el correo y contrasena asignados por el administrador.</p>
+            <p>Ingresa con las credenciales que te asignó el administrador.</p>
           </div>
           <LoginForm onAuthenticated={onAuthenticated} />
         </section>

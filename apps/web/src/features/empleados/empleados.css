@@ -1213,3 +1213,555 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Formulario de empleados: una edición compacta y orientada a revisión. */
+.empleados-form-stack {
+  width: 100%;
+  margin-inline: 0;
+  padding: 8px 0 88px;
+}
+
+.empleado-form {
+  gap: 18px;
+}
+
+.empleado-form-header {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.empleado-form-back {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-surface);
+  color: var(--color-deep);
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease,
+    transform 150ms ease;
+}
+
+.empleado-form-back svg {
+  width: 18px;
+  height: 18px;
+}
+
+.empleado-form-back:hover {
+  border-color: var(--color-care);
+  background: var(--color-soft);
+  transform: translateX(-1px);
+}
+
+.empleado-form-back:focus-visible,
+.empleado-switch:focus-visible,
+.empleado-password-visibility:focus-visible,
+.empleado-signature-preview:focus-visible,
+.empleado-signature-remove:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-care) 22%, transparent);
+}
+
+.empleado-form-header__copy {
+  min-width: 0;
+}
+
+.empleado-form-header__copy h1 {
+  margin: 0;
+  color: var(--color-deep);
+  font-size: clamp(1.3rem, 2.4vw, 1.65rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.empleado-form-header__copy p {
+  margin: 4px 0 0;
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empleado-form-header__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.empleado-switch {
+  display: inline-flex;
+  width: 32px;
+  height: 18px;
+  align-items: center;
+  padding: 2px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-muted) 42%, var(--color-surface));
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+
+.empleado-switch > span {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-ink) 28%, transparent);
+  transition: transform 160ms ease;
+}
+
+.empleado-switch[aria-checked="true"] {
+  background: var(--color-care);
+}
+
+.empleado-switch[aria-checked="true"] > span {
+  transform: translateX(14px);
+}
+
+.empleado-switch:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.empleado-form-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+}
+
+.empleado-form-layout--with-side {
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+}
+
+.empleado-form-panel {
+  gap: 22px;
+  padding: 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  box-shadow: none;
+}
+
+.empleado-form-section {
+  display: grid;
+  gap: 12px;
+}
+
+.empleado-form-section + .empleado-form-section {
+  padding-top: 22px;
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+}
+
+.empleado-form-section h2 {
+  margin: 0;
+  color: var(--color-deep);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.empleado-form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+
+.empleado-form-field {
+  gap: 5px;
+}
+
+.empleado-form-field--full {
+  grid-column: 1 / -1;
+}
+
+.empleado-form-field > label {
+  color: var(--color-deep);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.empleado-form-field input,
+.empleado-form-field select,
+.empleado-password-control input {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.empleado-form-field input:focus,
+.empleado-form-field select:focus,
+.empleado-password-control input:focus {
+  border-color: var(--color-care);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-care) 16%, transparent);
+  outline: 0;
+}
+
+.empleado-form-field input[aria-invalid="true"],
+.empleado-form-field select[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.empleado-form-field .field-error,
+.empleado-signature-panel .field-error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.empleado-form-field .field-hint {
+  color: var(--color-muted);
+  font-size: 0.7rem;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.empleado-password-control {
+  position: relative;
+}
+
+.empleado-password-control input {
+  padding-right: 42px;
+}
+
+.empleado-password-visibility {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: grid;
+  width: 32px;
+  height: 30px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.empleado-password-visibility:hover {
+  background: var(--color-soft);
+  color: var(--color-deep);
+}
+
+.empleado-password-visibility svg {
+  width: 16px;
+  height: 16px;
+}
+
+.empleado-form > .form-error {
+  margin: 0;
+  padding: 9px 12px;
+  font-size: 0.78rem;
+}
+
+.empleado-form-footer {
+  min-height: 54px;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.empleado-form-footer__dirty {
+  min-height: 18px;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.empleado-form-actions {
+  align-items: center;
+}
+
+.empleado-form-actions .primary-action,
+.empleado-form-actions .outline-action {
+  min-width: 132px;
+  min-height: 38px;
+  padding: 0 14px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.empleado-form-actions .primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.empleado-form-actions__spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid color-mix(in srgb, var(--color-surface) 45%, transparent);
+  border-top-color: var(--color-surface);
+  border-radius: 50%;
+  animation: empleado-form-spin 700ms linear infinite;
+}
+
+@keyframes empleado-form-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.empleado-signature-panel {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: var(--color-surface);
+  box-shadow: none;
+}
+
+.empleado-signature-panel__header {
+  align-items: center;
+}
+
+.empleado-signature-panel__header h2 {
+  margin: 0;
+  color: var(--color-deep);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.empleado-signature-status {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: var(--color-soft);
+  color: var(--color-deep);
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.empleado-signature-status[data-state="empty"] {
+  background: color-mix(in srgb, var(--color-border) 52%, var(--color-surface));
+  color: var(--color-muted);
+}
+
+.empleado-signature-preview {
+  min-height: 84px;
+  padding: 8px;
+  border: 1px dashed color-mix(in srgb, var(--color-muted) 48%, var(--color-border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-soft) 26%, var(--color-surface));
+  cursor: pointer;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease;
+}
+
+.empleado-signature-preview:hover,
+.empleado-signature-preview.is-dragging {
+  border-color: var(--color-care);
+  background: var(--color-soft);
+}
+
+.empleado-signature-preview img {
+  width: 100%;
+  height: 66px;
+  object-fit: contain;
+}
+
+.empleado-signature-preview > span {
+  display: grid;
+  height: 66px;
+  place-content: center;
+  gap: 4px;
+  color: var(--color-muted);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.empleado-signature-preview > span svg {
+  width: 17px;
+  height: 17px;
+  margin-inline: auto;
+  color: var(--color-care);
+}
+
+.empleado-signature-file-meta {
+  min-width: 0;
+  margin: -2px 0 0;
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empleado-signature-actions,
+.empleado-signature-confirmation {
+  display: flex;
+  gap: 8px;
+}
+
+.empleado-signature-actions .outline-action,
+.empleado-signature-confirmation .primary-action,
+.empleado-signature-confirmation .outline-action {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.empleado-signature-actions .outline-action {
+  flex: 1;
+}
+
+.empleado-signature-remove {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-danger);
+  cursor: pointer;
+}
+
+.empleado-signature-remove:hover {
+  border-color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 7%, var(--color-surface));
+}
+
+.empleado-signature-remove svg {
+  width: 15px;
+  height: 15px;
+}
+
+.empleado-signature-confirmation .primary-action {
+  flex: 1;
+}
+
+.empleado-signature-help {
+  margin: -3px 0 0;
+  color: var(--color-muted);
+  font-size: 0.6875rem;
+  font-weight: 400;
+}
+
+.empleado-signature-divider {
+  height: 1px;
+  margin-top: 2px;
+  background: var(--color-border);
+}
+
+.empleado-signature-signer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.empleado-signature-signer > div {
+  display: grid;
+  gap: 2px;
+}
+
+.empleado-signature-signer strong {
+  color: var(--color-deep);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.empleado-signature-signer > div span {
+  color: var(--color-muted);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+@media (max-width: 760px) {
+  .empleados-form-stack {
+    width: 100%;
+    padding-bottom: 94px;
+  }
+
+  .empleado-form-header {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .empleado-form-header__status {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .empleado-form-layout--with-side,
+  .empleado-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .empleado-form-field--full {
+    grid-column: auto;
+  }
+
+  .empleado-form-panel {
+    padding: 18px;
+  }
+
+  .empleado-form-footer {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 8;
+    display: flex;
+    min-height: 68px;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 12px max(16px, env(safe-area-inset-left)) calc(12px + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+    backdrop-filter: blur(10px);
+  }
+
+  .empleado-form-footer__dirty {
+    display: none;
+  }
+
+  .empleado-form-actions {
+    width: 100%;
+  }
+
+  .empleado-form-actions .primary-action,
+  .empleado-form-actions .outline-action {
+    flex: 1;
+    min-width: 0;
+  }
+}

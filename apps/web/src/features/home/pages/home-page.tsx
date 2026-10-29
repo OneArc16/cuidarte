@@ -1,4 +1,5 @@
 import { type AuthUser } from "@cuidarte/contracts";
+import { useState } from "react";
 
 import { type GoBack, type Navigate } from "@/app/hooks/use-app-navigation";
 import { HOME_PATH } from "@/app/routes/paths";
@@ -39,6 +40,7 @@ type HomePageProps = {
 export function HomePage({ goBack, navigate, onLogoutSuccess, path, user }: HomePageProps) {
   const isMobileViewport = useMediaQuery(MOBILE_HOME_QUERY);
   const canViewDashboard = canViewHomeDashboard(user);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
   const activeModuleId = isBackofficePath(path)
     ? "backoffice"
@@ -60,7 +62,7 @@ export function HomePage({ goBack, navigate, onLogoutSuccess, path, user }: Home
 
   return (
     <main
-      className={`home-shell${isReportsPath(path) ? " home-shell--reports" : ""}${user.role === "auditor" && path === HOME_PATH ? " home-shell--auditor" : ""}`}
+      className={`home-shell${isReportsPath(path) ? " home-shell--reports" : ""}${user.role === "auditor" && path === HOME_PATH ? " home-shell--auditor" : ""}${isSidebarExpanded ? " home-shell--sidebar-expanded" : ""}`}
     >
       {isMobileViewport ? null : (
         <HomeDesktopSidebar
@@ -68,6 +70,7 @@ export function HomePage({ goBack, navigate, onLogoutSuccess, path, user }: Home
           user={user}
           navigate={navigate}
           onLogoutSuccess={onLogoutSuccess}
+          onExpandedChange={setIsSidebarExpanded}
         />
       )}
 

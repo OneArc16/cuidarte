@@ -7,9 +7,9 @@ import {
   type UpdateEmpleadoRequest,
 } from "@cuidarte/contracts";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Power } from "lucide-react";
+import { ChevronLeft, Eye, EyeOff } from "lucide-react";
 import { type FieldErrors, type Resolver, useForm } from "react-hook-form";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import {
   type EmpleadoFormValues,
@@ -20,7 +20,6 @@ import {
   toUpdateEmpleadoRequest,
 } from "../schemas/empleado-form.schema";
 import { formatEmpleadoRole, getAssignableEmpleadoRoles } from "../lib/empleados-formatters";
-import { EmpleadoDirectorSignerToggle } from "./empleado-director-signature-panel";
 import { EmpleadoFieldGroup } from "./empleado-field-group";
 
 type EmpleadoFormProps =
@@ -42,18 +41,16 @@ type EmpleadoFormProps =
       detail: EmpleadoDetail;
       error: string | null;
       isPending: boolean;
+      sidePanel?: ReactNode;
       teamOptions: EquipoOption[];
-      footerAction?: ReactNode;
       onCancel: () => void;
       onSubmit: (values: UpdateEmpleadoRequest) => void;
     };
 
 export function EmpleadoForm(props: EmpleadoFormProps) {
   const detail = props.mode === "edit" ? props.detail : null;
-  const editFooterAction =
-    props.mode === "edit"
-      ? (props.footerAction ?? <EmpleadoDirectorSignerToggle detail={props.detail} />)
-      : null;
+  const sidePanel = props.mode === "edit" ? props.sidePanel : null;
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const form = useForm<EmpleadoFormValues>({
     resolver: zodResolver(empleadoFormSchema) as Resolver<EmpleadoFormValues>,
     defaultValues:
@@ -72,6 +69,8 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
   );
   const shouldShowTenantSelect =
     props.mode === "create" && props.shouldSelectTenant && selectedRole !== "super_admin";
+  const isDirty = form.formState.isDirty;
+  const formSubtitle = detail?.fullName ?? "Completa la información para crear el nuevo empleado.";
 
   useEffect(() => {
     if (detail !== null) {
@@ -87,6 +86,14 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
 
   function handleInvalidSubmit(_errors: FieldErrors<EmpleadoFormValues>) {
     return;
+  }
+
+  function toggleActiveUser() {
+    setValue("isActive", !isActive, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true,
+    });
   }
 
   return (
@@ -107,7 +114,7 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
             if (values.password.trim().length < 8) {
               setError("password", {
                 type: "manual",
-                message: "La contrasena debe tener minimo 8 caracteres.",
+                message: "La contraseña debe tener mínimo 8 caracteres.",
               });
               return;
             }
@@ -119,7 +126,7 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
           if (values.password.trim() !== "" && values.password.trim().length < 8) {
             setError("password", {
               type: "manual",
-              message: "La nueva contrasena debe tener minimo 8 caracteres.",
+              message: "La nueva contraseña debe tener mínimo 8 caracteres.",
             });
             return;
           }
@@ -128,216 +135,261 @@ export function EmpleadoForm(props: EmpleadoFormProps) {
         }, handleInvalidSubmit)(event);
       }}
     >
-      <section className="empleado-form-panel">
-        <div
-          className={`empleado-form-grid${
-            shouldShowTenantSelect ? " empleado-form-grid--with-tenant" : ""
-          }`}
+      <header className="empleado-form-header">
+        <button
+          className="empleado-form-back"
+          type="button"
+          aria-label="Volver a la gestión de empleados"
+          onClick={props.onCancel}
         >
-          {shouldShowTenantSelect ? (
+          <ChevronLeft aria-hidden="true" />
+        </button>
+
+        <div className="empleado-form-header__copy">
+          <p>{formSubtitle}</p>
+        </div>
+
+        <div className="empleado-form-header__status">
+          <span>Usuario activo</span>
+          <button
+            className="empleado-switch"
+            type="button"
+            role="switch"
+            aria-checked={isActive}
+            aria-label={isActive ? "Inactivar usuario" : "Activar usuario"}
+            onClick={toggleActiveUser}
+          >
+            <span aria-hidden="true" />
+          </button>
+        </div>
+      </header>
+
+      <div
+        className={`empleado-form-layout${sidePanel == null ? "" : " empleado-form-layout--with-side"}`}
+      >
+        <section className="empleado-form-panel" aria-label="Datos del empleado">
+          <EmpleadoFormSection title="Datos personales">
             <EmpleadoFieldGroup
-              className="empleado-form-field--tenant"
-              label="Centro"
-              error={getError("tenantId")}
+              id="empleado-first-name"
+              label="Primer nombre"
+              error={getError("firstName")}
             >
+              <input
+                id="empleado-first-name"
+                type="text"
+                autoComplete="given-name"
+                aria-invalid={getError("firstName") === undefined ? "false" : "true"}
+                {...form.register("firstName")}
+              />
+            </EmpleadoFieldGroup>
+
+            <EmpleadoFieldGroup
+              id="empleado-middle-name"
+              label="Segundo nombre"
+              error={getError("middleName")}
+            >
+              <input
+                id="empleado-middle-name"
+                type="text"
+                autoComplete="additional-name"
+                aria-invalid={getError("middleName") === undefined ? "false" : "true"}
+                {...form.register("middleName")}
+              />
+            </EmpleadoFieldGroup>
+
+            <EmpleadoFieldGroup
+              id="empleado-first-surname"
+              label="Primer apellido"
+              error={getError("firstSurname")}
+            >
+              <input
+                id="empleado-first-surname"
+                type="text"
+                autoComplete="family-name"
+                aria-invalid={getError("firstSurname") === undefined ? "false" : "true"}
+                {...form.register("firstSurname")}
+              />
+            </EmpleadoFieldGroup>
+
+            <EmpleadoFieldGroup
+              id="empleado-second-surname"
+              label="Segundo apellido"
+              error={getError("secondSurname")}
+            >
+              <input
+                id="empleado-second-surname"
+                type="text"
+                aria-invalid={getError("secondSurname") === undefined ? "false" : "true"}
+                {...form.register("secondSurname")}
+              />
+            </EmpleadoFieldGroup>
+          </EmpleadoFormSection>
+
+          <EmpleadoFormSection title="Contacto e identificación">
+            <EmpleadoFieldGroup
+              className="empleado-form-field--full"
+              id="empleado-email"
+              label="Correo electrónico"
+              error={getError("email")}
+            >
+              <input
+                id="empleado-email"
+                type="email"
+                autoComplete="email"
+                aria-invalid={getError("email") === undefined ? "false" : "true"}
+                {...form.register("email")}
+              />
+            </EmpleadoFieldGroup>
+
+            <EmpleadoFieldGroup
+              id="empleado-document-number"
+              label="Número de documento"
+              error={getError("documentNumber")}
+            >
+              <input
+                id="empleado-document-number"
+                type="text"
+                inputMode="text"
+                aria-invalid={getError("documentNumber") === undefined ? "false" : "true"}
+                {...form.register("documentNumber")}
+              />
+            </EmpleadoFieldGroup>
+
+            <EmpleadoFieldGroup id="empleado-phone" label="Teléfono" error={getError("phone")}>
+              <input
+                id="empleado-phone"
+                type="tel"
+                autoComplete="tel"
+                aria-invalid={getError("phone") === undefined ? "false" : "true"}
+                {...form.register("phone")}
+              />
+            </EmpleadoFieldGroup>
+          </EmpleadoFormSection>
+
+          <EmpleadoFormSection title="Rol y equipo">
+            {shouldShowTenantSelect ? (
+              <EmpleadoFieldGroup id="empleado-tenant" label="Centro" error={getError("tenantId")}>
+                <select
+                  id="empleado-tenant"
+                  aria-invalid={getError("tenantId") === undefined ? "false" : "true"}
+                  disabled={props.mode === "create" && props.areTenantOptionsLoading}
+                  {...form.register("tenantId")}
+                >
+                  <option value="">Seleccionar</option>
+                  {props.mode === "create"
+                    ? props.tenantOptions.map((tenant) => (
+                        <option key={tenant.id} value={tenant.id}>
+                          {tenant.name}
+                        </option>
+                      ))
+                    : null}
+                </select>
+              </EmpleadoFieldGroup>
+            ) : null}
+
+            <EmpleadoFieldGroup id="empleado-role" label="Tipo de usuario" error={getError("role")}>
               <select
-                aria-invalid={getError("tenantId") === undefined ? "false" : "true"}
-                disabled={props.mode === "create" && props.areTenantOptionsLoading}
-                {...form.register("tenantId")}
+                id="empleado-role"
+                aria-invalid={getError("role") === undefined ? "false" : "true"}
+                {...form.register("role")}
               >
-                <option value="">Seleccionar</option>
-                {props.mode === "create"
-                  ? props.tenantOptions.map((tenant) => (
-                      <option key={tenant.id} value={tenant.id}>
-                        {tenant.name}
-                      </option>
-                    ))
-                  : null}
+                {roleOptions.map((role) => (
+                  <option key={role} value={role}>
+                    {formatEmpleadoRole(role)}
+                  </option>
+                ))}
               </select>
             </EmpleadoFieldGroup>
-          ) : null}
 
-          <EmpleadoFieldGroup
-            className="empleado-form-field--name"
-            label="Primer nombre"
-            error={getError("firstName")}
-          >
-            <input
-              type="text"
-              autoComplete="given-name"
-              aria-invalid={getError("firstName") === undefined ? "false" : "true"}
-              {...form.register("firstName")}
-            />
-          </EmpleadoFieldGroup>
-
-          <EmpleadoFieldGroup
-            className="empleado-form-field--name"
-            label="Segundo nombre"
-            error={getError("middleName")}
-          >
-            <input
-              type="text"
-              autoComplete="additional-name"
-              aria-invalid={getError("middleName") === undefined ? "false" : "true"}
-              {...form.register("middleName")}
-            />
-          </EmpleadoFieldGroup>
-
-          <EmpleadoFieldGroup
-            className="empleado-form-field--name"
-            label="Primer apellido"
-            error={getError("firstSurname")}
-          >
-            <input
-              type="text"
-              autoComplete="family-name"
-              aria-invalid={getError("firstSurname") === undefined ? "false" : "true"}
-              {...form.register("firstSurname")}
-            />
-          </EmpleadoFieldGroup>
-
-          <EmpleadoFieldGroup
-            className="empleado-form-field--name"
-            label="Segundo apellido"
-            error={getError("secondSurname")}
-          >
-            <input
-              type="text"
-              aria-invalid={getError("secondSurname") === undefined ? "false" : "true"}
-              {...form.register("secondSurname")}
-            />
-          </EmpleadoFieldGroup>
-
-          <EmpleadoFieldGroup
-            className="empleado-form-field--email"
-            label="Correo electronico"
-            error={getError("email")}
-          >
-            <input
-              type="email"
-              autoComplete="email"
-              aria-invalid={getError("email") === undefined ? "false" : "true"}
-              {...form.register("email")}
-            />
-          </EmpleadoFieldGroup>
-
-          <EmpleadoFieldGroup
-            className="empleado-form-field--compact"
-            label="Numero de documento"
-            error={getError("documentNumber")}
-          >
-            <input
-              type="text"
-              inputMode="text"
-              aria-invalid={getError("documentNumber") === undefined ? "false" : "true"}
-              {...form.register("documentNumber")}
-            />
-          </EmpleadoFieldGroup>
-
-          <EmpleadoFieldGroup
-            className="empleado-form-field--compact"
-            label="Telefono"
-            error={getError("phone")}
-          >
-            <input
-              type="tel"
-              autoComplete="tel"
-              aria-invalid={getError("phone") === undefined ? "false" : "true"}
-              {...form.register("phone")}
-            />
-          </EmpleadoFieldGroup>
-
-          <EmpleadoFieldGroup
-            className="empleado-form-field--compact"
-            label="Tipo de usuario"
-            error={getError("role")}
-          >
-            <select
-              aria-invalid={getError("role") === undefined ? "false" : "true"}
-              {...form.register("role")}
+            <EmpleadoFieldGroup
+              id="empleado-team"
+              label="Equipo asignado"
+              error={getError("teamId")}
             >
-              {roleOptions.map((role) => (
-                <option key={role} value={role}>
-                  {formatEmpleadoRole(role)}
-                </option>
-              ))}
-            </select>
-          </EmpleadoFieldGroup>
+              <select
+                id="empleado-team"
+                aria-invalid={getError("teamId") === undefined ? "false" : "true"}
+                {...form.register("teamId")}
+              >
+                <option value="">Sin equipo asignado</option>
+                {teamOptions.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </EmpleadoFieldGroup>
+          </EmpleadoFormSection>
 
-          <EmpleadoFieldGroup
-            className="empleado-form-field--compact"
-            label="Equipo asignado"
-            error={getError("teamId")}
-          >
-            <select
-              aria-invalid={getError("teamId") === undefined ? "false" : "true"}
-              {...form.register("teamId")}
+          <EmpleadoFormSection title="Seguridad">
+            <EmpleadoFieldGroup
+              className="empleado-form-field--full"
+              id="empleado-password"
+              label={props.mode === "create" ? "Contraseña" : "Nueva contraseña"}
+              {...(props.mode === "edit" ? { hint: "Déjala vacía para conservar la actual" } : {})}
+              error={getError("password")}
             >
-              <option value="">Sin equipo asignado</option>
-              {teamOptions.map((team) => (
-                <option key={team.id} value={team.id}>
-                  {team.name}
-                </option>
-              ))}
-            </select>
-          </EmpleadoFieldGroup>
+              <div className="empleado-password-control">
+                <input
+                  id="empleado-password"
+                  type={isPasswordVisible ? "text" : "password"}
+                  autoComplete={props.mode === "create" ? "new-password" : "off"}
+                  aria-invalid={getError("password") === undefined ? "false" : "true"}
+                  {...form.register("password")}
+                />
+                <button
+                  type="button"
+                  className="empleado-password-visibility"
+                  aria-label={isPasswordVisible ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  onClick={() => setIsPasswordVisible((isVisible) => !isVisible)}
+                >
+                  {isPasswordVisible ? <EyeOff aria-hidden="true" /> : <Eye aria-hidden="true" />}
+                </button>
+              </div>
+            </EmpleadoFieldGroup>
+          </EmpleadoFormSection>
+        </section>
 
-          <EmpleadoFieldGroup
-            className="empleado-form-field--compact"
-            label={props.mode === "create" ? "Contrasena" : "Nueva contrasena"}
-            error={getError("password")}
-          >
-            <input
-              type="password"
-              autoComplete={props.mode === "create" ? "new-password" : "off"}
-              aria-invalid={getError("password") === undefined ? "false" : "true"}
-              {...form.register("password")}
-            />
-          </EmpleadoFieldGroup>
-        </div>
-      </section>
+        {sidePanel}
+      </div>
 
       {props.error !== null ? (
-        <p className="form-error" role="alert">
+        <p className="form-error" role="alert" aria-live="assertive">
           {props.error}
         </p>
       ) : null}
 
-      <div className="empleado-form-footer">
-        <div className="empleado-form-status-actions">
-          <button
-            className="empleado-status-toggle"
-            type="button"
-            aria-pressed={isActive}
-            onClick={() =>
-              setValue("isActive", !isActive, {
-                shouldDirty: true,
-                shouldTouch: true,
-                shouldValidate: true,
-              })
-            }
-          >
-            <span className="empleado-status-toggle__icon" aria-hidden="true">
-              <Power />
-            </span>
-            <span>
-              <strong>{isActive ? "Usuario activo" : "Usuario inactivo"}</strong>
-              <small>{isActive ? "Inactivar usuario" : "Activar usuario"}</small>
-            </span>
-          </button>
-
-          {editFooterAction}
-        </div>
+      <footer className="empleado-form-footer">
+        <p className="empleado-form-footer__dirty" aria-live="polite">
+          {isDirty ? "Hay cambios sin guardar" : ""}
+        </p>
 
         <div className="empleado-form-actions">
-          <button className="outline-action" type="button" onClick={props.onCancel}>
+          <button
+            className="outline-action"
+            type="button"
+            disabled={props.isPending}
+            onClick={props.onCancel}
+          >
             Cancelar
           </button>
-          <button className="primary-action" type="submit" disabled={props.isPending}>
-            {props.isPending ? "Guardando..." : "Guardar"}
+          <button className="primary-action" type="submit" disabled={!isDirty || props.isPending}>
+            {props.isPending ? (
+              <span className="empleado-form-actions__spinner" aria-hidden="true" />
+            ) : null}
+            <span>{props.isPending ? "Guardando…" : "Guardar cambios"}</span>
           </button>
         </div>
-      </div>
+      </footer>
     </form>
+  );
+}
+
+function EmpleadoFormSection({ children, title }: { children: ReactNode; title: string }) {
+  return (
+    <section className="empleado-form-section">
+      <h2>{title}</h2>
+      <div className="empleado-form-grid">{children}</div>
+    </section>
   );
 }

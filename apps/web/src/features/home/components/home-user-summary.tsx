@@ -1,45 +1,70 @@
 import { type AuthUser } from "@cuidarte/contracts";
 import { MapPin } from "lucide-react";
+import { type ReactNode } from "react";
 
-import { formatRole, getInitials } from "../lib/home-formatters";
+import { formatRole, formatTenantLocation, getInitials } from "../lib/home-formatters";
 
 type HomeUserSummaryProps = {
   user: AuthUser;
   className?: string;
+  asButton?: boolean;
+  ariaExpanded?: boolean;
+  ariaHaspopup?: "menu";
+  ariaLabel?: string;
+  endAdornment?: ReactNode;
+  onClick?: () => void;
+  showLocation?: boolean;
 };
 
-export function HomeUserSummary({ className = "home-user", user }: HomeUserSummaryProps) {
+export function HomeUserSummary({
+  ariaExpanded,
+  ariaHaspopup,
+  ariaLabel,
+  asButton = false,
+  className = "home-user",
+  endAdornment,
+  onClick,
+  showLocation = true,
+  user,
+}: HomeUserSummaryProps) {
   const tenantLocation = formatTenantLocation(user);
-
-  return (
-    <section className={className} aria-label="Usuario logueado">
+  const summaryContent = (
+    <>
       <span className="home-user__avatar" aria-hidden="true">
         {getInitials(user.fullName)}
       </span>
-      <div className="home-user__details">
+      <span className="home-user__details">
         <strong>{user.fullName}</strong>
         <span>{formatRole(user.role)}</span>
-        {tenantLocation === null ? null : (
+        {!showLocation || tenantLocation === null ? null : (
           <span className="home-user__location">
             <MapPin aria-hidden="true" />
             Sede · {tenantLocation}
           </span>
         )}
-      </div>
-    </section>
+      </span>
+      {endAdornment}
+    </>
   );
-}
 
-function formatTenantLocation(user: AuthUser): string | null {
-  if (
-    user.tenantId === null ||
-    user.tenantMunicipality === null ||
-    user.tenantMunicipality === undefined ||
-    user.tenantDepartment === null ||
-    user.tenantDepartment === undefined
-  ) {
-    return null;
+  if (asButton) {
+    return (
+      <button
+        className={`${className} home-user--interactive`}
+        type="button"
+        aria-expanded={ariaExpanded}
+        aria-haspopup={ariaHaspopup}
+        aria-label={ariaLabel}
+        onClick={onClick}
+      >
+        {summaryContent}
+      </button>
+    );
   }
 
-  return `${user.tenantMunicipality}, ${user.tenantDepartment}`;
+  return (
+    <section className={className} aria-label="Usuario logueado">
+      {summaryContent}
+    </section>
+  );
 }

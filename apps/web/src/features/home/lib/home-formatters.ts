@@ -18,6 +18,20 @@ export function formatRole(role: AuthUser["role"]): string {
   return ROLE_LABELS[role];
 }
 
+export function formatTenantLocation(user: AuthUser): string | null {
+  if (
+    user.tenantId === null ||
+    user.tenantMunicipality === null ||
+    user.tenantMunicipality === undefined ||
+    user.tenantDepartment === null ||
+    user.tenantDepartment === undefined
+  ) {
+    return null;
+  }
+
+  return `${user.tenantMunicipality}, ${user.tenantDepartment}`;
+}
+
 const dashboardNumberFormatter = new Intl.NumberFormat("es-CO");
 
 export function getInitials(fullName: string): string {

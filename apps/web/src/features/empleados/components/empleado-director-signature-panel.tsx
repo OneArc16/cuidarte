@@ -1,6 +1,6 @@
 import { type EmpleadoDetail } from "@cuidarte/contracts";
-import { Power } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ImagePlus, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { resolveTenantActiveSignerAction } from "../lib/empleados-active-signer";
@@ -20,14 +20,22 @@ type EmpleadoDirectorSignerToggleProps = {
   detail: EmpleadoDetail;
 };
 
+const MAX_SIGNATURE_FILE_SIZE_BYTES = 3 * 1024 * 1024;
+const ACCEPTED_SIGNATURE_TYPES = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp"]);
+const SIGNATURE_FILE_ACCEPT = ".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp";
+
+export function canShowEmpleadoSignature(detail: EmpleadoDetail) {
+  return detail.tenantId !== null;
+}
+
+export function canShowEmpleadoDirectorSignature(detail: EmpleadoDetail) {
+  return detail.role === "director" && canShowEmpleadoSignature(detail);
+}
+
 export function EmpleadoDirectorSignerToggle({ detail }: EmpleadoDirectorSignerToggleProps) {
-  if (detail.role !== "director" || detail.tenantId === null) {
-    return null;
-  }
-
-  const setSignerMutation = useSetTenantActiveSignerMutation(detail.tenantId ?? "");
-  const clearSignerMutation = useClearTenantActiveSignerMutation(detail.tenantId ?? "");
-
+  const tenantId = detail.tenantId ?? "";
+  const setSignerMutation = useSetTenantActiveSignerMutation(tenantId);
+  const clearSignerMutation = useClearTenantActiveSignerMutation(tenantId);
   const latestSignatureId = detail.latestSignature?.id ?? null;
   const signerAction = resolveTenantActiveSignerAction({
     activeSigner: detail.tenantActiveSigner,
@@ -44,71 +52,72 @@ export function EmpleadoDirectorSignerToggle({ detail }: EmpleadoDirectorSignerT
   const isToggleDisabled =
     setSignerMutation.isPending || clearSignerMutation.isPending || signerAction === "unavailable";
 
+  if (!canShowEmpleadoDirectorSignature(detail)) {
+    return null;
+  }
+
   return (
-    <button
-      className="empleado-status-toggle empleado-signature-status-toggle"
-      type="button"
-      aria-pressed={isActiveSigner}
-      aria-label={toggleButtonLabel}
-      disabled={isToggleDisabled}
-      onClick={() => {
-        if (signerAction === "deactivate") {
-          clearSignerMutation.mutate(undefined, {
-            onSuccess: () => {
-              toast.success("Firmante activo desactivado.");
+    <div className="empleado-signature-signer">
+      <div>
+        <strong>Firmante activo</strong>
+        <span>Firma los documentos del centro</span>
+      </div>
+      <button
+        className="empleado-switch"
+        type="button"
+        role="switch"
+        aria-checked={isActiveSigner}
+        aria-label={toggleButtonLabel}
+        disabled={isToggleDisabled}
+        onClick={() => {
+          if (signerAction === "deactivate") {
+            clearSignerMutation.mutate(undefined, {
+              onSuccess: () => {
+                toast.success("Firmante activo desactivado.");
+              },
+            });
+
+            return;
+          }
+
+          if (detail.latestSignature === null) {
+            return;
+          }
+
+          setSignerMutation.mutate(
+            {
+              employeeId: detail.id,
+              signatureVersionId: detail.latestSignature.id,
             },
-          });
-
-          return;
-        }
-
-        if (detail.latestSignature === null) {
-          return;
-        }
-
-        setSignerMutation.mutate(
-          {
-            employeeId: detail.id,
-            signatureVersionId: detail.latestSignature.id,
-          },
-          {
-            onSuccess: () => {
-              toast.success("Firmante activo del centro actualizado.");
+            {
+              onSuccess: () => {
+                toast.success("Firmante activo del centro actualizado.");
+              },
             },
-          },
-        );
-      }}
-    >
-      <span className="empleado-status-toggle__icon" aria-hidden="true">
-        <Power />
-      </span>
-      <span>
-        <strong>{isActiveSigner ? "Firmante activo" : "Firmante inactivo"}</strong>
-        <small>
-          {signerAction === "deactivate"
-            ? "Desactivar firmante"
-            : signerAction === "update"
-              ? "Actualizar firma activa"
-              : signerAction === "activate"
-                ? "Activar firmante"
-                : "Cargar firma primero"}
-        </small>
-      </span>
-    </button>
+          );
+        }}
+      >
+        <span aria-hidden="true" />
+      </button>
+    </div>
   );
 }
 
 export function EmpleadoDirectorSignaturePanel({ detail }: EmpleadoDirectorSignaturePanelProps) {
-  const isDirectorWithTenant = detail.role === "director" && detail.tenantId !== null;
-
+  const canShowSignature = canShowEmpleadoSignature(detail);
+  const isDirectorWithTenant = canShowEmpleadoDirectorSignature(detail);
   const uploadMutation = useUploadEmpleadoSignatureMutation(detail.id);
   const signaturePreviewQuery = useEmpleadoSignaturePreviewQuery(
     detail.id,
-    detail.latestSignature !== null,
+    canShowSignature && detail.latestSignature !== null,
   );
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedPreviewUrl, setSelectedPreviewUrl] = useState<string | null>(null);
+  const [selectionError, setSelectionError] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
 
   useEffect(() => {
     if (signaturePreviewQuery.data === undefined) {
@@ -124,6 +133,20 @@ export function EmpleadoDirectorSignaturePanel({ detail }: EmpleadoDirectorSigna
     };
   }, [signaturePreviewQuery.data]);
 
+  useEffect(() => {
+    if (selectedFile === null) {
+      setSelectedPreviewUrl(null);
+      return;
+    }
+
+    const objectUrl = URL.createObjectURL(selectedFile);
+    setSelectedPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [selectedFile]);
+
   const hasCurrentSignature = detail.latestSignature !== null;
   const currentSignatureCreatedAtLabel = useMemo(() => {
     if (detail.latestSignature === null) {
@@ -136,132 +159,196 @@ export function EmpleadoDirectorSignaturePanel({ detail }: EmpleadoDirectorSigna
     }).format(new Date(detail.latestSignature.createdAt));
   }, [detail.latestSignature]);
 
-  if (detail.tenantId === null) {
+  if (!canShowSignature) {
     return null;
   }
 
+  const displayedPreviewUrl = selectedPreviewUrl ?? previewUrl;
+  const displayedFileName = selectedFile?.name ?? detail.latestSignature?.originalName ?? null;
+  const displayedUploadDate =
+    selectedFile === null ? currentSignatureCreatedAtLabel : "Pendiente de carga";
+
+  function resetSelectedFile() {
+    setSelectedFile(null);
+    setSelectionError(null);
+    setFileInputKey((currentKey) => currentKey + 1);
+  }
+
+  function selectFile(file: File | null) {
+    if (file === null) {
+      return;
+    }
+
+    if (!ACCEPTED_SIGNATURE_TYPES.has(file.type)) {
+      setSelectedFile(null);
+      setSelectionError("Adjunta la firma en formato PNG, JPG, JPEG o WEBP.");
+      setFileInputKey((currentKey) => currentKey + 1);
+      return;
+    }
+
+    if (file.size > MAX_SIGNATURE_FILE_SIZE_BYTES) {
+      setSelectedFile(null);
+      setSelectionError("La firma debe pesar máximo 3 MB.");
+      setFileInputKey((currentKey) => currentKey + 1);
+      return;
+    }
+
+    setSelectionError(null);
+    setSelectedFile(file);
+  }
+
+  function openFileSelector() {
+    fileInputRef.current?.click();
+  }
+
+  function uploadSelectedFile() {
+    if (selectedFile === null) {
+      return;
+    }
+
+    uploadMutation.mutate(selectedFile, {
+      onSuccess: () => {
+        resetSelectedFile();
+        toast.success("Firma cargada correctamente.");
+      },
+    });
+  }
+
   return (
-    <section
-      className="empleado-signature-panel"
-      aria-labelledby="empleado-director-signature-title"
-    >
+    <aside className="empleado-signature-panel" aria-labelledby="empleado-director-signature-title">
       <div className="empleado-signature-panel__header">
-        <div>
-          <p className="empleado-signature-panel__eyebrow">
-            {isDirectorWithTenant ? "Firma del director" : "Firma del usuario"}
-          </p>
-          <h2 id="empleado-director-signature-title">
-            {isDirectorWithTenant ? "Firma y firmante activo" : "Firma opcional"}
-          </h2>
-        </div>
-      </div>
-
-      <div className="empleado-signature-panel__summary">
-        <article className="empleado-signature-card empleado-signature-card--preview">
-          <strong>Firma actual cargada</strong>
-          <p>
-            {hasCurrentSignature
-              ? isDirectorWithTenant
-                ? "La ultima firma cargada puede activarse para el centro."
-                : "La firma queda disponible para los formatos o actas que la requieran."
-              : isDirectorWithTenant
-                ? "Este director aun no tiene una firma cargada."
-                : "Este usuario aun no tiene una firma cargada."}
-          </p>
-
-          {previewUrl !== null ? (
-            <div className="empleado-signature-preview empleado-signature-preview--compact">
-              <img src={previewUrl} alt={`Firma cargada de ${detail.fullName}`} />
-            </div>
-          ) : (
-            <div className="empleado-signature-preview empleado-signature-preview--empty empleado-signature-preview--compact">
-              <span>Sin vista previa</span>
-            </div>
-          )}
-
-          {currentSignatureCreatedAtLabel !== null ? (
-            <dl className="empleado-signature-meta">
-              <div>
-                <dt>Archivo</dt>
-                <dd>{detail.latestSignature?.originalName}</dd>
-              </div>
-              <div>
-                <dt>Subida</dt>
-                <dd>{currentSignatureCreatedAtLabel}</dd>
-              </div>
-            </dl>
-          ) : null}
-
-          {signaturePreviewQuery.isError ? (
-            <p className="form-error" role="alert">
-              {resolveEmpleadosApiError(signaturePreviewQuery.error)}
-            </p>
-          ) : null}
-        </article>
-
-        <form
-          className="empleado-signature-action-card empleado-signature-action-card--compact"
-          onSubmit={(event) => {
-            event.preventDefault();
-
-            if (selectedFile === null) {
-              return;
-            }
-
-            uploadMutation.mutate(selectedFile, {
-              onSuccess: () => {
-                setSelectedFile(null);
-                setFileInputKey((currentKey) => currentKey + 1);
-                toast.success("Firma cargada correctamente.");
-              },
-            });
-          }}
+        <h2 id="empleado-director-signature-title">Firma</h2>
+        <span
+          className="empleado-signature-status"
+          data-state={hasCurrentSignature ? "loaded" : "empty"}
         >
-          <div className="empleado-signature-upload-copy">
-            <strong>Cargar nueva firma</strong>
-            <p>
-              PNG, JPG, JPEG, WEBP (max 3 MB).
-              {isDirectorWithTenant
-                ? " Si corresponde, luego podras activarla como firmante del centro."
-                : " Este paso es opcional."}
-            </p>
-          </div>
-
-          <div className="empleado-signature-upload-row">
-            <label className="empleado-signature-file-input">
-              <span>Seleccionar archivo</span>
-              <input
-                key={fileInputKey}
-                type="file"
-                accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
-                onChange={(event) => {
-                  setSelectedFile(event.target.files?.[0] ?? null);
-                }}
-              />
-            </label>
-
-            <button
-              className="primary-action empleado-signature-upload-button"
-              type="submit"
-              disabled={selectedFile === null || uploadMutation.isPending}
-            >
-              {uploadMutation.isPending ? "..." : "Subir"}
-            </button>
-          </div>
-
-          <div className="empleado-signature-upload-footer">
-            <p className="empleado-signature-file-name">
-              {selectedFile?.name ?? "Ningún archivo seleccionado."}
-            </p>
-
-            {uploadMutation.isError ? (
-              <p className="form-error" role="alert">
-                {resolveEmpleadosApiError(uploadMutation.error)}
-              </p>
-            ) : null}
-          </div>
-        </form>
+          {hasCurrentSignature ? "Cargada" : "Sin firma"}
+        </span>
       </div>
-    </section>
+
+      <input
+        key={fileInputKey}
+        ref={fileInputRef}
+        className="visually-hidden"
+        type="file"
+        accept={SIGNATURE_FILE_ACCEPT}
+        aria-label="Seleccionar firma"
+        onChange={(event) => selectFile(event.target.files?.[0] ?? null)}
+      />
+
+      <div
+        className={`empleado-signature-preview${isDragOver ? " is-dragging" : ""}`}
+        role="button"
+        tabIndex={0}
+        aria-label="Arrastra o selecciona una imagen de firma"
+        onClick={openFileSelector}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openFileSelector();
+          }
+        }}
+        onDragEnter={(event) => {
+          event.preventDefault();
+          setIsDragOver(true);
+        }}
+        onDragOver={(event) => event.preventDefault()}
+        onDragLeave={() => setIsDragOver(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          setIsDragOver(false);
+          selectFile(event.dataTransfer.files[0] ?? null);
+        }}
+      >
+        {displayedPreviewUrl === null ? (
+          <span>
+            <ImagePlus aria-hidden="true" />
+            Arrastra o selecciona una imagen
+          </span>
+        ) : (
+          <img
+            src={displayedPreviewUrl}
+            alt={
+              selectedFile === null
+                ? `Firma cargada de ${detail.fullName}`
+                : "Vista previa de la firma seleccionada"
+            }
+          />
+        )}
+      </div>
+
+      {displayedFileName !== null ? (
+        <p
+          className="empleado-signature-file-meta"
+          title={`${displayedFileName} · ${displayedUploadDate ?? ""}`}
+        >
+          {displayedFileName} · {displayedUploadDate}
+        </p>
+      ) : null}
+
+      <div className="empleado-signature-actions">
+        <button className="outline-action" type="button" onClick={openFileSelector}>
+          Reemplazar
+        </button>
+        {selectedFile !== null ? (
+          <button
+            className="empleado-signature-remove"
+            type="button"
+            aria-label="Quitar archivo seleccionado"
+            onClick={resetSelectedFile}
+          >
+            <X aria-hidden="true" />
+          </button>
+        ) : null}
+      </div>
+
+      {selectedFile !== null ? (
+        <div className="empleado-signature-confirmation">
+          <button
+            className="primary-action"
+            type="button"
+            disabled={uploadMutation.isPending}
+            onClick={uploadSelectedFile}
+          >
+            {uploadMutation.isPending ? "Cargando…" : "Usar esta firma"}
+          </button>
+          <button
+            className="outline-action"
+            type="button"
+            disabled={uploadMutation.isPending}
+            onClick={resetSelectedFile}
+          >
+            Cancelar
+          </button>
+        </div>
+      ) : null}
+
+      <p className="empleado-signature-help">PNG, JPG o WEBP · máx. 3 MB</p>
+
+      {selectionError !== null ? (
+        <p className="field-error" role="alert" aria-live="polite">
+          {selectionError}
+        </p>
+      ) : null}
+
+      {signaturePreviewQuery.isError ? (
+        <p className="field-error" role="alert" aria-live="polite">
+          {resolveEmpleadosApiError(signaturePreviewQuery.error)}
+        </p>
+      ) : null}
+
+      {uploadMutation.isError ? (
+        <p className="field-error" role="alert" aria-live="polite">
+          {resolveEmpleadosApiError(uploadMutation.error)}
+        </p>
+      ) : null}
+
+      {isDirectorWithTenant ? (
+        <>
+          <div className="empleado-signature-divider" />
+          <EmpleadoDirectorSignerToggle detail={detail} />
+        </>
+      ) : null}
+    </aside>
   );
 }
