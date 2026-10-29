@@ -223,6 +223,10 @@
   border-bottom: 0;
 }
 
+.adultos-table tbody tr:hover td {
+  background: rgb(225 245 238 / 30%);
+}
+
 .adultos-table td strong {
   display: block;
   max-width: 190px;

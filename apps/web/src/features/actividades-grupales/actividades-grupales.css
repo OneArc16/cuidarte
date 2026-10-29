@@ -636,6 +636,10 @@
   border-bottom: 0;
 }
 
+.actividades-table tbody tr:hover td {
+  background: rgb(225 245 238 / 30%);
+}
+
 .actividades-table td strong {
   display: block;
   color: var(--color-ink);

@@ -64,6 +64,9 @@
   font-size: 0.69rem;
   text-transform: uppercase;
 }
+.psicologia-table-wrap tbody tr:hover td {
+  background: rgb(225 245 238 / 30%);
+}
 .psicologia-row-actions {
   display: flex;
   gap: 6px;

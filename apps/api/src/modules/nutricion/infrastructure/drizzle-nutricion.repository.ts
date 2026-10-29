@@ -33,6 +33,7 @@ type AdultoRow = {
   id: string;
   tenantId: string;
   tenantName: string;
+  documentType: NutricionAdultoRecord["documentType"];
   documentNumber: string;
   names: string;
   surnames: string;
@@ -376,6 +377,7 @@ export class DrizzleNutricionRepository implements NutricionRepository {
       id: adultosMayores.id,
       tenantId: adultosMayores.tenantId,
       tenantName: tenants.name,
+      documentType: adultosMayores.documentType,
       documentNumber: adultosMayores.documentNumber,
       names: adultosMayores.names,
       surnames: adultosMayores.surnames,
@@ -454,6 +456,7 @@ export class DrizzleNutricionRepository implements NutricionRepository {
       id: row.id,
       tenantId: row.tenantId,
       tenantName: row.tenantName,
+      documentType: row.documentType,
       documentNumber: row.documentNumber,
       fullName: `${row.names} ${row.surnames}`.replace(/\s+/g, " ").trim(),
       phone: row.phone,

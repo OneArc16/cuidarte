@@ -1,5 +1,7 @@
 import { type NutricionAdultoResumen } from "@cuidarte/contracts";
 
+import { formatAdultoMayorDocument } from "@/features/adultos-mayores/lib/adultos-mayores-formatters";
+
 type NutricionAdultoSummaryProps = {
   adultoMayor: NutricionAdultoResumen;
 };
@@ -17,7 +19,7 @@ export function NutricionAdultoSummary({ adultoMayor }: NutricionAdultoSummaryPr
       <dl className="nutricion-summary__grid">
         <div>
           <dt>Documento</dt>
-          <dd>{adultoMayor.documentNumber}</dd>
+          <dd>{formatAdultoMayorDocument(adultoMayor.documentType, adultoMayor.documentNumber)}</dd>
         </div>
         <div>
           <dt>Centro</dt>

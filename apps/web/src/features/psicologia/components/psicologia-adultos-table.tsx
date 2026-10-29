@@ -1,5 +1,7 @@
 import { type PsicologiaAdultoResumen } from "@cuidarte/contracts";
 import { ClipboardPlus, MessageCircleHeart } from "lucide-react";
+
+import { formatAdultoMayorDocument } from "@/features/adultos-mayores/lib/adultos-mayores-formatters";
 type Props = {
   adultos: PsicologiaAdultoResumen[];
   canCreate: boolean;
@@ -46,7 +48,7 @@ export function PsicologiaAdultosTable({
           ) : null}
           {adultos.map((adulto) => (
             <tr key={adulto.id}>
-              <td>{adulto.documentNumber}</td>
+              <td>{formatAdultoMayorDocument(adulto.documentType, adulto.documentNumber)}</td>
               <td>
                 <strong>{adulto.fullName}</strong>
               </td>

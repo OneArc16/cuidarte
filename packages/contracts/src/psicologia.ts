@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { userRoleSchema } from "./auth.js";
+import { adultoMayorDocumentTypeSchema } from "./adultos-mayores.js";
 
 const dateSchema = z.iso.date();
 const nullableDateSchema = z
@@ -28,6 +29,7 @@ export const psicologiaAdultoResumenSchema = z.object({
   id: z.uuid(),
   tenantId: z.uuid(),
   tenantName: z.string().min(1),
+  documentType: adultoMayorDocumentTypeSchema,
   documentNumber: z.string().min(1).max(80),
   fullName: z.string().min(1).max(180),
   phone: z.string().max(40).nullable(),

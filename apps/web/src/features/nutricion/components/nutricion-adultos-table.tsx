@@ -1,6 +1,8 @@
 import { type NutricionAdultoResumen } from "@cuidarte/contracts";
 import { ClipboardPlus, Utensils } from "lucide-react";
 
+import { formatAdultoMayorDocument } from "@/features/adultos-mayores/lib/adultos-mayores-formatters";
+
 import { formatNutricionSex } from "../lib/nutricion-formatters";
 
 type NutricionAdultosTableProps = {
@@ -62,7 +64,9 @@ export function NutricionAdultosTable({
           ) : null}
           {adultosMayores.map((adultoMayor) => (
             <tr key={adultoMayor.id}>
-              <td>{adultoMayor.documentNumber}</td>
+              <td>
+                {formatAdultoMayorDocument(adultoMayor.documentType, adultoMayor.documentNumber)}
+              </td>
               <td>
                 <strong>{adultoMayor.fullName}</strong>
               </td>

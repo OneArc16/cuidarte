@@ -20,6 +20,7 @@ type AdultoRow = {
   id: string;
   tenantId: string;
   tenantName: string;
+  documentType: "cc" | "ce" | "passport" | "other";
   documentNumber: string;
   names: string;
   surnames: string;
@@ -216,6 +217,7 @@ export class PsicologiaService {
       id: adultosMayores.id,
       tenantId: adultosMayores.tenantId,
       tenantName: tenants.name,
+      documentType: adultosMayores.documentType,
       documentNumber: adultosMayores.documentNumber,
       names: adultosMayores.names,
       surnames: adultosMayores.surnames,
@@ -231,6 +233,7 @@ export class PsicologiaService {
       id: adulto.id,
       tenantId: adulto.tenantId,
       tenantName: adulto.tenantName,
+      documentType: adulto.documentType,
       documentNumber: adulto.documentNumber,
       fullName: `${adulto.names} ${adulto.surnames}`.trim(),
       phone: adulto.phone,

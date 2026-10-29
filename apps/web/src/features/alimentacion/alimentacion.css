@@ -348,6 +348,11 @@
   background: rgb(248 252 250 / 99%);
 }
 
+.alimentacion-group-row:not(.is-expanded):hover td,
+.alimentacion-detail-row:hover td {
+  background: rgb(225 245 238 / 30%);
+}
+
 .alimentacion-detail-row--first td {
   border-top: 1px dashed rgb(29 158 117 / 24%);
 }
@@ -837,7 +842,6 @@
   .alimentacion-import-dialog__action-button {
     min-height: 44px;
   }
-
 }
 
 .alimentacion-imported-versions-list {

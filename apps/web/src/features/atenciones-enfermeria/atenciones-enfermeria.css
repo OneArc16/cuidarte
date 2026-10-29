@@ -502,6 +502,10 @@
   border-bottom: 0;
 }
 
+.atenciones-enfermeria-table tbody tr:hover td {
+  background: rgb(225 245 238 / 30%);
+}
+
 .atenciones-enfermeria-table tbody td strong {
   display: block;
   color: var(--color-ink);

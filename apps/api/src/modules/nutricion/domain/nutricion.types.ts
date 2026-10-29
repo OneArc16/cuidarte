@@ -2,6 +2,7 @@ import {
   type NutricionFollowUpAdherence,
   type NutricionMealSlot,
   type NutricionPlanStatus,
+  type AdultoMayorDocumentType,
   type UserRole,
 } from "@cuidarte/contracts";
 
@@ -11,6 +12,7 @@ export type NutricionAdultoRecord = {
   id: string;
   tenantId: string;
   tenantName: string;
+  documentType: AdultoMayorDocumentType;
   documentNumber: string;
   fullName: string;
   phone: string | null;

@@ -90,6 +90,10 @@
   border-bottom: 0;
 }
 
+.empleados-table tbody tr:hover td {
+  background: rgb(225 245 238 / 30%);
+}
+
 .empleados-table td strong {
   display: block;
   max-width: 220px;

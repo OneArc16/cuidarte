@@ -303,6 +303,7 @@ export class NutricionService {
       id: record.id,
       tenantId: record.tenantId,
       tenantName: record.tenantName,
+      documentType: record.documentType,
       documentNumber: record.documentNumber,
       fullName: record.fullName,
       phone: record.phone,

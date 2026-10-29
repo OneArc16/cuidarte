@@ -1,4 +1,6 @@
 import { type PsicologiaAdultoResumen } from "@cuidarte/contracts";
+
+import { formatAdultoMayorDocument } from "@/features/adultos-mayores/lib/adultos-mayores-formatters";
 export function PsicologiaAdultoSummary({ adulto }: { adulto: PsicologiaAdultoResumen }) {
   return (
     <section className="psicologia-summary" aria-label="Resumen del adulto mayor">
@@ -9,7 +11,7 @@ export function PsicologiaAdultoSummary({ adulto }: { adulto: PsicologiaAdultoRe
       <dl>
         <div>
           <dt>Documento</dt>
-          <dd>{adulto.documentNumber}</dd>
+          <dd>{formatAdultoMayorDocument(adulto.documentType, adulto.documentNumber)}</dd>
         </div>
         <div>
           <dt>Centro</dt>
