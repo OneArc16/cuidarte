@@ -2,6 +2,7 @@ import {
   alimentacionAccessRoleValues,
   atencionEnfermeriaModuleRoleValues,
   nutricionModuleRoleValues,
+  psicologiaModuleRoleValues,
   hasUserPermission,
   type AuthUser,
   type HomeDashboardShortcutModuleId,
@@ -12,6 +13,7 @@ import {
   CalendarPlus,
   BarChart3,
   HeartPulse,
+  Brain,
   Home,
   Apple,
   Settings,
@@ -33,12 +35,14 @@ import { BACKOFFICE_PATH } from "@/features/backoffice/lib/backoffice-paths";
 import { EMPLEADOS_PATH } from "@/features/empleados/lib/empleados-paths";
 import { REPORTS_PATH } from "@/features/reports/lib/reports-paths";
 import { NUTRICION_PATH } from "@/features/nutricion/lib/nutricion-paths";
+import { PSICOLOGIA_PATH } from "@/features/psicologia/lib/psicologia-paths";
 
 export type HomeModuleId =
   | "inicio"
   | HomeDashboardShortcutModuleId
   | "atenciones-enfermeria"
   | "nutricion"
+  | "psicologia"
   | "reportes"
   | "ajustes";
 
@@ -117,6 +121,16 @@ export const HOME_MODULES = [
     permission: "nutricion.view",
   },
   {
+    id: "psicologia",
+    label: "Psicología",
+    icon: Brain,
+    path: PSICOLOGIA_PATH,
+    roles: psicologiaModuleRoleValues,
+    summaryLabel: "Sesiones de psicología",
+    directAccessDescription: "Atención y seguimiento psicosocial",
+    permission: "psicologia.view",
+  },
+  {
     id: "registro-alimentacion",
     label: "Registro de alimentación",
     icon: Utensils,
@@ -187,6 +201,9 @@ export function isMobilePrimaryModule(module: HomeModule): boolean {
 
 export function isShortcutModule(module: HomeModule): module is ShortcutHomeModule {
   return (
-    module.id !== "inicio" && module.id !== "atenciones-enfermeria" && module.id !== "nutricion"
+    module.id !== "inicio" &&
+    module.id !== "atenciones-enfermeria" &&
+    module.id !== "nutricion" &&
+    module.id !== "psicologia"
   );
 }

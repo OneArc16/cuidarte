@@ -42,6 +42,7 @@ export function HomeDesktopSidebar({
       "sesiones-grupales",
       "atenciones-enfermeria",
       "nutricion",
+      "psicologia",
       "registro-alimentacion",
     ].includes(module.id),
   );
