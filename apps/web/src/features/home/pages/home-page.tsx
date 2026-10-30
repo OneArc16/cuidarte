@@ -25,6 +25,8 @@ import { isPsicologiaPath } from "@/features/psicologia/lib/psicologia-paths";
 import { PsicologiaPage } from "@/features/psicologia/pages/psicologia-page";
 import { isFisioterapiaPath } from "@/features/fisioterapia/lib/fisioterapia-paths";
 import { FisioterapiaPage } from "@/features/fisioterapia/pages/fisioterapia-page";
+import { isTrabajoSocialPath } from "@/features/trabajo-social/lib/trabajo-social-paths";
+import { TrabajoSocialPage } from "@/features/trabajo-social/pages/trabajo-social-page";
 
 import { HomeDashboard } from "../components/home-dashboard";
 import { HomeDirectAccess } from "../components/home-direct-access";
@@ -62,15 +64,17 @@ export function HomePage({ goBack, navigate, onLogoutSuccess, path, user }: Home
               ? "psicologia"
               : isFisioterapiaPath(path)
                 ? "fisioterapia"
-                : isActividadesGrupalesPath(path)
-                  ? "sesiones-grupales"
-                  : isEmpleadosPath(path)
-                    ? "gestion-empleados"
-                    : isReportsPath(path)
-                      ? "reportes"
-                      : isAjustesPath(path)
-                        ? "ajustes"
-                        : "inicio";
+                : isTrabajoSocialPath(path)
+                  ? "trabajo-social"
+                  : isActividadesGrupalesPath(path)
+                    ? "sesiones-grupales"
+                    : isEmpleadosPath(path)
+                      ? "gestion-empleados"
+                      : isReportsPath(path)
+                        ? "reportes"
+                        : isAjustesPath(path)
+                          ? "ajustes"
+                          : "inicio";
 
   return (
     <main
@@ -103,15 +107,17 @@ export function HomePage({ goBack, navigate, onLogoutSuccess, path, user }: Home
                       ? "psicologia-title"
                       : isFisioterapiaPath(path)
                         ? "fisioterapia-title"
-                        : isActividadesGrupalesPath(path)
-                          ? "actividades-title"
-                          : isEmpleadosPath(path)
-                            ? "empleados-title"
-                            : isReportsPath(path)
-                              ? "reports-title"
-                              : isAjustesPath(path)
-                                ? "ajustes-title"
-                                : "home-title"
+                        : isTrabajoSocialPath(path)
+                          ? "trabajo-social-title"
+                          : isActividadesGrupalesPath(path)
+                            ? "actividades-title"
+                            : isEmpleadosPath(path)
+                              ? "empleados-title"
+                              : isReportsPath(path)
+                                ? "reports-title"
+                                : isAjustesPath(path)
+                                  ? "ajustes-title"
+                                  : "home-title"
         }
       >
         {isBackofficePath(path) ? (
@@ -128,6 +134,8 @@ export function HomePage({ goBack, navigate, onLogoutSuccess, path, user }: Home
           <PsicologiaPage path={path} navigate={navigate} user={user} />
         ) : isFisioterapiaPath(path) ? (
           <FisioterapiaPage path={path} navigate={navigate} user={user} />
+        ) : isTrabajoSocialPath(path) ? (
+          <TrabajoSocialPage path={path} navigate={navigate} user={user} />
         ) : isActividadesGrupalesPath(path) ? (
           <ActividadesGrupalesPage path={path} navigate={navigate} user={user} />
         ) : isEmpleadosPath(path) ? (

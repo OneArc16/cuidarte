@@ -44,6 +44,7 @@ export function HomeDesktopSidebar({
       "nutricion",
       "psicologia",
       "fisioterapia",
+      "trabajo-social",
       "registro-alimentacion",
     ].includes(module.id),
   );

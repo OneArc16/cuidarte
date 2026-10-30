@@ -46,6 +46,7 @@ export function defaultEmpleadoPermissions(role: UserRole): UserPermission[] {
       "nutricion.view",
       "psicologia.view",
       "fisioterapia.view",
+      "trabajo_social.view",
       "reportes.view",
       ...REPORT_CHART_PERMISSIONS,
     ],
@@ -90,6 +91,10 @@ export function defaultEmpleadoPermissions(role: UserRole): UserPermission[] {
       "fisioterapia.create",
       "fisioterapia.edit_own",
       "fisioterapia.manage",
+      "trabajo_social.view",
+      "trabajo_social.create",
+      "trabajo_social.edit_own",
+      "trabajo_social.manage",
       "reportes.view",
       "reportes.export",
       ...REPORT_CHART_PERMISSIONS,
@@ -183,6 +188,9 @@ export function defaultEmpleadoPermissions(role: UserRole): UserPermission[] {
       "atenciones_individuales.medical_history",
       "atenciones_individuales.create",
       "atenciones_individuales.edit",
+      "trabajo_social.view",
+      "trabajo_social.create",
+      "trabajo_social.edit_own",
     ],
   };
 

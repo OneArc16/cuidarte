@@ -176,6 +176,10 @@ export const fisioterapiaSessionModality = pgEnum("fisioterapia_session_modality
   "grupal",
   "domiciliaria",
 ]);
+export const trabajoSocialSessionModality = pgEnum("trabajo_social_session_modality", [
+  "individual",
+  "familiar",
+]);
 
 export const cie10Catalog = pgTable(
   "cie10_catalog",
@@ -1657,6 +1661,61 @@ export const fisioterapiaSessions = pgTable(
       sql`${table.evolution} is null or char_length(${table.evolution}) <= 4000`,
     ),
     check("fisioterapia_sessions_version_positive", sql`${table.version} > 0`),
+  ],
+);
+
+export const trabajoSocialSessions = pgTable(
+  "trabajo_social_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    adultoMayorId: uuid("adulto_mayor_id")
+      .notNull()
+      .references(() => adultosMayores.id, { onDelete: "restrict" }),
+    sessionDate: date("session_date", { mode: "string" }).notNull(),
+    modality: trabajoSocialSessionModality("modality").notNull().default("individual"),
+    reason: text("reason").notNull(),
+    socialAssessment: text("social_assessment").notNull(),
+    intervention: text("intervention").notNull(),
+    agreements: text("agreements"),
+    nextSessionDate: date("next_session_date", { mode: "string" }),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    updatedByUserId: uuid("updated_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    version: integer("version").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("trabajo_social_sessions_tenant_date_idx").on(table.tenantId, table.sessionDate),
+    index("trabajo_social_sessions_adulto_date_idx").on(table.adultoMayorId, table.sessionDate),
+    index("trabajo_social_sessions_created_by_user_idx").on(table.createdByUserId),
+    check(
+      "trabajo_social_sessions_next_after_session",
+      sql`${table.nextSessionDate} is null or ${table.nextSessionDate} >= ${table.sessionDate}`,
+    ),
+    check(
+      "trabajo_social_sessions_reason_length",
+      sql`char_length(btrim(${table.reason})) between 1 and 2000`,
+    ),
+    check(
+      "trabajo_social_sessions_assessment_length",
+      sql`char_length(btrim(${table.socialAssessment})) between 1 and 4000`,
+    ),
+    check(
+      "trabajo_social_sessions_intervention_length",
+      sql`char_length(btrim(${table.intervention})) between 1 and 4000`,
+    ),
+    check(
+      "trabajo_social_sessions_agreements_length",
+      sql`${table.agreements} is null or char_length(${table.agreements}) <= 4000`,
+    ),
+    check("trabajo_social_sessions_version_positive", sql`${table.version} > 0`),
   ],
 );
 

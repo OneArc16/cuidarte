@@ -74,6 +74,8 @@ import { isPsicologiaPath } from "@/features/psicologia/lib/psicologia-paths";
 import { canOpenPsicologia } from "@/features/psicologia/lib/psicologia-permissions";
 import { isFisioterapiaPath } from "@/features/fisioterapia/lib/fisioterapia-paths";
 import { canOpenFisioterapia } from "@/features/fisioterapia/lib/fisioterapia-permissions";
+import { isTrabajoSocialPath } from "@/features/trabajo-social/lib/trabajo-social-paths";
+import { canOpenTrabajoSocial } from "@/features/trabajo-social/lib/trabajo-social-permissions";
 
 export function App() {
   const currentUserQuery = useCurrentUserQuery();
@@ -173,6 +175,11 @@ export function App() {
       return;
     }
 
+    if (isTrabajoSocialPath(path) && !canOpenTrabajoSocial(user)) {
+      navigate(HOME_PATH, { replace: true });
+      return;
+    }
+
     if (isReportsPath(path) && !canOpenReports(user)) {
       navigate(HOME_PATH, { replace: true });
       return;
@@ -247,6 +254,7 @@ export function App() {
       !isNutricionPath(path) &&
       !isPsicologiaPath(path) &&
       !isFisioterapiaPath(path) &&
+      !isTrabajoSocialPath(path) &&
       !isActividadesGrupalesPath(path) &&
       !isReportsPath(path) &&
       !isAjustesPath(path) &&
@@ -280,19 +288,21 @@ export function App() {
                     ? "Psicología | CuidarTe"
                     : isFisioterapiaPath(path)
                       ? "Fisioterapia | CuidarTe"
-                      : isActividadesGrupalesTrashPath(path)
-                        ? "Historial de cambios | CuidarTe"
-                        : isActividadesGrupalesCorrectionsPath(path)
-                          ? "Correccion de consecutivos | CuidarTe"
-                          : isActividadesGrupalesPath(path)
-                            ? "Sesiones grupales | CuidarTe"
-                            : isAjustesPath(path)
-                              ? "Ajustes | CuidarTe"
-                              : isReportsPath(path)
-                                ? "Reportes | CuidarTe"
-                                : isEmpleadosPath(path)
-                                  ? "Gestion de empleados | CuidarTe"
-                                  : "Inicio | CuidarTe";
+                      : isTrabajoSocialPath(path)
+                        ? "Trabajo Social | CuidarTe"
+                        : isActividadesGrupalesTrashPath(path)
+                          ? "Historial de cambios | CuidarTe"
+                          : isActividadesGrupalesCorrectionsPath(path)
+                            ? "Correccion de consecutivos | CuidarTe"
+                            : isActividadesGrupalesPath(path)
+                              ? "Sesiones grupales | CuidarTe"
+                              : isAjustesPath(path)
+                                ? "Ajustes | CuidarTe"
+                                : isReportsPath(path)
+                                  ? "Reportes | CuidarTe"
+                                  : isEmpleadosPath(path)
+                                    ? "Gestion de empleados | CuidarTe"
+                                    : "Inicio | CuidarTe";
   }, [path, user]);
 
   if (currentUserQuery.isLoading) {

@@ -5,6 +5,7 @@ export * from "./atenciones-enfermeria.js";
 export * from "./nutricion.js";
 export * from "./psicologia.js";
 export * from "./fisioterapia.js";
+export * from "./trabajo-social.js";
 export * from "./atenciones-individuales.js";
 export * from "./actividades-grupales.js";
 export * from "./backoffice.js";

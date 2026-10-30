@@ -4,6 +4,7 @@ import {
   nutricionModuleRoleValues,
   psicologiaModuleRoleValues,
   fisioterapiaModuleRoleValues,
+  trabajoSocialModuleRoleValues,
   hasUserPermission,
   type AuthUser,
   type HomeDashboardShortcutModuleId,
@@ -16,6 +17,7 @@ import {
   HeartPulse,
   Brain,
   Dumbbell,
+  HandHeart,
   Home,
   Apple,
   Settings,
@@ -39,6 +41,7 @@ import { REPORTS_PATH } from "@/features/reports/lib/reports-paths";
 import { NUTRICION_PATH } from "@/features/nutricion/lib/nutricion-paths";
 import { PSICOLOGIA_PATH } from "@/features/psicologia/lib/psicologia-paths";
 import { FISIOTERAPIA_PATH } from "@/features/fisioterapia/lib/fisioterapia-paths";
+import { TRABAJO_SOCIAL_PATH } from "@/features/trabajo-social/lib/trabajo-social-paths";
 
 export type HomeModuleId =
   | "inicio"
@@ -47,6 +50,7 @@ export type HomeModuleId =
   | "nutricion"
   | "psicologia"
   | "fisioterapia"
+  | "trabajo-social"
   | "reportes"
   | "ajustes";
 
@@ -145,6 +149,16 @@ export const HOME_MODULES = [
     permission: "fisioterapia.view",
   },
   {
+    id: "trabajo-social",
+    label: "Trabajo Social",
+    icon: HandHeart,
+    path: TRABAJO_SOCIAL_PATH,
+    roles: trabajoSocialModuleRoleValues,
+    summaryLabel: "Atenciones de trabajo social",
+    directAccessDescription: "Intervención y seguimiento sociofamiliar",
+    permission: "trabajo_social.view",
+  },
+  {
     id: "registro-alimentacion",
     label: "Registro de alimentación",
     icon: Utensils,
@@ -219,6 +233,7 @@ export function isShortcutModule(module: HomeModule): module is ShortcutHomeModu
     module.id !== "atenciones-enfermeria" &&
     module.id !== "nutricion" &&
     module.id !== "psicologia" &&
-    module.id !== "fisioterapia"
+    module.id !== "fisioterapia" &&
+    module.id !== "trabajo-social"
   );
 }
