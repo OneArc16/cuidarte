@@ -8,6 +8,7 @@ import { AtencionesIndividualesModule } from "./modules/atenciones-individuales/
 import { AtencionesEnfermeriaModule } from "./modules/atenciones-enfermeria/atenciones-enfermeria.module";
 import { NutricionModule } from "./modules/nutricion/nutricion.module";
 import { PsicologiaModule } from "./modules/psicologia/psicologia.module";
+import { FisioterapiaModule } from "./modules/fisioterapia/fisioterapia.module";
 import { Cie10Module } from "./modules/cie10/cie10.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { BackofficeModule } from "./modules/backoffice/backoffice.module";
@@ -29,6 +30,7 @@ import { UbicacionesModule } from "./modules/ubicaciones/ubicaciones.module";
     AtencionesEnfermeriaModule,
     NutricionModule,
     PsicologiaModule,
+    FisioterapiaModule,
     Cie10Module,
     AuthModule,
     BackofficeModule,

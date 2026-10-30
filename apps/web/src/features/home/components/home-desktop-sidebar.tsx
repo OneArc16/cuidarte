@@ -43,6 +43,7 @@ export function HomeDesktopSidebar({
       "atenciones-enfermeria",
       "nutricion",
       "psicologia",
+      "fisioterapia",
       "registro-alimentacion",
     ].includes(module.id),
   );

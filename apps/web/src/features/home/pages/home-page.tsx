@@ -23,6 +23,8 @@ import { isNutricionPath } from "@/features/nutricion/lib/nutricion-paths";
 import { NutricionPage } from "@/features/nutricion/pages/nutricion-page";
 import { isPsicologiaPath } from "@/features/psicologia/lib/psicologia-paths";
 import { PsicologiaPage } from "@/features/psicologia/pages/psicologia-page";
+import { isFisioterapiaPath } from "@/features/fisioterapia/lib/fisioterapia-paths";
+import { FisioterapiaPage } from "@/features/fisioterapia/pages/fisioterapia-page";
 
 import { HomeDashboard } from "../components/home-dashboard";
 import { HomeDirectAccess } from "../components/home-direct-access";
@@ -58,15 +60,17 @@ export function HomePage({ goBack, navigate, onLogoutSuccess, path, user }: Home
             ? "nutricion"
             : isPsicologiaPath(path)
               ? "psicologia"
-              : isActividadesGrupalesPath(path)
-                ? "sesiones-grupales"
-                : isEmpleadosPath(path)
-                  ? "gestion-empleados"
-                  : isReportsPath(path)
-                    ? "reportes"
-                    : isAjustesPath(path)
-                      ? "ajustes"
-                      : "inicio";
+              : isFisioterapiaPath(path)
+                ? "fisioterapia"
+                : isActividadesGrupalesPath(path)
+                  ? "sesiones-grupales"
+                  : isEmpleadosPath(path)
+                    ? "gestion-empleados"
+                    : isReportsPath(path)
+                      ? "reportes"
+                      : isAjustesPath(path)
+                        ? "ajustes"
+                        : "inicio";
 
   return (
     <main
@@ -97,15 +101,17 @@ export function HomePage({ goBack, navigate, onLogoutSuccess, path, user }: Home
                     ? "nutricion-title"
                     : isPsicologiaPath(path)
                       ? "psicologia-title"
-                      : isActividadesGrupalesPath(path)
-                        ? "actividades-title"
-                        : isEmpleadosPath(path)
-                          ? "empleados-title"
-                          : isReportsPath(path)
-                            ? "reports-title"
-                            : isAjustesPath(path)
-                              ? "ajustes-title"
-                              : "home-title"
+                      : isFisioterapiaPath(path)
+                        ? "fisioterapia-title"
+                        : isActividadesGrupalesPath(path)
+                          ? "actividades-title"
+                          : isEmpleadosPath(path)
+                            ? "empleados-title"
+                            : isReportsPath(path)
+                              ? "reports-title"
+                              : isAjustesPath(path)
+                                ? "ajustes-title"
+                                : "home-title"
         }
       >
         {isBackofficePath(path) ? (
@@ -120,6 +126,8 @@ export function HomePage({ goBack, navigate, onLogoutSuccess, path, user }: Home
           <NutricionPage path={path} navigate={navigate} user={user} />
         ) : isPsicologiaPath(path) ? (
           <PsicologiaPage path={path} navigate={navigate} user={user} />
+        ) : isFisioterapiaPath(path) ? (
+          <FisioterapiaPage path={path} navigate={navigate} user={user} />
         ) : isActividadesGrupalesPath(path) ? (
           <ActividadesGrupalesPage path={path} navigate={navigate} user={user} />
         ) : isEmpleadosPath(path) ? (

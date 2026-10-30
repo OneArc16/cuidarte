@@ -171,6 +171,11 @@ export const psicologiaSessionModality = pgEnum("psicologia_session_modality", [
   "individual",
   "familiar",
 ]);
+export const fisioterapiaSessionModality = pgEnum("fisioterapia_session_modality", [
+  "individual",
+  "grupal",
+  "domiciliaria",
+]);
 
 export const cie10Catalog = pgTable(
   "cie10_catalog",
@@ -1597,6 +1602,61 @@ export const psicologiaSessions = pgTable(
       sql`${table.agreements} is null or char_length(${table.agreements}) <= 4000`,
     ),
     check("psicologia_sessions_version_positive", sql`${table.version} > 0`),
+  ],
+);
+
+export const fisioterapiaSessions = pgTable(
+  "fisioterapia_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    adultoMayorId: uuid("adulto_mayor_id")
+      .notNull()
+      .references(() => adultosMayores.id, { onDelete: "restrict" }),
+    sessionDate: date("session_date", { mode: "string" }).notNull(),
+    modality: fisioterapiaSessionModality("modality").notNull().default("individual"),
+    reason: text("reason").notNull(),
+    functionalAssessment: text("functional_assessment").notNull(),
+    intervention: text("intervention").notNull(),
+    evolution: text("evolution"),
+    nextSessionDate: date("next_session_date", { mode: "string" }),
+    createdByUserId: uuid("created_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    updatedByUserId: uuid("updated_by_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    version: integer("version").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("fisioterapia_sessions_tenant_date_idx").on(table.tenantId, table.sessionDate),
+    index("fisioterapia_sessions_adulto_date_idx").on(table.adultoMayorId, table.sessionDate),
+    index("fisioterapia_sessions_created_by_user_idx").on(table.createdByUserId),
+    check(
+      "fisioterapia_sessions_next_after_session",
+      sql`${table.nextSessionDate} is null or ${table.nextSessionDate} >= ${table.sessionDate}`,
+    ),
+    check(
+      "fisioterapia_sessions_reason_length",
+      sql`char_length(btrim(${table.reason})) between 1 and 2000`,
+    ),
+    check(
+      "fisioterapia_sessions_functional_assessment_length",
+      sql`char_length(btrim(${table.functionalAssessment})) between 1 and 4000`,
+    ),
+    check(
+      "fisioterapia_sessions_intervention_length",
+      sql`char_length(btrim(${table.intervention})) between 1 and 4000`,
+    ),
+    check(
+      "fisioterapia_sessions_evolution_length",
+      sql`${table.evolution} is null or char_length(${table.evolution}) <= 4000`,
+    ),
+    check("fisioterapia_sessions_version_positive", sql`${table.version} > 0`),
   ],
 );
 
