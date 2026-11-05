@@ -438,6 +438,7 @@
 
 .actividades-change-log-changes {
   min-width: 280px;
+  max-width: 360px;
 }
 
 .actividades-change-log-change + .actividades-change-log-change {
@@ -448,6 +449,109 @@
   display: block;
   color: var(--color-muted);
   font-size: 0.76rem;
+}
+
+.actividades-change-log-change .actividades-change-log-preview {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+.actividades-change-log-toggle {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-deep);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.actividades-change-log-toggle:focus-visible {
+  outline: 2px solid var(--color-deep);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.actividades-change-log-row--expanded > td {
+  border-bottom: 0;
+}
+
+.actividades-change-log-detail-row > td {
+  padding-top: 0;
+}
+
+.actividades-change-log-detail {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgb(233 249 242 / 35%);
+}
+
+.actividades-change-log-detail__field h4 {
+  margin: 0 0 8px;
+  font-size: 0.86rem;
+}
+
+.actividades-change-log-detail__compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.actividades-change-log-detail__panel {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.actividades-change-log-detail__panel--before {
+  border-color: rgb(157 39 54 / 22%);
+}
+
+.actividades-change-log-detail__panel--after {
+  border-color: rgb(20 120 80 / 28%);
+}
+
+.actividades-change-log-detail__label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.actividades-change-log-detail__panel--before .actividades-change-log-detail__label {
+  color: #9d2736;
+}
+
+.actividades-change-log-detail__panel--after .actividades-change-log-detail__label {
+  color: var(--color-deep);
+}
+
+.actividades-change-log-detail__panel p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .actividades-change-log-detail__compare {
+    grid-template-columns: 1fr;
+  }
 }
 
 .actividades-change-log-pagination {

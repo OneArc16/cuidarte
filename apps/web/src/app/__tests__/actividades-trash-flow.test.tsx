@@ -61,6 +61,57 @@ describe("App actividades change log flow", () => {
     expect(screen.queryByRole("button", { name: /Eliminar/i })).not.toBeInTheDocument();
   });
 
+  it("labels the actor column and expands long changes into a full detail row", async () => {
+    const longText = "Desarrollo extenso de la sesión. ".repeat(10).trim();
+    server.use(
+      mockAuthMe(authUserFixture),
+      http.get("http://localhost:3001/api/actividades-grupales/log-cambios", () =>
+        HttpResponse.json({
+          entries: [
+            {
+              ...actividadGrupalChangeLogFixture,
+              changes: [{ field: "Desarrollo", before: null, after: longText }],
+            },
+          ],
+          nextCursor: null,
+        }),
+      ),
+    );
+
+    const user = userEvent.setup();
+    renderAppAtPath("/creacion-actividades/log-cambios");
+
+    expect(
+      await screen.findByRole("columnheader", { name: "Modificado por" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Realizada por" })).not.toBeInTheDocument();
+
+    const toggle = screen.getByRole("button", { name: "Ver detalle completo" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("region", { name: "Cambio en Desarrollo" })).not.toBeInTheDocument();
+
+    await user.click(toggle);
+
+    const detail = screen.getByRole("region", { name: "Cambio en Desarrollo" });
+    expect(detail).toHaveTextContent(longText);
+    expect(screen.getByRole("button", { name: "Ocultar detalle" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Ocultar detalle" }));
+    expect(screen.queryByRole("region", { name: "Cambio en Desarrollo" })).not.toBeInTheDocument();
+  });
+
+  it("does not offer the detail toggle for short changes", async () => {
+    server.use(mockAuthMe(authUserFixture));
+
+    renderAppAtPath("/creacion-actividades/log-cambios");
+
+    expect(await screen.findByText("Antes: 09:30")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ver detalle completo" })).not.toBeInTheDocument();
+  });
+
   it("loads the next history page without adding entries to the current view", async () => {
     const cursors: Array<string | null> = [];
     const secondEntry = {
