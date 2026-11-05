@@ -38,6 +38,7 @@ export type FindActividadGrupalByIdQuery = {
 
 export type FindActividadesGrupalesTrashQuery = FindActividadesGrupalesQuery;
 export type FindActividadGrupalChangeLogQuery = FindActividadesGrupalesQuery & {
+  action: "updated" | "deleted" | null;
   cursor: string | null;
   limit: number;
 };

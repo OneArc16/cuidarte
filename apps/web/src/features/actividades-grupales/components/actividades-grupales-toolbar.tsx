@@ -1,6 +1,7 @@
 import { CalendarDays, Search } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import {
+  type ActividadGrupalChangeLogAction,
   type ActividadGrupalOrganizer,
   type ActividadGrupalTipo,
   type ActividadGrupalTenantOption,
@@ -23,6 +24,10 @@ type ActividadesGrupalesToolbarProps = {
   activityTypeOptions: ActividadGrupalTipo[];
   isTenantOptionsLoading: boolean;
   exportButton?: ReactNode;
+  actionFilter?: {
+    value: ActividadGrupalChangeLogAction | "";
+    onChange: (action: ActividadGrupalChangeLogAction | "") => void;
+  };
   onActivityTypeIdChange: (activityTypeId: string) => void;
   onActivityMonthChange: (activityMonth: string) => void;
   onOrganizerChange: (organizer: ActividadGrupalOrganizer | "") => void;
@@ -31,6 +36,7 @@ type ActividadesGrupalesToolbarProps = {
 };
 
 export function ActividadesGrupalesToolbar({
+  actionFilter,
   activityMonth,
   exportButton,
   isTenantOptionsLoading,
@@ -112,7 +118,13 @@ export function ActividadesGrupalesToolbar({
 
   return (
     <section
-      className={`actividades-toolbar${showTenantFilter ? " actividades-toolbar--with-tenant" : ""}`}
+      className={[
+        "actividades-toolbar",
+        showTenantFilter ? "actividades-toolbar--with-tenant" : null,
+        actionFilter === undefined ? null : "actividades-toolbar--with-action",
+      ]
+        .filter((className) => className !== null)
+        .join(" ")}
       aria-label="Herramientas del listado"
     >
       <label className="actividades-search">
@@ -256,6 +268,22 @@ export function ActividadesGrupalesToolbar({
           </select>
         </label>
       ) : null}
+
+      {actionFilter === undefined ? null : (
+        <label className="actividades-filter">
+          <span>Acción</span>
+          <select
+            value={actionFilter.value}
+            onChange={(event) =>
+              actionFilter.onChange(event.target.value as ActividadGrupalChangeLogAction | "")
+            }
+          >
+            <option value="">Todas las acciones</option>
+            <option value="updated">Edición</option>
+            <option value="deleted">Eliminación</option>
+          </select>
+        </label>
+      )}
 
       {exportButton === undefined ? null : (
         <div className="actividades-toolbar-export">{exportButton}</div>

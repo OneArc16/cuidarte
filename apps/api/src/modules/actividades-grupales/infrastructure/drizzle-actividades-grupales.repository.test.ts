@@ -12,6 +12,7 @@ import {
   DrizzleActividadesGrupalesRepository,
   hashCorrectionSnapshot,
   resolveAutomaticActaSeries,
+  resolveChangeLogAuditActions,
 } from "./drizzle-actividades-grupales.repository";
 
 type ActiveRow = {
@@ -552,3 +553,24 @@ function createTransaction({
 
   return transaction;
 }
+
+describe("resolveChangeLogAuditActions", () => {
+  it("includes every change log audit action when no action filter is set", () => {
+    assert.deepEqual(resolveChangeLogAuditActions(null), [
+      "actividades-grupales.updated",
+      "actividades-grupales.diligenciamiento.saved",
+      "actividades-grupales.deleted",
+    ]);
+  });
+
+  it("treats diligenciamiento saves as editions", () => {
+    assert.deepEqual(resolveChangeLogAuditActions("updated"), [
+      "actividades-grupales.updated",
+      "actividades-grupales.diligenciamiento.saved",
+    ]);
+  });
+
+  it("restricts deletions to the deleted audit action", () => {
+    assert.deepEqual(resolveChangeLogAuditActions("deleted"), ["actividades-grupales.deleted"]);
+  });
+});

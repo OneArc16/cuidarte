@@ -188,13 +188,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
   async findChangeLogMany(
     query: FindActividadGrupalChangeLogQuery,
   ): Promise<{ entries: ActividadGrupalChangeLogRecord[]; nextCursor: string | null }> {
-    const conditions: SQL[] = [
-      inArray(auditLogs.action, [
-        "actividades-grupales.updated",
-        "actividades-grupales.deleted",
-        "actividades-grupales.diligenciamiento.saved",
-      ]),
-    ];
+    const conditions: SQL[] = [inArray(auditLogs.action, resolveChangeLogAuditActions(query.action))];
     const changeLogWhere = this.buildChangeLogWhere(query);
 
     if (changeLogWhere !== undefined) {
@@ -3186,4 +3180,17 @@ function resolveMonthRange(period: string): {
     startDate: `${yearValue}-${monthValue}-01`,
     endDateExclusive: `${String(nextYear).padStart(4, "0")}-${String(nextMonth).padStart(2, "0")}-01`,
   };
+}
+
+const CHANGE_LOG_AUDIT_ACTIONS = {
+  updated: ["actividades-grupales.updated", "actividades-grupales.diligenciamiento.saved"],
+  deleted: ["actividades-grupales.deleted"],
+} as const;
+
+export function resolveChangeLogAuditActions(action: FindActividadGrupalChangeLogQuery["action"]): string[] {
+  if (action === null) {
+    return [...CHANGE_LOG_AUDIT_ACTIONS.updated, ...CHANGE_LOG_AUDIT_ACTIONS.deleted];
+  }
+
+  return [...CHANGE_LOG_AUDIT_ACTIONS[action]];
 }

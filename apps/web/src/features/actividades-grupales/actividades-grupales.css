@@ -21,6 +21,18 @@
     minmax(210px, 270px) minmax(160px, 220px) 88px;
 }
 
+.actividades-toolbar--with-action {
+  grid-template-columns:
+    minmax(220px, 360px) minmax(180px, 220px) minmax(210px, 260px)
+    minmax(160px, 200px) 88px;
+}
+
+.actividades-toolbar--with-tenant.actividades-toolbar--with-action {
+  grid-template-columns:
+    minmax(220px, 360px) minmax(180px, 220px) minmax(210px, 260px)
+    minmax(160px, 220px) minmax(160px, 200px) 88px;
+}
+
 .actividades-search,
 .actividades-filter {
   display: grid;
@@ -2537,6 +2549,7 @@
 
 @media (max-width: 1100px) {
   .actividades-toolbar,
+  .actividades-toolbar--with-tenant.actividades-toolbar--with-action,
   .actividad-form-shell,
   .actividad-diligenciamiento-shell,
   .actividad-empleados-list,

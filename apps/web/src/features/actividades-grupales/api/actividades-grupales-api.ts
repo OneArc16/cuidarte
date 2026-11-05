@@ -1,4 +1,5 @@
 import {
+  type ActividadGrupalChangeLogAction,
   type ActividadGrupalEditDetail,
   type ActividadGrupalDiligenciamientoDetail,
   type DeleteActividadGrupalResponse,
@@ -50,6 +51,7 @@ type ListActividadesGrupalesParams = {
 type TrashActividadesGrupalesParams = ListActividadesGrupalesParams;
 
 type ActividadGrupalChangeLogParams = TrashActividadesGrupalesParams & {
+  action: ActividadGrupalChangeLogAction | null;
   cursor: string | null;
   limit: number;
 };
@@ -312,6 +314,9 @@ function buildActividadGrupalChangeLogUrl(params: ActividadGrupalChangeLogParams
   const searchParams = new URLSearchParams(queryString);
 
   searchParams.set("limit", String(params.limit));
+  if (params.action !== null) {
+    searchParams.set("action", params.action);
+  }
   if (params.cursor !== null) {
     searchParams.set("cursor", params.cursor);
   }

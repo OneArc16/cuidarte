@@ -103,6 +103,30 @@ describe("App actividades change log flow", () => {
     expect(screen.queryByRole("region", { name: "Cambio en Desarrollo" })).not.toBeInTheDocument();
   });
 
+  it("filters the change log by action", async () => {
+    const requestedActions: Array<string | null> = [];
+    server.use(
+      mockAuthMe(authUserFixture),
+      http.get("http://localhost:3001/api/actividades-grupales/log-cambios", ({ request }) => {
+        requestedActions.push(new URL(request.url).searchParams.get("action"));
+        return HttpResponse.json({ entries: [actividadGrupalChangeLogFixture], nextCursor: null });
+      }),
+    );
+
+    const user = userEvent.setup();
+    renderAppAtPath("/creacion-actividades/log-cambios");
+
+    const actionSelect = await screen.findByRole("combobox", { name: "Acción" });
+    expect(actionSelect).toHaveValue("");
+    await waitFor(() => expect(requestedActions[0]).toBeNull());
+
+    await user.selectOptions(actionSelect, "Eliminación");
+    await waitFor(() => expect(requestedActions.at(-1)).toBe("deleted"));
+
+    await user.selectOptions(actionSelect, "Edición");
+    await waitFor(() => expect(requestedActions.at(-1)).toBe("updated"));
+  });
+
   it("does not offer the detail toggle for short changes", async () => {
     server.use(mockAuthMe(authUserFixture));
 

@@ -456,6 +456,12 @@ export const actividadGrupalTrashListResponseSchema = z.object({
   actividadesGrupales: z.array(actividadGrupalTrashListItemSchema),
 });
 
+export const actividadGrupalChangeLogActionSchema = z.enum(["updated", "deleted"]);
+
+const nullableChangeLogActionSchema = z
+  .union([actividadGrupalChangeLogActionSchema, z.literal(""), z.null(), z.undefined()])
+  .transform((value) => (value === null || value === undefined || value === "" ? null : value));
+
 export const actividadGrupalChangeLogEntrySchema = z.object({
   id: z.uuid(),
   activityId: z.uuid(),
@@ -463,7 +469,7 @@ export const actividadGrupalChangeLogEntrySchema = z.object({
   tenantName: z.string().min(1).max(180),
   actaNumber: actaNumberSchema,
   activityName: z.string().min(1).max(160),
-  action: z.enum(["updated", "deleted"]),
+  action: actividadGrupalChangeLogActionSchema,
   actorUserId: z.uuid(),
   actorUserFullName: z.string().min(1).max(180),
   occurredAt: z.string().min(1),
@@ -477,6 +483,7 @@ export const actividadGrupalChangeLogEntrySchema = z.object({
 });
 
 export const actividadGrupalChangeLogListQuerySchema = actividadGrupalListQuerySchema.extend({
+  action: nullableChangeLogActionSchema.optional().default(null),
   cursor: z.string().trim().min(1).max(500).nullable().optional().default(null),
   limit: z.coerce.number().int().min(1).max(50).optional().default(20),
 });
@@ -614,6 +621,7 @@ export type UpdateActividadGrupalGlobalSeriesRequest = z.infer<
 >;
 export type ActividadGrupalTrashListItem = z.infer<typeof actividadGrupalTrashListItemSchema>;
 export type ActividadGrupalChangeLogEntry = z.infer<typeof actividadGrupalChangeLogEntrySchema>;
+export type ActividadGrupalChangeLogAction = z.infer<typeof actividadGrupalChangeLogActionSchema>;
 export type ActividadGrupalChangeLogListQuery = z.infer<
   typeof actividadGrupalChangeLogListQuerySchema
 >;

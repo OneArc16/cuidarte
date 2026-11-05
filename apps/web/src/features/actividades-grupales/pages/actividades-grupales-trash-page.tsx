@@ -1,4 +1,8 @@
-import { type ActividadGrupalOrganizer, type AuthUser } from "@cuidarte/contracts";
+import {
+  type ActividadGrupalChangeLogAction,
+  type ActividadGrupalOrganizer,
+  type AuthUser,
+} from "@cuidarte/contracts";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 
@@ -30,6 +34,7 @@ export function ActividadesGrupalesTrashPage({
   const [selectedActivityTypeId, setSelectedActivityTypeId] = useState("");
   const [selectedOrganizer, setSelectedOrganizer] = useState<ActividadGrupalOrganizer | "">("");
   const [selectedTenantId, setSelectedTenantId] = useState("");
+  const [selectedAction, setSelectedAction] = useState<ActividadGrupalChangeLogAction | "">("");
   const [pageCursors, setPageCursors] = useState<Array<string | null>>([null]);
   const [currentPage, setCurrentPage] = useState(0);
   const showTenantFilter = user.role === "super_admin";
@@ -52,6 +57,7 @@ export function ActividadesGrupalesTrashPage({
       organizer: selectedOrganizer === "" ? null : selectedOrganizer,
       activityMonth: null,
       tenantId: effectiveTenantId,
+      action: selectedAction === "" ? null : selectedAction,
       cursor: pageCursors[currentPage] ?? null,
       limit: CHANGE_LOG_PAGE_SIZE,
     },
@@ -114,6 +120,13 @@ export function ActividadesGrupalesTrashPage({
       </div>
 
       <ActividadesGrupalesToolbar
+        actionFilter={{
+          value: selectedAction,
+          onChange: (value) => {
+            setSelectedAction(value);
+            resetPagination();
+          },
+        }}
         activityMonth=""
         search={search}
         selectedActivityTypeId={selectedActivityTypeId}

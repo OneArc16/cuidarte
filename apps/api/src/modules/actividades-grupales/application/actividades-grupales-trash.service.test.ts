@@ -98,6 +98,7 @@ describe("ActividadesGrupalesTrashService", () => {
         organizer: null,
         activityMonth: null,
         tenantId: null,
+        action: null,
         cursor: null,
         limit: 20,
       },
@@ -110,6 +111,36 @@ describe("ActividadesGrupalesTrashService", () => {
     assert.equal(result.entries[0]?.action, "updated");
     assert.equal(result.entries[0]?.actorUserFullName, adminUser.fullName);
     assert.equal(result.nextCursor, null);
+  });
+
+  it("forwards the action filter to the change log repository", async () => {
+    const receivedActions: Array<string | null> = [];
+    const baseRepository = createRepository();
+    const service = new ActividadesGrupalesTrashService(
+      createRepository({
+        async findChangeLogMany(query) {
+          receivedActions.push(query.action);
+          return baseRepository.findChangeLogMany(query);
+        },
+      }),
+    );
+
+    await service.listChangeLog(
+      {
+        search: null,
+        activityType: null,
+        activityTypeId: null,
+        organizer: null,
+        activityMonth: null,
+        tenantId: null,
+        action: "deleted",
+        cursor: null,
+        limit: 20,
+      },
+      adminUser,
+    );
+
+    assert.deepEqual(receivedActions, ["deleted"]);
   });
 
   it("rejects auditors", async () => {

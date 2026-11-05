@@ -1,4 +1,5 @@
 import {
+  type ActividadGrupalChangeLogAction,
   type ActividadGrupalEditDetail,
   type UpdateActividadGrupalRequest,
   type ActividadGrupalOrganizer,
@@ -36,6 +37,7 @@ type TrashActividadesGrupalesParams = {
 };
 
 type ActividadGrupalChangeLogParams = TrashActividadesGrupalesParams & {
+  action: ActividadGrupalChangeLogAction | null;
   cursor: string | null;
   limit: number;
 };

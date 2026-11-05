@@ -91,6 +91,7 @@ export class ActividadesGrupalesTrashService {
       scope,
       permittedOrganizers: resolvePermittedActividadGrupalOrganizers(actor),
       permittedCreatorUserId: actor.id,
+      action: query.action,
       cursor: query.cursor,
       limit: query.limit,
     });
