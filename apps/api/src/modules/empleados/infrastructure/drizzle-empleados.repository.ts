@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 import { and, asc, desc, eq, ilike, isNull, ne, or, sql, type SQL } from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
+import { revokeActiveUserSessions } from "../../auth/revoke-user-sessions";
 import {
   auditLogs,
   employeeSignatureVersions,
@@ -471,9 +472,10 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
     auditEntries: EmpleadoAuditCommand[],
   ): Promise<EmpleadoRecord> {
     const updatedId = await this.database.db.transaction(async (tx) => {
+      const now = new Date();
       const updateValues: Partial<typeof users.$inferInsert> = {
         ...this.buildMutableValues(command),
-        updatedAt: new Date(),
+        updatedAt: now,
       };
 
       if (command.passwordHash !== undefined) {
@@ -492,6 +494,10 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
 
       if (updated === undefined) {
         throw new Error("No fue posible actualizar el usuario.");
+      }
+
+      if (command.passwordHash !== undefined) {
+        await revokeActiveUserSessions(tx, command.id, now);
       }
 
       await tx

@@ -20,6 +20,7 @@ import { and, asc, eq, ilike, ne, or, type SQL } from "drizzle-orm";
 
 import { DatabaseService } from "../../database/database.service";
 import { auditLogs, tenants, users } from "../../database/schema";
+import { revokeActiveUserSessions } from "../auth/revoke-user-sessions";
 import { UbicacionesService } from "../ubicaciones/application/ubicaciones.service";
 
 type TenantRow = typeof tenants.$inferSelect;
@@ -199,6 +200,10 @@ export class BackofficeService {
 
         if (updatedOwner === undefined) {
           throw new ConflictException("El tenant no tiene propietario configurado.");
+        }
+
+        if (command.owner.password !== undefined) {
+          await revokeActiveUserSessions(tx, updatedOwner.id, now);
         }
 
         await tx.insert(auditLogs).values(
