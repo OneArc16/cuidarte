@@ -9,6 +9,7 @@ import ExcelJS from "exceljs";
 import { chromium } from "playwright";
 
 import { AdultosMayoresService } from "./adultos-mayores.service";
+import { type AdultoMayorExportItem } from "../domain/adulto-mayor.types";
 import playwrightEnv from "../../../common/playwright-env";
 
 export type ExportedAdultosMayoresFile = {
@@ -158,6 +159,10 @@ export class AdultosMayoresExportService {
         key: "beneficiarioProgramaSocial",
         width: 30,
       },
+      { header: "Programa · Estado", key: "programaEstado", width: 18 },
+      { header: "Programa · Fecha de activación", key: "programaFechaActivacion", width: 22 },
+      { header: "Programa · Fecha de inactivación", key: "programaFechaInactivacion", width: 22 },
+      { header: "Programa · Historial de periodos", key: "programaHistorial", width: 44 },
     ];
 
     if (includeTenant) {
@@ -168,9 +173,11 @@ export class AdultosMayoresExportService {
   }
 
   private toExportRow(
-    adultoMayor: AdultoMayorDetail,
+    adultoMayor: AdultoMayorExportItem,
     includeTenant: boolean,
   ): Record<string, string | number> {
+    const latestPeriod = adultoMayor.programPeriods.at(-1);
+
     const row = {
       tipoDocumento: formatDocumentType(adultoMayor.documentType),
       numeroDocumento: adultoMayor.documentNumber,
@@ -208,6 +215,19 @@ export class AdultosMayoresExportService {
       acompanante: adultoMayor.companion ?? "",
       ingresoEconomico: adultoMayor.economicIncome ?? "",
       beneficiarioProgramaSocial: formatBoolean(adultoMayor.socialProgramBeneficiary),
+      programaEstado: adultoMayor.programStatus === "active" ? "Activo" : "Inactivo",
+      programaFechaActivacion:
+        latestPeriod === undefined ? "" : formatDate(latestPeriod.activationDate),
+      programaFechaInactivacion:
+        latestPeriod?.inactivationDate == null ? "" : formatDate(latestPeriod.inactivationDate),
+      programaHistorial: adultoMayor.programPeriods
+        .map(
+          (period) =>
+            `${formatDate(period.activationDate)} - ${
+              period.inactivationDate === null ? "actual" : formatDate(period.inactivationDate)
+            }`,
+        )
+        .join("; "),
     };
 
     if (!includeTenant) {

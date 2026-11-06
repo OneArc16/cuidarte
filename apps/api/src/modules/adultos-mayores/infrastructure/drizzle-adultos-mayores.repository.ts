@@ -58,6 +58,7 @@ import {
   type ReintegrateAdultoMayorProgramCommand,
 } from "../domain/adulto-mayor.types";
 import { type AdultosMayoresRepository } from "../domain/adultos-mayores.repository";
+import { selectAdultoMayorProgramPeriods } from "./adulto-mayor-program-periods.sql";
 
 type AdultoMayorSelectionRow = {
   id: string;
@@ -79,6 +80,7 @@ type AdultoMayorSelectionRow = {
   status: AdultoMayorRecord["status"];
   deathDate: string | null;
   programStatus: NonNullable<AdultoMayorRecord["programStatus"]>;
+  programPeriods?: AdultoMayorRecord["programPeriods"];
   educationLevel: string | null;
   disability: string | null;
   populationGroup: string | null;
@@ -114,7 +116,10 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
 
   async findMany(query: FindAdultosMayoresQuery): Promise<AdultoMayorRecord[]> {
     const rows = await this.database.db
-      .select(this.getAdultoMayorSelection())
+      .select({
+        ...this.getAdultoMayorSelection(),
+        programPeriods: selectAdultoMayorProgramPeriods(adultosMayores.id),
+      })
       .from(adultosMayores)
       .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
       .leftJoin(epsCatalog, eq(epsCatalog.id, adultosMayores.epsId))

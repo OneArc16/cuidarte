@@ -1,6 +1,7 @@
 import {
   type AdultoMayorBloodType,
   type AdultoMayorAttentionFilter,
+  type AdultoMayorDetail,
   type AdultoMayorDocumentType,
   type AdultoMayorHealthRegime,
   type AdultoMayorSex,
@@ -8,6 +9,8 @@ import {
   type AdultoMayorProgramStatus,
   type AdultoMayorZone,
 } from "@cuidarte/contracts";
+
+import { type AdultoMayorProgramPeriodRange } from "./adulto-mayor-program-policy";
 
 export type AdultosMayoresScope =
   | {
@@ -87,6 +90,10 @@ export type AdultoMayorCommandRecord = {
   socialProgramBeneficiary: boolean;
 };
 
+export type AdultoMayorExportItem = AdultoMayorDetail & {
+  programPeriods: AdultoMayorProgramPeriodRange[];
+};
+
 export type CreateAdultoMayorRecordCommand = AdultoMayorCommandRecord & {
   activationDate: string;
 };
@@ -157,6 +164,8 @@ export type AdultoMayorRecord = {
   status: AdultoMayorStatus;
   deathDate?: string | null;
   programStatus?: AdultoMayorProgramStatus;
+  /** Only loaded for exports. */
+  programPeriods?: AdultoMayorProgramPeriodRange[] | undefined;
   educationLevel: string | null;
   disability: string | null;
   populationGroup: string | null;

@@ -20,8 +20,11 @@ describe("AdultosMayoresExportService", () => {
     const service = new AdultosMayoresExportService({
       async listAdultosMayoresForExport() {
         return [
-          buildDetail({ status: "deceased", deathDate: "2026-06-10" }),
-          buildDetail({ id: "1e3c7c94-33f4-4cf2-91ea-bb9f18db4cd2" }),
+          { ...buildDetail({ status: "deceased", deathDate: "2026-06-10" }), programPeriods: [] },
+          {
+            ...buildDetail({ id: "1e3c7c94-33f4-4cf2-91ea-bb9f18db4cd2" }),
+            programPeriods: [],
+          },
         ];
       },
     } as never);
@@ -46,6 +49,54 @@ describe("AdultosMayoresExportService", () => {
     assert.equal(worksheet.getCell("AG2").value, "Sí");
     assert.equal(worksheet.getCell("AI2").value, 850000);
     assert.equal(worksheet.getCell("AJ2").value, "No");
+  });
+
+  it("agrega al final el estado y los periodos del programa sin mover las columnas existentes", async () => {
+    const service = new AdultosMayoresExportService({
+      async listAdultosMayoresForExport() {
+        return [
+          {
+            ...buildDetail(),
+            programStatus: "active",
+            programPeriods: [
+              { activationDate: "2026-07-15", inactivationDate: "2026-09-01" },
+              { activationDate: "2026-10-01", inactivationDate: null },
+            ],
+          },
+          {
+            ...buildDetail({ id: "1e3c7c94-33f4-4cf2-91ea-bb9f18db4cd2" }),
+            programStatus: "inactive",
+            programPeriods: [{ activationDate: "2026-07-15", inactivationDate: "2026-09-01" }],
+          },
+        ];
+      },
+    } as never);
+
+    const file = await service.exportExcel({ search: null, page: 1, pageSize: 20 }, actor);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(Uint8Array.from(file.buffer).buffer);
+    const worksheet = workbook.getWorksheet("Adultos mayores");
+
+    assert.ok(worksheet);
+    assert.equal(worksheet.getCell("I1").value, "Fecha de defunción");
+    assert.equal(worksheet.getCell("AJ1").value, "Salud · Beneficiario programa social");
+    assert.deepEqual(
+      ["AK1", "AL1", "AM1", "AN1"].map((cell) => worksheet.getCell(cell).value),
+      [
+        "Programa · Estado",
+        "Programa · Fecha de activación",
+        "Programa · Fecha de inactivación",
+        "Programa · Historial de periodos",
+      ],
+    );
+    assert.deepEqual(
+      ["AK2", "AL2", "AM2", "AN2"].map((cell) => worksheet.getCell(cell).value),
+      ["Activo", "01/10/2026", "", "15/07/2026 - 01/09/2026; 01/10/2026 - actual"],
+    );
+    assert.deepEqual(
+      ["AK3", "AL3", "AM3", "AN3"].map((cell) => worksheet.getCell(cell).value),
+      ["Inactivo", "15/07/2026", "01/09/2026", "15/07/2026 - 01/09/2026"],
+    );
   });
 });
 

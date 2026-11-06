@@ -43,7 +43,7 @@ import {
   ADULTOS_MAYORES_REPOSITORY,
   type AdultosMayoresRepository,
 } from "../domain/adultos-mayores.repository";
-import { type AdultoMayorRecord } from "../domain/adulto-mayor.types";
+import { type AdultoMayorExportItem, type AdultoMayorRecord } from "../domain/adulto-mayor.types";
 import {
   assertAdultoMayorStatusData,
   canCorrectDeceasedStatus,
@@ -94,10 +94,13 @@ export class AdultosMayoresService {
   async listAdultosMayoresForExport(
     query: AdultoMayorListQuery,
     actor: AuthUser,
-  ): Promise<AdultoMayorDetail[]> {
+  ): Promise<AdultoMayorExportItem[]> {
     const records = await this.findAdultosMayores(query, actor);
 
-    return records.map((record) => this.toDetail(record));
+    return records.map((record) => ({
+      ...this.toDetail(record),
+      programPeriods: record.programPeriods ?? [],
+    }));
   }
 
   private async findAdultosMayores(
