@@ -488,6 +488,19 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
             </select>
           </AdultoMayorFieldGroup>
 
+          {props.mode === "create" ? (
+            <AdultoMayorFieldGroup
+              label="Fecha de activación en el programa"
+              error={getError("activationDate")}
+            >
+              <input
+                type="date"
+                aria-invalid={getError("activationDate") === undefined ? "false" : "true"}
+                {...form.register("activationDate")}
+              />
+            </AdultoMayorFieldGroup>
+          ) : null}
+
           {status === "deceased" ? (
             <AdultoMayorFieldGroup label="Fecha de defuncion" error={getError("deathDate")}>
               <input

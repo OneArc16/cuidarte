@@ -13,6 +13,8 @@ import {
 } from "@cuidarte/contracts";
 import { z } from "zod";
 
+import { getLocalDateInputValue } from "@/shared/lib/date-input";
+
 import { resolveHealthRegimeFormValue } from "../lib/health-regime-options";
 
 type AdultoMayorCommandInput = z.input<typeof updateAdultoMayorRequestSchema>;
@@ -27,6 +29,7 @@ export const adultoMayorFormSchema = z
     sex: adultoMayorSexSchema,
     status: adultoMayorStatusSchema,
     deathDate: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.literal("")]),
+    activationDate: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.literal("")]),
     statusChangeReason: optionalFormTextSchema(500),
     firstName: requiredFormTextSchema(80),
     middleName: optionalFormTextSchema(80),
@@ -90,6 +93,7 @@ export type AdultoMayorFormValues = Omit<
   epsId: string;
   healthRegime: string;
   deathDate: string;
+  activationDate: string;
   statusChangeReason: string;
 };
 
@@ -101,6 +105,7 @@ export function createDefaultAdultoMayorFormValues(): AdultoMayorFormValues {
     sex: "female",
     status: "alive",
     deathDate: "",
+    activationDate: getLocalDateInputValue(),
     statusChangeReason: "",
     firstName: "",
     middleName: "",
@@ -141,6 +146,7 @@ export function toAdultoMayorFormValues(detail: AdultoMayorDetail): AdultoMayorF
     sex: detail.sex,
     status: detail.status,
     deathDate: detail.deathDate ?? "",
+    activationDate: "",
     statusChangeReason: "",
     firstName: detail.firstName,
     middleName: detail.middleName ?? "",
@@ -183,6 +189,7 @@ export function toCreateAdultoMayorRequest(
     healthRegime: toNullableValue(values.healthRegime),
     epsId: toNullableValue(values.epsId),
     deathDate: values.status === "deceased" ? toNullableValue(values.deathDate) : null,
+    activationDate: toNullableValue(values.activationDate),
     statusChangeReason: toNullableValue(values.statusChangeReason),
   });
 }
@@ -190,7 +197,9 @@ export function toCreateAdultoMayorRequest(
 export function toUpdateAdultoMayorRequest(
   values: AdultoMayorFormValues,
 ): UpdateAdultoMayorRequest {
-  const { tenantId: _tenantId, ...commandValues } = values;
+  // The activation date only opens the first program period; later changes go through
+  // the program panel (inactivate / reintegrate).
+  const { tenantId: _tenantId, activationDate: _activationDate, ...commandValues } = values;
 
   return updateAdultoMayorRequestSchema.parse({
     ...commandValues,

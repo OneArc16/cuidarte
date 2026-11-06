@@ -2346,3 +2346,90 @@
     display: none;
   }
 }
+
+.adulto-program-badge {
+  display: inline-grid;
+  min-width: 72px;
+  min-height: 28px;
+  place-items: center;
+  padding: 0 10px;
+  border: 1px solid rgb(8 80 65 / 13%);
+  border-radius: 999px;
+  color: var(--color-deep);
+  font-size: 0.74rem;
+  font-weight: 900;
+  background: var(--color-soft);
+}
+
+.adulto-program-badge[data-state="inactive"] {
+  border-color: rgb(143 47 45 / 20%);
+  background: rgb(250 238 218 / 72%);
+  color: rgb(112 55 34);
+}
+
+.adulto-program-panel {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px 20px;
+  border: 1px solid rgb(8 80 65 / 14%);
+  border-radius: 16px;
+  background: var(--color-surface);
+}
+
+.adulto-program-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.adulto-program-panel__header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.adulto-program-panel__form {
+  display: grid;
+  grid-template-columns: minmax(0, 180px) minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.adulto-program-panel__form label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  font-weight: 700;
+}
+
+.adulto-program-panel__form .form-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.adulto-program-panel__periods {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adulto-program-panel__periods li {
+  padding: 10px 12px;
+  border-left: 3px solid rgb(8 80 65 / 30%);
+  border-radius: 8px;
+  background: var(--color-soft);
+}
+
+.adulto-program-panel__periods p {
+  margin: 4px 0 0;
+  font-size: 0.86rem;
+}
+
+@media (max-width: 720px) {
+  .adulto-program-panel__form {
+    grid-template-columns: 1fr;
+  }
+}

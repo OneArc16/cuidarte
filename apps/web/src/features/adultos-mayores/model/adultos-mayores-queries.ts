@@ -1,5 +1,7 @@
 import {
   type AdultoMayorAttentionFilter,
+  type InactivateAdultoMayorRequest,
+  type ReintegrateAdultoMayorRequest,
   type CreateAdultoMayorRequest,
   type UpdateAdultoMayorRequest,
 } from "@cuidarte/contracts";
@@ -19,6 +21,8 @@ export const adultosMayoresQueryKeys = {
   trashList: (params: { search: string }) => ["adultos-mayores", "papelera", params] as const,
   statusHistory: (adultoMayorId: string) =>
     ["adultos-mayores", adultoMayorId, "status-history"] as const,
+  programPeriods: (adultoMayorId: string) =>
+    ["adultos-mayores", adultoMayorId, "program-periods"] as const,
 };
 
 async function invalidateAdultoMayorDependencies(queryClient: QueryClient) {
@@ -70,6 +74,33 @@ export function useAdultoMayorStatusHistoryQuery(adultoMayorId: string, enabled 
     queryFn: () => adultosMayoresApi.getAdultoMayorStatusHistory(adultoMayorId, { limit: 100 }),
     enabled,
     retry: false,
+  });
+}
+
+export function useAdultoMayorProgramPeriodsQuery(adultoMayorId: string) {
+  return useQuery({
+    queryKey: adultosMayoresQueryKeys.programPeriods(adultoMayorId),
+    queryFn: () => adultosMayoresApi.getAdultoMayorProgramPeriods(adultoMayorId),
+    retry: false,
+  });
+}
+
+export type AdultoMayorProgramChange =
+  | { kind: "inactivate"; request: InactivateAdultoMayorRequest }
+  | { kind: "reintegrate"; request: ReintegrateAdultoMayorRequest };
+
+export function useChangeAdultoMayorProgramMutation(adultoMayorId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (change: AdultoMayorProgramChange) =>
+      change.kind === "inactivate"
+        ? adultosMayoresApi.inactivateAdultoMayorProgram(adultoMayorId, change.request)
+        : adultosMayoresApi.reintegrateAdultoMayorProgram(adultoMayorId, change.request),
+    onSuccess: async (periods) => {
+      queryClient.setQueryData(adultosMayoresQueryKeys.programPeriods(adultoMayorId), periods);
+      await invalidateAdultoMayorDependencies(queryClient);
+    },
   });
 }
 

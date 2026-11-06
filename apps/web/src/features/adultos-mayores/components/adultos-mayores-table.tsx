@@ -52,7 +52,7 @@ export function AdultosMayoresTable({
   onSendToTrash,
   showTenantColumn,
 }: AdultosMayoresTableProps) {
-  const columnCount = showTenantColumn ? 8 : 7;
+  const columnCount = showTenantColumn ? 9 : 8;
 
   return (
     <section
@@ -75,6 +75,7 @@ export function AdultosMayoresTable({
             <th scope="col">Telefono</th>
             <th scope="col">Edad</th>
             <th scope="col">Sexo</th>
+            <th scope="col">Programa</th>
             <th scope="col">
               <span className="visually-hidden">Acciones</span>
             </th>
@@ -108,6 +109,11 @@ export function AdultosMayoresTable({
               <td>{formatAdultoMayorPhone(adultoMayor.phone)}</td>
               <td>{adultoMayor.age}</td>
               <td>{formatAdultoMayorSex(adultoMayor.sex)}</td>
+              <td>
+                <span className="adulto-program-badge" data-state={adultoMayor.programStatus}>
+                  {adultoMayor.programStatus === "active" ? "Activo" : "Inactivo"}
+                </span>
+              </td>
               <td>
                 <div className="adultos-row-actions">
                   {canManageAlimentacion ? (

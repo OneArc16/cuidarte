@@ -5,6 +5,7 @@ import { useState } from "react";
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
 import { AdultoMayorForm } from "../components/adulto-mayor-form";
+import { AdultoMayorProgramPanel } from "../components/adulto-mayor-program-panel";
 import { AdultoMayorStatusHistory } from "../components/adulto-mayor-status-history";
 import { resolveAdultosMayoresApiError } from "../lib/adultos-mayores-formatters";
 import { ADULTOS_MAYORES_PATH } from "../lib/adultos-mayores-paths";
@@ -88,6 +89,8 @@ export function AdultoMayorEditPage({ adultoMayorId, navigate }: AdultoMayorEdit
           {adultoMayorQuery.data.names} {adultoMayorQuery.data.surnames}
         </span>
       </div>
+
+      <AdultoMayorProgramPanel adultoMayorId={adultoMayorId} />
 
       <AdultoMayorForm
         mode="edit"

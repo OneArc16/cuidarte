@@ -6,6 +6,9 @@ import {
   type AdultoMayorTrashListResponse,
   type AdultoMayorTrashMutationResponse,
   type AdultoMayorStatusHistoryResponse,
+  type AdultoMayorProgramPeriodsResponse,
+  type InactivateAdultoMayorRequest,
+  type ReintegrateAdultoMayorRequest,
   type CreateAdultoMayorRequest,
   type UpdateAdultoMayorRequest,
   adultoMayorDocumentResponseSchema,
@@ -15,6 +18,7 @@ import {
   adultoMayorTrashListResponseSchema,
   adultoMayorTrashMutationResponseSchema,
   adultoMayorStatusHistoryResponseSchema,
+  adultoMayorProgramPeriodsResponseSchema,
 } from "@cuidarte/contracts";
 import { z } from "zod";
 
@@ -88,6 +92,37 @@ export function getAdultoMayorStatusHistory(
   return fetchJson(
     `${getApiBaseUrl()}/adultos-mayores/${adultoMayorId}/historial-estados${query ? `?${query}` : ""}`,
     adultoMayorStatusHistoryResponseSchema,
+  );
+}
+
+export function getAdultoMayorProgramPeriods(
+  adultoMayorId: string,
+): Promise<AdultoMayorProgramPeriodsResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/adultos-mayores/${adultoMayorId}/periodos-programa`,
+    adultoMayorProgramPeriodsResponseSchema,
+  );
+}
+
+export function inactivateAdultoMayorProgram(
+  adultoMayorId: string,
+  request: InactivateAdultoMayorRequest,
+): Promise<AdultoMayorProgramPeriodsResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/adultos-mayores/${adultoMayorId}/periodos-programa/inactivar`,
+    adultoMayorProgramPeriodsResponseSchema,
+    { method: "POST", body: request },
+  );
+}
+
+export function reintegrateAdultoMayorProgram(
+  adultoMayorId: string,
+  request: ReintegrateAdultoMayorRequest,
+): Promise<AdultoMayorProgramPeriodsResponse> {
+  return fetchJson(
+    `${getApiBaseUrl()}/adultos-mayores/${adultoMayorId}/periodos-programa/reintegrar`,
+    adultoMayorProgramPeriodsResponseSchema,
+    { method: "POST", body: request },
   );
 }
 
