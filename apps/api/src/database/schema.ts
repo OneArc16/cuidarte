@@ -40,6 +40,10 @@ export const adultoMayorDocumentType = pgEnum("adulto_mayor_document_type", [
 ]);
 export const adultoMayorSex = pgEnum("adulto_mayor_sex", ["female", "male", "other"]);
 export const adultoMayorStatus = pgEnum("adulto_mayor_status", ["alive", "deceased"]);
+export const adultoMayorProgramStatus = pgEnum("adulto_mayor_program_status", [
+  "active",
+  "inactive",
+]);
 export const adultoMayorImportStatus = pgEnum("adulto_mayor_import_status", [
   "ready",
   "validated_with_errors",
@@ -527,6 +531,7 @@ export const adultosMayores = pgTable(
     sex: adultoMayorSex("sex").notNull(),
     status: adultoMayorStatus("status").notNull().default("alive"),
     deathDate: date("death_date", { mode: "string" }),
+    programStatus: adultoMayorProgramStatus("program_status").notNull().default("active"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
@@ -585,6 +590,45 @@ export const adultoMayorStatusHistory = pgTable(
     index("adulto_mayor_historial_estados_tenant_created_at_idx").on(
       table.tenantId,
       table.createdAt,
+    ),
+  ],
+);
+
+export const adultoMayorProgramPeriods = pgTable(
+  "adulto_mayor_periodos_programa",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    adultoMayorId: uuid("adulto_mayor_id")
+      .notNull()
+      .references(() => adultosMayores.id, { onDelete: "restrict" }),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "restrict" }),
+    activationDate: date("activation_date", { mode: "string" }).notNull(),
+    inactivationDate: date("inactivation_date", { mode: "string" }),
+    activationReason: varchar("activation_reason", { length: 500 }),
+    inactivationReason: varchar("inactivation_reason", { length: 500 }),
+    activatedByUserId: uuid("activated_by_user_id").references(() => users.id, {
+      onDelete: "restrict",
+    }),
+    inactivatedByUserId: uuid("inactivated_by_user_id").references(() => users.id, {
+      onDelete: "restrict",
+    }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("adulto_mayor_periodos_programa_open_unique")
+      .on(table.adultoMayorId)
+      .where(sql`${table.inactivationDate} is null`),
+    index("adulto_mayor_periodos_programa_adulto_activation_idx").on(
+      table.adultoMayorId,
+      table.activationDate,
+    ),
+    index("adulto_mayor_periodos_programa_tenant_idx").on(table.tenantId),
+    check(
+      "adulto_mayor_periodos_programa_valid_range",
+      sql`${table.inactivationDate} is null or ${table.inactivationDate} > ${table.activationDate}`,
     ),
   ],
 );
