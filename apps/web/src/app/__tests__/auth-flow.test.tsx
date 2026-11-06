@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
+import { http, HttpResponse } from "msw";
 import userEvent from "@testing-library/user-event";
 
 import { server } from "../../test/test-server";
 import { renderApp, resetAppTestState } from "../../test/helpers/app-test.helpers";
 import { mockAuthLoginFailure } from "../../test/helpers/msw-domain.helpers";
+import { authUserFixture } from "../../test/fixtures";
 
 describe("App auth flow", () => {
   beforeEach(() => {
@@ -52,6 +54,52 @@ describe("App auth flow", () => {
 
     await user.click(screen.getByRole("button", { name: "Ocultar contrasena" }));
     expect(passwordInput).toHaveAttribute("type", "password");
+  });
+
+  it("closes an idle session and explains why on the login screen", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let isSessionActive = true;
+    let logoutCalls = 0;
+    let activityCalls = 0;
+
+    server.use(
+      http.get("http://localhost:3001/api/auth/me", () =>
+        HttpResponse.json({
+          user: isSessionActive ? authUserFixture : null,
+          idleTimeoutSeconds: 30 * 60,
+        }),
+      ),
+      http.post("http://localhost:3001/api/auth/activity", () => {
+        activityCalls += 1;
+        return HttpResponse.json({ success: true });
+      }),
+      http.post("http://localhost:3001/api/auth/logout", () => {
+        logoutCalls += 1;
+        isSessionActive = false;
+        return HttpResponse.json({ success: true });
+      }),
+    );
+
+    renderApp();
+
+    await waitFor(() => expect(activityCalls).toBe(1));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(28 * 60 * 1000);
+    });
+    expect(
+      screen.getByRole("alertdialog", { name: "Tu sesión está por cerrarse" }),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2 * 60 * 1000);
+    });
+
+    expect(await screen.findByRole("heading", { name: "Bienvenido" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Tu sesión se cerró por inactividad. Ingresa de nuevo para continuar.",
+    );
+    expect(logoutCalls).toBe(1);
   });
 
   it("shows an accessible error when credentials are rejected", async () => {

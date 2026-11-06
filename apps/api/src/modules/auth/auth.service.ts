@@ -13,6 +13,7 @@ import { verify } from "argon2";
 import { getEnv } from "../../config/env";
 import { DatabaseService } from "../../database/database.service";
 import { tenants, userPermissions, userSessions, users } from "../../database/schema";
+import { isSessionIdle } from "./session-idle";
 
 type LoginMetadata = {
   ip: string | null;
@@ -26,6 +27,7 @@ type AuthenticatedSession = {
 };
 
 type UserRow = typeof users.$inferSelect;
+type SessionRow = typeof userSessions.$inferSelect;
 type TenantRow = typeof tenants.$inferSelect;
 
 const GENERIC_LOGIN_ERROR = "Correo o contrasena incorrectos.";
@@ -85,20 +87,57 @@ export class AuthService {
     };
   }
 
+  getIdleTimeoutSeconds(): number {
+    return getEnv().SESSION_IDLE_TIMEOUT_MINUTES * 60;
+  }
+
+  /**
+   * Resolves the authenticated user without refreshing session activity, so
+   * background polling never keeps an idle session alive.
+   */
   async getCurrentUser(token: string | undefined): Promise<AuthUser | null> {
-    if (token === undefined || token.length === 0) {
+    const active = await this.findActiveSession(token, new Date());
+
+    if (active === null) {
       return null;
     }
 
+    const permissions = await this.findUserPermissions(active.user.id);
+
+    return this.toAuthUser(active.user, active.tenant, permissions);
+  }
+
+  /** Registers real user activity, extending the idle window of an active session. */
+  async registerActivity(token: string | undefined): Promise<boolean> {
     const now = new Date();
-    const tokenHash = this.hashToken(token);
+    const active = await this.findActiveSession(token, now);
+
+    if (active === null) {
+      return false;
+    }
+
+    await this.database.db
+      .update(userSessions)
+      .set({ lastUsedAt: now })
+      .where(eq(userSessions.id, active.session.id));
+
+    return true;
+  }
+
+  private async findActiveSession(
+    token: string | undefined,
+    now: Date,
+  ): Promise<{ session: SessionRow; user: UserRow; tenant: TenantRow | null } | null> {
+    if (token === undefined || token.length === 0) {
+      return null;
+    }
 
     const [session] = await this.database.db
       .select()
       .from(userSessions)
       .where(
         and(
-          eq(userSessions.tokenHash, tokenHash),
+          eq(userSessions.tokenHash, this.hashToken(token)),
           isNull(userSessions.revokedAt),
           gt(userSessions.expiresAt, now),
         ),
@@ -106,6 +145,10 @@ export class AuthService {
       .limit(1);
 
     if (session === undefined) {
+      return null;
+    }
+
+    if (isSessionIdle(session, now, getEnv().SESSION_IDLE_TIMEOUT_MINUTES)) {
       return null;
     }
 
@@ -117,14 +160,7 @@ export class AuthService {
 
     const tenant = await this.ensureTenantCanLogin(user);
 
-    await this.database.db
-      .update(userSessions)
-      .set({ lastUsedAt: now })
-      .where(eq(userSessions.id, session.id));
-
-    const permissions = await this.findUserPermissions(user.id);
-
-    return this.toAuthUser(user, tenant, permissions);
+    return { session, user, tenant };
   }
 
   async logout(token: string | undefined): Promise<void> {

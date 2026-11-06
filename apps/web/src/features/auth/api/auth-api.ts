@@ -2,10 +2,12 @@ import {
   authSessionSchema,
   logoutResponseSchema,
   meResponseSchema,
+  sessionActivityResponseSchema,
   type AuthSession,
   type LoginRequest,
   type LogoutResponse,
   type MeResponse,
+  type SessionActivityResponse,
 } from "@cuidarte/contracts";
 
 import { getApiBaseUrl } from "../../../shared/api/api-config";
@@ -26,6 +28,12 @@ export function getMe(): Promise<MeResponse> {
 
 export function logout(): Promise<LogoutResponse> {
   return fetchJson(`${getApiBaseUrl()}/auth/logout`, logoutResponseSchema, {
+    method: "POST",
+  });
+}
+
+export function registerActivity(): Promise<SessionActivityResponse> {
+  return fetchJson(`${getApiBaseUrl()}/auth/activity`, sessionActivityResponseSchema, {
     method: "POST",
   });
 }

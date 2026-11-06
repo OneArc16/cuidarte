@@ -6,6 +6,7 @@ import {
   Post,
   Req,
   Res,
+  UnauthorizedException,
 } from "@nestjs/common";
 import { ApiOkResponse, ApiTags, ApiUnauthorizedResponse } from "@nestjs/swagger";
 import {
@@ -13,6 +14,7 @@ import {
   loginRequestSchema,
   logoutResponseSchema,
   meResponseSchema,
+  sessionActivityResponseSchema,
 } from "@cuidarte/contracts";
 import { type FastifyReply, type FastifyRequest } from "fastify";
 
@@ -45,6 +47,7 @@ export class AuthController {
 
     return authSessionSchema.parse({
       user: session.user,
+      idleTimeoutSeconds: this.authService.getIdleTimeoutSeconds(),
     });
   }
 
@@ -53,7 +56,26 @@ export class AuthController {
   async me(@Req() request: FastifyRequest) {
     const user = await this.authService.getCurrentUser(getSessionTokenFromRequest(request));
 
-    return meResponseSchema.parse({ user });
+    return meResponseSchema.parse({
+      user,
+      idleTimeoutSeconds: this.authService.getIdleTimeoutSeconds(),
+    });
+  }
+
+  @Post("activity")
+  @HttpCode(200)
+  @ApiOkResponse({ description: "Actividad de la sesion registrada." })
+  @ApiUnauthorizedResponse({ description: "La sesion no esta activa." })
+  async activity(@Req() request: FastifyRequest) {
+    const registered = await this.authService.registerActivity(
+      getSessionTokenFromRequest(request),
+    );
+
+    if (!registered) {
+      throw new UnauthorizedException("Sesion requerida.");
+    }
+
+    return sessionActivityResponseSchema.parse({ success: true });
   }
 
   @Post("logout")

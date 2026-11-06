@@ -5,6 +5,7 @@ import { renderWithProviders } from "../render-with-providers";
 export function resetAppTestState(path = "/"): void {
   window.history.replaceState({}, "", path);
   window.localStorage.clear();
+  window.sessionStorage.clear();
 }
 
 export function setAppPath(path: string): void {

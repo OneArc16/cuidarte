@@ -405,12 +405,20 @@ export const loginRequestSchema = z.object({
   password: z.string().min(1, "La contraseña es obligatoria."),
 });
 
+const idleTimeoutSecondsSchema = z.number().int().positive();
+
 export const authSessionSchema = z.object({
   user: authUserSchema,
+  idleTimeoutSeconds: idleTimeoutSecondsSchema.optional(),
 });
 
 export const meResponseSchema = z.object({
   user: authUserSchema.nullable(),
+  idleTimeoutSeconds: idleTimeoutSecondsSchema.optional(),
+});
+
+export const sessionActivityResponseSchema = z.object({
+  success: z.literal(true),
 });
 
 export const logoutResponseSchema = z.object({
@@ -423,3 +431,4 @@ export type LoginRequest = z.input<typeof loginRequestSchema>;
 export type AuthSession = z.infer<typeof authSessionSchema>;
 export type MeResponse = z.infer<typeof meResponseSchema>;
 export type LogoutResponse = z.infer<typeof logoutResponseSchema>;
+export type SessionActivityResponse = z.infer<typeof sessionActivityResponseSchema>;

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { LoginForm } from "../components/login-form";
+import { consumeLogoutReason } from "../lib/idle-session-storage";
 
 const SLOGAN_ROTATION_INTERVAL_MS = 4200;
 const LOGIN_SLOGANS = [
@@ -15,6 +16,8 @@ type LoginPageProps = {
 };
 
 export function LoginPage({ onAuthenticated }: LoginPageProps) {
+  const [logoutReason] = useState(consumeLogoutReason);
+
   return (
     <main className="app-shell">
       <section className="hero">
@@ -37,6 +40,11 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
             <h2>Bienvenido</h2>
             <p>Ingresa con las credenciales que te asignó el administrador.</p>
           </div>
+          {logoutReason === "idle" ? (
+            <p className="login-card__notice" role="status">
+              Tu sesión se cerró por inactividad. Ingresa de nuevo para continuar.
+            </p>
+          ) : null}
           <LoginForm onAuthenticated={onAuthenticated} />
         </section>
       </section>

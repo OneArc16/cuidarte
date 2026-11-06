@@ -715,3 +715,85 @@ h1 {
   color: var(--color-deep);
   font-weight: 900;
 }
+
+.login-card__notice {
+  margin: 0 0 18px;
+  padding: 10px 12px;
+  border: 1px solid rgb(180 120 20 / 28%);
+  border-radius: 10px;
+  background: rgb(255 246 225 / 92%);
+  color: #6b4a08;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.idle-session-dialog-backdrop {
+  position: fixed;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(3 33 40 / 54%);
+  backdrop-filter: blur(8px);
+}
+
+.idle-session-dialog {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  width: min(100%, 420px);
+  padding: 28px 24px 24px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgb(3 33 40 / 28%);
+  text-align: center;
+}
+
+.idle-session-dialog__icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  background: rgb(255 246 225 / 92%);
+  color: #9a6a0c;
+}
+
+.idle-session-dialog__icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.idle-session-dialog h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.idle-session-dialog p {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.idle-session-dialog p strong {
+  color: var(--color-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+.idle-session-dialog__action {
+  margin-top: 6px;
+  padding: 10px 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-deep);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.idle-session-dialog__action:focus-visible {
+  outline: 2px solid var(--color-deep);
+  outline-offset: 3px;
+}

@@ -15,4 +15,5 @@ export const healthAuthHandlers = [
     HttpResponse.json({ user: authUserFixture }),
   ),
   http.post("http://localhost:3001/api/auth/logout", () => HttpResponse.json({ success: true })),
+  http.post("http://localhost:3001/api/auth/activity", () => HttpResponse.json({ success: true })),
 ] as const;

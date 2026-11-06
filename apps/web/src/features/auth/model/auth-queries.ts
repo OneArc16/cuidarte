@@ -24,7 +24,10 @@ export function useLoginMutation() {
   return useMutation({
     mutationFn: (request: LoginRequest) => authApi.login(request),
     onSuccess: (session) => {
-      queryClient.setQueryData(authQueryKeys.me, { user: session.user });
+      queryClient.setQueryData(authQueryKeys.me, {
+        user: session.user,
+        idleTimeoutSeconds: session.idleTimeoutSeconds,
+      });
     },
   });
 }

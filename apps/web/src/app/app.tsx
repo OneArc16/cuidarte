@@ -41,6 +41,7 @@ import {
   isActividadesGrupalesCorrectionsPath,
   isActividadesGrupalesPath,
 } from "@/features/actividades-grupales/lib/actividades-grupales-paths";
+import { IdleSessionGuard } from "@/features/auth/components/idle-session-guard";
 import { LoginPage } from "@/features/auth/pages/login-page";
 import { useCurrentUserQuery } from "@/features/auth/model/auth-queries";
 import { HomePage } from "@/features/home/pages/home-page";
@@ -274,12 +275,15 @@ export function App() {
   }
 
   return (
-    <HomePage
-      path={path}
-      user={user}
-      goBack={goBack}
-      navigate={navigate}
-      onLogoutSuccess={() => navigate(LOGIN_PATH, { replace: true })}
-    />
+    <>
+      <HomePage
+        path={path}
+        user={user}
+        goBack={goBack}
+        navigate={navigate}
+        onLogoutSuccess={() => navigate(LOGIN_PATH, { replace: true })}
+      />
+      <IdleSessionGuard idleTimeoutSeconds={currentUserQuery.data?.idleTimeoutSeconds} />
+    </>
   );
 }
