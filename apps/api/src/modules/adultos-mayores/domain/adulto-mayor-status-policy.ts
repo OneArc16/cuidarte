@@ -2,12 +2,11 @@ import { BadRequestException } from "@nestjs/common";
 
 import { hasUserPermission, type AdultoMayorStatus, type AuthUser } from "@cuidarte/contracts";
 
-const DATE_FORMATTER = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "America/Bogota",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
+import { formatCurrentDate, formatDateForMessage } from "./adulto-mayor-dates";
+import {
+  assertAdultoMayorProgramDateAllowed,
+  type AdultoMayorProgramPeriodRange,
+} from "./adulto-mayor-program-policy";
 
 export function assertAdultoMayorStatusData(params: {
   status: AdultoMayorStatus;
@@ -44,31 +43,28 @@ export function assertAdultoMayorStatusData(params: {
 export function assertAdultoMayorRecordDateAllowed(params: {
   status?: AdultoMayorStatus | undefined;
   deathDate?: string | null | undefined;
+  programPeriods?: readonly AdultoMayorProgramPeriodRange[] | undefined;
   recordDate: string;
 }) {
-  if (params.status !== "deceased" || params.deathDate === undefined || params.deathDate === null) {
-    return;
-  }
-
-  if (params.recordDate > params.deathDate) {
+  if (
+    params.status === "deceased" &&
+    params.deathDate !== undefined &&
+    params.deathDate !== null &&
+    params.recordDate > params.deathDate
+  ) {
     throw new BadRequestException(
       `No puedes registrar informacion posterior a la fecha de defuncion del adulto mayor (${formatDateForMessage(params.deathDate)}).`,
     );
+  }
+
+  if (params.programPeriods !== undefined) {
+    assertAdultoMayorProgramDateAllowed({
+      programPeriods: params.programPeriods,
+      recordDate: params.recordDate,
+    });
   }
 }
 
 export function canCorrectDeceasedStatus(actor: Pick<AuthUser, "role" | "permissions">) {
   return hasUserPermission(actor, "adultos_mayores.edit");
-}
-
-function formatCurrentDate() {
-  const parts = DATE_FORMATTER.formatToParts(new Date());
-  const values = new Map(parts.map((part) => [part.type, part.value]));
-
-  return `${values.get("year")}-${values.get("month")}-${values.get("day")}`;
-}
-
-function formatDateForMessage(value: string) {
-  const [year, month, day] = value.split("-");
-  return `${day}/${month}/${year}`;
 }

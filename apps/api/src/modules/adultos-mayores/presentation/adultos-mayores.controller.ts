@@ -30,6 +30,9 @@ import {
   adultoMayorTenantOptionsResponseSchema,
   adultoMayorStatusHistoryQuerySchema,
   adultoMayorStatusHistoryResponseSchema,
+  adultoMayorProgramPeriodsResponseSchema,
+  inactivateAdultoMayorRequestSchema,
+  reintegrateAdultoMayorRequestSchema,
   createAdultoMayorRequestSchema,
   updateAdultoMayorRequestSchema,
   sendAdultoMayorToTrashRequestSchema,
@@ -144,6 +147,60 @@ export class AdultosMayoresController {
     );
 
     return adultoMayorStatusHistoryResponseSchema.parse(history);
+  }
+
+  @Get(":id/periodos-programa")
+  @ApiOkResponse({ description: "Periodos del adulto mayor en el programa." })
+  @ApiNotFoundResponse({ description: "Adulto mayor no encontrado." })
+  async getProgramPeriods(@Param("id") id: string, @Req() request: AuthenticatedRequest) {
+    const adultoMayorId = parseZodSchema(adultoMayorIdParamSchema, id);
+    const periods = await this.adultosMayoresService.getProgramPeriods(
+      adultoMayorId,
+      request.currentUser,
+    );
+
+    return adultoMayorProgramPeriodsResponseSchema.parse(periods);
+  }
+
+  @Post(":id/periodos-programa/inactivar")
+  @ApiOkResponse({ description: "Adulto mayor inactivado en el programa." })
+  @ApiBadRequestResponse({ description: "Fecha de inactivacion no valida." })
+  @ApiNotFoundResponse({ description: "Adulto mayor no encontrado." })
+  async inactivateProgram(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const adultoMayorId = parseZodSchema(adultoMayorIdParamSchema, id);
+    const command = parseZodSchema(inactivateAdultoMayorRequestSchema, body);
+    const periods = await this.adultosMayoresService.inactivateProgram(
+      adultoMayorId,
+      command,
+      request.currentUser,
+    );
+
+    return adultoMayorProgramPeriodsResponseSchema.parse(periods);
+  }
+
+  @Post(":id/periodos-programa/reintegrar")
+  @ApiOkResponse({ description: "Adulto mayor reintegrado al programa." })
+  @ApiBadRequestResponse({ description: "Fecha de reintegro no valida." })
+  @ApiConflictResponse({ description: "El adulto mayor ya esta activo." })
+  @ApiNotFoundResponse({ description: "Adulto mayor no encontrado." })
+  async reintegrateProgram(
+    @Param("id") id: string,
+    @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const adultoMayorId = parseZodSchema(adultoMayorIdParamSchema, id);
+    const command = parseZodSchema(reintegrateAdultoMayorRequestSchema, body);
+    const periods = await this.adultosMayoresService.reintegrateProgram(
+      adultoMayorId,
+      command,
+      request.currentUser,
+    );
+
+    return adultoMayorProgramPeriodsResponseSchema.parse(periods);
   }
 
   @Delete(":id")

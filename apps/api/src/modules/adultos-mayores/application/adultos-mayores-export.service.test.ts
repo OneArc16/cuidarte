@@ -64,6 +64,7 @@ function buildDetail(overrides: Partial<AdultoMayorDetail> = {}): AdultoMayorDet
     sex: "female",
     status: "alive",
     deathDate: null,
+    programStatus: "active",
     firstName: "Rosa",
     middleName: "Elena",
     firstSurname: "Martinez",

@@ -15,6 +15,9 @@ import {
   type AdultoMayorDocumentRecord,
   type AdultoMayorStatusHistoryRecord,
   type AdultosMayoresPageRecord,
+  type AdultoMayorProgramPeriodRecord,
+  type InactivateAdultoMayorProgramCommand,
+  type ReintegrateAdultoMayorProgramCommand,
 } from "./adulto-mayor.types";
 
 export const ADULTOS_MAYORES_REPOSITORY = Symbol("ADULTOS_MAYORES_REPOSITORY");
@@ -32,6 +35,15 @@ export type AdultosMayoresRepository = {
     cursor: string | null;
   }): Promise<{ entries: AdultoMayorStatusHistoryRecord[]; nextCursor: string | null }>;
   findTenantOptions(): Promise<AdultoMayorTenantOptionRecord[]>;
+  findProgramPeriods(adultoMayorId: string): Promise<AdultoMayorProgramPeriodRecord[]>;
+  inactivateProgram(
+    command: InactivateAdultoMayorProgramCommand,
+    audit: AdultoMayorAuditCommand,
+  ): Promise<boolean>;
+  reintegrateProgram(
+    command: ReintegrateAdultoMayorProgramCommand,
+    audit: AdultoMayorAuditCommand,
+  ): Promise<void>;
   create(
     command: CreateAdultoMayorRecordCommand,
     audit: AdultoMayorAuditCommand,

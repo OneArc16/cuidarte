@@ -1,13 +1,17 @@
 import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
 import { describe, it } from "node:test";
 
 import { type AuthUser } from "@cuidarte/contracts";
-import { ConflictException, ForbiddenException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException } from "@nestjs/common";
 
 import { calculateAgeFromBirthDate } from "./age";
 import { AdultosMayoresService } from "./adultos-mayores.service";
 import {
+  type AdultoMayorAuditCommand,
+  type AdultoMayorProgramPeriodRecord,
   type AdultoMayorRecord,
+  type CreateAdultoMayorRecordCommand,
   type FindAdultosMayoresQuery,
   type FindAdultosMayoresTrashQuery,
   type RestoreAdultoMayorCommand,
@@ -392,6 +396,105 @@ describe("AdultosMayoresService", () => {
     });
   });
 
+  it("opens the program period on the activation date written in the form", async () => {
+    const repository = createRepository();
+    const service = createService(repository);
+
+    await service.createAdultoMayor(
+      { ...createCommand(), activationDate: "2026-10-01" },
+      tenantAdminUser,
+    );
+
+    assert.equal(repository.createCommands[0]?.activationDate, "2026-10-01");
+  });
+
+  it("defaults the activation date to today when the request omits it", async () => {
+    const repository = createRepository();
+    const service = createService(repository);
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(
+      new Date(),
+    );
+
+    await service.createAdultoMayor(createCommand(), tenantAdminUser);
+
+    assert.equal(repository.createCommands[0]?.activationDate, today);
+  });
+
+  it("rejects a future activation date on creation", async () => {
+    const repository = createRepository();
+    const service = createService(repository);
+
+    await assert.rejects(
+      () =>
+        service.createAdultoMayor(
+          { ...createCommand(), activationDate: "2999-01-01" },
+          tenantAdminUser,
+        ),
+      { constructor: BadRequestException },
+    );
+    assert.equal(repository.createCommands.length, 0);
+  });
+
+  it("inactivates and then reintegrates an adulto mayor with audited periods", async () => {
+    const repository = createRepository();
+    const service = createService(repository);
+    const adultoMayorId = records[0]!.id;
+
+    const inactivated = await service.inactivateProgram(
+      adultoMayorId,
+      { inactivationDate: "2026-09-01", reason: "Se mudo con un familiar" },
+      tenantAdminUser,
+    );
+
+    assert.equal(inactivated.periods[0]?.inactivationDate, "2026-09-01");
+    assert.equal(inactivated.periods[0]?.inactivationReason, "Se mudo con un familiar");
+    assert.equal(inactivated.programStatus, "inactive");
+
+    await assert.rejects(
+      () =>
+        service.inactivateProgram(
+          adultoMayorId,
+          { inactivationDate: "2026-09-02", reason: null },
+          tenantAdminUser,
+        ),
+      { constructor: BadRequestException },
+    );
+
+    const reintegrated = await service.reintegrateProgram(
+      adultoMayorId,
+      { activationDate: "2026-10-01", reason: null },
+      tenantAdminUser,
+    );
+
+    assert.equal(reintegrated.programStatus, "active");
+    assert.deepEqual(
+      reintegrated.periods.map((period) => [period.activationDate, period.inactivationDate]),
+      [
+        ["2026-07-15", "2026-09-01"],
+        ["2026-10-01", null],
+      ],
+    );
+    assert.deepEqual(
+      repository.programAudits.map((audit) => audit.action),
+      ["adultos-mayores.program-inactivated", "adultos-mayores.program-reintegrated"],
+    );
+  });
+
+  it("forbids auditors from changing the program status", async () => {
+    const repository = createRepository();
+    const service = createService(repository);
+
+    await assert.rejects(
+      () =>
+        service.inactivateProgram(
+          records[0]!.id,
+          { inactivationDate: "2026-09-01", reason: null },
+          tenantAuditorUser,
+        ),
+      { constructor: ForbiddenException },
+    );
+  });
+
   it("calculates age from birth date", () => {
     assert.equal(calculateAgeFromBirthDate("1948-03-12", new Date("2026-04-22T12:00:00Z")), 78);
     assert.equal(calculateAgeFromBirthDate("1948-10-12", new Date("2026-04-22T12:00:00Z")), 77);
@@ -445,7 +548,28 @@ function createRepository(): AdultosMayoresRepository & {
   trashQueries: FindAdultosMayoresTrashQuery[];
   trashCommands: SendAdultoMayorToTrashCommand[];
   restoreCommands: RestoreAdultoMayorCommand[];
+  createCommands: CreateAdultoMayorRecordCommand[];
+  programAudits: AdultoMayorAuditCommand[];
+  periods: Map<string, AdultoMayorProgramPeriodRecord[]>;
 } {
+  const createCommands: CreateAdultoMayorRecordCommand[] = [];
+  const programAudits: AdultoMayorAuditCommand[] = [];
+  const periods = new Map<string, AdultoMayorProgramPeriodRecord[]>(
+    records.map((record) => [
+      record.id,
+      [
+        {
+          id: randomUUID(),
+          activationDate: "2026-07-15",
+          inactivationDate: null,
+          activationReason: null,
+          inactivationReason: null,
+          activatedByUserFullName: null,
+          inactivatedByUserFullName: null,
+        },
+      ],
+    ]),
+  );
   const queries: FindAdultosMayoresQuery[] = [];
   const trashQueries: FindAdultosMayoresTrashQuery[] = [];
   const trashCommands: SendAdultoMayorToTrashCommand[] = [];
@@ -457,6 +581,38 @@ function createRepository(): AdultosMayoresRepository & {
     trashQueries,
     trashCommands,
     restoreCommands,
+    createCommands,
+    programAudits,
+    periods,
+    async findProgramPeriods(adultoMayorId) {
+      return periods.get(adultoMayorId) ?? [];
+    },
+    async inactivateProgram(command, audit) {
+      const open = (periods.get(command.adultoMayorId) ?? []).find(
+        (period) => period.id === command.periodId && period.inactivationDate === null,
+      );
+
+      if (open === undefined) {
+        return false;
+      }
+
+      open.inactivationDate = command.inactivationDate;
+      open.inactivationReason = command.reason;
+      programAudits.push(audit);
+      return true;
+    },
+    async reintegrateProgram(command, audit) {
+      periods.get(command.adultoMayorId)?.push({
+        id: randomUUID(),
+        activationDate: command.activationDate,
+        inactivationDate: null,
+        activationReason: command.reason,
+        inactivationReason: null,
+        activatedByUserFullName: null,
+        inactivatedByUserFullName: null,
+      });
+      programAudits.push(audit);
+    },
     async findMany(query) {
       queries.push(query);
 
@@ -513,6 +669,7 @@ function createRepository(): AdultosMayoresRepository & {
       return [{ id: tenantId, name: "Centro de Vida Demo" }];
     },
     async create(command) {
+      createCommands.push(command);
       const record: AdultoMayorRecord = {
         id: "25ce51a5-f0a6-4374-a6b4-815348cbd26d",
         tenantName: "Centro de Vida Demo",

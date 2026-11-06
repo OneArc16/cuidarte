@@ -5,6 +5,7 @@ import { type UserRole } from "./auth.js";
 export const adultoMayorDocumentTypeSchema = z.enum(["cc", "ce", "passport", "other"]);
 export const adultoMayorSexSchema = z.enum(["female", "male", "other"]);
 export const adultoMayorStatusSchema = z.enum(["alive", "deceased"]);
+export const adultoMayorProgramStatusSchema = z.enum(["active", "inactive"]);
 export const adultoMayorZoneSchema = z.enum(["urban", "rural"]);
 export const adultoMayorAttentionFilterSchema = z.enum(["all", "medical", "nursing"]);
 export const adultoMayorBloodTypeSchema = z.enum([
@@ -273,6 +274,7 @@ export const adultoMayorListItemSchema = z.object({
   sex: adultoMayorSexSchema,
   status: adultoMayorStatusSchema,
   deathDate: dateSchema.nullable().optional().default(null),
+  programStatus: adultoMayorProgramStatusSchema.optional().default("active"),
   createdAt: z.string().min(1),
   updatedAt: z.string().min(1),
 });
@@ -386,6 +388,7 @@ export const createAdultoMayorRequestSchema = adultoMayorCommandBaseSchema
   .extend({
     tenantId: z.uuid().nullable().optional().default(null),
     status: adultoMayorStatusSchema.optional().default("alive"),
+    activationDate: dateSchema.nullable().optional().default(null),
   })
   .superRefine(validateAdultoMayorStatusFields);
 
@@ -433,6 +436,31 @@ export const adultoMayorStatusHistoryQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 });
 
+export const adultoMayorProgramPeriodSchema = z.object({
+  id: z.uuid(),
+  activationDate: dateSchema,
+  inactivationDate: dateSchema.nullable(),
+  activationReason: z.string().max(500).nullable(),
+  inactivationReason: z.string().max(500).nullable(),
+  activatedByUserFullName: z.string().min(1).max(180).nullable(),
+  inactivatedByUserFullName: z.string().min(1).max(180).nullable(),
+});
+
+export const adultoMayorProgramPeriodsResponseSchema = z.object({
+  programStatus: adultoMayorProgramStatusSchema,
+  periods: z.array(adultoMayorProgramPeriodSchema),
+});
+
+export const inactivateAdultoMayorRequestSchema = z.object({
+  inactivationDate: dateSchema,
+  reason: nullableTextSchema(500).optional().default(null),
+});
+
+export const reintegrateAdultoMayorRequestSchema = z.object({
+  activationDate: dateSchema,
+  reason: nullableTextSchema(500).optional().default(null),
+});
+
 export const adultoMayorDetailResponseSchema = adultoMayorDetailSchema;
 export const adultoMayorDocumentResponseSchema = z.object({ document: adultoMayorDocumentSchema });
 
@@ -451,6 +479,13 @@ export const adultoMayorImportHistoryResponseSchema = z.object({
 export type AdultoMayorDocumentType = z.infer<typeof adultoMayorDocumentTypeSchema>;
 export type AdultoMayorSex = z.infer<typeof adultoMayorSexSchema>;
 export type AdultoMayorStatus = z.infer<typeof adultoMayorStatusSchema>;
+export type AdultoMayorProgramStatus = z.infer<typeof adultoMayorProgramStatusSchema>;
+export type AdultoMayorProgramPeriod = z.infer<typeof adultoMayorProgramPeriodSchema>;
+export type AdultoMayorProgramPeriodsResponse = z.infer<
+  typeof adultoMayorProgramPeriodsResponseSchema
+>;
+export type InactivateAdultoMayorRequest = z.input<typeof inactivateAdultoMayorRequestSchema>;
+export type ReintegrateAdultoMayorRequest = z.input<typeof reintegrateAdultoMayorRequestSchema>;
 export type AdultoMayorZone = z.infer<typeof adultoMayorZoneSchema>;
 export type AdultoMayorBloodType = z.infer<typeof adultoMayorBloodTypeSchema>;
 export type AdultoMayorHealthRegime = z.infer<typeof adultoMayorHealthRegimeSchema>;
@@ -497,9 +532,9 @@ type AdultoMayorStatusCommandFields = {
 };
 export type CreateAdultoMayorRequest = Omit<
   z.infer<typeof createAdultoMayorRequestSchema>,
-  keyof AdultoMayorStatusCommandFields
+  keyof AdultoMayorStatusCommandFields | "activationDate"
 > &
-  AdultoMayorStatusCommandFields;
+  AdultoMayorStatusCommandFields & { activationDate?: string | null };
 export type UpdateAdultoMayorRequest = Omit<
   z.infer<typeof updateAdultoMayorRequestSchema>,
   keyof AdultoMayorStatusCommandFields

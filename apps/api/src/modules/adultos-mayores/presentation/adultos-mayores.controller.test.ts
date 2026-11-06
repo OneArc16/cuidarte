@@ -37,6 +37,7 @@ describe("AdultosMayoresController exports", () => {
         email: null,
         tenantId: null,
         deathDate: null,
+        activationDate: null,
         statusChangeReason: null,
       },
       actor: currentUser,

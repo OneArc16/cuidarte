@@ -21,8 +21,11 @@ import {
 } from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
+import { alias } from "drizzle-orm/pg-core";
+
 import {
   adultoMayorDocuments,
+  adultoMayorProgramPeriods,
   adultoMayorStatusHistory,
   adultosMayores,
   atencionesEnfermeria,
@@ -50,6 +53,9 @@ import {
   type AdultosMayoresPageRecord,
   type RestoreAdultoMayorCommand,
   type SendAdultoMayorToTrashCommand,
+  type AdultoMayorProgramPeriodRecord,
+  type InactivateAdultoMayorProgramCommand,
+  type ReintegrateAdultoMayorProgramCommand,
 } from "../domain/adulto-mayor.types";
 import { type AdultosMayoresRepository } from "../domain/adultos-mayores.repository";
 
@@ -72,6 +78,7 @@ type AdultoMayorSelectionRow = {
   sex: AdultoMayorRecord["sex"];
   status: AdultoMayorRecord["status"];
   deathDate: string | null;
+  programStatus: NonNullable<AdultoMayorRecord["programStatus"]>;
   educationLevel: string | null;
   disability: string | null;
   populationGroup: string | null;
@@ -374,6 +381,13 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
         throw new Error("No fue posible crear el adulto mayor.");
       }
 
+      await tx.insert(adultoMayorProgramPeriods).values({
+        adultoMayorId: created.id,
+        tenantId: command.tenantId,
+        activationDate: command.activationDate,
+        activatedByUserId: audit.actorUserId,
+      });
+
       await tx.insert(auditLogs).values(this.toAuditInsert(audit));
 
       const [row] = await tx
@@ -389,6 +403,88 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       }
 
       return this.toRecord(row);
+    });
+  }
+
+  async findProgramPeriods(adultoMayorId: string): Promise<AdultoMayorProgramPeriodRecord[]> {
+    const activatedBy = alias(users, "program_activated_by");
+    const inactivatedBy = alias(users, "program_inactivated_by");
+
+    return await this.database.db
+      .select({
+        id: adultoMayorProgramPeriods.id,
+        activationDate: adultoMayorProgramPeriods.activationDate,
+        inactivationDate: adultoMayorProgramPeriods.inactivationDate,
+        activationReason: adultoMayorProgramPeriods.activationReason,
+        inactivationReason: adultoMayorProgramPeriods.inactivationReason,
+        activatedByUserFullName: activatedBy.fullName,
+        inactivatedByUserFullName: inactivatedBy.fullName,
+      })
+      .from(adultoMayorProgramPeriods)
+      .leftJoin(activatedBy, eq(activatedBy.id, adultoMayorProgramPeriods.activatedByUserId))
+      .leftJoin(inactivatedBy, eq(inactivatedBy.id, adultoMayorProgramPeriods.inactivatedByUserId))
+      .where(eq(adultoMayorProgramPeriods.adultoMayorId, adultoMayorId))
+      .orderBy(asc(adultoMayorProgramPeriods.activationDate));
+  }
+
+  async inactivateProgram(
+    command: InactivateAdultoMayorProgramCommand,
+    audit: AdultoMayorAuditCommand,
+  ): Promise<boolean> {
+    return await this.database.db.transaction(async (tx) => {
+      const now = new Date();
+      const [closed] = await tx
+        .update(adultoMayorProgramPeriods)
+        .set({
+          inactivationDate: command.inactivationDate,
+          inactivationReason: command.reason,
+          inactivatedByUserId: command.actorUserId,
+          updatedAt: now,
+        })
+        .where(
+          and(
+            eq(adultoMayorProgramPeriods.id, command.periodId),
+            eq(adultoMayorProgramPeriods.adultoMayorId, command.adultoMayorId),
+            isNull(adultoMayorProgramPeriods.inactivationDate),
+          ),
+        )
+        .returning({ id: adultoMayorProgramPeriods.id });
+
+      if (closed === undefined) {
+        return false;
+      }
+
+      await tx
+        .update(adultosMayores)
+        .set({ programStatus: "inactive", updatedAt: now })
+        .where(eq(adultosMayores.id, command.adultoMayorId));
+      await tx.insert(auditLogs).values(this.toAuditInsert(audit));
+
+      return true;
+    });
+  }
+
+  async reintegrateProgram(
+    command: ReintegrateAdultoMayorProgramCommand,
+    audit: AdultoMayorAuditCommand,
+  ): Promise<void> {
+    await this.database.db.transaction(async (tx) => {
+      const now = new Date();
+
+      await tx.insert(adultoMayorProgramPeriods).values({
+        adultoMayorId: command.adultoMayorId,
+        tenantId: command.tenantId,
+        activationDate: command.activationDate,
+        activationReason: command.reason,
+        activatedByUserId: command.actorUserId,
+        createdAt: now,
+        updatedAt: now,
+      });
+      await tx
+        .update(adultosMayores)
+        .set({ programStatus: "active", updatedAt: now })
+        .where(eq(adultosMayores.id, command.adultoMayorId));
+      await tx.insert(auditLogs).values(this.toAuditInsert(audit));
     });
   }
 
@@ -636,6 +732,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
       sex: adultosMayores.sex,
       status: adultosMayores.status,
       deathDate: adultosMayores.deathDate,
+      programStatus: adultosMayores.programStatus,
       educationLevel: adultosMayores.educationLevel,
       disability: adultosMayores.disability,
       populationGroup: adultosMayores.populationGroup,

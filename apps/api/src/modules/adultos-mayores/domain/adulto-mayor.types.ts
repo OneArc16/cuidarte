@@ -5,6 +5,7 @@ import {
   type AdultoMayorHealthRegime,
   type AdultoMayorSex,
   type AdultoMayorStatus,
+  type AdultoMayorProgramStatus,
   type AdultoMayorZone,
 } from "@cuidarte/contracts";
 
@@ -86,7 +87,35 @@ export type AdultoMayorCommandRecord = {
   socialProgramBeneficiary: boolean;
 };
 
-export type CreateAdultoMayorRecordCommand = AdultoMayorCommandRecord;
+export type CreateAdultoMayorRecordCommand = AdultoMayorCommandRecord & {
+  activationDate: string;
+};
+
+export type AdultoMayorProgramPeriodRecord = {
+  id: string;
+  activationDate: string;
+  inactivationDate: string | null;
+  activationReason: string | null;
+  inactivationReason: string | null;
+  activatedByUserFullName: string | null;
+  inactivatedByUserFullName: string | null;
+};
+
+export type InactivateAdultoMayorProgramCommand = {
+  adultoMayorId: string;
+  periodId: string;
+  inactivationDate: string;
+  reason: string | null;
+  actorUserId: string;
+};
+
+export type ReintegrateAdultoMayorProgramCommand = {
+  adultoMayorId: string;
+  tenantId: string;
+  activationDate: string;
+  reason: string | null;
+  actorUserId: string;
+};
 
 export type UpdateAdultoMayorRecordCommand = Omit<AdultoMayorCommandRecord, "tenantId"> & {
   id: string;
@@ -99,6 +128,8 @@ export type AdultoMayorAuditCommand = {
     | "adultos-mayores.created"
     | "adultos-mayores.updated"
     | "adultos-mayores.status-changed"
+    | "adultos-mayores.program-inactivated"
+    | "adultos-mayores.program-reintegrated"
     | "adultos-mayores.deleted"
     | "adultos-mayores.restored";
   targetTenantId: string;
@@ -125,6 +156,7 @@ export type AdultoMayorRecord = {
   sex: AdultoMayorSex;
   status: AdultoMayorStatus;
   deathDate?: string | null;
+  programStatus?: AdultoMayorProgramStatus;
   educationLevel: string | null;
   disability: string | null;
   populationGroup: string | null;

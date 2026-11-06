@@ -10,7 +10,11 @@ import {
   type AuthUser,
   type CreateAdultoMayorRequest,
   type UpdateAdultoMayorRequest,
+  type AdultoMayorProgramPeriodsResponse,
+  type InactivateAdultoMayorRequest,
+  type ReintegrateAdultoMayorRequest,
   adultoMayorDetailSchema,
+  adultoMayorProgramPeriodsResponseSchema,
   adultoMayorListItemSchema,
   adultoMayorListResponseSchema,
   adultoMayorTenantOptionSchema,
@@ -44,6 +48,12 @@ import {
   assertAdultoMayorStatusData,
   canCorrectDeceasedStatus,
 } from "../domain/adulto-mayor-status-policy";
+import {
+  assertAdultoMayorActivationDate,
+  assertAdultoMayorCanBeInactivated,
+  assertAdultoMayorCanBeReintegrated,
+} from "../domain/adulto-mayor-program-policy";
+import { formatCurrentDate } from "../domain/adulto-mayor-dates";
 import { UbicacionesService } from "../../ubicaciones/application/ubicaciones.service";
 import { EpsService } from "../../eps/application/eps.service";
 import {
@@ -311,6 +321,13 @@ export class AdultosMayoresService {
       deathDate,
     });
 
+    const activationDate = command.activationDate ?? formatCurrentDate();
+    assertAdultoMayorActivationDate({
+      activationDate,
+      birthDate: command.birthDate,
+      today: formatCurrentDate(),
+    });
+
     if (
       actor.role !== "super_admin" &&
       command.tenantId !== null &&
@@ -338,6 +355,7 @@ export class AdultosMayoresService {
         {
           ...command,
           deathDate,
+          activationDate,
           departmentId: location.department.id,
           municipalityId: location.municipality.id,
           department: location.department.name,
@@ -362,6 +380,115 @@ export class AdultosMayoresService {
       this.throwConflictForUniqueViolation(error);
       throw error;
     }
+  }
+
+  async getProgramPeriods(
+    adultoMayorId: string,
+    actor: AuthUser,
+  ): Promise<AdultoMayorProgramPeriodsResponse> {
+    const scope = this.resolveScopeOrThrow(actor);
+    const record = await this.adultosMayoresRepository.findById({ id: adultoMayorId, scope });
+
+    if (record === null) {
+      throw new NotFoundException("Adulto mayor no encontrado.");
+    }
+
+    return await this.toProgramPeriodsResponse(adultoMayorId);
+  }
+
+  async inactivateProgram(
+    adultoMayorId: string,
+    command: InactivateAdultoMayorRequest,
+    actor: AuthUser,
+  ): Promise<AdultoMayorProgramPeriodsResponse> {
+    this.ensureCanManage(actor);
+    const record = await this.findManagedRecordOrThrow(adultoMayorId, actor);
+    const reason = command.reason ?? null;
+    const periods = await this.adultosMayoresRepository.findProgramPeriods(adultoMayorId);
+    const openPeriod = assertAdultoMayorCanBeInactivated({
+      periods,
+      inactivationDate: command.inactivationDate,
+      today: formatCurrentDate(),
+    });
+
+    const closed = await this.adultosMayoresRepository.inactivateProgram(
+      {
+        adultoMayorId,
+        periodId: openPeriod.id,
+        inactivationDate: command.inactivationDate,
+        reason,
+        actorUserId: actor.id,
+      },
+      {
+        actorUserId: actor.id,
+        action: "adultos-mayores.program-inactivated",
+        targetTenantId: record.tenantId,
+        summary: `Adulto mayor inactivado en el programa: ${record.names} ${record.surnames}`,
+        metadata: {
+          adultoMayorId,
+          activationDate: openPeriod.activationDate,
+          inactivationDate: command.inactivationDate,
+          reason,
+        },
+      },
+    );
+
+    if (!closed) {
+      throw new ConflictException("El periodo del programa cambio mientras lo inactivabas.");
+    }
+
+    return await this.toProgramPeriodsResponse(adultoMayorId);
+  }
+
+  async reintegrateProgram(
+    adultoMayorId: string,
+    command: ReintegrateAdultoMayorRequest,
+    actor: AuthUser,
+  ): Promise<AdultoMayorProgramPeriodsResponse> {
+    this.ensureCanManage(actor);
+    const record = await this.findManagedRecordOrThrow(adultoMayorId, actor);
+    const reason = command.reason ?? null;
+    const periods = await this.adultosMayoresRepository.findProgramPeriods(adultoMayorId);
+    const today = formatCurrentDate();
+
+    assertAdultoMayorCanBeReintegrated({
+      periods,
+      activationDate: command.activationDate,
+      status: record.status,
+      today,
+    });
+    assertAdultoMayorActivationDate({
+      activationDate: command.activationDate,
+      birthDate: record.birthDate,
+      today,
+    });
+
+    try {
+      await this.adultosMayoresRepository.reintegrateProgram(
+        {
+          adultoMayorId,
+          tenantId: record.tenantId,
+          activationDate: command.activationDate,
+          reason,
+          actorUserId: actor.id,
+        },
+        {
+          actorUserId: actor.id,
+          action: "adultos-mayores.program-reintegrated",
+          targetTenantId: record.tenantId,
+          summary: `Adulto mayor reintegrado al programa: ${record.names} ${record.surnames}`,
+          metadata: { adultoMayorId, activationDate: command.activationDate, reason },
+        },
+      );
+    } catch (error: unknown) {
+      if (isUniqueViolation(error)) {
+        throw new ConflictException("El adulto mayor ya esta activo en el programa.");
+      }
+
+      throw error;
+    }
+
+    return await this.toProgramPeriodsResponse(adultoMayorId);
   }
 
   async updateAdultoMayor(
@@ -488,6 +615,30 @@ export class AdultosMayoresService {
     return scope;
   }
 
+  private async findManagedRecordOrThrow(adultoMayorId: string, actor: AuthUser) {
+    const scope = this.resolveScopeOrThrow(actor);
+    const record = await this.adultosMayoresRepository.findById({ id: adultoMayorId, scope });
+
+    if (record === null) {
+      throw new NotFoundException("Adulto mayor no encontrado.");
+    }
+
+    return record;
+  }
+
+  private async toProgramPeriodsResponse(
+    adultoMayorId: string,
+  ): Promise<AdultoMayorProgramPeriodsResponse> {
+    const periods = await this.adultosMayoresRepository.findProgramPeriods(adultoMayorId);
+
+    return adultoMayorProgramPeriodsResponseSchema.parse({
+      programStatus: periods.some((period) => period.inactivationDate === null)
+        ? "active"
+        : "inactive",
+      periods,
+    });
+  }
+
   private ensureCanManage(actor: AuthUser) {
     if (!canManageAdultosMayores(actor)) {
       throw new ForbiddenException("No tienes permisos para crear o actualizar adultos mayores.");
@@ -534,6 +685,7 @@ export class AdultosMayoresService {
       sex: record.sex,
       status: record.status,
       deathDate: record.deathDate,
+      programStatus: record.programStatus ?? "active",
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
     });
@@ -604,4 +756,16 @@ export class AdultosMayoresService {
       throw new ConflictException("Ya existe un adulto mayor con ese documento en este centro.");
     }
   }
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) {
+    return false;
+  }
+
+  if ("code" in error && error.code === "23505") {
+    return true;
+  }
+
+  return "cause" in error && isUniqueViolation(error.cause);
 }

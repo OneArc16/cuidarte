@@ -2,7 +2,9 @@ import { Injectable } from "@nestjs/common";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 
 import { DatabaseService } from "../../../database/database.service";
+import { formatCurrentDate } from "../domain/adulto-mayor-dates";
 import {
+  adultoMayorProgramPeriods,
   adultosMayores,
   adultoMayorStatusHistory,
   adultoMayorImportBatches,
@@ -834,7 +836,7 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
       return [];
     }
 
-    return await db
+    const inserted = await db
       .insert(adultosMayores)
       .values(
         params.rows.map((row) => ({
@@ -852,6 +854,21 @@ export class DrizzleAdultosMayoresImportRepository implements AdultosMayoresImpo
         documentType: adultosMayores.documentType,
         documentNumber: adultosMayores.documentNumber,
       });
+
+    if (inserted.length > 0) {
+      // Imported adults enter the program on the day the import is confirmed.
+      const activationDate = formatCurrentDate();
+      await db.insert(adultoMayorProgramPeriods).values(
+        inserted.map((adulto) => ({
+          adultoMayorId: adulto.id,
+          tenantId: params.tenantId,
+          activationDate,
+          activatedByUserId: params.requestedByUserId,
+        })),
+      );
+    }
+
+    return inserted;
   }
 
   private buildAdultoMutableValues(payload: Record<string, unknown>) {
