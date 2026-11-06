@@ -90,6 +90,27 @@ describe("politica de periodos del programa de adultos mayores", () => {
         }),
       BadRequestException,
     );
+    assert.doesNotThrow(() =>
+      assertAdultoMayorActivationDate({
+        activationDate: "2026-06-10",
+        birthDate: "1940-01-01",
+        deathDate: "2026-06-10",
+        today: "2026-11-06",
+      }),
+    );
+    assert.throws(
+      () =>
+        assertAdultoMayorActivationDate({
+          activationDate: "2026-06-11",
+          birthDate: "1940-01-01",
+          deathDate: "2026-06-10",
+          today: "2026-11-06",
+        }),
+      (error: unknown) =>
+        error instanceof BadRequestException &&
+        error.message ===
+          "La fecha de activacion no puede ser posterior a la fecha de defuncion (10/06/2026).",
+    );
   });
 
   it("solo inactiva un periodo abierto con fecha posterior a su activacion", () => {

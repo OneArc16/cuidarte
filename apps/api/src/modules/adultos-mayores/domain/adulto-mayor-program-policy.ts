@@ -40,6 +40,7 @@ export function assertAdultoMayorProgramDateAllowed(params: {
 export function assertAdultoMayorActivationDate(params: {
   activationDate: string;
   birthDate: string;
+  deathDate?: string | null;
   today: string;
 }) {
   if (params.activationDate > params.today) {
@@ -49,6 +50,16 @@ export function assertAdultoMayorActivationDate(params: {
   if (params.activationDate < params.birthDate) {
     throw new BadRequestException(
       "La fecha de activacion no puede ser anterior a la fecha de nacimiento.",
+    );
+  }
+
+  if (
+    params.deathDate !== undefined &&
+    params.deathDate !== null &&
+    params.activationDate > params.deathDate
+  ) {
+    throw new BadRequestException(
+      `La fecha de activacion no puede ser posterior a la fecha de defuncion (${formatDateForMessage(params.deathDate)}).`,
     );
   }
 }

@@ -325,6 +325,7 @@ export class AdultosMayoresService {
     assertAdultoMayorActivationDate({
       activationDate,
       birthDate: command.birthDate,
+      deathDate,
       today: formatCurrentDate(),
     });
 
