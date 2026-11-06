@@ -3,6 +3,7 @@ import { type AnyPgColumn } from "drizzle-orm/pg-core";
 
 import { adultoMayorProgramPeriods } from "../../../database/schema";
 import { type AdultoMayorProgramPeriodRange } from "../domain/adulto-mayor-program-policy";
+import { type AdultoMayorExportProgramPeriod } from "../domain/adulto-mayor.types";
 
 const PERIODS_ALIAS = sql.identifier("program_period");
 
@@ -28,6 +29,25 @@ export function selectAdultoMayorProgramPeriods(adultoMayorId: AnyPgColumn) {
       json_build_object(
         'activationDate', ${activationDate},
         'inactivationDate', ${periodColumn(adultoMayorProgramPeriods.inactivationDate)}
+      )
+      order by ${activationDate}
+    )
+    from ${adultoMayorProgramPeriods} as ${PERIODS_ALIAS}
+    where ${periodColumn(adultoMayorProgramPeriods.adultoMayorId)} = ${qualified(adultoMayorId)}
+  ), '[]'::json)`;
+}
+
+/** Same as `selectAdultoMayorProgramPeriods`, plus the reasons; used by exports. */
+export function selectAdultoMayorProgramPeriodsWithReasons(adultoMayorId: AnyPgColumn) {
+  const activationDate = periodColumn(adultoMayorProgramPeriods.activationDate);
+
+  return sql<AdultoMayorExportProgramPeriod[]>`coalesce((
+    select json_agg(
+      json_build_object(
+        'activationDate', ${activationDate},
+        'inactivationDate', ${periodColumn(adultoMayorProgramPeriods.inactivationDate)},
+        'activationReason', ${periodColumn(adultoMayorProgramPeriods.activationReason)},
+        'inactivationReason', ${periodColumn(adultoMayorProgramPeriods.inactivationReason)}
       )
       order by ${activationDate}
     )

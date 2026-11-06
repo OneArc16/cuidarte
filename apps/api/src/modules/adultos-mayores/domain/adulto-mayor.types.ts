@@ -90,8 +90,13 @@ export type AdultoMayorCommandRecord = {
   socialProgramBeneficiary: boolean;
 };
 
+export type AdultoMayorExportProgramPeriod = AdultoMayorProgramPeriodRange & {
+  activationReason: string | null;
+  inactivationReason: string | null;
+};
+
 export type AdultoMayorExportItem = AdultoMayorDetail & {
-  programPeriods: AdultoMayorProgramPeriodRange[];
+  programPeriods: AdultoMayorExportProgramPeriod[];
 };
 
 export type CreateAdultoMayorRecordCommand = AdultoMayorCommandRecord & {
@@ -165,7 +170,7 @@ export type AdultoMayorRecord = {
   deathDate?: string | null;
   programStatus?: AdultoMayorProgramStatus;
   /** Only loaded for exports. */
-  programPeriods?: AdultoMayorProgramPeriodRange[] | undefined;
+  programPeriods?: AdultoMayorExportProgramPeriod[] | undefined;
   educationLevel: string | null;
   disability: string | null;
   populationGroup: string | null;

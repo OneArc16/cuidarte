@@ -59,14 +59,14 @@ describe("AdultosMayoresExportService", () => {
             ...buildDetail(),
             programStatus: "active",
             programPeriods: [
-              { activationDate: "2026-07-15", inactivationDate: "2026-09-01" },
-              { activationDate: "2026-10-01", inactivationDate: null },
+              period("2026-07-15", "2026-09-01", null, "Hospitalizacion"),
+              period("2026-10-01", null, "Regreso al centro"),
             ],
           },
           {
             ...buildDetail({ id: "1e3c7c94-33f4-4cf2-91ea-bb9f18db4cd2" }),
             programStatus: "inactive",
-            programPeriods: [{ activationDate: "2026-07-15", inactivationDate: "2026-09-01" }],
+            programPeriods: [period("2026-07-15", "2026-09-01", null, "Se mudo con un familiar")],
           },
         ];
       },
@@ -80,23 +80,30 @@ describe("AdultosMayoresExportService", () => {
     assert.ok(worksheet);
     assert.equal(worksheet.getCell("I1").value, "Fecha de defunción");
     assert.equal(worksheet.getCell("AJ1").value, "Salud · Beneficiario programa social");
-    assert.deepEqual(
-      ["AK1", "AL1", "AM1", "AN1"].map((cell) => worksheet.getCell(cell).value),
-      [
-        "Programa · Estado",
-        "Programa · Fecha de activación",
-        "Programa · Fecha de inactivación",
-        "Programa · Historial de periodos",
-      ],
-    );
-    assert.deepEqual(
-      ["AK2", "AL2", "AM2", "AN2"].map((cell) => worksheet.getCell(cell).value),
-      ["Activo", "01/10/2026", "", "15/07/2026 - 01/09/2026; 01/10/2026 - actual"],
-    );
-    assert.deepEqual(
-      ["AK3", "AL3", "AM3", "AN3"].map((cell) => worksheet.getCell(cell).value),
-      ["Inactivo", "15/07/2026", "01/09/2026", "15/07/2026 - 01/09/2026"],
-    );
+    const programCells = (row: number) =>
+      ["AK", "AL", "AM", "AN", "AO"].map((column) => worksheet.getCell(`${column}${row}`).value);
+
+    assert.deepEqual(programCells(1), [
+      "Programa · Estado",
+      "Programa · Fecha de activación",
+      "Programa · Fecha de inactivación",
+      "Programa · Historial de periodos",
+      "Programa · Motivo",
+    ]);
+    assert.deepEqual(programCells(2), [
+      "Activo",
+      "01/10/2026",
+      "",
+      "15/07/2026 - 01/09/2026 (salida: Hospitalizacion); 01/10/2026 - actual (ingreso: Regreso al centro)",
+      "Regreso al centro",
+    ]);
+    assert.deepEqual(programCells(3), [
+      "Inactivo",
+      "15/07/2026",
+      "01/09/2026",
+      "15/07/2026 - 01/09/2026 (salida: Se mudo con un familiar)",
+      "Se mudo con un familiar",
+    ]);
   });
 
   it("incluye el estado y el periodo actual del programa en el PDF", () => {
@@ -106,14 +113,14 @@ describe("AdultosMayoresExportService", () => {
         ...buildDetail(),
         programStatus: "active" as const,
         programPeriods: [
-          { activationDate: "2026-07-15", inactivationDate: "2026-09-01" },
-          { activationDate: "2026-10-01", inactivationDate: null },
+          period("2026-07-15", "2026-09-01", null, "Hospitalizacion"),
+          period("2026-10-01", null, "Regreso al centro"),
         ],
       },
       {
         ...buildDetail({ id: "1e3c7c94-33f4-4cf2-91ea-bb9f18db4cd2" }),
         programStatus: "inactive" as const,
-        programPeriods: [{ activationDate: "2026-07-15", inactivationDate: "2026-09-01" }],
+        programPeriods: [period("2026-07-15", "2026-09-01", null, "Se mudo con un familiar")],
       },
     ];
 
@@ -121,17 +128,34 @@ describe("AdultosMayoresExportService", () => {
       service as unknown as { buildPdfHtml(items: unknown[], includeTenant: boolean): string }
     ).buildPdfHtml(items, false);
 
-    assert.match(html, /<th>Programa<\/th>\s*<th>Periodo actual<\/th>/);
-    assert.match(html, /<td>Activo<\/td>\s*<td>01\/10\/2026 - actual<\/td>/);
-    assert.match(html, /<td>Inactivo<\/td>\s*<td>15\/07\/2026 - 01\/09\/2026<\/td>/);
+    assert.match(html, /<th>Programa<\/th>\s*<th>Periodo actual<\/th>\s*<th>Motivo<\/th>/);
+    assert.match(
+      html,
+      /<td>Activo<\/td>\s*<td>01\/10\/2026 - actual<\/td>\s*<td>Regreso al centro<\/td>/,
+    );
+    assert.match(
+      html,
+      /<td>Inactivo<\/td>\s*<td>15\/07\/2026 - 01\/09\/2026<\/td>\s*<td>Se mudo con un familiar<\/td>/,
+    );
 
     const basicPdf = buildBasicPdf(items, false).toString("latin1");
 
     assert.ok(basicPdf.includes("Periodo actual"));
     assert.ok(basicPdf.includes("01/10/2026 - actual"));
     assert.ok(basicPdf.includes("15/07/2026 - 01/09/2026"));
+    assert.ok(basicPdf.includes("Motivo"));
+    assert.ok(basicPdf.includes("Regreso al cent"));
   });
 });
+
+function period(
+  activationDate: string,
+  inactivationDate: string | null,
+  activationReason: string | null = null,
+  inactivationReason: string | null = null,
+) {
+  return { activationDate, inactivationDate, activationReason, inactivationReason };
+}
 
 function buildDetail(overrides: Partial<AdultoMayorDetail> = {}): AdultoMayorDetail {
   return {

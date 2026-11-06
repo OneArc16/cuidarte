@@ -58,7 +58,7 @@ import {
   type ReintegrateAdultoMayorProgramCommand,
 } from "../domain/adulto-mayor.types";
 import { type AdultosMayoresRepository } from "../domain/adultos-mayores.repository";
-import { selectAdultoMayorProgramPeriods } from "./adulto-mayor-program-periods.sql";
+import { selectAdultoMayorProgramPeriodsWithReasons } from "./adulto-mayor-program-periods.sql";
 
 type AdultoMayorSelectionRow = {
   id: string;
@@ -118,7 +118,7 @@ export class DrizzleAdultosMayoresRepository implements AdultosMayoresRepository
     const rows = await this.database.db
       .select({
         ...this.getAdultoMayorSelection(),
-        programPeriods: selectAdultoMayorProgramPeriods(adultosMayores.id),
+        programPeriods: selectAdultoMayorProgramPeriodsWithReasons(adultosMayores.id),
       })
       .from(adultosMayores)
       .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))

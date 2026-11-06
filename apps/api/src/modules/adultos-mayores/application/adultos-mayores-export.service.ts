@@ -162,7 +162,8 @@ export class AdultosMayoresExportService {
       { header: "Programa · Estado", key: "programaEstado", width: 18 },
       { header: "Programa · Fecha de activación", key: "programaFechaActivacion", width: 22 },
       { header: "Programa · Fecha de inactivación", key: "programaFechaInactivacion", width: 22 },
-      { header: "Programa · Historial de periodos", key: "programaHistorial", width: 44 },
+      { header: "Programa · Historial de periodos", key: "programaHistorial", width: 60 },
+      { header: "Programa · Motivo", key: "programaMotivo", width: 36 },
     ];
 
     if (includeTenant) {
@@ -220,7 +221,20 @@ export class AdultosMayoresExportService {
         latestPeriod === undefined ? "" : formatDate(latestPeriod.activationDate),
       programaFechaInactivacion:
         latestPeriod?.inactivationDate == null ? "" : formatDate(latestPeriod.inactivationDate),
-      programaHistorial: adultoMayor.programPeriods.map(formatProgramPeriod).join("; "),
+      programaHistorial: adultoMayor.programPeriods
+        .map((period) => {
+          const reasons = [
+            period.activationReason === null ? null : `ingreso: ${period.activationReason}`,
+            period.inactivationReason === null ? null : `salida: ${period.inactivationReason}`,
+          ].filter((reason) => reason !== null);
+          const formattedPeriod = formatProgramPeriod(period);
+
+          return reasons.length === 0
+            ? formattedPeriod
+            : `${formattedPeriod} (${reasons.join(", ")})`;
+        })
+        .join("; "),
+      programaMotivo: formatLatestProgramReason(adultoMayor.programPeriods),
     };
 
     if (!includeTenant) {
@@ -252,6 +266,7 @@ export class AdultosMayoresExportService {
           <td>${escapeHtml(formatDeathDate(adultoMayor.deathDate))}</td>
           <td>${escapeHtml(formatProgramStatus(adultoMayor.programStatus))}</td>
           <td>${escapeHtml(formatLatestProgramPeriod(adultoMayor.programPeriods))}</td>
+          <td>${escapeHtml(formatLatestProgramReason(adultoMayor.programPeriods))}</td>
         </tr>`;
       })
       .join("");
@@ -331,6 +346,7 @@ export class AdultosMayoresExportService {
                 <th>Fecha de defunción</th>
                 <th>Programa</th>
                 <th>Periodo actual</th>
+                <th>Motivo</th>
               </tr>
             </thead>
             <tbody>
@@ -381,6 +397,21 @@ function formatLatestProgramPeriod(periods: AdultoMayorExportItem["programPeriod
   const latestPeriod = periods.at(-1);
 
   return latestPeriod === undefined ? "" : formatProgramPeriod(latestPeriod);
+}
+
+/** Reason of the latest movement: the exit when the period is closed, otherwise the entry. */
+function formatLatestProgramReason(periods: AdultoMayorExportItem["programPeriods"]): string {
+  const latestPeriod = periods.at(-1);
+
+  if (latestPeriod === undefined) {
+    return "";
+  }
+
+  return (
+    (latestPeriod.inactivationDate === null
+      ? latestPeriod.activationReason
+      : latestPeriod.inactivationReason) ?? ""
+  );
 }
 
 function formatDeathDate(deathDate: AdultoMayorListItem["deathDate"]): string {
@@ -482,6 +513,7 @@ export function buildBasicPdf(
         "Fecha de defunción",
         "Programa",
         "Periodo actual",
+        "Motivo",
       ]
     : [
         "Tipo de documento",
@@ -495,10 +527,11 @@ export function buildBasicPdf(
         "Fecha de defunción",
         "Programa",
         "Periodo actual",
+        "Motivo",
       ];
   const columns = includeTenant
-    ? [72, 45, 68, 78, 78, 60, 30, 48, 48, 58, 48, 120]
-    : [55, 72, 95, 95, 70, 32, 55, 50, 62, 48, 120];
+    ? [60, 45, 60, 65, 65, 55, 30, 42, 42, 55, 48, 120, 85]
+    : [55, 62, 80, 80, 60, 32, 48, 45, 58, 48, 120, 85];
   const pages: string[] = [];
   let cursor = 0;
 
@@ -544,6 +577,7 @@ function toPdfRow(adultoMayor: AdultoMayorExportItem, includeTenant: boolean): s
     formatDeathDate(adultoMayor.deathDate),
     formatProgramStatus(adultoMayor.programStatus),
     formatLatestProgramPeriod(adultoMayor.programPeriods),
+    formatLatestProgramReason(adultoMayor.programPeriods),
   ];
 
   return includeTenant ? [adultoMayor.tenantName, ...row] : row;
