@@ -323,9 +323,11 @@ export class AdultosMayoresService {
     });
 
     const today = formatCurrentDate();
-    const activationDate = command.activationDate ?? today;
+    // An adult registered after their death can only have been active up to that day.
+    const defaultActivationDate = deathDate !== null && deathDate < today ? deathDate : today;
+    const activationDate = command.activationDate ?? defaultActivationDate;
 
-    if (activationDate !== today && !canManageAdultoMayorProgram(actor)) {
+    if (activationDate !== defaultActivationDate && !canManageAdultoMayorProgram(actor)) {
       throw new ForbiddenException(
         "No tienes permisos para registrar una fecha de activacion distinta a hoy.",
       );

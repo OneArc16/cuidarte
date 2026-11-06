@@ -560,9 +560,19 @@ describe("AdultosMayoresService", () => {
       tenantNurseUser,
     );
 
+    await service.createAdultoMayor(
+      {
+        ...createCommand(),
+        documentNumber: "6655443322",
+        status: "deceased",
+        deathDate: "2026-06-10",
+      },
+      tenantNurseUser,
+    );
+
     assert.deepEqual(
       repository.createCommands.map((command) => command.activationDate),
-      [today, today],
+      [today, today, "2026-06-10"],
     );
   });
 

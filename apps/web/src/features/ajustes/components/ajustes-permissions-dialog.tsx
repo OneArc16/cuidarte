@@ -21,7 +21,7 @@ type AjustesPermissionsDialogProps = {
   onClose: () => void;
 };
 
-const PERMISSION_COLUMNS = [
+export const PERMISSION_COLUMNS = [
   { key: "view", label: "VER" },
   { key: "view_creation_details", label: "CREACIÓN" },
   { key: "medical_history", label: "HISTORIAL MÉDICO" },
@@ -37,6 +37,7 @@ const PERMISSION_COLUMNS = [
   { key: "bulk_import", label: "IMPORTAR MASIVO" },
   { key: "export", label: "DESCARGAR" },
   { key: "manage", label: "GESTIONAR" },
+  { key: "manage_program", label: "ESTADO PROGRAMA" },
 ] as const;
 
 const MATRIX_GRID_TEMPLATE_COLUMNS = [
@@ -56,6 +57,7 @@ const MATRIX_GRID_TEMPLATE_COLUMNS = [
   "minmax(100px, 116px)",
   "minmax(96px, 108px)",
   "minmax(90px, 104px)",
+  "minmax(110px, 124px)",
 ].join(" ");
 
 const MODULE_DESCRIPTIONS: Record<string, string> = {
