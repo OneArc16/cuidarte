@@ -1,4 +1,5 @@
 import { type AdultoMayorProgramPeriod } from "@cuidarte/contracts";
+import { UserMinus, UserPlus } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
 
@@ -47,10 +48,7 @@ export function AdultoMayorProgramPanel({ adultoMayorId }: AdultoMayorProgramPan
   return (
     <section className="adulto-program-panel" aria-labelledby="adulto-program-title">
       <header className="adulto-program-panel__header">
-        <div>
-          <p className="eyebrow">Programa</p>
-          <h2 id="adulto-program-title">Activación en el programa</h2>
-        </div>
+        <h2 id="adulto-program-title">Programa</h2>
         {programStatus === undefined ? null : (
           <span className="adulto-program-badge" data-state={programStatus}>
             {isActive ? "Activo" : "Inactivo"}
@@ -58,7 +56,9 @@ export function AdultoMayorProgramPanel({ adultoMayorId }: AdultoMayorProgramPan
         )}
       </header>
 
-      {periodsQuery.isLoading ? <p>Cargando periodos...</p> : null}
+      {periodsQuery.isLoading ? (
+        <p className="adulto-program-panel__hint">Cargando periodos...</p>
+      ) : null}
       {periodsQuery.isError ? (
         <p className="form-error" role="alert">
           {resolveAdultosMayoresApiError(periodsQuery.error)}
@@ -66,8 +66,12 @@ export function AdultoMayorProgramPanel({ adultoMayorId }: AdultoMayorProgramPan
       ) : null}
 
       {programStatus !== undefined ? (
-        <form className="adulto-program-panel__form" onSubmit={(event) => void handleSubmit(event)}>
-          <label>
+        <form
+          className="adulto-program-panel__form"
+          data-action={isActive ? "inactivate" : "reintegrate"}
+          onSubmit={(event) => void handleSubmit(event)}
+        >
+          <label className="adulto-form-field">
             <span>{dateLabel}</span>
             <input
               type="date"
@@ -77,17 +81,23 @@ export function AdultoMayorProgramPanel({ adultoMayorId }: AdultoMayorProgramPan
               onChange={(event) => setDate(event.target.value)}
             />
           </label>
-          <label>
+          <label className="adulto-form-field">
             <span>Motivo (opcional)</span>
             <input
               type="text"
               maxLength={500}
+              placeholder={isActive ? "Ej. se mudó con un familiar" : "Ej. regresó al centro"}
               value={reason}
               onChange={(event) => setReason(event.target.value)}
             />
           </label>
-          <button className="primary-action" type="submit" disabled={changeMutation.isPending}>
-            {changeMutation.isPending ? "Guardando..." : actionLabel}
+          <button
+            className="adulto-program-panel__submit"
+            type="submit"
+            disabled={changeMutation.isPending}
+          >
+            {isActive ? <UserMinus aria-hidden="true" /> : <UserPlus aria-hidden="true" />}
+            <span>{changeMutation.isPending ? "Guardando..." : actionLabel}</span>
           </button>
           {changeMutation.isError ? (
             <p className="form-error" role="alert">
@@ -100,15 +110,9 @@ export function AdultoMayorProgramPanel({ adultoMayorId }: AdultoMayorProgramPan
       {periods.length > 0 ? (
         <ol className="adulto-program-panel__periods" aria-label="Periodos en el programa">
           {periods.map((period) => (
-            <li key={period.id}>
+            <li key={period.id} data-open={period.inactivationDate === null}>
               <strong>{formatPeriodRange(period)}</strong>
-              {period.activationReason !== null ? (
-                <p>Motivo de ingreso: {period.activationReason}</p>
-              ) : null}
-              {period.inactivationReason !== null ? (
-                <p>Motivo de salida: {period.inactivationReason}</p>
-              ) : null}
-              {formatPeriodAuthors(period)}
+              {formatPeriodDetails(period)}
             </li>
           ))}
         </ol>
@@ -125,15 +129,17 @@ function formatPeriodRange(period: AdultoMayorProgramPeriod) {
     : `Activo del ${from} al ${formatDate(period.inactivationDate)}`;
 }
 
-function formatPeriodAuthors(period: AdultoMayorProgramPeriod) {
-  const authors = [
-    period.activatedByUserFullName === null ? null : `Activó: ${period.activatedByUserFullName}`,
+function formatPeriodDetails(period: AdultoMayorProgramPeriod) {
+  const details = [
+    period.activationReason === null ? null : `Ingreso: ${period.activationReason}`,
+    period.inactivationReason === null ? null : `Salida: ${period.inactivationReason}`,
+    period.activatedByUserFullName === null ? null : `Activó ${period.activatedByUserFullName}`,
     period.inactivatedByUserFullName === null
       ? null
-      : `Inactivó: ${period.inactivatedByUserFullName}`,
+      : `Inactivó ${period.inactivatedByUserFullName}`,
   ].filter((value) => value !== null);
 
-  return authors.length === 0 ? null : <p>{authors.join(" · ")}</p>;
+  return details.length === 0 ? null : <p>{details.join(" · ")}</p>;
 }
 
 function formatDate(value: string) {

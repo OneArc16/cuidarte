@@ -2348,59 +2348,69 @@
 }
 
 .adulto-program-badge {
-  display: inline-grid;
-  min-width: 72px;
-  min-height: 28px;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
   padding: 0 10px;
-  border: 1px solid rgb(8 80 65 / 13%);
   border-radius: 999px;
   color: var(--color-deep);
   font-size: 0.74rem;
-  font-weight: 900;
+  font-weight: 800;
   background: var(--color-soft);
 }
 
+.adulto-program-badge::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-care);
+  content: "";
+}
+
 .adulto-program-badge[data-state="inactive"] {
-  border-color: rgb(143 47 45 / 20%);
-  background: rgb(250 238 218 / 72%);
-  color: rgb(112 55 34);
+  color: var(--color-muted);
+  background: rgb(93 113 107 / 10%);
+}
+
+.adulto-program-badge[data-state="inactive"]::before {
+  background: var(--color-muted);
 }
 
 .adulto-program-panel {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   min-width: 0;
   padding: 18px 20px;
-  border: 1px solid rgb(8 80 65 / 14%);
-  border-radius: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
   background: var(--color-surface);
 }
 
 .adulto-program-panel__header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 
 .adulto-program-panel__header h2 {
   margin: 0;
-  font-size: 1.05rem;
+  color: var(--color-ink);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.adulto-program-panel__hint {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.86rem;
 }
 
 .adulto-program-panel__form {
   display: grid;
-  grid-template-columns: minmax(0, 180px) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(150px, 190px) minmax(0, 1fr) auto;
   align-items: end;
   gap: 12px;
-}
-
-.adulto-program-panel__form label {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-  font-weight: 700;
 }
 
 .adulto-program-panel__form .form-error {
@@ -2408,24 +2418,100 @@
   margin: 0;
 }
 
+.adulto-program-panel__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  color: var(--color-deep);
+  font-size: 0.88rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: var(--color-surface);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.adulto-program-panel__submit svg {
+  width: 16px;
+  height: 16px;
+}
+
+.adulto-program-panel__submit:hover:not(:disabled) {
+  border-color: var(--color-care);
+  background: var(--color-soft);
+}
+
+.adulto-program-panel__form[data-action="inactivate"] .adulto-program-panel__submit:hover:not(:disabled) {
+  border-color: rgb(143 47 45 / 35%);
+  color: var(--color-danger);
+  background: rgb(143 47 45 / 5%);
+}
+
+.adulto-program-panel__submit:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
 .adulto-program-panel__periods {
   display: grid;
-  gap: 10px;
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .adulto-program-panel__periods li {
-  padding: 10px 12px;
-  border-left: 3px solid rgb(8 80 65 / 30%);
-  border-radius: 8px;
-  background: var(--color-soft);
+  position: relative;
+  padding: 0 0 12px 20px;
+  color: var(--color-muted);
+  font-size: 0.86rem;
+}
+
+.adulto-program-panel__periods li:last-child {
+  padding-bottom: 0;
+}
+
+.adulto-program-panel__periods li::before {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-border);
+  content: "";
+}
+
+.adulto-program-panel__periods li:not(:last-child)::after {
+  position: absolute;
+  top: 18px;
+  bottom: 2px;
+  left: 3.5px;
+  width: 1px;
+  background: var(--color-border);
+  content: "";
+}
+
+.adulto-program-panel__periods li[data-open="true"]::before {
+  background: var(--color-care);
+}
+
+.adulto-program-panel__periods strong {
+  color: var(--color-ink);
+  font-weight: 700;
 }
 
 .adulto-program-panel__periods p {
-  margin: 4px 0 0;
-  font-size: 0.86rem;
+  margin: 2px 0 0;
+  font-size: 0.8rem;
 }
 
 @media (max-width: 720px) {
