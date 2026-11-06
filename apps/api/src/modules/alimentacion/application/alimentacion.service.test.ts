@@ -476,6 +476,79 @@ describe("AlimentacionService", () => {
     assert.equal(result.deliveryDate, "2026-04-25");
   });
 
+  it("rejects batches for adults outside their program period on a delivery date", async () => {
+    const repository = createRepository({
+      adultosMayoresByIds: [
+        {
+          ...adultoMayorRecord,
+          programPeriods: [{ activationDate: "2026-01-10", inactivationDate: "2026-04-24" }],
+        },
+      ],
+    });
+    const service = new AlimentacionService(repository);
+
+    await assert.rejects(
+      () =>
+        service.createBatch(
+          {
+            tenantId: null,
+            deliveryDates: ["2026-04-23", "2026-04-24"],
+            organizer: "nutricionista",
+            registros: [
+              {
+                adultoMayorId,
+                refrigerio1: "entregado",
+                almuerzo: "entregado",
+                refrigerio2: "no_aplica",
+                auxilioTransporte: "no_entregado",
+              },
+            ],
+          },
+          adminUser,
+        ),
+      (error: unknown) =>
+        error instanceof BadRequestException &&
+        error.message.includes("no estaba activo en el programa") &&
+        error.message.includes("24/04/2026"),
+    );
+    assert.equal(repository.createdCommands.length, 0);
+  });
+
+  it("checks program periods on updates only when the delivery date changes", async () => {
+    const repository = createRepository({
+      existingByAdultoAndDate: null,
+      adultoMayorById: {
+        ...adultoMayorRecord,
+        programPeriods: [{ activationDate: "2026-07-15", inactivationDate: null }],
+      },
+    });
+    const service = new AlimentacionService(repository);
+    const command = {
+      organizer: "director" as const,
+      refrigerio1: "entregado" as const,
+      almuerzo: "entregado" as const,
+      refrigerio2: "entregado" as const,
+      auxilioTransporte: "entregado" as const,
+    };
+
+    await assert.doesNotReject(() =>
+      service.updateRegistro(
+        existingRecordId,
+        { ...command, deliveryDate: "2026-04-24" },
+        directorUser,
+      ),
+    );
+    await assert.rejects(
+      () =>
+        service.updateRegistro(
+          existingRecordId,
+          { ...command, deliveryDate: "2026-04-25" },
+          directorUser,
+        ),
+      BadRequestException,
+    );
+  });
+
   it("allows director users to delete feeding records in their tenant", async () => {
     const repository = createRepository({
       deletedRecord: alimentacionRecord,

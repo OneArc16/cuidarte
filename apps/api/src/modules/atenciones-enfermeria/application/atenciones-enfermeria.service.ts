@@ -196,6 +196,7 @@ export class AtencionesEnfermeriaService {
     assertAdultoMayorRecordDateAllowed({
       status: adultoMayor.status,
       deathDate: adultoMayor.deathDate,
+      programPeriods: adultoMayor.programPeriods,
       recordDate: normalizedCommand.attentionDate,
     });
 
@@ -237,6 +238,19 @@ export class AtencionesEnfermeriaService {
       deathDate: currentRecord.adultoMayor.deathDate,
       recordDate: normalizedCommand.attentionDate,
     });
+
+    // An existing attention keeps its date valid; the program only constrains a new date.
+    if (normalizedCommand.attentionDate !== currentRecord.attentionDate) {
+      const adultoMayor = await this.atencionesRepository.findAdultoMayorById({
+        adultoMayorId: currentRecord.adultoMayorId,
+        scope,
+      });
+
+      assertAdultoMayorRecordDateAllowed({
+        programPeriods: adultoMayor?.programPeriods ?? [],
+        recordDate: normalizedCommand.attentionDate,
+      });
+    }
 
     const updated = await this.runGuarded(async () =>
       this.atencionesRepository.update({

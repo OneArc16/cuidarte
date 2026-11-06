@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { type AuthUser } from "@cuidarte/contracts";
-import { ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
 
 import { AtencionesEnfermeriaService } from "./atenciones-enfermeria.service";
 import {
@@ -267,6 +267,64 @@ describe("AtencionesEnfermeriaService", () => {
           { ...nurseUser, role: "admin" },
         ),
       { constructor: ForbiddenException },
+    );
+  });
+
+  it("applies program periods on creation and on updates that change the date", async () => {
+    const outOfProgramAdulto = {
+      ...adultoRecord,
+      programPeriods: [{ activationDate: "2026-09-01", inactivationDate: null }],
+    };
+    const repository = createRepository({
+      adulto: outOfProgramAdulto,
+      listItems: [detailRecord],
+    });
+    const service = new AtencionesEnfermeriaService(repository);
+    const vitals = {
+      attentionTime: "08:45",
+      careType: "seguimiento" as const,
+      reason: "Cambio",
+      tensionSistolica: 118,
+      tensionDiastolica: 78,
+      frecuenciaCardiaca: 70,
+      frecuenciaRespiratoria: 18,
+      temperatura: 36.5,
+      saturacionOxigeno: 98,
+      pesoKg: 63,
+      tallaCm: 165,
+      perimetroAbdominalCm: 88.5,
+      glucometriaMgDl: 90,
+      glucometriaContext: "ayunas" as const,
+      nursingNote: "Otra nota.",
+    };
+
+    await assert.rejects(
+      () =>
+        service.createAtencion(
+          { ...vitals, adultoMayorId, attentionDate: "2026-08-16" },
+          nurseUser,
+        ),
+      (error: unknown) =>
+        error instanceof BadRequestException &&
+        error.message.includes("no estaba activo en el programa"),
+    );
+    assert.equal(repository.createCalls.length, 0);
+
+    await assert.doesNotReject(() =>
+      service.updateAtencion(
+        recordId,
+        { ...vitals, attentionDate: "2026-08-16", version: 1 },
+        nurseUser,
+      ),
+    );
+    await assert.rejects(
+      () =>
+        service.updateAtencion(
+          recordId,
+          { ...vitals, attentionDate: "2026-08-20", version: 1 },
+          nurseUser,
+        ),
+      BadRequestException,
     );
   });
 

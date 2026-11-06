@@ -9,6 +9,7 @@ import {
 } from "@cuidarte/contracts";
 
 import { type AuditRequestContext } from "../../../common/audit-request-context";
+import { type AdultoMayorProgramPeriodRange } from "../../adultos-mayores/domain/adulto-mayor-program-policy";
 
 export type ActividadesGrupalesScope =
   | {
@@ -48,6 +49,8 @@ export type FindActividadGrupalChangeLogQuery = FindActividadesGrupalesQuery & {
 export type SearchActividadGrupalIntegrantesOptionsQuery = {
   tenantId: string;
   search: string | null;
+  /** Only adults active in the program on this date (YYYY-MM-DD). */
+  activeOn: string;
 };
 
 export type ActividadGrupalTenantOptionRecord = {
@@ -67,6 +70,7 @@ export type ActividadGrupalIntegranteOptionRecord = {
   fullName: string;
   status?: AdultoMayorStatus;
   deathDate?: string | null;
+  programPeriods?: AdultoMayorProgramPeriodRange[];
 };
 
 export type ActividadGrupalSupportFileRecord = {

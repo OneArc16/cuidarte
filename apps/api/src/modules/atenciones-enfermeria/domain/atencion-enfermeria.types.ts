@@ -7,6 +7,8 @@ import {
 } from "@cuidarte/contracts";
 import type { UserRole } from "@cuidarte/contracts";
 
+import { type AdultoMayorProgramPeriodRange } from "../../adultos-mayores/domain/adulto-mayor-program-policy";
+
 export type AtencionEnfermeriaScope =
   | {
       type: "all";
@@ -28,6 +30,7 @@ export type AtencionEnfermeriaAdultoRecord = {
   healthRegime: string | null;
   status?: AdultoMayorStatus;
   deathDate?: string | null;
+  programPeriods?: AdultoMayorProgramPeriodRange[];
 };
 
 export type AtencionEnfermeriaRecordBase = {

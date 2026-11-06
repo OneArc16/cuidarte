@@ -8,6 +8,8 @@ import {
   type UserRole,
 } from "@cuidarte/contracts";
 
+import { type AdultoMayorProgramPeriodRange } from "../../adultos-mayores/domain/adulto-mayor-program-policy";
+
 export type AlimentacionScope =
   | {
       type: "all";
@@ -97,6 +99,7 @@ export type AlimentacionAdultoOptionRecord = {
   registeredDeliveryDates?: string[];
   status?: AdultoMayorStatus;
   deathDate?: string | null;
+  programPeriods?: AdultoMayorProgramPeriodRange[];
 };
 
 export type AlimentacionRecord = {

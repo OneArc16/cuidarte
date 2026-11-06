@@ -585,6 +585,65 @@ describe("ActividadesGrupalesService", () => {
     );
   });
 
+  it("searches integrantes active in the program on the activity date", async () => {
+    const repository = createRepository();
+    const searches: Array<{ activeOn: string }> = [];
+    const originalSearch = repository.searchIntegranteOptions.bind(repository);
+    repository.searchIntegranteOptions = async (query) => {
+      searches.push({ activeOn: query.activeOn });
+      return await originalSearch(query);
+    };
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+    const targetRecord = records[0]!;
+
+    await service.searchIntegranteOptions(targetRecord.id, { search: null }, medicoUser);
+
+    assert.deepEqual(searches, [{ activeOn: targetRecord.activityDate }]);
+  });
+
+  it("rejects new integrantes outside their program period but keeps registered ones", async () => {
+    const registeredId = "25ce51a5-f0a6-4374-a6b4-815348cbd26d";
+    const newId = "6b1f8f3e-2c4d-4f6a-9b8e-1d2c3b4a5f60";
+    const outOfProgram = [{ activationDate: "2026-01-10", inactivationDate: "2026-03-01" }];
+    const repository = createRepository();
+    repository.findIntegrantesByIds = async (_tenantId, integranteIds) =>
+      integranteIds.map((id) => ({
+        id,
+        documentNumber: id === registeredId ? "1020304050" : "5566778899",
+        fullName: id === registeredId ? "Rosa Elena Martinez Rojas" : "Pedro Gomez",
+        status: "alive" as const,
+        deathDate: null,
+        programPeriods: outOfProgram,
+      }));
+    const service = new ActividadesGrupalesService(repository, createFilesStorage());
+    const save = (integranteIds: string[]) =>
+      service.saveActividadGrupalDiligenciamiento(
+        {
+          activityId: records[0]!.id,
+          payload: {
+            objectives: "Objetivos",
+            development: "Desarrollo",
+            conclusion: "Conclusion",
+            responsibleDepartment: "nutricion",
+            integranteIds,
+            removedPhotoFileIds: [],
+            removePdfFile: false,
+          },
+          newPhotos: [],
+          newPdf: null,
+        },
+        medicoUser,
+      );
+
+    await assert.rejects(
+      () => save([registeredId, newId]),
+      (error: unknown) =>
+        error instanceof BadRequestException &&
+        error.message.startsWith("El adulto mayor no estaba activo en el programa"),
+    );
+    await assert.doesNotReject(() => save([registeredId]));
+  });
+
   it("allows saving diligenciamiento without integrantes", async () => {
     const repository = createRepository();
     const service = new ActividadesGrupalesService(repository, createFilesStorage());

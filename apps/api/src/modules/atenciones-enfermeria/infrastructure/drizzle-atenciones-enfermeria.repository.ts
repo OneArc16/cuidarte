@@ -2,6 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { and, asc, desc, eq, ilike, isNotNull, isNull, or, sql, type SQL } from "drizzle-orm";
 
 import { DatabaseService, type AppDatabase } from "../../../database/database.service";
+import { selectAdultoMayorProgramPeriods } from "../../adultos-mayores/infrastructure/adulto-mayor-program-periods.sql";
 import {
   adultosMayores,
   atencionesEnfermeria,
@@ -609,6 +610,7 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
       sex: adultosMayores.sex,
       status: adultosMayores.status,
       deathDate: adultosMayores.deathDate,
+      programPeriods: selectAdultoMayorProgramPeriods(adultosMayores.id),
       eps: sql<string | null>`coalesce(${epsCatalog.name}, ${adultosMayores.eps})`,
       healthRegime: adultosMayores.healthRegime,
     };
@@ -693,6 +695,7 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
     sex: string;
     status: AtencionEnfermeriaAdultoRecord["status"];
     deathDate: string | null;
+    programPeriods?: AtencionEnfermeriaAdultoRecord["programPeriods"];
     eps: string | null;
     healthRegime: string | null;
   }): AtencionEnfermeriaAdultoRecord {
@@ -706,6 +709,7 @@ export class DrizzleAtencionesEnfermeriaRepository implements AtencionesEnfermer
       sex: row.sex,
       ...(row.status === undefined ? {} : { status: row.status }),
       deathDate: row.deathDate,
+      ...(row.programPeriods === undefined ? {} : { programPeriods: row.programPeriods }),
       eps: row.eps,
       healthRegime: row.healthRegime,
     };

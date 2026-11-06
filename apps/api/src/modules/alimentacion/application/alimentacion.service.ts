@@ -118,6 +118,7 @@ export class AlimentacionService {
     assertAdultoMayorRecordDateAllowed({
       status: adultoMayor.status,
       deathDate: adultoMayor.deathDate,
+      programPeriods: adultoMayor.programPeriods,
       recordDate: query.deliveryDate,
     });
 
@@ -162,6 +163,7 @@ export class AlimentacionService {
         assertAdultoMayorRecordDateAllowed({
           status: adultoMayor.status,
           deathDate: adultoMayor.deathDate,
+          programPeriods: adultoMayor.programPeriods,
           recordDate: deliveryDate,
         });
       }
@@ -256,6 +258,9 @@ export class AlimentacionService {
     assertAdultoMayorRecordDateAllowed({
       status: adultoMayor.status,
       deathDate: adultoMayor.deathDate,
+      // An existing record keeps its date valid; the program only constrains a new date.
+      programPeriods:
+        command.deliveryDate === currentRecord.deliveryDate ? undefined : adultoMayor.programPeriods,
       recordDate: command.deliveryDate,
     });
 

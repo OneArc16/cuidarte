@@ -17,6 +17,10 @@ import {
 
 import { DatabaseService } from "../../../database/database.service";
 import {
+  adultoMayorActiveInProgramOn,
+  selectAdultoMayorProgramPeriods,
+} from "../../adultos-mayores/infrastructure/adulto-mayor-program-periods.sql";
+import {
   adultosMayores,
   alimentacionBulkImportBatches,
   alimentacionBulkImportItems,
@@ -93,6 +97,7 @@ type AlimentacionAdultoOptionRow = {
   registeredDeliveryDates?: string[];
   status: AlimentacionAdultoOptionRecord["status"];
   deathDate: string | null;
+  programPeriods?: AlimentacionAdultoOptionRecord["programPeriods"];
 };
 
 type AlimentacionFormatoEntregaRow = {
@@ -207,6 +212,9 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       eq(adultosMayores.tenantId, query.tenantId),
       isNull(adultosMayores.deletedAt),
       or(isNull(adultosMayores.deathDate), gte(adultosMayores.deathDate, latestDeliveryDate))!,
+      ...query.deliveryDates.map((deliveryDate) =>
+        adultoMayorActiveInProgramOn(adultosMayores.id, deliveryDate),
+      ),
     ];
 
     if (query.search !== null) {
@@ -289,6 +297,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         surnames: adultosMayores.surnames,
         status: adultosMayores.status,
         deathDate: adultosMayores.deathDate,
+        programPeriods: selectAdultoMayorProgramPeriods(adultosMayores.id),
       })
       .from(adultosMayores)
       .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
@@ -328,6 +337,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
         surnames: adultosMayores.surnames,
         status: adultosMayores.status,
         deathDate: adultosMayores.deathDate,
+        programPeriods: selectAdultoMayorProgramPeriods(adultosMayores.id),
       })
       .from(adultosMayores)
       .innerJoin(tenants, eq(tenants.id, adultosMayores.tenantId))
@@ -1287,6 +1297,7 @@ export class DrizzleAlimentacionRepository implements AlimentacionRepository {
       registeredDeliveryDates: row.registeredDeliveryDates ?? [],
       ...(row.status === undefined ? {} : { status: row.status }),
       deathDate: row.deathDate,
+      ...(row.programPeriods === undefined ? {} : { programPeriods: row.programPeriods }),
     };
   }
 

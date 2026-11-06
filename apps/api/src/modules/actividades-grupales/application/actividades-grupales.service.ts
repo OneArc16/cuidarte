@@ -68,6 +68,7 @@ import {
   type ActividadGrupalSupportFileRecord,
   type BufferedActividadGrupalUpload,
   ActaCorrectionConflictError,
+  type ActividadGrupalIntegranteOptionRecord,
 } from "../domain/actividad-grupal.types";
 import {
   ACTIVIDADES_GRUPALES_FILES_STORAGE,
@@ -313,7 +314,11 @@ export class ActividadesGrupalesService {
       );
     }
 
-    this.assertIntegrantesDateAllowed(detail.integrantes, command.activityDate);
+    this.assertIntegrantesDateAllowed(detail.integrantes, command.activityDate, {
+      // Already registered integrantes are history: their program periods only matter
+      // when the activity moves to another date.
+      checkProgramPeriods: command.activityDate !== detail.activity.activityDate,
+    });
 
     const record = await this.actividadesGrupalesRepository.update({
       activityId,
@@ -499,6 +504,7 @@ export class ActividadesGrupalesService {
     const integrantes = await this.actividadesGrupalesRepository.searchIntegranteOptions({
       tenantId: detail.activity.tenantId,
       search: query.search,
+      activeOn: detail.activity.activityDate,
     });
 
     return integrantes.map((integrante) => actividadGrupalIntegranteOptionSchema.parse(integrante));
@@ -528,7 +534,17 @@ export class ActividadesGrupalesService {
       );
     }
 
-    this.assertIntegrantesDateAllowed(integrantes, detail.activity.activityDate);
+    const registeredIntegranteIds = new Set(detail.integrantes.map((integrante) => integrante.id));
+    this.assertIntegrantesDateAllowed(
+      integrantes.filter((integrante) => registeredIntegranteIds.has(integrante.id)),
+      detail.activity.activityDate,
+      { checkProgramPeriods: false },
+    );
+    this.assertIntegrantesDateAllowed(
+      integrantes.filter((integrante) => !registeredIntegranteIds.has(integrante.id)),
+      detail.activity.activityDate,
+      { checkProgramPeriods: true },
+    );
 
     const storedFiles = await this.storeNewUploads(detail, command.newPhotos, command.newPdf);
 
@@ -897,13 +913,17 @@ export class ActividadesGrupalesService {
   }
 
   private assertIntegrantesDateAllowed(
-    integrantes: Array<{ status?: "alive" | "deceased"; deathDate?: string | null }>,
+    integrantes: Array<
+      Pick<ActividadGrupalIntegranteOptionRecord, "status" | "deathDate" | "programPeriods">
+    >,
     activityDate: string,
+    options: { checkProgramPeriods: boolean },
   ) {
     for (const integrante of integrantes) {
       assertAdultoMayorRecordDateAllowed({
         status: integrante.status,
         deathDate: integrante.deathDate,
+        programPeriods: options.checkProgramPeriods ? integrante.programPeriods : undefined,
         recordDate: activityDate,
       });
     }

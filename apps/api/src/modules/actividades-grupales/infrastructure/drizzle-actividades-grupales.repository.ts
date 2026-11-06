@@ -19,6 +19,10 @@ import { alias } from "drizzle-orm/pg-core";
 
 import { DatabaseService } from "../../../database/database.service";
 import {
+  adultoMayorActiveInProgramOn,
+  selectAdultoMayorProgramPeriods,
+} from "../../adultos-mayores/infrastructure/adulto-mayor-program-periods.sql";
+import {
   actividadGrupalActaCorrectionOperations,
   actividadGrupalActaOrganizerCounters,
   actividadGrupalDiligenciamientoFiles,
@@ -444,6 +448,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
     const conditions: SQL[] = [
       eq(adultosMayores.tenantId, query.tenantId),
       isNull(adultosMayores.deletedAt),
+      adultoMayorActiveInProgramOn(adultosMayores.id, query.activeOn),
     ];
 
     if (query.search !== null) {
@@ -497,6 +502,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         surnames: adultosMayores.surnames,
         status: adultosMayores.status,
         deathDate: adultosMayores.deathDate,
+        programPeriods: selectAdultoMayorProgramPeriods(adultosMayores.id),
       })
       .from(adultosMayores)
       .where(
@@ -513,6 +519,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       fullName: `${row.names} ${row.surnames}`.trim(),
       status: row.status,
       deathDate: row.deathDate,
+      programPeriods: row.programPeriods,
     }));
   }
 
@@ -2105,6 +2112,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         documentNumber: adultosMayores.documentNumber,
         names: adultosMayores.names,
         surnames: adultosMayores.surnames,
+        programPeriods: selectAdultoMayorProgramPeriods(adultosMayores.id),
       })
       .from(actividadGrupalDiligenciamientoIntegrantes)
       .innerJoin(
@@ -2118,6 +2126,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
       id: row.id,
       documentNumber: row.documentNumber,
       fullName: `${row.names} ${row.surnames}`.trim(),
+      programPeriods: row.programPeriods,
     }));
   }
 
