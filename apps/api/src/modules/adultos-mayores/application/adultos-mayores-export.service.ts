@@ -87,7 +87,7 @@ export class AdultosMayoresExportService {
   }
 
   private async renderPdfWithPlaywright(
-    adultosMayores: AdultoMayorListItem[],
+    adultosMayores: AdultoMayorExportItem[],
     includeTenant: boolean,
   ): Promise<Buffer> {
     const browser = await chromium.launch({
@@ -215,19 +215,12 @@ export class AdultosMayoresExportService {
       acompanante: adultoMayor.companion ?? "",
       ingresoEconomico: adultoMayor.economicIncome ?? "",
       beneficiarioProgramaSocial: formatBoolean(adultoMayor.socialProgramBeneficiary),
-      programaEstado: adultoMayor.programStatus === "active" ? "Activo" : "Inactivo",
+      programaEstado: formatProgramStatus(adultoMayor.programStatus),
       programaFechaActivacion:
         latestPeriod === undefined ? "" : formatDate(latestPeriod.activationDate),
       programaFechaInactivacion:
         latestPeriod?.inactivationDate == null ? "" : formatDate(latestPeriod.inactivationDate),
-      programaHistorial: adultoMayor.programPeriods
-        .map(
-          (period) =>
-            `${formatDate(period.activationDate)} - ${
-              period.inactivationDate === null ? "actual" : formatDate(period.inactivationDate)
-            }`,
-        )
-        .join("; "),
+      programaHistorial: adultoMayor.programPeriods.map(formatProgramPeriod).join("; "),
     };
 
     if (!includeTenant) {
@@ -240,7 +233,7 @@ export class AdultosMayoresExportService {
     };
   }
 
-  private buildPdfHtml(adultosMayores: AdultoMayorListItem[], includeTenant: boolean): string {
+  private buildPdfHtml(adultosMayores: AdultoMayorExportItem[], includeTenant: boolean): string {
     const tenantHeader = includeTenant ? "<th>Centro</th>" : "";
     const rows = adultosMayores
       .map((adultoMayor) => {
@@ -257,6 +250,8 @@ export class AdultosMayoresExportService {
           <td>${escapeHtml(formatSex(adultoMayor.sex))}</td>
           <td>${escapeHtml(formatStatus(adultoMayor.status))}</td>
           <td>${escapeHtml(formatDeathDate(adultoMayor.deathDate))}</td>
+          <td>${escapeHtml(formatProgramStatus(adultoMayor.programStatus))}</td>
+          <td>${escapeHtml(formatLatestProgramPeriod(adultoMayor.programPeriods))}</td>
         </tr>`;
       })
       .join("");
@@ -334,6 +329,8 @@ export class AdultosMayoresExportService {
                 <th>Sexo</th>
                 <th>Estado</th>
                 <th>Fecha de defunción</th>
+                <th>Programa</th>
+                <th>Periodo actual</th>
               </tr>
             </thead>
             <tbody>
@@ -368,6 +365,22 @@ function formatSex(sex: AdultoMayorListItem["sex"]): string {
 
 function formatStatus(status: AdultoMayorListItem["status"]): string {
   return status === "alive" ? "Vivo" : "Fallecido";
+}
+
+function formatProgramStatus(programStatus: AdultoMayorExportItem["programStatus"]): string {
+  return programStatus === "active" ? "Activo" : "Inactivo";
+}
+
+function formatProgramPeriod(period: AdultoMayorExportItem["programPeriods"][number]): string {
+  const until = period.inactivationDate === null ? "actual" : formatDate(period.inactivationDate);
+
+  return `${formatDate(period.activationDate)} - ${until}`;
+}
+
+function formatLatestProgramPeriod(periods: AdultoMayorExportItem["programPeriods"]): string {
+  const latestPeriod = periods.at(-1);
+
+  return latestPeriod === undefined ? "" : formatProgramPeriod(latestPeriod);
 }
 
 function formatDeathDate(deathDate: AdultoMayorListItem["deathDate"]): string {
@@ -446,7 +459,10 @@ function escapeHtml(value: string): string {
   });
 }
 
-function buildBasicPdf(adultosMayores: AdultoMayorListItem[], includeTenant: boolean): Buffer {
+export function buildBasicPdf(
+  adultosMayores: AdultoMayorExportItem[],
+  includeTenant: boolean,
+): Buffer {
   const pageWidth = 841.89;
   const pageHeight = 595.28;
   const margin = 34;
@@ -464,6 +480,8 @@ function buildBasicPdf(adultosMayores: AdultoMayorListItem[], includeTenant: boo
         "Sexo",
         "Estado",
         "Fecha de defunción",
+        "Programa",
+        "Periodo actual",
       ]
     : [
         "Tipo de documento",
@@ -475,10 +493,12 @@ function buildBasicPdf(adultosMayores: AdultoMayorListItem[], includeTenant: boo
         "Sexo",
         "Estado",
         "Fecha de defunción",
+        "Programa",
+        "Periodo actual",
       ];
   const columns = includeTenant
-    ? [90, 70, 80, 95, 95, 72, 38, 60, 55, 70]
-    : [65, 80, 110, 110, 85, 38, 65, 55, 70];
+    ? [72, 45, 68, 78, 78, 60, 30, 48, 48, 58, 48, 120]
+    : [55, 72, 95, 95, 70, 32, 55, 50, 62, 48, 120];
   const pages: string[] = [];
   let cursor = 0;
 
@@ -511,7 +531,7 @@ function buildBasicPdf(adultosMayores: AdultoMayorListItem[], includeTenant: boo
   return createPdfDocument(pages, pageWidth, pageHeight);
 }
 
-function toPdfRow(adultoMayor: AdultoMayorListItem, includeTenant: boolean): string[] {
+function toPdfRow(adultoMayor: AdultoMayorExportItem, includeTenant: boolean): string[] {
   const row = [
     formatDocumentType(adultoMayor.documentType),
     adultoMayor.documentNumber,
@@ -522,6 +542,8 @@ function toPdfRow(adultoMayor: AdultoMayorListItem, includeTenant: boolean): str
     formatSex(adultoMayor.sex),
     formatStatus(adultoMayor.status),
     formatDeathDate(adultoMayor.deathDate),
+    formatProgramStatus(adultoMayor.programStatus),
+    formatLatestProgramPeriod(adultoMayor.programPeriods),
   ];
 
   return includeTenant ? [adultoMayor.tenantName, ...row] : row;

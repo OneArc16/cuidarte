@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import { type AdultoMayorDetail, type AuthUser } from "@cuidarte/contracts";
 import ExcelJS from "exceljs";
 
-import { AdultosMayoresExportService } from "./adultos-mayores-export.service";
+import { AdultosMayoresExportService, buildBasicPdf } from "./adultos-mayores-export.service";
 
 const actor: AuthUser = {
   id: "68c499c2-8805-423d-8c7a-fc2649fab102",
@@ -97,6 +97,39 @@ describe("AdultosMayoresExportService", () => {
       ["AK3", "AL3", "AM3", "AN3"].map((cell) => worksheet.getCell(cell).value),
       ["Inactivo", "15/07/2026", "01/09/2026", "15/07/2026 - 01/09/2026"],
     );
+  });
+
+  it("incluye el estado y el periodo actual del programa en el PDF", () => {
+    const service = new AdultosMayoresExportService({} as never);
+    const items = [
+      {
+        ...buildDetail(),
+        programStatus: "active" as const,
+        programPeriods: [
+          { activationDate: "2026-07-15", inactivationDate: "2026-09-01" },
+          { activationDate: "2026-10-01", inactivationDate: null },
+        ],
+      },
+      {
+        ...buildDetail({ id: "1e3c7c94-33f4-4cf2-91ea-bb9f18db4cd2" }),
+        programStatus: "inactive" as const,
+        programPeriods: [{ activationDate: "2026-07-15", inactivationDate: "2026-09-01" }],
+      },
+    ];
+
+    const html = (
+      service as unknown as { buildPdfHtml(items: unknown[], includeTenant: boolean): string }
+    ).buildPdfHtml(items, false);
+
+    assert.match(html, /<th>Programa<\/th>\s*<th>Periodo actual<\/th>/);
+    assert.match(html, /<td>Activo<\/td>\s*<td>01\/10\/2026 - actual<\/td>/);
+    assert.match(html, /<td>Inactivo<\/td>\s*<td>15\/07\/2026 - 01\/09\/2026<\/td>/);
+
+    const basicPdf = buildBasicPdf(items, false).toString("latin1");
+
+    assert.ok(basicPdf.includes("Periodo actual"));
+    assert.ok(basicPdf.includes("01/10/2026 - actual"));
+    assert.ok(basicPdf.includes("15/07/2026 - 01/09/2026"));
   });
 });
 
