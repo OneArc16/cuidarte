@@ -519,6 +519,13 @@
       "when": 1793990493359,
       "tag": "0073_adultos_mayores_program_periods",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1793993086815,
+      "tag": "0074_adultos_mayores_manage_program_permission",
+      "breakpoints": true
     }
   ]
 }

@@ -33,6 +33,7 @@ export const userPermissionValues = [
   "adultos_mayores.edit",
   "adultos_mayores.delete",
   "adultos_mayores.import",
+  "adultos_mayores.manage_program",
   "alimentacion.view",
   "alimentacion.view_delivery_days",
   "alimentacion.create",
@@ -208,6 +209,12 @@ export const userPermissionCatalog = [
     group: "Adultos mayores",
     label: "Importar adultos mayores",
     description: "Validar y confirmar importaciones.",
+  },
+  {
+    key: "adultos_mayores.manage_program",
+    group: "Adultos mayores",
+    label: "Gestionar estado en el programa",
+    description: "Ver la pestaña Estado programa y registrar fechas de activación, inactivación y reintegro.",
   },
   {
     key: "alimentacion.view",

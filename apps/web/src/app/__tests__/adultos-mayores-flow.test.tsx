@@ -281,6 +281,35 @@ describe("App adultos mayores flow", () => {
     expect(screen.queryByRole("button", { name: "Guardar" })).not.toBeInTheDocument();
   });
 
+  it("hides the program tab and activation date without the manage program permission", async () => {
+    server.use(
+      mockAuthMe({
+        ...authUserFixture,
+        role: "enfermeria",
+        permissions: ["adultos_mayores.view", "adultos_mayores.create", "adultos_mayores.edit"],
+      }),
+    );
+    renderAppAtPath(`/adultos-mayores/${adultoMayorFixture.id}/edit`);
+
+    await screen.findByLabelText("Segundo nombre");
+    expect(screen.queryByRole("tab", { name: "Estado programa" })).not.toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Salud" })).toBeInTheDocument();
+  });
+
+  it("shows the activation date on creation only with the manage program permission", async () => {
+    server.use(
+      mockAuthMe({
+        ...authUserFixture,
+        role: "enfermeria",
+        permissions: ["adultos_mayores.view", "adultos_mayores.create", "adultos_mayores.edit"],
+      }),
+    );
+    renderAppAtPath("/adultos-mayores/new");
+
+    await screen.findByLabelText("Primer nombre");
+    expect(screen.queryByLabelText("Fecha de activación en el programa")).not.toBeInTheDocument();
+  });
+
   it("edits an adulto mayor from the reusable form", async () => {
     server.use(mockAuthMe(authUserFixture));
     const successToastSpy = vi.spyOn(toast, "success");

@@ -52,6 +52,7 @@ import {
   assertAdultoMayorActivationDate,
   assertAdultoMayorCanBeInactivated,
   assertAdultoMayorCanBeReintegrated,
+  canManageAdultoMayorProgram,
 } from "../domain/adulto-mayor-program-policy";
 import { formatCurrentDate } from "../domain/adulto-mayor-dates";
 import { UbicacionesService } from "../../ubicaciones/application/ubicaciones.service";
@@ -321,12 +322,20 @@ export class AdultosMayoresService {
       deathDate,
     });
 
-    const activationDate = command.activationDate ?? formatCurrentDate();
+    const today = formatCurrentDate();
+    const activationDate = command.activationDate ?? today;
+
+    if (activationDate !== today && !canManageAdultoMayorProgram(actor)) {
+      throw new ForbiddenException(
+        "No tienes permisos para registrar una fecha de activacion distinta a hoy.",
+      );
+    }
+
     assertAdultoMayorActivationDate({
       activationDate,
       birthDate: command.birthDate,
       deathDate,
-      today: formatCurrentDate(),
+      today,
     });
 
     if (
@@ -387,6 +396,7 @@ export class AdultosMayoresService {
     adultoMayorId: string,
     actor: AuthUser,
   ): Promise<AdultoMayorProgramPeriodsResponse> {
+    this.ensureCanManageProgram(actor);
     const scope = this.resolveScopeOrThrow(actor);
     const record = await this.adultosMayoresRepository.findById({ id: adultoMayorId, scope });
 
@@ -402,7 +412,7 @@ export class AdultosMayoresService {
     command: InactivateAdultoMayorRequest,
     actor: AuthUser,
   ): Promise<AdultoMayorProgramPeriodsResponse> {
-    this.ensureCanManage(actor);
+    this.ensureCanManageProgram(actor);
     const record = await this.findManagedRecordOrThrow(adultoMayorId, actor);
     const reason = command.reason ?? null;
     const periods = await this.adultosMayoresRepository.findProgramPeriods(adultoMayorId);
@@ -446,7 +456,7 @@ export class AdultosMayoresService {
     command: ReintegrateAdultoMayorRequest,
     actor: AuthUser,
   ): Promise<AdultoMayorProgramPeriodsResponse> {
-    this.ensureCanManage(actor);
+    this.ensureCanManageProgram(actor);
     const record = await this.findManagedRecordOrThrow(adultoMayorId, actor);
     const reason = command.reason ?? null;
     const periods = await this.adultosMayoresRepository.findProgramPeriods(adultoMayorId);
@@ -638,6 +648,16 @@ export class AdultosMayoresService {
         : "inactive",
       periods,
     });
+  }
+
+  private ensureCanManageProgram(actor: AuthUser) {
+    this.ensureCanManage(actor);
+
+    if (!canManageAdultoMayorProgram(actor)) {
+      throw new ForbiddenException(
+        "No tienes permisos para gestionar el estado en el programa de adultos mayores.",
+      );
+    }
   }
 
   private ensureCanManage(actor: AuthUser) {

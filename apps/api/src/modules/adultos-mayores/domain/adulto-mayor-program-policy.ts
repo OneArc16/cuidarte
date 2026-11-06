@@ -1,8 +1,12 @@
 import { BadRequestException } from "@nestjs/common";
 
-import { type AdultoMayorStatus } from "@cuidarte/contracts";
+import { hasUserPermission, type AdultoMayorStatus, type AuthUser } from "@cuidarte/contracts";
 
 import { formatDateForMessage } from "./adulto-mayor-dates";
+
+export function canManageAdultoMayorProgram(actor: Pick<AuthUser, "permissions">) {
+  return hasUserPermission(actor, "adultos_mayores.manage_program");
+}
 
 export type AdultoMayorProgramPeriodRange = {
   activationDate: string;

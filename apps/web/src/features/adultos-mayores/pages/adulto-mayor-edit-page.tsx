@@ -1,3 +1,4 @@
+import { type AuthUser } from "@cuidarte/contracts";
 import { ChevronLeft, History } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -6,6 +7,7 @@ import { type Navigate } from "@/app/hooks/use-app-navigation";
 
 import { AdultoMayorForm } from "../components/adulto-mayor-form";
 import { AdultoMayorProgramPanel } from "../components/adulto-mayor-program-panel";
+import { canManageAdultoMayorProgram } from "../lib/adultos-mayores-permissions";
 import { AdultoMayorStatusHistory } from "../components/adulto-mayor-status-history";
 import { resolveAdultosMayoresApiError } from "../lib/adultos-mayores-formatters";
 import { ADULTOS_MAYORES_PATH } from "../lib/adultos-mayores-paths";
@@ -20,9 +22,10 @@ import {
 type AdultoMayorEditPageProps = {
   adultoMayorId: string;
   navigate: Navigate;
+  user: AuthUser;
 };
 
-export function AdultoMayorEditPage({ adultoMayorId, navigate }: AdultoMayorEditPageProps) {
+export function AdultoMayorEditPage({ adultoMayorId, navigate, user }: AdultoMayorEditPageProps) {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const adultoMayorQuery = useAdultoMayorQuery(adultoMayorId);
   const statusHistoryQuery = useAdultoMayorStatusHistoryQuery(
@@ -92,7 +95,11 @@ export function AdultoMayorEditPage({ adultoMayorId, navigate }: AdultoMayorEdit
 
       <AdultoMayorForm
         mode="edit"
-        programPanel={<AdultoMayorProgramPanel adultoMayorId={adultoMayorId} />}
+        programPanel={
+          canManageAdultoMayorProgram(user) ? (
+            <AdultoMayorProgramPanel adultoMayorId={adultoMayorId} />
+          ) : undefined
+        }
         detail={adultoMayorQuery.data}
         isPending={updateMutation.isPending}
         error={resolveAdultosMayoresApiError(updateMutation.error)}

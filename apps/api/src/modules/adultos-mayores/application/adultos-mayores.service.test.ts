@@ -46,6 +46,13 @@ const tenantAuditorUser: AuthUser = {
   passwordSetByAdmin: true,
 };
 
+const tenantNurseUser: AuthUser = {
+  ...tenantAdminUser,
+  id: "1d2e3f40-5a6b-4c7d-8e9f-0a1b2c3d4e5f",
+  role: "enfermeria",
+  permissions: ["adultos_mayores.view", "adultos_mayores.create", "adultos_mayores.edit"],
+};
+
 const tenantDeleteUser: AuthUser = {
   ...tenantAdminUser,
   permissions: ["adultos_mayores.delete"],
@@ -492,6 +499,70 @@ describe("AdultosMayoresService", () => {
           tenantAuditorUser,
         ),
       { constructor: ForbiddenException },
+    );
+  });
+
+  it("restricts program periods to users with the manage program permission", async () => {
+    const repository = createRepository();
+    const service = createService(repository);
+    const adultoMayorId = records[0]!.id;
+
+    await assert.rejects(() => service.getProgramPeriods(adultoMayorId, tenantNurseUser), {
+      constructor: ForbiddenException,
+    });
+    await assert.rejects(
+      () =>
+        service.inactivateProgram(
+          adultoMayorId,
+          { inactivationDate: "2026-09-01", reason: "Retiro" },
+          tenantNurseUser,
+        ),
+      { constructor: ForbiddenException },
+    );
+    await assert.rejects(
+      () =>
+        service.reintegrateProgram(
+          adultoMayorId,
+          { activationDate: "2026-10-01", reason: "Regreso" },
+          tenantNurseUser,
+        ),
+      { constructor: ForbiddenException },
+    );
+    assert.equal(repository.programAudits.length, 0);
+
+    const directorWithPermission: AuthUser = {
+      ...tenantNurseUser,
+      role: "director",
+      permissions: [...tenantNurseUser.permissions!, "adultos_mayores.manage_program"],
+    };
+    const periods = await service.getProgramPeriods(adultoMayorId, directorWithPermission);
+    assert.equal(periods.programStatus, "active");
+  });
+
+  it("lets users without the program permission create adults only active from today", async () => {
+    const repository = createRepository();
+    const service = createService(repository);
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Bogota" }).format(
+      new Date(),
+    );
+
+    await assert.rejects(
+      () =>
+        service.createAdultoMayor(
+          { ...createCommand(), activationDate: "2026-10-01" },
+          tenantNurseUser,
+        ),
+      { constructor: ForbiddenException },
+    );
+    await service.createAdultoMayor({ ...createCommand(), activationDate: today }, tenantNurseUser);
+    await service.createAdultoMayor(
+      { ...createCommand(), documentNumber: "5544332211" },
+      tenantNurseUser,
+    );
+
+    assert.deepEqual(
+      repository.createCommands.map((command) => command.activationDate),
+      [today, today],
     );
   });
 

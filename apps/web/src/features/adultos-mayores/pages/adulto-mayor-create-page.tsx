@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { type Navigate } from "@/app/hooks/use-app-navigation";
 
 import { AdultoMayorForm } from "../components/adulto-mayor-form";
+import { canManageAdultoMayorProgram } from "../lib/adultos-mayores-permissions";
 import { uploadAdultoMayorDocument } from "../api/adultos-mayores-api";
 import { resolveAdultosMayoresApiError } from "../lib/adultos-mayores-formatters";
 import { ADULTOS_MAYORES_PATH, buildAdultoMayorEditPath } from "../lib/adultos-mayores-paths";
@@ -48,6 +49,7 @@ export function AdultoMayorCreatePage({ navigate, user }: AdultoMayorCreatePageP
 
       <AdultoMayorForm
         mode="create"
+        canSetActivationDate={canManageAdultoMayorProgram(user)}
         areTenantOptionsLoading={tenantOptionsQuery.isLoading}
         shouldSelectTenant={shouldSelectTenant}
         tenantOptions={tenantOptions}

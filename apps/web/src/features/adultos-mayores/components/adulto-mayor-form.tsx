@@ -109,6 +109,8 @@ type AdultoMayorFormProps =
   | {
       mode: "create";
       areTenantOptionsLoading: boolean;
+      /** Without it the adult enters the program today and the date field is hidden. */
+      canSetActivationDate: boolean;
       error: string | null;
       isPending: boolean;
       shouldSelectTenant: boolean;
@@ -388,7 +390,12 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
 
     await form.handleSubmit(async (values) => {
       if (props.mode === "create") {
-        await props.onSubmit(toCreateAdultoMayorRequest(values), documentFile);
+        await props.onSubmit(
+          toCreateAdultoMayorRequest(
+            props.canSetActivationDate ? values : { ...values, activationDate: "" },
+          ),
+          documentFile,
+        );
         clearCreateDraft();
         setDocumentFile(null);
         return;
@@ -505,7 +512,7 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
             </select>
           </AdultoMayorFieldGroup>
 
-          {props.mode === "create" ? (
+          {props.mode === "create" && props.canSetActivationDate ? (
             <AdultoMayorFieldGroup
               label="Fecha de activación en el programa"
               error={getError("activationDate")}

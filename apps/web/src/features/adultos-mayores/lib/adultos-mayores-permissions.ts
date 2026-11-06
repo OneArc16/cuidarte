@@ -7,6 +7,10 @@ export function canManageAdultosMayores(user: Pick<AuthUser, "role" | "permissio
         hasUserPermission(user, "adultos_mayores.edit");
 }
 
+export function canManageAdultoMayorProgram(user: Pick<AuthUser, "permissions">): boolean {
+  return hasUserPermission(user, "adultos_mayores.manage_program");
+}
+
 export function canImportAdultosMayores(user: Pick<AuthUser, "role" | "permissions">): boolean {
   return user.permissions === undefined
     ? user.role === "super_admin" || user.role === "admin" || user.role === "director"

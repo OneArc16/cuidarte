@@ -113,7 +113,7 @@ export function AdultosMayoresPage({ navigate, path, user }: AdultosMayoresPageP
   const adultoMayorId = getAdultoMayorEditIdFromPath(path);
 
   if (adultoMayorId !== null) {
-    return <AdultoMayorEditPage adultoMayorId={adultoMayorId} navigate={navigate} />;
+    return <AdultoMayorEditPage adultoMayorId={adultoMayorId} navigate={navigate} user={user} />;
   }
 
   return (
