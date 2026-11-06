@@ -6,6 +6,7 @@ import {
   formatActividadGrupalTrashTimestamp,
   formatActaNumber,
 } from "../lib/actividades-grupales-formatters";
+import { describeUserAgent } from "../lib/describe-user-agent";
 
 type ActividadesGrupalesChangeLogTableProps = {
   entries: ActividadGrupalChangeLogEntry[];
@@ -125,6 +126,10 @@ export function ActividadesGrupalesChangeLogTable({
                     </td>
                     <td>
                       <strong>{entry.actorUserFullName}</strong>
+                      <ChangeLogOrigin
+                        ip={entry.actorIp ?? null}
+                        userAgent={entry.actorUserAgent ?? null}
+                      />
                     </td>
                     <td>{formatActividadGrupalTrashTimestamp(entry.occurredAt)}</td>
                   </tr>
@@ -162,5 +167,20 @@ export function ActividadesGrupalesChangeLogTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+function ChangeLogOrigin({ ip, userAgent }: { ip: string | null; userAgent: string | null }) {
+  const device = describeUserAgent(userAgent);
+
+  if (ip === null && device === null) {
+    return <span className="actividades-change-log-origin">Origen no registrado</span>;
+  }
+
+  return (
+    <span className="actividades-change-log-origin" title={userAgent ?? undefined}>
+      {ip === null ? null : <span>IP {ip}</span>}
+      {device === null ? null : <span>{device}</span>}
+    </span>
   );
 }

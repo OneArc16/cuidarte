@@ -472,6 +472,8 @@ export const actividadGrupalChangeLogEntrySchema = z.object({
   action: actividadGrupalChangeLogActionSchema,
   actorUserId: z.uuid(),
   actorUserFullName: z.string().min(1).max(180),
+  actorIp: z.string().max(64).nullable().optional(),
+  actorUserAgent: z.string().max(512).nullable().optional(),
   occurredAt: z.string().min(1),
   changes: z.array(
     z.object({

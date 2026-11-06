@@ -8,6 +8,8 @@ import {
   type UserRole,
 } from "@cuidarte/contracts";
 
+import { type AuditRequestContext } from "../../../common/audit-request-context";
+
 export type ActividadesGrupalesScope =
   | {
       type: "all";
@@ -101,6 +103,7 @@ export type CreateActividadGrupalRecordCommand = {
 export type UpdateActividadGrupalRecordCommand = {
   activityId: string;
   actorUserId: string;
+  requestContext: AuditRequestContext;
   activityName: string;
   activityType: ActividadGrupalType | null;
   activityTypeId: string;
@@ -120,6 +123,7 @@ export type UpdateActividadGrupalRecordCommand = {
 export type DeleteActividadGrupalRecordCommand = {
   activityId: string;
   actorUserId: string;
+  requestContext: AuditRequestContext;
   reason: string;
 };
 
@@ -200,6 +204,7 @@ export type PersistActividadGrupalSupportFile = {
 export type SaveActividadGrupalDiligenciamientoRecordCommand = {
   activityId: string;
   actorUserId: string;
+  requestContext: AuditRequestContext;
   objectives: string;
   development: string;
   conclusion: string;
@@ -265,6 +270,8 @@ export type ActividadGrupalChangeLogRecord = Pick<
   action: "updated" | "deleted";
   actorUserId: string;
   actorUserFullName: string;
+  actorIp: string | null;
+  actorUserAgent: string | null;
   occurredAt: Date;
   changes: Array<{
     field: string;

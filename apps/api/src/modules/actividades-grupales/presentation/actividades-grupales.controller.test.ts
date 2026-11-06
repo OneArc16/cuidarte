@@ -322,11 +322,18 @@ describe("ActividadesGrupalesController", () => {
     let receivedActivityId: string | null = null;
     let receivedActorId: string | null = null;
     let receivedReason: string | null = null;
+    let receivedRequestContext: unknown = null;
     const trashService = {
-      sendToTrash: async (activityId: string, reason: string, actor: AuthUser) => {
+      sendToTrash: async (
+        activityId: string,
+        reason: string,
+        actor: AuthUser,
+        requestContext: unknown,
+      ) => {
         receivedActivityId = activityId;
         receivedReason = reason;
         receivedActorId = actor.id;
+        receivedRequestContext = requestContext;
       },
     };
     const controller = new ActividadesGrupalesController(
@@ -338,10 +345,18 @@ describe("ActividadesGrupalesController", () => {
     const result = await controller.deleteActividadGrupal(
       "5f0361fb-ff51-43d7-a6e8-83c58df345b6",
       { reason: "Registro duplicado" },
-      { currentUser } as never,
+      {
+        currentUser,
+        ip: "190.85.12.4",
+        headers: { "user-agent": "Mozilla/5.0 Chrome/130.0" },
+      } as never,
     );
 
     assert.equal(receivedActivityId, "5f0361fb-ff51-43d7-a6e8-83c58df345b6");
+    assert.deepEqual(receivedRequestContext, {
+      ip: "190.85.12.4",
+      userAgent: "Mozilla/5.0 Chrome/130.0",
+    });
     assert.equal(receivedActorId, currentUser.id);
     assert.equal(receivedReason, "Registro duplicado");
     assert.deepEqual(result, { success: true });

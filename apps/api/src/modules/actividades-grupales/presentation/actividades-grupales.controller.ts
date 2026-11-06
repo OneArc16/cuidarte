@@ -51,6 +51,7 @@ import { type FastifyReply } from "fastify";
 import { type Multipart, type MultipartFile } from "@fastify/multipart";
 import { z } from "zod";
 
+import { resolveAuditRequestContext } from "../../../common/audit-request-context";
 import { buildContentDisposition } from "../../../common/content-disposition";
 import { parseZodSchema } from "../../../common/parse-zod-schema";
 import { type AuthenticatedRequest } from "../../auth/authenticated-request";
@@ -282,6 +283,7 @@ export class ActividadesGrupalesController {
       activityId,
       command,
       request.currentUser,
+      resolveAuditRequestContext(request),
     );
 
     return actividadGrupalListItemSchema.parse(detail);
@@ -303,6 +305,7 @@ export class ActividadesGrupalesController {
       activityId,
       command.reason,
       request.currentUser,
+      resolveAuditRequestContext(request),
     );
 
     return deleteActividadGrupalResponseSchema.parse({ success: true });
@@ -390,6 +393,7 @@ export class ActividadesGrupalesController {
         newPdf: multipartPayload.newPdf,
       },
       request.currentUser,
+      resolveAuditRequestContext(request),
     );
 
     return actividadGrupalDiligenciamientoDetailSchema.parse(detail);

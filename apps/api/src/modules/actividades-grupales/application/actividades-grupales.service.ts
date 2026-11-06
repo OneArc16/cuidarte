@@ -56,6 +56,10 @@ import {
   resolvePermittedActividadGrupalOrganizers,
   resolveActividadesGrupalesScope,
 } from "../domain/actividad-grupal.policy";
+import {
+  type AuditRequestContext,
+  EMPTY_AUDIT_REQUEST_CONTEXT,
+} from "../../../common/audit-request-context";
 import { assertAdultoMayorRecordDateAllowed } from "../../adultos-mayores/domain/adulto-mayor-status-policy";
 import { ActividadGrupalTiposService } from "../../actividad-grupal-tipos/application/actividad-grupal-tipos.service";
 import {
@@ -285,6 +289,7 @@ export class ActividadesGrupalesService {
     activityId: string,
     command: UpdateActividadGrupalRequest,
     actor: AuthUser,
+    requestContext: AuditRequestContext = EMPTY_AUDIT_REQUEST_CONTEXT,
   ): Promise<ActividadGrupalListItem> {
     this.ensureCanEditActivities(actor);
     const detail = await this.getEditableActivityOrThrow(activityId, actor);
@@ -313,6 +318,7 @@ export class ActividadesGrupalesService {
     const record = await this.actividadesGrupalesRepository.update({
       activityId,
       actorUserId: actor.id,
+      requestContext,
       activityName: command.activityName,
       activityType: detail.activity.activityType,
       activityTypeId: command.activityTypeId,
@@ -501,6 +507,7 @@ export class ActividadesGrupalesService {
   async saveActividadGrupalDiligenciamiento(
     command: SaveActividadGrupalDiligenciamientoCommand,
     actor: AuthUser,
+    requestContext: AuditRequestContext = EMPTY_AUDIT_REQUEST_CONTEXT,
   ): Promise<ActividadGrupalDiligenciamientoDetail> {
     this.ensureCanEditActivities(actor);
     const detail = await this.getPermittedDiligenciamientoOrThrow(command.activityId, actor);
@@ -529,6 +536,7 @@ export class ActividadesGrupalesService {
       const saved = await this.actividadesGrupalesRepository.saveDiligenciamiento({
         activityId: command.activityId,
         actorUserId: actor.id,
+        requestContext,
         objectives: command.payload.objectives,
         development: command.payload.development,
         conclusion: command.payload.conclusion,

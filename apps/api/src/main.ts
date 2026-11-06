@@ -29,6 +29,7 @@ async function bootstrap(): Promise<void> {
       AppModule,
       new FastifyAdapter({
         logger: env.NODE_ENV !== "test",
+        trustProxy: env.TRUST_PROXY,
       }),
     );
     await app.register(fastifyMultipart as never, {

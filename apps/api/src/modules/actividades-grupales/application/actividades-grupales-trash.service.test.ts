@@ -45,7 +45,7 @@ const auditorUser: AuthUser = {
 
 describe("ActividadesGrupalesTrashService", () => {
   it("deletes an active acta into the deletion log without touching files", async () => {
-    let deletedCommand: { activityId: string; actorUserId: string; reason: string } | null = null;
+    let deletedCommand: Parameters<ActividadesGrupalesRepository["delete"]>[0] | null = null;
     const repository = createRepository({
       delete: async (command) => {
         deletedCommand = command;
@@ -62,6 +62,7 @@ describe("ActividadesGrupalesTrashService", () => {
     assert.deepEqual(deletedCommand, {
       activityId: "bd962778-117e-4275-aa07-1ea2f7a1d6f8",
       actorUserId: adminUser.id,
+      requestContext: { ip: null, userAgent: null },
       reason: "Registro duplicado",
     });
   });
@@ -110,6 +111,11 @@ describe("ActividadesGrupalesTrashService", () => {
     ]);
     assert.equal(result.entries[0]?.action, "updated");
     assert.equal(result.entries[0]?.actorUserFullName, adminUser.fullName);
+    assert.equal(result.entries[0]?.actorIp, "190.85.12.4");
+    assert.equal(
+      result.entries[0]?.actorUserAgent,
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0",
+    );
     assert.equal(result.nextCursor, null);
   });
 
@@ -141,6 +147,32 @@ describe("ActividadesGrupalesTrashService", () => {
     );
 
     assert.deepEqual(receivedActions, ["deleted"]);
+  });
+
+  it("records where a deletion came from", async () => {
+    const deleteCommands: Array<Parameters<ActividadesGrupalesRepository["delete"]>[0]> = [];
+    const service = new ActividadesGrupalesTrashService(
+      createRepository({
+        async delete(command) {
+          deleteCommands.push(command);
+        },
+      }),
+    );
+
+    await service.sendToTrash(
+      "bd962778-117e-4275-aa07-1ea2f7a1d6f8",
+      "Registro duplicado",
+      adminUser,
+      {
+        ip: "190.85.12.4",
+        userAgent: "Mozilla/5.0 Firefox/131.0",
+      },
+    );
+
+    assert.deepEqual(deleteCommands[0]?.requestContext, {
+      ip: "190.85.12.4",
+      userAgent: "Mozilla/5.0 Firefox/131.0",
+    });
   });
 
   it("rejects auditors", async () => {
@@ -267,6 +299,8 @@ function createRepository(
             action: "updated" as const,
             actorUserId: adminUser.id,
             actorUserFullName: adminUser.fullName,
+            actorIp: "190.85.12.4",
+            actorUserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0",
             occurredAt: new Date("2026-04-23T12:00:00.000Z"),
             changes: [{ field: "Hora de finalización", before: "09:30", after: "10:00" }],
           },

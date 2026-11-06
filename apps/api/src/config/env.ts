@@ -11,6 +11,9 @@ const envSchema = z.object({
   SESSION_COOKIE_NAME: z.string().min(1).default("cuidarte_session"),
   SESSION_TTL_DAYS: z.coerce.number().int().positive().default(7),
   SESSION_IDLE_TIMEOUT_MINUTES: z.coerce.number().int().positive().default(30),
+  // Proxies whose X-Forwarded-For header is trusted to resolve the client IP
+  // (proxy-addr syntax: comma separated IPs, CIDRs or presets such as "loopback").
+  TRUST_PROXY: z.string().trim().min(1).default("loopback"),
   ACTIVIDADES_GRUPALES_UPLOADS_DIR: z.string().min(1).default("/tmp/cuidarte/actividades-grupales"),
   EMPLEADOS_SIGNATURES_DIR: z.string().min(1).default(".data/uploads/empleados-signatures"),
   ALIMENTACION_FORMATOS_DIR: z.string().min(1).default(".data/uploads/alimentacion-formatos"),

@@ -103,6 +103,37 @@ describe("App actividades change log flow", () => {
     expect(screen.queryByRole("region", { name: "Cambio en Desarrollo" })).not.toBeInTheDocument();
   });
 
+  it("shows where each change came from", async () => {
+    server.use(
+      mockAuthMe(authUserFixture),
+      http.get("http://localhost:3001/api/actividades-grupales/log-cambios", () =>
+        HttpResponse.json({
+          entries: [
+            {
+              ...actividadGrupalChangeLogFixture,
+              actorIp: "190.85.12.4",
+              actorUserAgent:
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+            },
+            {
+              ...actividadGrupalChangeLogFixture,
+              id: "823e4567-e89b-42d3-a456-426614174000",
+              actorIp: null,
+              actorUserAgent: null,
+            },
+          ],
+          nextCursor: null,
+        }),
+      ),
+    );
+
+    renderAppAtPath("/creacion-actividades/log-cambios");
+
+    expect(await screen.findByText("IP 190.85.12.4")).toBeInTheDocument();
+    expect(screen.getByText("Chrome en Windows")).toBeInTheDocument();
+    expect(screen.getByText("Origen no registrado")).toBeInTheDocument();
+  });
+
   it("filters the change log by action", async () => {
     const requestedActions: Array<string | null> = [];
     server.use(

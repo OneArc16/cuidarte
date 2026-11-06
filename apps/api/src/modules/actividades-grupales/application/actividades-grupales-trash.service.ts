@@ -10,6 +10,11 @@ import {
 import { ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 
 import {
+  type AuditRequestContext,
+  EMPTY_AUDIT_REQUEST_CONTEXT,
+} from "../../../common/audit-request-context";
+
+import {
   canListTrashActividadesGrupales,
   canManageActividadesGrupales,
   canTrashActividadGrupal,
@@ -33,7 +38,12 @@ export class ActividadesGrupalesTrashService {
     private readonly actividadesGrupalesRepository: ActividadesGrupalesRepository,
   ) {}
 
-  async sendToTrash(activityId: string, reason: string, actor: AuthUser): Promise<void> {
+  async sendToTrash(
+    activityId: string,
+    reason: string,
+    actor: AuthUser,
+    requestContext: AuditRequestContext = EMPTY_AUDIT_REQUEST_CONTEXT,
+  ): Promise<void> {
     this.ensureCanManageActivities(actor);
     const scope = this.resolveScopeOrThrow(actor);
     const detail = await this.actividadesGrupalesRepository.findById({
@@ -53,6 +63,7 @@ export class ActividadesGrupalesTrashService {
     await this.actividadesGrupalesRepository.delete({
       activityId,
       actorUserId: actor.id,
+      requestContext,
       reason,
     });
   }
@@ -189,6 +200,8 @@ export class ActividadesGrupalesTrashService {
       action: record.action,
       actorUserId: record.actorUserId,
       actorUserFullName: record.actorUserFullName,
+      actorIp: record.actorIp,
+      actorUserAgent: record.actorUserAgent,
       occurredAt: record.occurredAt.toISOString(),
       changes: record.changes,
     });

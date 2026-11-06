@@ -1534,6 +1534,8 @@ export const auditLogs = pgTable(
       .$type<Record<string, unknown>>()
       .notNull()
       .default(sql`'{}'::jsonb`),
+    actorIp: varchar("actor_ip", { length: 64 }),
+    actorUserAgent: text("actor_user_agent"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

@@ -463,7 +463,16 @@
   font-size: 0.76rem;
 }
 
-.actividades-change-log-change .actividades-change-log-preview {
+.actividades-change-log-change .actividades-change-log-origin {
+  display: grid;
+  gap: 1px;
+  margin-top: 4px;
+  color: var(--muted-foreground);
+  font-size: 0.74rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.actividades-change-log-preview {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
