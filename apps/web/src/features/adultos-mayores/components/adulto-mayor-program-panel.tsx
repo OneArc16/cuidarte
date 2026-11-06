@@ -1,6 +1,6 @@
 import { type AdultoMayorProgramPeriod } from "@cuidarte/contracts";
 import { UserMinus, UserPlus } from "lucide-react";
-import { type FormEvent, useState } from "react";
+import { type KeyboardEvent, useState } from "react";
 import { toast } from "sonner";
 
 import { getLocalDateInputValue } from "@/shared/lib/date-input";
@@ -26,9 +26,13 @@ export function AdultoMayorProgramPanel({ adultoMayorId }: AdultoMayorProgramPan
   const actionLabel = isActive ? "Inactivar" : "Reintegrar";
   const dateLabel = isActive ? "Fecha de inactivación" : "Fecha de reintegro";
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const trimmedReason = reason.trim() === "" ? null : reason.trim();
+  async function handleSubmit() {
+    const trimmedReason = reason.trim();
+
+    if (date === "" || trimmedReason === "" || changeMutation.isPending) {
+      return;
+    }
+
 
     try {
       await changeMutation.mutateAsync(
@@ -45,16 +49,25 @@ export function AdultoMayorProgramPanel({ adultoMayorId }: AdultoMayorProgramPan
     toast.success(isActive ? "Adulto mayor inactivado." : "Adulto mayor reintegrado.");
   }
 
+  // The panel lives inside the adulto mayor form, so Enter must run this action instead of
+  // submitting the outer form.
+  function handleEnter(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      void handleSubmit();
+    }
+  }
+
   return (
-    <section className="adulto-program-panel" aria-labelledby="adulto-program-title">
-      <header className="adulto-program-panel__header">
-        <h2 id="adulto-program-title">Programa</h2>
+    <section className="adulto-program-panel" aria-label="Estado en el programa">
+      <div className="adulto-program-panel__header">
+        <span>Estado actual</span>
         {programStatus === undefined ? null : (
           <span className="adulto-program-badge" data-state={programStatus}>
             {isActive ? "Activo" : "Inactivo"}
           </span>
         )}
-      </header>
+      </div>
 
       {periodsQuery.isLoading ? (
         <p className="adulto-program-panel__hint">Cargando periodos...</p>
@@ -66,10 +79,9 @@ export function AdultoMayorProgramPanel({ adultoMayorId }: AdultoMayorProgramPan
       ) : null}
 
       {programStatus !== undefined ? (
-        <form
+        <div
           className="adulto-program-panel__form"
           data-action={isActive ? "inactivate" : "reintegrate"}
-          onSubmit={(event) => void handleSubmit(event)}
         >
           <label className="adulto-form-field">
             <span>{dateLabel}</span>
@@ -79,22 +91,26 @@ export function AdultoMayorProgramPanel({ adultoMayorId }: AdultoMayorProgramPan
               max={getLocalDateInputValue()}
               value={date}
               onChange={(event) => setDate(event.target.value)}
+              onKeyDown={handleEnter}
             />
           </label>
           <label className="adulto-form-field">
-            <span>Motivo (opcional)</span>
+            <span>Motivo</span>
             <input
               type="text"
+              required
               maxLength={500}
               placeholder={isActive ? "Ej. se mudó con un familiar" : "Ej. regresó al centro"}
               value={reason}
               onChange={(event) => setReason(event.target.value)}
+              onKeyDown={handleEnter}
             />
           </label>
           <button
             className="adulto-program-panel__submit"
-            type="submit"
-            disabled={changeMutation.isPending}
+            type="button"
+            disabled={changeMutation.isPending || date === "" || reason.trim() === ""}
+            onClick={() => void handleSubmit()}
           >
             {isActive ? <UserMinus aria-hidden="true" /> : <UserPlus aria-hidden="true" />}
             <span>{changeMutation.isPending ? "Guardando..." : actionLabel}</span>
@@ -104,7 +120,7 @@ export function AdultoMayorProgramPanel({ adultoMayorId }: AdultoMayorProgramPan
               {resolveAdultosMayoresApiError(changeMutation.error)}
             </p>
           ) : null}
-        </form>
+        </div>
       ) : null}
 
       {periods.length > 0 ? (

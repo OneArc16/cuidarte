@@ -39,6 +39,22 @@ export const adultosMayoresHandlers = [
   http.post("http://localhost:3001/api/adultos-mayores/:adultoMayorId/restore", () =>
     HttpResponse.json({ success: true }),
   ),
+  http.get("http://localhost:3001/api/adultos-mayores/:adultoMayorId/periodos-programa", () =>
+    HttpResponse.json({
+      programStatus: "active",
+      periods: [
+        {
+          id: "7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d",
+          activationDate: "2026-07-15",
+          inactivationDate: null,
+          activationReason: null,
+          inactivationReason: null,
+          activatedByUserFullName: null,
+          inactivatedByUserFullName: null,
+        },
+      ],
+    }),
+  ),
   http.get("http://localhost:3001/api/adultos-mayores/:adultoMayorId", () =>
     HttpResponse.json(adultoMayorFixture),
   ),

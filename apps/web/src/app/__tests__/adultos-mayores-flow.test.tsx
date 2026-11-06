@@ -265,6 +265,22 @@ describe("App adultos mayores flow", () => {
     });
   });
 
+  it("shows the program status as its own tab without the form save action", async () => {
+    server.use(mockAuthMe(authUserFixture));
+    const user = userEvent.setup();
+    renderAppAtPath(`/adultos-mayores/${adultoMayorFixture.id}/edit`);
+
+    await screen.findByLabelText("Segundo nombre");
+    expect(screen.getByRole("button", { name: "Guardar" })).toBeVisible();
+
+    await user.click(screen.getByRole("tab", { name: "Estado programa" }));
+
+    expect(await screen.findByText("Activo desde 15/07/2026")).toBeVisible();
+    expect(screen.getByLabelText("Fecha de inactivación")).toBeVisible();
+    expect(screen.getByLabelText("Motivo")).toBeRequired();
+    expect(screen.queryByRole("button", { name: "Guardar" })).not.toBeInTheDocument();
+  });
+
   it("edits an adulto mayor from the reusable form", async () => {
     server.use(mockAuthMe(authUserFixture));
     const successToastSpy = vi.spyOn(toast, "success");

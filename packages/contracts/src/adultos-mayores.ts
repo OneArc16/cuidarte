@@ -453,12 +453,12 @@ export const adultoMayorProgramPeriodsResponseSchema = z.object({
 
 export const inactivateAdultoMayorRequestSchema = z.object({
   inactivationDate: dateSchema,
-  reason: nullableTextSchema(500).optional().default(null),
+  reason: requiredTextSchema(500),
 });
 
 export const reintegrateAdultoMayorRequestSchema = z.object({
   activationDate: dateSchema,
-  reason: nullableTextSchema(500).optional().default(null),
+  reason: requiredTextSchema(500),
 });
 
 export const adultoMayorDetailResponseSchema = adultoMayorDetailSchema;

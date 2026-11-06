@@ -90,10 +90,9 @@ export function AdultoMayorEditPage({ adultoMayorId, navigate }: AdultoMayorEdit
         </span>
       </div>
 
-      <AdultoMayorProgramPanel adultoMayorId={adultoMayorId} />
-
       <AdultoMayorForm
         mode="edit"
+        programPanel={<AdultoMayorProgramPanel adultoMayorId={adultoMayorId} />}
         detail={adultoMayorQuery.data}
         isPending={updateMutation.isPending}
         error={resolveAdultosMayoresApiError(updateMutation.error)}

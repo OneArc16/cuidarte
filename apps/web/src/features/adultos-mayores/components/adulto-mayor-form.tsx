@@ -6,7 +6,7 @@ import {
 } from "@cuidarte/contracts";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, type Resolver, type FieldErrors, useForm, useWatch } from "react-hook-form";
-import { useEffect, useId, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Eye, FileText, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -123,6 +123,8 @@ type AdultoMayorFormProps =
   | {
       mode: "edit";
       detail: AdultoMayorDetail;
+      /** Rendered as the "Estado programa" tab; it saves on its own, outside this form. */
+      programPanel?: ReactNode;
       error: string | null;
       isPending: boolean;
       onCancel: () => void;
@@ -134,10 +136,13 @@ type AdultoMayorFormProps =
     };
 
 export function AdultoMayorForm(props: AdultoMayorFormProps) {
-  const [activeSection, setActiveSection] = useState<AdultoMayorFormSectionId>("personal");
+  const [activeSection, setActiveSection] = useState<AdultoMayorFormSectionId | "program">(
+    "personal",
+  );
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const tabPanelIdPrefix = useId();
   const detail = props.mode === "edit" ? props.detail : null;
+  const programPanel = props.mode === "edit" ? (props.programPanel ?? null) : null;
   const shouldShowTenantSelect = props.mode === "create" && props.shouldSelectTenant;
   const form = useForm<AdultoMayorFormValues>({
     resolver: zodResolver(adultoMayorFormSchema) as Resolver<AdultoMayorFormValues>,
@@ -237,7 +242,7 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
   }, [props.mode, reset]);
 
   useEffect(() => {
-    if (props.mode !== "create") {
+    if (props.mode !== "create" || activeSection === "program") {
       return;
     }
 
@@ -417,6 +422,18 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
             {section.label}
           </button>
         ))}
+        {programPanel === null ? null : (
+          <button
+            id={`${tabPanelIdPrefix}-program-tab`}
+            type="button"
+            role="tab"
+            aria-controls={`${tabPanelIdPrefix}-program-panel`}
+            aria-selected={activeSection === "program"}
+            onClick={() => setActiveSection("program")}
+          >
+            Estado programa
+          </button>
+        )}
       </nav>
 
       <section
@@ -987,7 +1004,19 @@ export function AdultoMayorForm(props: AdultoMayorFormProps) {
         </div>
       </section>
 
-      <div className="adulto-form-actions">
+      {programPanel === null ? null : (
+        <section
+          className="adulto-form-panel"
+          id={`${tabPanelIdPrefix}-program-panel`}
+          role="tabpanel"
+          aria-labelledby={`${tabPanelIdPrefix}-program-tab`}
+          hidden={activeSection !== "program"}
+        >
+          {programPanel}
+        </section>
+      )}
+
+      <div className="adulto-form-actions" hidden={activeSection === "program"}>
         <button
           className="outline-action"
           type="button"

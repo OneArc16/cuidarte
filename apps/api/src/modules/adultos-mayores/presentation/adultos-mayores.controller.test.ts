@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { BadRequestException } from "@nestjs/common";
+
 import { type AdultoMayorListQuery, type AuthUser } from "@cuidarte/contracts";
 import { type FastifyReply } from "fastify";
 
@@ -21,6 +23,35 @@ const municipalityId = "22222222-2222-2222-8222-222222222222";
 const epsId = "33333333-3333-4333-8333-333333333333";
 
 describe("AdultosMayoresController exports", () => {
+  it("requires a reason to inactivate or reintegrate in the program", async () => {
+    const service = createAdultosMayoresService();
+    const controller = new AdultosMayoresController(
+      service as never,
+      createExportService() as never,
+    );
+    const adultoMayorId = "0b17e370-8f81-48c0-b707-c7046f497855";
+
+    for (const body of [
+      { inactivationDate: "2026-09-01" },
+      { inactivationDate: "2026-09-01", reason: "   " },
+    ]) {
+      await assert.rejects(
+        () => controller.inactivateProgram(adultoMayorId, body, { currentUser } as never),
+        BadRequestException,
+      );
+    }
+
+    await assert.rejects(
+      () =>
+        controller.reintegrateProgram(
+          adultoMayorId,
+          { activationDate: "2026-10-01", reason: "" },
+          { currentUser } as never,
+        ),
+      BadRequestException,
+    );
+  });
+
   it("passes create commands and current user to the service", async () => {
     const service = createAdultosMayoresService();
     const controller = new AdultosMayoresController(

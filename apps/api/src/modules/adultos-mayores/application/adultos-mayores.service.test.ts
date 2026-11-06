@@ -454,7 +454,7 @@ describe("AdultosMayoresService", () => {
       () =>
         service.inactivateProgram(
           adultoMayorId,
-          { inactivationDate: "2026-09-02", reason: null },
+          { inactivationDate: "2026-09-02", reason: "Duplicado" },
           tenantAdminUser,
         ),
       { constructor: BadRequestException },
@@ -462,7 +462,7 @@ describe("AdultosMayoresService", () => {
 
     const reintegrated = await service.reintegrateProgram(
       adultoMayorId,
-      { activationDate: "2026-10-01", reason: null },
+      { activationDate: "2026-10-01", reason: "Regreso al centro" },
       tenantAdminUser,
     );
 
@@ -488,7 +488,7 @@ describe("AdultosMayoresService", () => {
       () =>
         service.inactivateProgram(
           records[0]!.id,
-          { inactivationDate: "2026-09-01", reason: null },
+          { inactivationDate: "2026-09-01", reason: "Retiro" },
           tenantAuditorUser,
         ),
       { constructor: ForbiddenException },

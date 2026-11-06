@@ -2379,25 +2379,17 @@
 
 .adulto-program-panel {
   display: grid;
-  gap: 16px;
+  gap: 18px;
   min-width: 0;
-  padding: 18px 20px;
-  border: 1px solid var(--color-border);
-  border-radius: 14px;
-  background: var(--color-surface);
 }
 
 .adulto-program-panel__header {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.adulto-program-panel__header h2 {
-  margin: 0;
-  color: var(--color-ink);
-  font-size: 0.95rem;
-  font-weight: 800;
+  color: var(--color-deep);
+  font-size: 0.82rem;
+  font-weight: 850;
 }
 
 .adulto-program-panel__hint {
