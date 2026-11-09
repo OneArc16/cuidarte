@@ -16,12 +16,26 @@ type ActividadesGrupalesChangeLogTableProps = {
 
 const LONG_VALUE_THRESHOLD = 90;
 const EMPTY_VALUE_LABEL = "Sin valor";
+/** Separates a short summary from its details, e.g. "3 asignado(s) · Agregó: names". */
+const DETAIL_SEPARATOR = " · ";
+
+function splitChangeValue(value: string | null): { summary: string; details: string[] } {
+  if (value === null) {
+    return { summary: EMPTY_VALUE_LABEL, details: [] };
+  }
+
+  const [summary = value, ...details] = value.split(DETAIL_SEPARATOR);
+
+  return { summary, details };
+}
 
 function hasLongValues(entry: ActividadGrupalChangeLogEntry) {
   return entry.changes.some(
     (change) =>
       (change.before?.length ?? 0) > LONG_VALUE_THRESHOLD ||
-      (change.after?.length ?? 0) > LONG_VALUE_THRESHOLD,
+      (change.after?.length ?? 0) > LONG_VALUE_THRESHOLD ||
+      splitChangeValue(change.before).details.length > 0 ||
+      splitChangeValue(change.after).details.length > 0,
   );
 }
 
@@ -103,10 +117,10 @@ export function ActividadesGrupalesChangeLogTable({
                             <div key={change.field} className="actividades-change-log-change">
                               <strong>{change.field}</strong>
                               <span className="actividades-change-log-preview">
-                                Antes: {change.before ?? EMPTY_VALUE_LABEL}
+                                Antes: {splitChangeValue(change.before).summary}
                               </span>
                               <span className="actividades-change-log-preview">
-                                Después: {change.after ?? EMPTY_VALUE_LABEL}
+                                Después: {splitChangeValue(change.after).summary}
                               </span>
                             </div>
                           ))}
@@ -146,12 +160,16 @@ export function ActividadesGrupalesChangeLogTable({
                               <h4>{change.field}</h4>
                               <div className="actividades-change-log-detail__compare">
                                 <div className="actividades-change-log-detail__panel actividades-change-log-detail__panel--before">
-                                  <span className="actividades-change-log-detail__label">Antes</span>
-                                  <p>{change.before ?? EMPTY_VALUE_LABEL}</p>
+                                  <span className="actividades-change-log-detail__label">
+                                    Antes
+                                  </span>
+                                  <ChangeValueDetail value={change.before} />
                                 </div>
                                 <div className="actividades-change-log-detail__panel actividades-change-log-detail__panel--after">
-                                  <span className="actividades-change-log-detail__label">Después</span>
-                                  <p>{change.after ?? EMPTY_VALUE_LABEL}</p>
+                                  <span className="actividades-change-log-detail__label">
+                                    Después
+                                  </span>
+                                  <ChangeValueDetail value={change.after} />
                                 </div>
                               </div>
                             </section>
@@ -167,6 +185,19 @@ export function ActividadesGrupalesChangeLogTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+function ChangeValueDetail({ value }: { value: string | null }) {
+  const { summary, details } = splitChangeValue(value);
+
+  return (
+    <>
+      <p>{summary}</p>
+      {details.map((detail) => (
+        <p key={detail}>{detail}</p>
+      ))}
+    </>
   );
 }
 
