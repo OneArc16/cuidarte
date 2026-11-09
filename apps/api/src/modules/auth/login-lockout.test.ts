@@ -11,7 +11,7 @@ const minutesAhead = (minutes: number) => new Date(now.getTime() + minutes * 60_
 const clean = { failedLoginAttempts: 0, lastFailedLoginAt: null, lockedUntil: null };
 
 describe("bloqueo de inicio de sesion por intentos fallidos", () => {
-  it("bloquea 15 minutos al quinto intento fallido seguido", () => {
+  it("bloquea 3 minutos al quinto intento fallido seguido", () => {
     let state: Parameters<typeof registerFailedLoginAttempt>[0] = clean;
 
     for (let attempt = 1; attempt <= 4; attempt += 1) {
@@ -22,7 +22,7 @@ describe("bloqueo de inicio de sesion por intentos fallidos", () => {
 
     state = registerFailedLoginAttempt(state, now);
     assert.equal(state.failedLoginAttempts, 5);
-    assert.deepEqual(state.lockedUntil, minutesAhead(15));
+    assert.deepEqual(state.lockedUntil, minutesAhead(3));
   });
 
   it("olvida los fallos de hace mas de 15 minutos", () => {
@@ -43,7 +43,7 @@ describe("bloqueo de inicio de sesion por intentos fallidos", () => {
     );
 
     assert.equal(state.failedLoginAttempts, 5);
-    assert.deepEqual(state.lockedUntil, minutesAhead(15));
+    assert.deepEqual(state.lockedUntil, minutesAhead(3));
   });
 
   it("empieza de cero cuando el bloqueo anterior ya vencio", () => {
