@@ -6,6 +6,7 @@ import { ActaCorrectionConflictError } from "../domain/actividad-grupal.types";
 import {
   assertCorrectionFinalStateIsUnique,
   buildAutomaticActaNormalizationRows,
+  buildDiligenciamientoAuditChanges,
   buildCorrectionPreviewRows,
   buildPrefixCorrectionPreviewRows,
   buildTemporaryCorrectionRows,
@@ -572,5 +573,70 @@ describe("resolveChangeLogAuditActions", () => {
 
   it("restricts deletions to the deleted audit action", () => {
     assert.deepEqual(resolveChangeLogAuditActions("deleted"), ["actividades-grupales.deleted"]);
+  });
+});
+
+describe("buildDiligenciamientoAuditChanges", () => {
+  const snapshot = {
+    objectives: "Objetivo",
+    development: "Desarrollo",
+    conclusion: "Conclusion",
+    responsibleDepartment: "Psicologia",
+    integranteIds: ["a", "b"],
+    photoNames: ["foto.jpg"],
+    pdfName: "acta.pdf",
+  };
+  const noFileChanges = {
+    integranteNames: new Map<string, string>(),
+    photosReplaced: false,
+    pdfReplaced: false,
+  };
+
+  it("returns no changes when the diligenciamiento is saved without changes", () => {
+    assert.deepEqual(
+      buildDiligenciamientoAuditChanges(snapshot, { ...snapshot }, noFileChanges),
+      [],
+    );
+  });
+
+  it("names the participants added and removed even when the count stays the same", () => {
+    assert.deepEqual(
+      buildDiligenciamientoAuditChanges(
+        snapshot,
+        { ...snapshot, integranteIds: ["a", "c"] },
+        {
+          ...noFileChanges,
+          integranteNames: new Map([
+            ["b", "Ana Perez"],
+            ["c", "Luis Gomez"],
+          ]),
+        },
+      ),
+      [
+        {
+          field: "Participantes",
+          before: "2 participante(s) · Quitó: Ana Perez",
+          after: "2 participante(s) · Agregó: Luis Gomez",
+        },
+      ],
+    );
+  });
+
+  it("records a support file replaced by another file with the same name", () => {
+    assert.deepEqual(
+      buildDiligenciamientoAuditChanges(
+        snapshot,
+        { ...snapshot },
+        {
+          ...noFileChanges,
+          photosReplaced: true,
+          pdfReplaced: true,
+        },
+      ),
+      [
+        { field: "Soporte PDF", before: "acta.pdf", after: "acta.pdf (reemplazado)" },
+        { field: "Fotos de soporte", before: "foto.jpg", after: "foto.jpg (reemplazadas)" },
+      ],
+    );
   });
 });

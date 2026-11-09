@@ -192,7 +192,9 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
   async findChangeLogMany(
     query: FindActividadGrupalChangeLogQuery,
   ): Promise<{ entries: ActividadGrupalChangeLogRecord[]; nextCursor: string | null }> {
-    const conditions: SQL[] = [inArray(auditLogs.action, resolveChangeLogAuditActions(query.action))];
+    const conditions: SQL[] = [
+      inArray(auditLogs.action, resolveChangeLogAuditActions(query.action)),
+    ];
     const changeLogWhere = this.buildChangeLogWhere(query);
 
     if (changeLogWhere !== undefined) {
@@ -992,20 +994,24 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         employeeIds: [...command.employeeIds].sort(),
       };
 
-      await tx.insert(auditLogs).values({
-        actorUserId: command.actorUserId,
-        action: "actividades-grupales.updated",
-        targetTenantId: updated.tenantId,
-        actorIp: command.requestContext.ip,
-        actorUserAgent: command.requestContext.userAgent,
-        summary: `Actividad grupal actualizada #${updated.id}: ${command.activityName}`,
-        metadata: {
-          activityId: command.activityId,
-          before,
-          after,
-          changes: buildActivityAuditChanges(before, after),
-        },
-      });
+      const activityChanges = buildActivityAuditChanges(before, after);
+
+      if (activityChanges.length > 0) {
+        await tx.insert(auditLogs).values({
+          actorUserId: command.actorUserId,
+          action: "actividades-grupales.updated",
+          targetTenantId: updated.tenantId,
+          actorIp: command.requestContext.ip,
+          actorUserAgent: command.requestContext.userAgent,
+          summary: `Actividad grupal actualizada #${updated.id}: ${command.activityName}`,
+          metadata: {
+            activityId: command.activityId,
+            before,
+            after,
+            changes: activityChanges,
+          },
+        });
+      }
 
       return {
         ...row,
@@ -1916,7 +1922,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         development: existingDiligenciamiento?.development ?? null,
         conclusion: existingDiligenciamiento?.conclusion ?? null,
         responsibleDepartment: existingDiligenciamiento?.responsibleDepartment ?? null,
-        integrantesCount: existingIntegrantes.length,
+        integranteIds: existingIntegrantes.map((integrante) => integrante.adultoMayorId).sort(),
         photoNames: existingFiles
           .filter((file) => file.kind === "support_photo")
           .map((file) => file.originalName)
@@ -1937,7 +1943,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         development: command.development,
         conclusion: command.conclusion,
         responsibleDepartment: command.responsibleDepartment,
-        integrantesCount: command.integranteIds.length,
+        integranteIds: [...command.integranteIds].sort(),
         photoNames: [
           ...existingFiles
             .filter((file) => file.kind === "support_photo" && !removedFileIds.includes(file.id))
@@ -1952,6 +1958,30 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
             ? null
             : (existingFiles.find((file) => file.kind === "support_pdf")?.originalName ?? null)),
       };
+      const changedIntegranteIds = symmetricDifference(before.integranteIds, after.integranteIds);
+      const changedIntegrantes =
+        changedIntegranteIds.length === 0
+          ? []
+          : await tx
+              .select({
+                id: adultosMayores.id,
+                names: adultosMayores.names,
+                surnames: adultosMayores.surnames,
+              })
+              .from(adultosMayores)
+              .where(inArray(adultosMayores.id, changedIntegranteIds));
+      const changes = buildDiligenciamientoAuditChanges(before, after, {
+        integranteNames: new Map(
+          changedIntegrantes.map((integrante) => [
+            integrante.id,
+            `${integrante.names} ${integrante.surnames}`.trim(),
+          ]),
+        ),
+        photosReplaced:
+          removedPhotoFiles.length > 0 ||
+          command.newFiles.some((file) => file.kind === "support_photo"),
+        pdfReplaced: newPdfProvided || (command.removePdfFile && before.pdfName !== null),
+      });
 
       await tx
         .insert(actividadGrupalDiligenciamientos)
@@ -2022,7 +2052,8 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         .where(eq(actividadesGrupales.id, command.activityId))
         .limit(1);
 
-      if (activity !== undefined) {
+      // Saving without changes must not add an empty "Edición" entry to the change log.
+      if (activity !== undefined && changes.length > 0) {
         await tx
           .update(actividadesGrupales)
           .set({
@@ -2047,7 +2078,7 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
             pdfUpdated: newPdfProvided,
             before,
             after,
-            changes: buildDiligenciamientoAuditChanges(before, after),
+            changes,
           },
         });
       }
@@ -3082,46 +3113,104 @@ type DiligenciamientoAuditSnapshot = {
   development: string | null;
   conclusion: string | null;
   responsibleDepartment: string | null;
-  integrantesCount: number;
+  integranteIds: string[];
   photoNames: string[];
   pdfName: string | null;
 };
 
-function buildDiligenciamientoAuditChanges(
+type DiligenciamientoAuditContext = {
+  /** Display names of the participants added or removed, by adulto mayor id. */
+  integranteNames: ReadonlyMap<string, string>;
+  /** A photo was removed or uploaded, even if the resulting names did not change. */
+  photosReplaced: boolean;
+  /** The PDF was removed or uploaded, even if the resulting name did not change. */
+  pdfReplaced: boolean;
+};
+
+export function buildDiligenciamientoAuditChanges(
   before: DiligenciamientoAuditSnapshot,
   after: DiligenciamientoAuditSnapshot,
+  context: DiligenciamientoAuditContext,
 ): Array<{ field: string; before: string | null; after: string | null }> {
   const fields: Array<{
-    key: "objectives" | "development" | "conclusion" | "responsibleDepartment" | "pdfName";
+    key: "objectives" | "development" | "conclusion" | "responsibleDepartment";
     label: string;
   }> = [
     { key: "objectives", label: "Objetivos" },
     { key: "development", label: "Desarrollo" },
     { key: "conclusion", label: "Conclusión" },
     { key: "responsibleDepartment", label: "Departamento responsable" },
-    { key: "pdfName", label: "Soporte PDF" },
   ];
   const changes = fields.flatMap(({ key, label }) =>
     before[key] === after[key] ? [] : [{ field: label, before: before[key], after: after[key] }],
   );
 
-  if (before.integrantesCount !== after.integrantesCount) {
+  if (before.pdfName !== after.pdfName || context.pdfReplaced) {
     changes.push({
-      field: "Participantes",
-      before: `${before.integrantesCount} participante(s)`,
-      after: `${after.integrantesCount} participante(s)`,
+      field: "Soporte PDF",
+      before: before.pdfName,
+      after:
+        after.pdfName !== null && after.pdfName === before.pdfName
+          ? `${after.pdfName} (reemplazado)`
+          : after.pdfName,
     });
   }
 
-  if (!sameStringValues(before.photoNames, after.photoNames)) {
+  const removedIntegranteIds = before.integranteIds.filter(
+    (id) => !after.integranteIds.includes(id),
+  );
+  const addedIntegranteIds = after.integranteIds.filter((id) => !before.integranteIds.includes(id));
+
+  if (removedIntegranteIds.length > 0 || addedIntegranteIds.length > 0) {
+    changes.push({
+      field: "Participantes",
+      before: describeIntegrantes(
+        before.integranteIds.length,
+        "Quitó",
+        removedIntegranteIds,
+        context,
+      ),
+      after: describeIntegrantes(after.integranteIds.length, "Agregó", addedIntegranteIds, context),
+    });
+  }
+
+  const photosChanged = !sameStringValues(before.photoNames, after.photoNames);
+
+  if (photosChanged || context.photosReplaced) {
+    const afterPhotos = after.photoNames.join(", ") || null;
+
     changes.push({
       field: "Fotos de soporte",
       before: before.photoNames.join(", ") || null,
-      after: after.photoNames.join(", ") || null,
+      after: !photosChanged && afterPhotos !== null ? `${afterPhotos} (reemplazadas)` : afterPhotos,
     });
   }
 
   return changes;
+}
+
+function describeIntegrantes(
+  count: number,
+  verb: "Agregó" | "Quitó",
+  changedIds: string[],
+  context: DiligenciamientoAuditContext,
+): string {
+  const total = `${count} participante(s)`;
+
+  if (changedIds.length === 0) {
+    return total;
+  }
+
+  const names = changedIds.map((id) => context.integranteNames.get(id) ?? "Adulto mayor");
+
+  return `${total} · ${verb}: ${names.join(", ")}`;
+}
+
+function symmetricDifference(left: string[], right: string[]): string[] {
+  return [
+    ...left.filter((value) => !right.includes(value)),
+    ...right.filter((value) => !left.includes(value)),
+  ];
 }
 
 function encodeChangeLogCursor(occurredAt: Date, id: string) {
@@ -3206,7 +3295,9 @@ const CHANGE_LOG_AUDIT_ACTIONS = {
   deleted: ["actividades-grupales.deleted"],
 } as const;
 
-export function resolveChangeLogAuditActions(action: FindActividadGrupalChangeLogQuery["action"]): string[] {
+export function resolveChangeLogAuditActions(
+  action: FindActividadGrupalChangeLogQuery["action"],
+): string[] {
   if (action === null) {
     return [...CHANGE_LOG_AUDIT_ACTIONS.updated, ...CHANGE_LOG_AUDIT_ACTIONS.deleted];
   }
