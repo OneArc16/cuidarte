@@ -994,7 +994,19 @@ export class DrizzleActividadesGrupalesRepository implements ActividadesGrupales
         employeeIds: [...command.employeeIds].sort(),
       };
 
-      const activityChanges = buildActivityAuditChanges(before, after);
+      const changedEmployeeIds = symmetricDifference(before.employeeIds, after.employeeIds);
+      const changedEmployees =
+        changedEmployeeIds.length === 0
+          ? []
+          : await tx
+              .select({ id: users.id, fullName: users.fullName })
+              .from(users)
+              .where(inArray(users.id, changedEmployeeIds));
+      const activityChanges = buildActivityAuditChanges(
+        before,
+        after,
+        new Map(changedEmployees.map((employee) => [employee.id, employee.fullName])),
+      );
 
       if (activityChanges.length > 0) {
         await tx.insert(auditLogs).values({
@@ -3075,9 +3087,10 @@ type ActivityAuditSnapshot = {
   employeeIds: string[];
 };
 
-function buildActivityAuditChanges(
+export function buildActivityAuditChanges(
   before: ActivityAuditSnapshot,
   after: ActivityAuditSnapshot,
+  employeeNames: ReadonlyMap<string, string>,
 ): Array<{ field: string; before: string | null; after: string | null }> {
   const fields: Array<{ key: Exclude<keyof ActivityAuditSnapshot, "employeeIds">; label: string }> =
     [
@@ -3092,16 +3105,30 @@ function buildActivityAuditChanges(
     before[key] === after[key] ? [] : [{ field: label, before: before[key], after: after[key] }],
   );
 
-  return sameStringValues(before.employeeIds, after.employeeIds)
-    ? changes
-    : [
-        ...changes,
-        {
-          field: "Profesionales asignados",
-          before: `${before.employeeIds.length} asignado(s)`,
-          after: `${after.employeeIds.length} asignado(s)`,
-        },
-      ];
+  const removedEmployeeIds = before.employeeIds.filter((id) => !after.employeeIds.includes(id));
+  const addedEmployeeIds = after.employeeIds.filter((id) => !before.employeeIds.includes(id));
+
+  if (removedEmployeeIds.length > 0 || addedEmployeeIds.length > 0) {
+    changes.push({
+      field: "Profesionales asignados",
+      before: describeMemberChange(
+        `${before.employeeIds.length} asignado(s)`,
+        "Quitó",
+        removedEmployeeIds,
+        employeeNames,
+        "Profesional",
+      ),
+      after: describeMemberChange(
+        `${after.employeeIds.length} asignado(s)`,
+        "Agregó",
+        addedEmployeeIds,
+        employeeNames,
+        "Profesional",
+      ),
+    });
+  }
+
+  return changes;
 }
 
 function sameStringValues(left: string[], right: string[]) {
@@ -3164,13 +3191,20 @@ export function buildDiligenciamientoAuditChanges(
   if (removedIntegranteIds.length > 0 || addedIntegranteIds.length > 0) {
     changes.push({
       field: "Participantes",
-      before: describeIntegrantes(
-        before.integranteIds.length,
+      before: describeMemberChange(
+        `${before.integranteIds.length} participante(s)`,
         "Quitó",
         removedIntegranteIds,
-        context,
+        context.integranteNames,
+        "Adulto mayor",
       ),
-      after: describeIntegrantes(after.integranteIds.length, "Agregó", addedIntegranteIds, context),
+      after: describeMemberChange(
+        `${after.integranteIds.length} participante(s)`,
+        "Agregó",
+        addedIntegranteIds,
+        context.integranteNames,
+        "Adulto mayor",
+      ),
     });
   }
 
@@ -3189,21 +3223,19 @@ export function buildDiligenciamientoAuditChanges(
   return changes;
 }
 
-function describeIntegrantes(
-  count: number,
+/** "N item(s) · Agregó: names" so the change log says who changed, not only how many. */
+function describeMemberChange(
+  total: string,
   verb: "Agregó" | "Quitó",
   changedIds: string[],
-  context: DiligenciamientoAuditContext,
+  names: ReadonlyMap<string, string>,
+  fallbackName: string,
 ): string {
-  const total = `${count} participante(s)`;
-
   if (changedIds.length === 0) {
     return total;
   }
 
-  const names = changedIds.map((id) => context.integranteNames.get(id) ?? "Adulto mayor");
-
-  return `${total} · ${verb}: ${names.join(", ")}`;
+  return `${total} · ${verb}: ${changedIds.map((id) => names.get(id) ?? fallbackName).join(", ")}`;
 }
 
 function symmetricDifference(left: string[], right: string[]): string[] {

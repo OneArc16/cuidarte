@@ -5,6 +5,7 @@ import type { ActaCorrectionPreviewRow } from "../domain/actividad-grupal.types"
 import { ActaCorrectionConflictError } from "../domain/actividad-grupal.types";
 import {
   assertCorrectionFinalStateIsUnique,
+  buildActivityAuditChanges,
   buildAutomaticActaNormalizationRows,
   buildDiligenciamientoAuditChanges,
   buildCorrectionPreviewRows,
@@ -638,5 +639,42 @@ describe("buildDiligenciamientoAuditChanges", () => {
         { field: "Fotos de soporte", before: "foto.jpg", after: "foto.jpg (reemplazadas)" },
       ],
     );
+  });
+});
+
+describe("buildActivityAuditChanges", () => {
+  const snapshot = {
+    activityName: "Campamentos",
+    activityTypeName: "Recreacion",
+    activityDate: "2026-11-09",
+    startTime: "08:00",
+    endTime: "10:00",
+    organizer: "director",
+    employeeIds: ["e1"],
+  };
+
+  it("names the assigned professionals added and removed", () => {
+    assert.deepEqual(
+      buildActivityAuditChanges(
+        snapshot,
+        { ...snapshot, employeeIds: ["e2", "e3"] },
+        new Map([
+          ["e1", "Ana Perez"],
+          ["e2", "Luis Gomez"],
+          ["e3", "Maria Ruiz"],
+        ]),
+      ),
+      [
+        {
+          field: "Profesionales asignados",
+          before: "1 asignado(s) · Quitó: Ana Perez",
+          after: "2 asignado(s) · Agregó: Luis Gomez, Maria Ruiz",
+        },
+      ],
+    );
+  });
+
+  it("returns no changes when the activity is saved without changes", () => {
+    assert.deepEqual(buildActivityAuditChanges(snapshot, { ...snapshot }, new Map()), []);
   });
 });
