@@ -298,6 +298,7 @@ export const users = pgTable(
     passwordChangedAt: timestamp("password_changed_at", { withTimezone: true }),
     failedLoginAttempts: integer("failed_login_attempts").notNull().default(0),
     lockedUntil: timestamp("locked_until", { withTimezone: true }),
+    lastFailedLoginAt: timestamp("last_failed_login_at", { withTimezone: true }),
     lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

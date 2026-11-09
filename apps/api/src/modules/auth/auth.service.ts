@@ -13,6 +13,7 @@ import { verify } from "argon2";
 import { getEnv } from "../../config/env";
 import { DatabaseService } from "../../database/database.service";
 import { tenants, userPermissions, userSessions, users } from "../../database/schema";
+import { getLoginLockMinutesLeft, registerFailedLoginAttempt } from "./login-lockout";
 import { isSessionIdle } from "./session-idle";
 
 type LoginMetadata = {
@@ -31,8 +32,6 @@ type SessionRow = typeof userSessions.$inferSelect;
 type TenantRow = typeof tenants.$inferSelect;
 
 const GENERIC_LOGIN_ERROR = "Correo o contrasena incorrectos.";
-const MAX_FAILED_LOGIN_ATTEMPTS = 5;
-const LOCK_MINUTES = 15;
 
 @Injectable()
 export class AuthService {
@@ -41,8 +40,17 @@ export class AuthService {
   async login(command: LoginRequest, metadata: LoginMetadata): Promise<AuthenticatedSession> {
     const user = await this.findUserByEmail(command.email);
 
-    if (user === null || !user.isActive || this.isLocked(user)) {
+    if (user === null || !user.isActive) {
       throw new UnauthorizedException(GENERIC_LOGIN_ERROR);
+    }
+
+    const lockMinutesLeft = getLoginLockMinutesLeft(user, new Date());
+
+    if (lockMinutesLeft !== null) {
+      // A locked account must not look like a wrong password, or the person keeps retrying.
+      throw new UnauthorizedException(
+        `Cuenta bloqueada temporalmente por varios intentos fallidos. Intenta de nuevo en ${lockMinutesLeft} ${lockMinutesLeft === 1 ? "minuto" : "minutos"}.`,
+      );
     }
 
     const tenant = await this.ensureTenantCanLogin(user);
@@ -72,6 +80,7 @@ export class AuthService {
       .update(users)
       .set({
         failedLoginAttempts: 0,
+        lastFailedLoginAt: null,
         lockedUntil: null,
         lastLoginAt: now,
         updatedAt: now,
@@ -154,7 +163,7 @@ export class AuthService {
 
     const user = await this.findUserById(session.userId);
 
-    if (user === null || !user.isActive || this.isLocked(user)) {
+    if (user === null || !user.isActive || getLoginLockMinutesLeft(user, now) !== null) {
       return null;
     }
 
@@ -208,24 +217,12 @@ export class AuthService {
     return tenant;
   }
 
-  private isLocked(user: UserRow): boolean {
-    return user.lockedUntil !== null && user.lockedUntil > new Date();
-  }
-
   private async registerFailedLogin(user: UserRow): Promise<void> {
-    const failedLoginAttempts = user.failedLoginAttempts + 1;
-    const lockedUntil =
-      failedLoginAttempts >= MAX_FAILED_LOGIN_ATTEMPTS
-        ? new Date(Date.now() + LOCK_MINUTES * 60 * 1000)
-        : null;
+    const now = new Date();
 
     await this.database.db
       .update(users)
-      .set({
-        failedLoginAttempts,
-        lockedUntil,
-        updatedAt: new Date(),
-      })
+      .set({ ...registerFailedLoginAttempt(user, now), updatedAt: now })
       .where(eq(users.id, user.id));
   }
 

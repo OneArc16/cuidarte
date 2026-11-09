@@ -117,4 +117,22 @@ describe("App auth flow", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Correo o contrasena incorrectos.");
   });
+
+  it("tells the person the account is temporarily locked instead of a wrong password", async () => {
+    const lockMessage =
+      "Cuenta bloqueada temporalmente por varios intentos fallidos. Intenta de nuevo en 12 minutos.";
+    server.use(mockAuthLoginFailure(401, lockMessage));
+    const user = userEvent.setup();
+
+    renderApp();
+
+    expect(await screen.findByRole("heading", { name: "Bienvenido" })).toBeInTheDocument();
+    await user.clear(screen.getByLabelText("Correo"));
+    await user.type(screen.getByLabelText("Correo"), "admin@centro-demo.test");
+    await user.clear(screen.getByLabelText("Contrasena"));
+    await user.type(screen.getByLabelText("Contrasena"), "correcta123");
+    await user.click(screen.getByRole("button", { name: "Iniciar sesion" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(lockMessage);
+  });
 });

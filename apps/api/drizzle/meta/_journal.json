@@ -526,6 +526,13 @@
       "when": 1793993086815,
       "tag": "0074_adultos_mayores_manage_program_permission",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1794229796031,
+      "tag": "0075_users_last_failed_login_at",
+      "breakpoints": true
     }
   ]
 }

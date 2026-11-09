@@ -409,7 +409,8 @@ export const authUserSchema = z.object({
 
 export const loginRequestSchema = z.object({
   email: z.email("Ingresa un correo electrónico válido.").transform((value) => value.toLowerCase()),
-  password: z.string().min(1, "La contraseña es obligatoria."),
+  // Passwords are trimmed when an administrator sets them, so login must trim too.
+  password: z.string().trim().min(1, "La contraseña es obligatoria."),
 });
 
 const idleTimeoutSecondsSchema = z.number().int().positive();
