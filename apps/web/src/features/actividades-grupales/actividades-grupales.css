@@ -1403,6 +1403,23 @@
   text-transform: uppercase;
 }
 
+.actividades-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: var(--color-deep);
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: var(--color-soft);
+}
+
+.actividades-count strong {
+  font-weight: 900;
+}
+
 .actividad-form {
   display: grid;
   gap: 14px;

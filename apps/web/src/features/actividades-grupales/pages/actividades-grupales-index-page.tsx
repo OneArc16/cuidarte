@@ -10,6 +10,7 @@ import { canExportReports } from "@/features/reports/lib/reports-permissions";
 import { getCurrentMonthInputValue } from "@/features/alimentacion/lib/alimentacion-formatters";
 
 import { ActividadGrupalDeleteDialog } from "../components/actividad-grupal-delete-dialog";
+import { ActividadesGrupalesCount } from "../components/actividades-grupales-count";
 import { ActividadesGrupalesTable } from "../components/actividades-grupales-table";
 import { ActividadesGrupalesToolbar } from "../components/actividades-grupales-toolbar";
 import {
@@ -138,6 +139,10 @@ export function ActividadesGrupalesIndexPage({
           </button>
         ) : null}
         <span className="actividades-form-nav__context">Listado activo</span>
+        <ActividadesGrupalesCount
+          count={actividadesQuery.data?.actividadesGrupales.length ?? 0}
+          isLoading={actividadesQuery.isLoading || actividadesQuery.isError}
+        />
       </div>
 
       <ActividadesGrupalesToolbar
