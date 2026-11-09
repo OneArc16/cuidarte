@@ -483,6 +483,7 @@ export class DrizzleEmpleadosRepository implements EmpleadosRepository {
         updateValues.passwordSetByAdmin = true;
         updateValues.passwordChangedAt = null;
         updateValues.failedLoginAttempts = 0;
+        updateValues.lastFailedLoginAt = null;
         updateValues.lockedUntil = null;
       }
 

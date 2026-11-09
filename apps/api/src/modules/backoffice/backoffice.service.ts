@@ -189,6 +189,7 @@ export class BackofficeService {
           ownerUpdateValues.passwordSetByAdmin = true;
           ownerUpdateValues.passwordChangedAt = null;
           ownerUpdateValues.failedLoginAttempts = 0;
+          ownerUpdateValues.lastFailedLoginAt = null;
           ownerUpdateValues.lockedUntil = null;
         }
 

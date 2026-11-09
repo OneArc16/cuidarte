@@ -218,12 +218,30 @@ export class AuthService {
   }
 
   private async registerFailedLogin(user: UserRow): Promise<void> {
-    const now = new Date();
+    // Lock the row so concurrent wrong passwords are counted one by one; otherwise a burst
+    // of parallel guesses would only add one failure and bypass the lockout.
+    await this.database.db.transaction(async (tx) => {
+      const [current] = await tx
+        .select({
+          failedLoginAttempts: users.failedLoginAttempts,
+          lastFailedLoginAt: users.lastFailedLoginAt,
+          lockedUntil: users.lockedUntil,
+        })
+        .from(users)
+        .where(eq(users.id, user.id))
+        .for("update");
 
-    await this.database.db
-      .update(users)
-      .set({ ...registerFailedLoginAttempt(user, now), updatedAt: now })
-      .where(eq(users.id, user.id));
+      if (current === undefined) {
+        return;
+      }
+
+      const now = new Date();
+
+      await tx
+        .update(users)
+        .set({ ...registerFailedLoginAttempt(current, now), updatedAt: now })
+        .where(eq(users.id, user.id));
+    });
   }
 
   private resolveSessionExpiration(now: Date): Date {
