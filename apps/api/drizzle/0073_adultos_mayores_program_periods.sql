@@ -22,5 +22,23 @@ ALTER TABLE "adulto_mayor_periodos_programa" ADD CONSTRAINT "adulto_mayor_period
 CREATE UNIQUE INDEX "adulto_mayor_periodos_programa_open_unique" ON "adulto_mayor_periodos_programa" USING btree ("adulto_mayor_id") WHERE "adulto_mayor_periodos_programa"."inactivation_date" is null;--> statement-breakpoint
 CREATE INDEX "adulto_mayor_periodos_programa_adulto_activation_idx" ON "adulto_mayor_periodos_programa" USING btree ("adulto_mayor_id","activation_date");--> statement-breakpoint
 CREATE INDEX "adulto_mayor_periodos_programa_tenant_idx" ON "adulto_mayor_periodos_programa" USING btree ("tenant_id");--> statement-breakpoint
-INSERT INTO "adulto_mayor_periodos_programa" ("adulto_mayor_id", "tenant_id", "activation_date")
-SELECT "id", "tenant_id", DATE '2026-07-15' FROM "adultos_mayores";
+INSERT INTO "adulto_mayor_periodos_programa"
+("adulto_mayor_id", "tenant_id", "activation_date", "inactivation_date")
+SELECT
+  "id",
+  "tenant_id",
+  DATE '2026-07-15',
+  CASE
+    WHEN "status"::text = 'deceased' THEN "death_date"
+    ELSE NULL
+  END
+FROM "adultos_mayores"
+WHERE "birth_date" <= DATE '2026-07-15'
+  AND (
+    "status"::text <> 'deceased'
+    OR "death_date" > DATE '2026-07-15'
+  );--> statement-breakpoint
+UPDATE "adultos_mayores"
+SET "program_status" = 'inactive'
+WHERE "status"::text = 'deceased'
+   OR "birth_date" > DATE '2026-07-15';
